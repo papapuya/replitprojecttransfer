@@ -507,15 +507,16 @@ ${vorteileHtml}
 ${techTableHtml}`;
   }
 
-  if (lieferumfangHtml) {
-    html += `
-${lieferumfangHtml}`;
-  }
-
-  // Schlusssatz am Ende (ohne "Fazit:" Label)
+  // Schlusssatz vor Lieferumfang (ohne "Fazit:" Label)
   if (data.fazit && data.fazit.trim()) {
     html += `
 <p>${e(data.fazit)}</p>`;
+  }
+
+  // Lieferumfang immer zum Schluss
+  if (lieferumfangHtml) {
+    html += `
+${lieferumfangHtml}`;
   }
 
   return html;
