@@ -553,8 +553,9 @@ function renderMediaMarktLayout(data: {
   const einleitung = e(data.einleitung || '');
   const anwendung = e(data.anwendung || data.beschreibung || data.narrative || '');
   
+  // Vorteile ohne <ul> Liste - nur Häkchen, keine Punkte
   const vorteileHtml = data.uspBullets.length > 0
-    ? `<ul>\n${data.uspBullets.slice(0, 5).map(usp => `<li>✅ ${e(usp)}</li>`).join('\n')}\n</ul>`
+    ? data.uspBullets.slice(0, 5).map(usp => `✅ ${e(usp)}`).join('<br />\n')
     : '';
 
   // Dynamische technische Tabelle mit Kompatibilität und Teilenummern
