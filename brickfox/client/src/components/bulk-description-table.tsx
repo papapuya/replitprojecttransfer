@@ -23,6 +23,7 @@ interface BulkProduct {
   p_id: string;
   v_id: string;
   produktname: string;
+  produktname_neu: string;
   produktbeschreibung: string;
   produktbeschreibung_html: string;
   mediamarktname_v1: string;
@@ -91,7 +92,10 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                   v_id
                 </TableHead>
                 <TableHead className="min-w-[200px]">
-                  Produktname
+                  Produktname (Original)
+                </TableHead>
+                <TableHead className="min-w-[250px]">
+                  SEO-Produktname
                 </TableHead>
                 <TableHead className="min-w-[400px]">
                   Produktbeschreibung Text
@@ -144,6 +148,15 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                         )}
                       </Tooltip>
                     </TooltipProvider>
+                  </TableCell>
+                  <TableCell>
+                    <Textarea
+                      value={product.produktname_neu || ''}
+                      onChange={(e) => onUpdateProduct(product.id, 'produktname_neu', e.target.value)}
+                      className="text-xs resize-none min-h-[80px] font-sans bulk-description-textarea"
+                      placeholder="SEO-optimierter Produktname..."
+                      data-testid={`input-produktname-neu-${product.id}`}
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2 items-start">
