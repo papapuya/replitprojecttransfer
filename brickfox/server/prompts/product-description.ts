@@ -55,6 +55,12 @@ Die Farbe (z.B. "schwarz", "weiß", "silber") gehört AUSSCHLIESSLICH in die tec
 Farbe ist KEIN Vorteil und darf NIEMALS mit ✅ Häkchen aufgelistet werden.
 VERBOTEN: ✅ In elegantem Schwarz / ✅ Erhältlich in Weiß / ✅ Schwarzes Gehäuse
 
+⚠️ APN/TEILENUMMERN NIEMALS IM FLIEßTEXT:
+Apple-Teilenummern (APN) und andere Teilenummern gehören AUSSCHLIESSLICH in die technische Tabelle!
+Schreibe NIEMALS Sätze wie "Er ersetzt die Apple-Teilenummern (APN) 616-0579" im Fließtext.
+VERBOTEN: "Er ersetzt die APN..." / "entspricht der Teilenummer..." / "Apple Part Number..."
+Die APN erscheint NUR in der technischen Tabelle als Zeile "Teilenummer: 616-0579, 616-0580"
+
 ═══════════════════════════════════════════════════════════════
 PRODUKTTITEL-SCHEMA (SEO-KRITISCH)
 ═══════════════════════════════════════════════════════════════

@@ -106,6 +106,43 @@ function filterFarbeBullets(bullets: string[]): string[] {
   });
 }
 
+/**
+ * Entfernt APN/Teilenummern-Sätze aus dem Fließtext
+ * Diese gehören nur in die technische Tabelle
+ */
+function removeApnFromText(text: string): string {
+  if (!text) return text;
+  
+  // Pattern für APN-Sätze die entfernt werden sollen
+  const apnPatterns = [
+    // "Er ersetzt die Apple-Teilenummern (APN) 616-0579, 616-0580."
+    /\s*Er\s+ersetzt\s+die\s+(Apple-)?Teilenummer[n]?\s*\(?(APN)?\)?\s*[0-9\-,\s]+\.?/gi,
+    // "entspricht APN 616-0579, 616-0580"
+    /\s*entspricht\s+(der\s+)?(APN|Teilenummer)\s*[0-9\-,\s]+\.?/gi,
+    // "Apple Part Number: 616-0579"
+    /\s*Apple\s+Part\s+Number[:\s]+[0-9\-,\s]+\.?/gi,
+    // "Teilenummer: 616-0579" im Fließtext
+    /\s*Teilenummer[:\s]+[0-9\-,\s]+\.?/gi,
+    // "(APN: 616-0579, 616-0580)"
+    /\s*\(APN[:\s]*[0-9\-,\s]+\)/gi,
+    // "APN 616-0579, 616-0580" als eigenständiger Satz
+    /\s*APN[:\s]+[0-9\-,\s]+\.?/gi,
+  ];
+  
+  let cleaned = text;
+  for (const pattern of apnPatterns) {
+    if (pattern.test(cleaned)) {
+      console.log(`🔢 APN aus Fließtext entfernt: ${cleaned.match(pattern)?.[0]}`);
+      cleaned = cleaned.replace(pattern, '');
+    }
+  }
+  
+  // Doppelte Leerzeichen und Punkte bereinigen
+  cleaned = cleaned.replace(/\s+/g, ' ').replace(/\.\s*\./g, '.').trim();
+  
+  return cleaned;
+}
+
 export function renderProductHtml(options: RenderOptions): string {
   const { productName, categoryConfig, copy, layoutStyle = 'mediamarkt', technicalDataTable, safetyWarnings, pdfManualUrl } = options;
   
@@ -118,16 +155,16 @@ export function renderProductHtml(options: RenderOptions): string {
     categoryConfig.technicalFields
   );
 
-  const cleanNarrative = cleanMarkdown(copy.narrative);
+  const cleanNarrative = removeApnFromText(cleanMarkdown(copy.narrative));
   const uspBullets = filterFarbeBullets(
     copy.uspBullets
       .map(usp => cleanMarkdown(usp))
       .filter(usp => usp && usp.trim().length > 0)
   ).slice(0, 5);
 
-  const einleitung = removeEmcomBrand(cleanMarkdown(copy.einleitung || ''));
-  const anwendung = removeEmcomBrand(cleanMarkdown(copy.anwendung || ''));
-  const beschreibung = removeEmcomBrand(cleanMarkdown(copy.beschreibung || ''));
+  const einleitung = removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.einleitung || '')));
+  const anwendung = removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.anwendung || '')));
+  const beschreibung = removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.beschreibung || '')));
   const tagline = cleanMarkdown(copy.tagline || '');
   const kompatibleModelle = (copy.kompatibleModelle || []).map(m => cleanMarkdown(m));
   const werkzeuguebersicht = (copy.werkzeuguebersicht || []).map(w => cleanMarkdown(w));

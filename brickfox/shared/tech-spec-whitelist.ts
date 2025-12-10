@@ -152,8 +152,8 @@ export const TECH_SPEC_WHITELIST: TechSpecField[] = [
   },
   {
     key: 'apn',
-    label: 'APN',
-    aliases: ['apple part number', 'apple-partnummer', 'partnummer', 'part number', 'teilenummer']
+    label: 'Teilenummer',
+    aliases: ['apn', 'apple part number', 'apple-partnummer', 'partnummer', 'part number', 'apple teilenummer']
   }
 ];
 
