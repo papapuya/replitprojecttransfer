@@ -335,8 +335,8 @@ export default function CSVBulkDescription() {
             v_id: v_id,
             produktname: produktname,
             produktname_neu: cleanSeoProductName(payload.produktTitel || '', voltValue),
-            produktbeschreibung: plainText,
-            produktbeschreibung_html: payload.description || '',
+            produktbeschreibung: cleanDescription(plainText),
+            produktbeschreibung_html: cleanDescription(payload.description || ''),
             mediamarktname_v1: mmNameV1.substring(0, 60),
             mediamarktname_v2: mmNameV2.substring(0, 40),
             seo_beschreibung: seoDesc,
@@ -384,7 +384,7 @@ export default function CSVBulkDescription() {
     return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   };
 
-  // Bereinigt den SEO-Produktnamen: EMCOM entfernen, Wh durch Volt ersetzen
+  // Bereinigt den SEO-Produktnamen: EMCOM entfernen, Wh/mAh entfernen, Volt hinzufügen
   const cleanSeoProductName = (name: string, voltValue?: string): string => {
     if (!name) return '';
     let cleaned = name;
@@ -401,6 +401,10 @@ export default function CSVBulkDescription() {
     // Wh-Angaben entfernen (z.B. "37 Wh", "– 37 Wh")
     cleaned = cleaned.replace(/\s*–?\s*\d+\s*Wh\b/gi, '');
     
+    // Falsche mAh-Angaben entfernen (z.B. "37mAh", "37 mAh" - unrealistisch kleine Werte)
+    // Entferne mAh-Werte unter 100 (unrealistisch für Akkus)
+    cleaned = cleaned.replace(/\s*–?\s*\d{1,2}\s*mAh\b/gi, '');
+    
     // Wenn Volt-Wert vorhanden, am Ende hinzufügen
     if (voltValue && voltValue.trim()) {
       // Prüfe ob bereits Volt im Namen
@@ -412,6 +416,23 @@ export default function CSVBulkDescription() {
     
     // Doppelte Leerzeichen und – am Ende bereinigen
     cleaned = cleaned.replace(/\s+/g, ' ').replace(/\s*–\s*$/, '').trim();
+    
+    return cleaned;
+  };
+
+  // Bereinigt die Produktbeschreibung: Falsche mAh/Wh-Werte entfernen
+  const cleanDescription = (html: string): string => {
+    if (!html) return '';
+    let cleaned = html;
+    
+    // Falsche mAh-Angaben entfernen (unter 100 mAh = unrealistisch)
+    cleaned = cleaned.replace(/\b\d{1,2}\s*mAh\b/gi, '');
+    
+    // Falsche Wh-Angaben entfernen (z.B. "37 Wh" ohne echte Daten)
+    cleaned = cleaned.replace(/\b\d{1,2}\s*Wh\b/gi, '');
+    
+    // Doppelte Leerzeichen bereinigen
+    cleaned = cleaned.replace(/\s+/g, ' ');
     
     return cleaned;
   };
