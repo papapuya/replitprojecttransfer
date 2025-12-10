@@ -50,6 +50,11 @@ GRUNDREGELN (WICHTIG)
 - ✅ Häkchen nur in der Vorteile-Sektion
 - Keine technischen Tabellen ohne echte technische Werte
 
+⚠️ FARBE NIEMALS IN VORTEILEN:
+Die Farbe (z.B. "schwarz", "weiß", "silber") gehört AUSSCHLIESSLICH in die technische Tabelle!
+Farbe ist KEIN Vorteil und darf NIEMALS mit ✅ Häkchen aufgelistet werden.
+VERBOTEN: ✅ In elegantem Schwarz / ✅ Erhältlich in Weiß / ✅ Schwarzes Gehäuse
+
 ═══════════════════════════════════════════════════════════════
 PRODUKTTITEL-SCHEMA (SEO-KRITISCH)
 ═══════════════════════════════════════════════════════════════

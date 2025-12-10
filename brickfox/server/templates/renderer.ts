@@ -71,6 +71,41 @@ function removeEmcomBrand(text: string): string {
   return cleaned;
 }
 
+/**
+ * Prüft ob ein Vorteil/Bullet eine Farbe enthält (Farbe gehört NUR in Tabelle)
+ */
+function isFarbeBullet(text: string): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  
+  // Farben-Keywords die nicht als Vorteile gelten
+  const farbePatterns = [
+    /\b(in\s+)?(schwarz|weiß|weiss|silber|grau|blau|rot|grün|gelb|orange|pink|lila|gold|bronze)\b/i,
+    /\bfarbe\b/i,
+    /\bgehäusefarbe\b/i,
+    /\bfarbig\b/i,
+    /\belegant(es|em)?\s+(schwarz|weiß|silber)/i,
+    /\bschwarzes?\s+gehäuse/i,
+    /\bweißes?\s+gehäuse/i,
+    /\berhältlich\s+in\s+/i
+  ];
+  
+  return farbePatterns.some(pattern => pattern.test(lower));
+}
+
+/**
+ * Filtert Farb-Bullets aus der Vorteile-Liste
+ */
+function filterFarbeBullets(bullets: string[]): string[] {
+  return bullets.filter(bullet => {
+    if (isFarbeBullet(bullet)) {
+      console.log(`🎨 Farbe aus Vorteilen gefiltert: "${bullet}"`);
+      return false;
+    }
+    return true;
+  });
+}
+
 export function renderProductHtml(options: RenderOptions): string {
   const { productName, categoryConfig, copy, layoutStyle = 'mediamarkt', technicalDataTable, safetyWarnings, pdfManualUrl } = options;
   
@@ -84,10 +119,11 @@ export function renderProductHtml(options: RenderOptions): string {
   );
 
   const cleanNarrative = cleanMarkdown(copy.narrative);
-  const uspBullets = copy.uspBullets
-    .map(usp => cleanMarkdown(usp))
-    .filter(usp => usp && usp.trim().length > 0)
-    .slice(0, 5);
+  const uspBullets = filterFarbeBullets(
+    copy.uspBullets
+      .map(usp => cleanMarkdown(usp))
+      .filter(usp => usp && usp.trim().length > 0)
+  ).slice(0, 5);
 
   const einleitung = removeEmcomBrand(cleanMarkdown(copy.einleitung || ''));
   const anwendung = removeEmcomBrand(cleanMarkdown(copy.anwendung || ''));
