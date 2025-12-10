@@ -60,14 +60,12 @@ Beispiele:
 4. Keine Bold-Tags im Fließtext
 5. Vorteile immer mit ✅
 
-**Sprachliche Variation (sehr wichtig für 90.000 Produkte):**
-- 5 rotierende Einleitungsmuster (A-E)
-- Synonyme für häufige Phrasen
-- Tonalität passt sich Kategorie an:
-  - Akku: sachlich & technisch
-  - Werkzeug: lösungsorientiert
-  - Zubehör: komfortbetont
-  - Case: schützend & alltagstauglich
+**3 Textstil-Vorlagen (rotieren automatisch):**
+- **Sachlich-technisch**: Neutral, faktenorientiert, wie von einem technischen Händler
+- **Nutzenorientiert**: Kundenzentriert, Alltagsszenarien, warm und praktisch
+- **Premium & beratend**: Hochwertig, vertrauensbildend, professioneller Beratungston
+
+Jeder Stil beeinflusst Einleitung, Anwendung, Vorteile und Schlusssatz.
 
 **Apple-Akkus: APN-Regeln (Apple Part Numbers):**
 - H1: Nur EINE APN, Schema "ersetzt APN <Nummer>"
