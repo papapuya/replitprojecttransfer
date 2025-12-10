@@ -326,61 +326,10 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string): stri
     return '';
   }
   
-  // Bei 8 oder weniger Modellen: einfache Liste
-  if (models.length <= 8) {
-    return `<h2>Kompatibilit&auml;t</h2>
-<ul>
-${models.map(model => `<li>${e(model)}</li>`).join('\n')}
-</ul>`;
-  }
+  // Kompaktes Inline-Format mit Kommas
+  const modelsInline = models.map(model => e(model)).join(', ');
   
-  // Bei mehr als 8 Modellen: gruppiertes Layout
-  const groups = groupModelsByCategory(models);
-  const groupNames = Object.keys(groups);
-  
-  // Wenn nur eine oder keine sinnvolle Gruppe: alle in einer Liste
-  if (groupNames.length <= 1) {
-    return `<h2>Kompatibilit&auml;t</h2>
-<ul>
-${models.map(model => `<li>${e(model)}</li>`).join('\n')}
-</ul>`;
-  }
-  
-  // Sortiere Gruppen nach Größe (größte zuerst), max 4 Gruppen
-  const sortedGroups = groupNames
-    .sort((a, b) => groups[b].length - groups[a].length)
-    .slice(0, 4);
-  
-  // Sammle übrige Modelle (aus nicht-angezeigten Gruppen)
-  const displayedModels = new Set(sortedGroups.flatMap(g => groups[g]));
-  const remainingModels = models.filter(m => !displayedModels.has(m));
-  
-  // Wenn es übrige Modelle gibt, füge sie zur "Weitere Modelle" Gruppe hinzu
-  if (remainingModels.length > 0) {
-    const weitereIndex = sortedGroups.indexOf('Weitere Modelle');
-    if (weitereIndex >= 0) {
-      groups['Weitere Modelle'] = [...groups['Weitere Modelle'], ...remainingModels];
-    } else if (sortedGroups.length < 4) {
-      sortedGroups.push('Weitere Modelle');
-      groups['Weitere Modelle'] = remainingModels;
-    } else {
-      // Füge zu kleinster Gruppe hinzu
-      const smallestGroup = sortedGroups[sortedGroups.length - 1];
-      groups[smallestGroup] = [...groups[smallestGroup], ...remainingModels];
-    }
-  }
-  
-  // Generiere Ultra-Safe HTML (ohne Inline-Styles, marktplatzsicher)
-  const groupsHtml = sortedGroups.map(groupName => {
-    const groupModels = groups[groupName];
-    return `<h3>${e(groupName)}</h3>
-<ul>
-${groupModels.map(model => `<li>${e(model)}</li>`).join('\n')}
-</ul>`;
-  }).join('\n');
-  
-  return `<h2>Kompatibilit&auml;t</h2>
-${groupsHtml}`;
+  return `<p><strong>Kompatibilit&auml;t:</strong> ${modelsInline}</p>`;
 }
 
 function cleanTechnicalTable(htmlTable: string): string {
@@ -489,10 +438,14 @@ ${packageItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 ${kompatibleModelleHtml}`;
   }
 
-  // APN-Satz nach Kompatibilität (SEO-optimiert)
+  // Teilenummer(n) kompakt nach Kompatibilität
   if (data.apnSatz && data.apnSatz.trim()) {
-    html += `
-<p>${e(data.apnSatz)}</p>`;
+    // Extrahiere nur die APN-Nummern aus dem Satz
+    const apnNumbers = data.apnSatz.match(/\d{3}-\d{5}/g);
+    if (apnNumbers && apnNumbers.length > 0) {
+      html += `
+<p><strong>Teilenummer(n):</strong> ${apnNumbers.join(', ')}</p>`;
+    }
   }
 
   if (werkzeuguebersichtHtml) {
