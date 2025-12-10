@@ -107,6 +107,32 @@ function filterFarbeBullets(bullets: string[]): string[] {
 }
 
 /**
+ * Extrahiert APN/Teilenummern aus Text
+ * Gibt die gefundenen Nummern zurück
+ */
+function extractApnFromText(text: string): string | null {
+  if (!text) return null;
+  
+  // Pattern für APN-Nummern
+  const apnPatterns = [
+    /APN[:\s]+([0-9\-,\s]+)/i,
+    /entspricht\s+APN\s+([0-9\-,\s]+)/i,
+    /Apple-?Teilenummer[n]?\s*[:\s]*([0-9\-,\s]+)/i,
+  ];
+  
+  for (const pattern of apnPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const apn = match[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
+      console.log(`🔢 APN extrahiert: ${apn}`);
+      return apn;
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Entfernt APN/Teilenummern-Sätze aus dem Fließtext
  * Diese gehören nur in die technische Tabelle
  */
@@ -168,10 +194,15 @@ export function renderProductHtml(options: RenderOptions): string {
   const tagline = cleanMarkdown(copy.tagline || '');
   const kompatibleModelle = (copy.kompatibleModelle || []).map(m => cleanMarkdown(m));
   const werkzeuguebersicht = (copy.werkzeuguebersicht || []).map(w => cleanMarkdown(w));
-  const apnSatz = cleanMarkdown(copy.apnSatz || '');
   const fazit = cleanMarkdown(copy.fazit || '');
   const produktTyp = copy.produktTyp || 'elektronik';
   const zeigeTabelle = copy.zeigeTabelle === true;
+  
+  // Extrahiere APN aus dem Produktnamen für den Fließtext unter der Tabelle
+  const extractedApn = extractApnFromText(productName);
+  const apnSatz = extractedApn 
+    ? `Akku passend f&uuml;r folgende Teilenummer (APN): ${extractedApn}`
+    : cleanMarkdown(copy.apnSatz || '');
   
   // Verwende AI-generierten produktTitel wenn vorhanden, sonst Original-Produktname
   let produktTitel = cleanMarkdown(copy.produktTitel || '') || cleanProductName;
@@ -537,16 +568,8 @@ function renderMediaMarktLayout(data: {
     });
   }
   
-  // Teilenummer(n) aus APN-Satz extrahieren
-  if (data.apnSatz && data.apnSatz.trim()) {
-    const apnNumbers = data.apnSatz.match(/\d{3}-\d{5}/g);
-    if (apnNumbers && apnNumbers.length > 0) {
-      allSpecs.push({
-        label: 'Teilenummer(n)',
-        value: apnNumbers.join(', ')
-      });
-    }
-  }
+  // Teilenummer(n) werden jetzt als Fließtext unter der Tabelle angezeigt
+  // NICHT mehr in der Tabelle!
   
   // Technische Specs hinzufügen (bei Akkus)
   if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
@@ -554,12 +577,20 @@ function renderMediaMarktLayout(data: {
   }
   
   // Tabelle anzeigen wenn es Daten gibt (dynamische Spaltenbreite)
+  // APN-Fließtext unter der Tabelle (nicht in der Tabelle)
+  let apnFliesstextHtml = '';
+  if (data.apnSatz && data.apnSatz.trim()) {
+    // Zeige den kompletten APN-Satz als Fließtext unter der Tabelle
+    apnFliesstextHtml = `<p>${data.apnSatz}</p>`;
+  }
+  
   const techTableHtml = allSpecs.length > 0
     ? `<h2>Technische Daten</h2>
 <table>
 ${allSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 1em;">${e(spec.label)}</td><td>${e(spec.value)}</td></tr>`).join('\n')}
-</table>`
-    : '';
+</table>
+${apnFliesstextHtml}`
+    : apnFliesstextHtml;
 
   const werkzeugItems = data.werkzeuguebersicht || [];
   const werkzeuguebersichtHtml = (produktTyp === 'werkzeug' && werkzeugItems.length > 0)
