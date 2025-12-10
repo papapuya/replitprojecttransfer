@@ -60,6 +60,7 @@ import { apiKeyManager } from './api-key-manager';
 import webhooksRouter from './webhooks-supabase';
 import mappingRouter from './routes-mapping';
 import { pdfParserService } from './services/pdf-parser';
+import { deeplService } from './services/deepl-service';
 
 async function requireAuth(req: any, res: any, next: any) {
   const authHeader = req.headers.authorization;
@@ -2003,11 +2004,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ].slice(0, 20); // Limit to top 20 keywords
       const seoKeywords = allKeywords.join(', ');
 
+      // DeepL-Übersetzung ins Niederländische (gleiche HTML-Struktur)
+      let descriptionNL = '';
+      let produktTitelNL = '';
+      
+      if (process.env.DEEPL_API_KEY) {
+        try {
+          // Batch-Übersetzung für bessere Performance
+          const [translatedDesc, translatedTitle] = await deeplService.translateBatch([
+            description || '',
+            produktTitel || ''
+          ]);
+          descriptionNL = translatedDesc;
+          produktTitelNL = translatedTitle;
+          console.log(`🇳🇱 NL-Übersetzung erfolgreich: Titel ${produktTitelNL.length} chars, Beschreibung ${descriptionNL.length} chars`);
+        } catch (error) {
+          console.error('❌ DeepL Übersetzungsfehler:', error);
+        }
+      }
+
       await trackApiUsage(req, res, () => {});
       res.json({ 
         success: true, 
         description,
+        descriptionNL, // Niederländische Beschreibung (gleiche HTML-Struktur)
         produktTitel, // AI-generierter SEO-optimierter Produktname
+        produktTitelNL, // Niederländischer Produktname
         seoTitle,
         seoDescription,
         seoKeywords,

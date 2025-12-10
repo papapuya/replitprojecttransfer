@@ -42,6 +42,10 @@ interface BulkProduct {
   produktname_neu: string;
   produktbeschreibung: string;
   produktbeschreibung_html: string;
+  // Niederländische Übersetzungen (via DeepL)
+  produktname_nl: string;
+  produktbeschreibung_nl: string;
+  produktbeschreibung_html_nl: string;
   mediamarktname_v1: string;
   mediamarktname_v2: string;
   seo_titel?: string;
@@ -98,6 +102,9 @@ export default function CSVBulkDescription() {
     { key: 'produktname_neu', label: 'p_name[de]', enabled: true },
     { key: 'produktbeschreibung', label: 'p_description_text[de]', enabled: false },
     { key: 'produktbeschreibung_html', label: 'p_description[de]', enabled: true },
+    // Niederländische Felder (via DeepL)
+    { key: 'produktname_nl', label: 'p_name[nl]', enabled: true },
+    { key: 'produktbeschreibung_html_nl', label: 'p_description[nl]', enabled: true },
     { key: 'mediamarktname_v1', label: 'p_mediamarkt_v1', enabled: false },
     { key: 'mediamarktname_v2', label: 'p_mediamarkt_v2', enabled: false },
     { key: 'seo_beschreibung', label: 'p_seo_description[de]', enabled: true },
@@ -110,7 +117,7 @@ export default function CSVBulkDescription() {
   const SESSION_KEY_RAW_DATA = 'csv-bulk-raw-data';
   const SESSION_KEY_FILE_NAME = 'csv-bulk-file-name';
   const SESSION_KEY_VERSION = 'csv-bulk-version';
-  const CURRENT_SCHEMA_VERSION = '2'; // Increment when BulkProduct structure changes
+  const CURRENT_SCHEMA_VERSION = '3'; // Increment when BulkProduct structure changes (v3: NL fields added)
 
   // Beim Laden der Komponente: Daten aus sessionStorage wiederherstellen
   useEffect(() => {
@@ -329,6 +336,9 @@ export default function CSVBulkDescription() {
           // Volt-Wert aus CSV extrahieren für SEO-Namen
           const voltValue = row['V_Nominal'] || row['v_nominal'] || row['Spannung'] || row['spannung'] || '';
 
+          // Niederländische Übersetzungen (von DeepL API)
+          const plainTextNL = stripHtml(payload.descriptionNL || '');
+          
           return {
             id: globalIndex + 1,
             p_id: p_id,
@@ -337,6 +347,10 @@ export default function CSVBulkDescription() {
             produktname_neu: cleanSeoProductName(payload.produktTitel || '', voltValue),
             produktbeschreibung: cleanDescription(plainText),
             produktbeschreibung_html: cleanDescription(payload.description || ''),
+            // Niederländische Übersetzungen
+            produktname_nl: payload.produktTitelNL || '',
+            produktbeschreibung_nl: cleanDescription(plainTextNL),
+            produktbeschreibung_html_nl: cleanDescription(payload.descriptionNL || ''),
             mediamarktname_v1: mmNameV1.substring(0, 60),
             mediamarktname_v2: mmNameV2.substring(0, 40),
             seo_beschreibung: seoDesc,
@@ -363,6 +377,9 @@ export default function CSVBulkDescription() {
             produktname_neu: '',
             produktbeschreibung: '',
             produktbeschreibung_html: '',
+            produktname_nl: '',
+            produktbeschreibung_nl: '',
+            produktbeschreibung_html_nl: '',
             mediamarktname_v1: '',
             mediamarktname_v2: '',
             seo_beschreibung: '',
