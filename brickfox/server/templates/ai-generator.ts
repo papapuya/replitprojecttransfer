@@ -124,6 +124,87 @@ function extractSupplierTechnicalData(
   return extracted;
 }
 
+// 3 Textstil-Vorlagen für Variation
+type StyleVariant = 'sachlich' | 'nutzen' | 'premium';
+
+function getRandomStyleVariant(): StyleVariant {
+  const styles: StyleVariant[] = ['sachlich', 'nutzen', 'premium'];
+  return styles[Math.floor(Math.random() * styles.length)];
+}
+
+function getStyleInstructions(style: StyleVariant): string {
+  switch (style) {
+    case 'sachlich':
+      return `STIL: SACHLICH-TECHNISCH (Version A)
+Dieser Text wirkt wie von einem technischen Händler oder Hersteller.
+
+EINLEITUNG:
+- Beschreibe das Produkt mit Fokus auf technischen Werten und Kompatibilität
+- Keine überflüssigen Adjektive, klarer Informationsstil
+- Beispiel: "Der [Akku] wurde entwickelt, um eine zuverlässige Energieversorgung sicherzustellen."
+
+ANWENDUNG & EINSATZBEREICH:
+- Kurz und objektiv: Austausch, Funktionswiederherstellung, Kompatibilität
+- Technische Schutzschaltungen erwähnen wenn vorhanden
+- Sachliche Sprache ohne emotionale Wertung
+
+VORTEILE (kurz, technisch präzise):
+- "Hochwertige Li-Polymer Zellen"
+- "Konstante Leistungsabgabe"
+- "Integrierte Schutzschaltungen"
+
+SCHLUSSSATZ:
+- Neutraler, fachlicher Abschluss ohne emotionalen Touch
+- Beispiel: "Eine zuverlässige Alternative zum Originalakku."`;
+
+    case 'nutzen':
+      return `STIL: NUTZENORIENTIERT & ALLTAGSNAH (Version B)
+Dieser Text ist kundenzentriert und vermeidet den "Datenblatt-Stil".
+
+EINLEITUNG:
+- Stelle das Alltagsszenario in den Fokus
+- Beispiel: "Wenn das Smartphone zu früh schlapp macht, ist dieser Ersatzakku die Lösung."
+- Technische Daten einbetten, aber nicht dominieren lassen
+
+ANWENDUNG & EINSATZBEREICH:
+- Erkläre, wie das Produkt konkret Probleme löst
+- Kurze Laufzeiten, unerwartete Abschaltungen, häufige Nutzung
+- Fokus auf Kundensituationen
+
+VORTEILE (nutzenorientiert):
+- "Spürbar längere Nutzung im Alltag"
+- "Verlässliche Energie für den Tag"
+- "Problemlöser bei Leistungsabfall"
+
+SCHLUSSSATZ:
+- Erkläre kurz, warum dieses Produkt eine praktische Lösung ist
+- Beispiel: "Die ideale Wahl für alle, die auf zuverlässige Energie angewiesen sind."`;
+
+    case 'premium':
+      return `STIL: PREMIUM & BERATEND (Version C)
+Dieser Text wirkt wie von einem Premium-Elektronikhändler – hochwertig und vertrauensbildend.
+
+EINLEITUNG:
+- Betone Qualität, Zuverlässigkeit, geprüfte Komponenten
+- Wirkt wie eine Kaufberatung
+- Beispiel: "Für Anwender, die Wert auf geprüfte Qualität legen, bietet dieser Akku..."
+
+ANWENDUNG & EINSATZBEREICH:
+- Erkläre, warum dieses Produkt eine technisch saubere Wahl ist
+- Qualitätskontrolle, langlebige Zellen, geprüfte Sicherheitsstandards
+- Professioneller Beratungston
+
+VORTEILE (hochwertig formuliert):
+- "Konstant stabile Spannungslage"
+- "Optimierte Zyklenfestigkeit"
+- "Präzise abgestimmte Parameter"
+
+SCHLUSSSATZ:
+- Betone Wertigkeit und sicheren Einsatz
+- Beispiel: "Eine durchdachte Wahl für anspruchsvolle Anwender."`;
+  }
+}
+
 async function generateProductCopyMonolithic(
   productData: any,
   categoryConfig: ProductCategoryConfig,
@@ -173,6 +254,10 @@ KATEGORIE: ELEKTRONIK / ZUBEHÖR (Typ B)
 - "zeigeTabelle": false`;
 
   const showTableHint = !isToolOrAccessory;
+  
+  // Zufälligen Textstil wählen für Variation
+  const styleVariant = getRandomStyleVariant();
+  console.log(`🎨 Textstil: ${styleVariant.toUpperCase()}`);
 
   const systemPrompt = `Du bist ein deterministischer PIM- & SEO-Textgenerator für akkushop.de.
 
@@ -322,36 +407,9 @@ Du darfst den Produktnamen NICHT in deinen Texten wiederholen!
 - Natürliche Einbettung mit Synonymen: "das Set", "der Ersatzakku"
 
 ═══════════════════════════════════════════════════════════════
-SPRACHLICHE VARIATION (PFLICHTREGELN)
+TEXTSTIL-VORLAGE (PFLICHT - verwende den zugewiesenen Stil!)
 ═══════════════════════════════════════════════════════════════
-Die Produktbeschreibung darf NICHT immer gleich beginnen!
-Verwende ROTIEREND unterschiedliche Einleitungsmuster:
-
-MUSTER A (Fokus Nutzen):
-"Dieser [Produkttyp] eignet sich für ..."
-
-MUSTER B (Fokus Einsatz):
-"Für den Einsatz im Bereich ... wurde dieser [Produkttyp] entwickelt."
-
-MUSTER C (Fokus Kompatibilität):
-"Dieser [Produkttyp] ist speziell abgestimmt auf ..."
-
-MUSTER D (Fokus Problem-Lösung):
-"Wenn der originale Akku nachlässt, bietet dieser [Produkttyp] ..."
-
-MUSTER E (Fokus Eigenschaft):
-"Mit [Haupteigenschaft] überzeugt dieser [Produkttyp] ..."
-
-SYNONYM-ROTATION für häufige Phrasen:
-- "eignet sich für" → ist ausgelegt für / wurde entwickelt für / kommt zum Einsatz bei
-- "bietet" → ermöglicht / gewährleistet / sorgt für
-- "ideal für" → geeignet für / passend für / konzipiert für
-
-TONALITÄT nach Kategorie:
-- Akku: sachlich & technisch
-- Werkzeug: lösungsorientiert & handwerklich
-- Zubehör: komfort- & nutzenorientiert
-- Case/Hülle: schützend & alltagstauglich
+${getStyleInstructions(styleVariant)}
 
 WICHTIG: Satzanfänge innerhalb eines Absatzes dürfen sich NICHT wiederholen!
 
@@ -413,17 +471,14 @@ TECHNISCHE DATEN (technicalSpecs):
 - Feld "APN / ersetzt" mit ALLEN APNs kommagetrennt
 - Beispiel: {"APN / ersetzt": "616-00351, 616-00352, 616-00346"}`;
 
-  const variationPatterns = ['A', 'B', 'C', 'D', 'E'];
-  const randomPattern = variationPatterns[Math.floor(Math.random() * variationPatterns.length)];
-
   const userPrompt = `Produktdaten:
 ${JSON.stringify(productData, null, 2)}
 
 Kategorie: ${categoryConfig.name}
-Einleitungsmuster: ${randomPattern} (verwende dieses Muster für die Einleitung!)
+Textstil: ${styleVariant.toUpperCase()} (verwende diesen Stil für ALLE Texte!)
 
 Erstelle jetzt das JSON-Objekt mit Produkttexten basierend auf diesen Daten.
-Verwende Muster ${randomPattern} für den Einleitungstext.`;
+Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrieben.`;
 
   try {
     const response = await openai.chat.completions.create({
