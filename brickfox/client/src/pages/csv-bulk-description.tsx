@@ -516,8 +516,22 @@ export default function CSVBulkDescription() {
     try {
       const selectedColumns = exportColumns.filter(col => col.enabled);
       
+      // Nur Zeilen mit generierter Beschreibung exportieren
+      const productsWithDescription = bulkProducts.filter(p => 
+        p.produktbeschreibung_html && p.produktbeschreibung_html.trim().length > 0
+      );
+      
+      if (productsWithDescription.length === 0) {
+        toast({
+          title: "Keine Daten",
+          description: "Bitte zuerst Beschreibungen generieren",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const headers = selectedColumns.map(col => col.label);
-      const rows = bulkProducts.map(product => {
+      const rows = productsWithDescription.map(product => {
         return selectedColumns.map(col => {
           const value = product[col.key as keyof BulkProduct];
           const strValue = typeof value === 'string' ? value : String(value);
@@ -544,7 +558,7 @@ export default function CSVBulkDescription() {
 
       toast({
         title: "Export erfolgreich",
-        description: "CSV-Datei wurde heruntergeladen",
+        description: `${productsWithDescription.length} Zeilen mit Beschreibung exportiert`,
       });
     } catch (err) {
       setError('Fehler beim Herunterladen der CSV-Datei');
