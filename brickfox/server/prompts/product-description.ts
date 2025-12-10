@@ -67,28 +67,28 @@ PRODUKTTITEL-SCHEMA (SEO-KRITISCH)
 Das Feld "produktTitel" MUSS diesem Schema folgen:
 
 FÜR AKKUS/BATTERIEN:
-[Marke] [mAh-Wert] [Produktart] für [Gerät/Serie] – [weitere Attribute]
+[Marke] [Produktart] für [Gerät/Serie] – [Volt], [mAh]
 
 FÜR ANDERE PRODUKTE:
 [Marke] [Produktart] für [Gerät/Serie] – [messbare Attribute]
 
 REGELN:
 1. Marke IMMER ZUERST (ohne Sonderzeichen, kein Pipe)
-2. Bei Akkus: mAh-Wert DIREKT NACH der Marke (z.B. "Varta 1821 mAh Akku")
-3. Dann Produktart (Hauptkeyword)
-4. Gedankenstrich (–) trennt Geräte von Attributen
+2. Dann Produktart (Hauptkeyword)
+3. Gedankenstrich (–) trennt Geräte von Attributen
+4. Bei Akkus: Volt ZUERST, dann mAh (z.B. "– 3,82 Volt, 1821 mAh")
 5. Maximal 120 Zeichen
 6. Keine endlosen Gerätelisten im Titel
 
 ⚠️ AUSNAHME EMCOM:
 Wenn die Marke "EMCOM" ist, wird der Markenname KOMPLETT WEGGELASSEN!
 EMCOM ist die Eigenmarke und soll NIEMALS im Titel erscheinen.
-Bei EMCOM startet der Titel direkt mit mAh (bei Akkus) oder Produktart.
+Bei EMCOM startet der Titel direkt mit der Produktart.
 
 BEISPIELE:
-✅ Varta 1821 mAh Ersatzakku für Apple iPhone SE 2020 – 3,82 Volt
-✅ Cameron Sino 2100 mAh Akku für Samsung Galaxy S5 – Li-Ion
-✅ 1821 mAh Ersatzakku für Apple iPhone SE 2020 – 3,82 Volt (EMCOM = keine Marke!)
+✅ Varta Ersatzakku für Apple iPhone SE 2020 – 3,82 Volt, 1821 mAh
+✅ Cameron Sino Akku für Samsung Galaxy S5 – 3,85 Volt, 2100 mAh, Li-Ion
+✅ Ersatzakku für Apple iPhone SE 2020 – 3,82 Volt, 1821 mAh (EMCOM = keine Marke!)
 ✅ Hähnel USB-Datenkabel für Apple iPhone 4/4s, iPad – 1,5 m, weiß
 ✅ iFixit Werkzeug-Set für iPhone Reparatur – 17-teilig
 
@@ -97,7 +97,7 @@ VERBOTEN:
 ❌ | Hähnel (Pipe-Zeichen)
 ❌ Hähnel | USB-Datenkabel (Pipe irgendwo)
 ❌ EMCOM Akku für iPhone (EMCOM darf NIEMALS im Titel stehen!)
-❌ Ersatzakku 1821 mAh für iPhone (mAh muss VOR Produktart!)
+❌ Akku für iPhone – 1821 mAh, 3,82 Volt (Volt muss VOR mAh!)
 
 ═══════════════════════════════════════════════════════════════
 TECHNISCHE DATEN – ERLAUBTE FELDER (WHITELIST)
@@ -149,7 +149,7 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 }
 
 REGELN FÜR JSON-FELDER:
-- produktTitel: PFLICHT. Bei Akkus: [Marke] [mAh] [Produktart] für [Geräte] – [Attribute]. Marke + mAh IMMER am Anfang! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen (mAh bleibt am Anfang)!
+- produktTitel: PFLICHT. Schema: [Marke] [Produktart] für [Geräte] – [Volt], [mAh]. Marke IMMER am Anfang! Bei Akkus: Volt vor mAh! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen!
 - anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen, KEINE APN-Nummern, KEINE Phrasen doppelt!
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - vorteile: Max 5, müssen aus Daten ableitbar sein
