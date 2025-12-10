@@ -149,6 +149,11 @@ export const TECH_SPEC_WHITELIST: TechSpecField[] = [
     key: 'zertifizierung',
     label: 'Zertifizierung',
     aliases: ['certification', 'v zertifizierung', 'ce', 'rohs']
+  },
+  {
+    key: 'apn',
+    label: 'APN',
+    aliases: ['apple part number', 'apple-partnummer', 'partnummer', 'part number', 'teilenummer']
   }
 ];
 
