@@ -152,13 +152,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Dieser Ersatzakku für das iPhone 4S bietet zuverlässige Energie mit Li-Polymer Technologie. Bei nachlassender Akkuleistung ermöglicht er die volle Funktionalität des Geräts. Die integrierten Schutzschaltungen gewährleisten sicheren Betrieb."
 
-VORTEILE (SEHR KURZ! Max 18 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
-- "Lange Laufzeit"
-- "Hohe Qualität"
-- "Einfach einsetzbar"
-- "Sicher"
-- "Bewährt"
-VERBOTEN: Modellnummern, mAh, Ah, Volt! Vorteile SEHR KURZ halten!`;
+VORTEILE (Max 30 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
+- "Zuverlässige Stromversorgung"
+- "Lange Lebensdauer"
+- "Einfache Installation"
+- "Sichere Schutzschaltung"
+- "Geprüfte Qualität"
+VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
 
     case 'nutzen':
       return `STIL: NUTZENORIENTIERT & ALLTAGSNAH (Version B)
@@ -170,13 +170,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Wenn das iPhone 4S nicht mehr den ganzen Tag durchhält, schafft dieser Ersatzakku Abhilfe. Mit hochwertigen Li-Polymer Zellen liefert er zuverlässige Energie für den Alltag. Der Austausch ist unkompliziert und bringt die gewohnte Laufzeit zurück."
 
-VORTEILE (SEHR KURZ! Max 18 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
-- "Lange Laufzeit"
-- "Hohe Qualität"
-- "Einfach einsetzbar"
-- "Sicher"
-- "Bewährt"
-VERBOTEN: Modellnummern, mAh, Ah, Volt! Vorteile SEHR KURZ halten!`;
+VORTEILE (Max 30 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
+- "Zuverlässige Stromversorgung"
+- "Lange Lebensdauer"
+- "Einfache Installation"
+- "Sichere Schutzschaltung"
+- "Geprüfte Qualität"
+VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
 
     case 'premium':
       return `STIL: PREMIUM & BERATEND (Version C)
@@ -188,13 +188,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Für Anwender, die Wert auf geprüfte Qualität legen, ist dieser iPhone 4S Ersatzakku die richtige Wahl. Die hochwertigen Li-Polymer Zellen bieten konstante Leistung und lange Lebensdauer. Integrierte Schutzschaltungen sorgen für sicheren Betrieb im täglichen Einsatz."
 
-VORTEILE (SEHR KURZ! Max 18 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
-- "Lange Laufzeit"
-- "Hohe Qualität"
-- "Einfach einsetzbar"
-- "Sicher"
-- "Bewährt"
-VERBOTEN: Modellnummern, mAh, Ah, Volt! Vorteile SEHR KURZ halten!`;
+VORTEILE (Max 30 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
+- "Zuverlässige Stromversorgung"
+- "Lange Lebensdauer"
+- "Einfache Installation"
+- "Sichere Schutzschaltung"
+- "Geprüfte Qualität"
+VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
   }
 }
 
@@ -379,13 +379,13 @@ WEITERE JSON-FELDER:
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
-- uspBullets: Max 5 SEHR KURZE Vorteile (max 18 Zeichen! OHNE Modelle, mAh, Volt!). Beispiele:
-  "Lange Laufzeit"
-  "Hohe Qualität"
-  "Einfach einsetzbar"
-  "Sicher"
-  "Bewährt"
-  VERBOTEN: Modellnummern, mAh, Ah, Volt! MUSS in eine Zeile passen!
+- uspBullets: Max 5 Vorteile (max 30 Zeichen! OHNE Modelle, mAh, Volt!). Beispiele:
+  "Zuverlässige Stromversorgung"
+  "Lange Lebensdauer"
+  "Einfache Installation"
+  "Sichere Schutzschaltung"
+  "Geprüfte Qualität"
+  VERBOTEN: Modellnummern, mAh, Ah, Volt!
 
 ⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
 Bei BATTERIEN (CR2032, AA, AAA): "passend zu", "geeignet für", "ersetzt" - NICHT "kompatibel"!
@@ -571,13 +571,13 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       return true;
     });
     
-    // Fallback-Vorteile falls alle gefiltert wurden (SEHR KURZ - max 20 Zeichen!)
+    // Fallback-Vorteile falls alle gefiltert wurden (max 30 Zeichen)
     const fallbackVorteile = [
-      "Lange Laufzeit",
-      "Hohe Qualität",
-      "Einfach einsetzbar",
-      "Sicher im Betrieb",
-      "Bewährt"
+      "Zuverlässige Stromversorgung",
+      "Lange Lebensdauer",
+      "Einfache Installation",
+      "Sichere Schutzschaltung",
+      "Geprüfte Qualität"
     ];
     
     const vorteile = filteredVorteile.length >= 3 
