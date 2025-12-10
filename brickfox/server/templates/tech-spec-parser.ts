@@ -260,6 +260,57 @@ export function extractTechSpecsFromStructured(
 }
 
 /**
+ * Extrahiert BrickFox-spezifische Attribute aus CSV-Daten
+ * z.B. p_attributes[akku_v][de] -> Spannung, p_attributes[akku_mah][de] -> Kapazität
+ */
+function extractBrickfoxAttributes(structuredData: any): Record<string, string> {
+  const specs: Record<string, string> = {};
+  
+  if (!structuredData) return specs;
+  
+  // Durchsuche alle Spalten nach p_attributes Pattern
+  for (const [key, value] of Object.entries(structuredData)) {
+    if (!value || typeof value !== 'string' || value.trim() === '') continue;
+    
+    const keyLower = key.toLowerCase();
+    
+    // Spannung: p_attributes[akku_v][de]
+    if (keyLower.includes('akku_v') || keyLower.includes('voltage') || keyLower.includes('spannung')) {
+      const correctedVoltage = correctVoltageValue(value);
+      specs['Spannung'] = correctedVoltage;
+      console.log(`⚡ BrickFox Spannung: ${value} → ${correctedVoltage}`);
+    }
+    
+    // Kapazität: p_attributes[akku_mah][de] oder ähnlich
+    if (keyLower.includes('akku_mah') || keyLower.includes('capacity') || 
+        (keyLower.includes('kapazit') && !specs['Kapazität'])) {
+      // Nur mAh verwenden, NICHT Wh erfinden!
+      let capacityValue = value.trim();
+      // Entferne "Wh" falls vorhanden und nicht explizit in CSV
+      if (!value.toLowerCase().includes('wh') && !value.toLowerCase().includes('mah')) {
+        // Numerischer Wert ohne Einheit - als mAh interpretieren
+        capacityValue = `${capacityValue} mAh`;
+      } else if (value.toLowerCase().includes('mah')) {
+        capacityValue = value;
+      }
+      // NICHT als Wh interpretieren wenn es nicht explizit drin steht!
+      if (!value.toLowerCase().includes('wh')) {
+        specs['Kapazität'] = capacityValue;
+        console.log(`🔋 BrickFox Kapazität: ${value} → ${capacityValue}`);
+      }
+    }
+    
+    // Akkutyp/Chemie: p_attributes[akku_chemie][de]
+    if (keyLower.includes('chemie') || keyLower.includes('chemistry') || keyLower.includes('akku_typ')) {
+      specs['Akkutyp'] = value.trim();
+      console.log(`🔬 BrickFox Akkutyp: ${value}`);
+    }
+  }
+  
+  return specs;
+}
+
+/**
  * Kombinierte Extraktion: Strukturierte Daten > Text-Parsing
  */
 export function extractTechSpecs1to1(
@@ -269,14 +320,26 @@ export function extractTechSpecs1to1(
 ): Record<string, string> {
   let specs: Record<string, string> = {};
   
-  // Priorität 1: Strukturierte Daten (wenn vorhanden)
+  // HÖCHSTE PRIORITÄT: BrickFox-Attribute direkt aus CSV
+  const brickfoxSpecs = extractBrickfoxAttributes(structuredData);
+  if (Object.keys(brickfoxSpecs).length > 0) {
+    console.log(`📊 Using ${Object.keys(brickfoxSpecs).length} specs from BrickFox attributes`);
+    specs = { ...brickfoxSpecs };
+  }
+  
+  // Priorität 2: Strukturierte Daten (wenn vorhanden)
   const structuredResult = extractTechSpecsFromStructured(structuredData, categoryConfig);
   if (structuredResult.source !== 'none') {
     console.log(`📊 Using ${Object.keys(structuredResult.specs).length} specs from structured data`);
-    specs = { ...structuredResult.specs };
+    // BrickFox-Specs haben Vorrang, nur fehlende ergänzen
+    for (const [key, value] of Object.entries(structuredResult.specs)) {
+      if (!specs[key]) {
+        specs[key] = value;
+      }
+    }
   }
   
-  // Priorität 2: Text-Parsing (als Ergänzung, nicht als Ersatz)
+  // Priorität 3: Text-Parsing (als Ergänzung, nicht als Ersatz)
   const textResult = parseTechSpecsFromText(extractedText, categoryConfig);
   if (textResult.source !== 'none') {
     // Ergänze fehlende Felder aus Text-Parsing (z.B. APN)
@@ -295,11 +358,12 @@ export function extractTechSpecs1to1(
                        structuredData['P_name[de]'] || 
                        structuredData['p_name[de]'] ||
                        structuredData['P Name'] ||
+                       structuredData['p_name[de]'] ||
                        structuredData.produktname || 
                        structuredData.name || '';
     
     // Pattern 1: "APN: 616-0579, 616-0580" oder "APN 616-0579"
-    const apnMatch = productName.match(/APN[:\s]+([0-9\-,\s]+)/i);
+    let apnMatch = productName.match(/APN[:\s]+([0-9\-,\s]+)/i);
     if (apnMatch) {
       specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ');
       console.log(`✅ APN aus Produktname: ${specs['APN']}`);
@@ -314,12 +378,49 @@ export function extractTechSpecs1to1(
       }
     }
     
-    // Pattern 3: Suche auch im extractedText nach APN falls noch nicht gefunden
+    // Pattern 3: Suche in ALLEN Spalten nach APN
+    if (!specs['APN']) {
+      for (const [key, value] of Object.entries(structuredData)) {
+        if (typeof value === 'string' && value.includes('APN')) {
+          const apnInValue = value.match(/APN[:\s]*([0-9\-,\s]+)/i);
+          if (apnInValue) {
+            specs['APN'] = apnInValue[1].trim().replace(/\s+/g, ' ');
+            console.log(`✅ APN aus Spalte ${key}: ${specs['APN']}`);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Pattern 4: Suche auch im extractedText nach APN falls noch nicht gefunden
     if (!specs['APN'] && extractedText) {
       const textApnMatch = extractedText.match(/APN[:\s]+([0-9\-,\s]+)/i);
       if (textApnMatch) {
         specs['APN'] = textApnMatch[1].trim().replace(/\s+/g, ' ');
         console.log(`✅ APN aus extractedText: ${specs['APN']}`);
+      }
+    }
+  }
+  
+  // WICHTIG: Entferne jegliche "Wh" Kapazität wenn nicht explizit in CSV
+  if (specs['Kapazität'] && specs['Kapazität'].toLowerCase().includes('wh')) {
+    // Prüfe ob Wh wirklich in den Originaldaten war
+    let hasWhInOriginal = false;
+    for (const [key, value] of Object.entries(structuredData || {})) {
+      if (typeof value === 'string' && value.toLowerCase().includes('wh')) {
+        hasWhInOriginal = true;
+        break;
+      }
+    }
+    if (!hasWhInOriginal) {
+      // Wh wurde fälschlicherweise hinzugefügt - entfernen oder zu mAh ändern
+      const numericPart = specs['Kapazität'].replace(/[^\d.,]/g, '');
+      if (numericPart) {
+        specs['Kapazität'] = `${numericPart} mAh`;
+        console.log(`🔋 Wh zu mAh korrigiert: ${specs['Kapazität']}`);
+      } else {
+        delete specs['Kapazität'];
+        console.log(`🔋 Kapazität mit falschem Wh entfernt`);
       }
     }
   }
