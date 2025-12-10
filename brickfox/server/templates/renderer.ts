@@ -586,10 +586,11 @@ function renderMediaMarktLayout(data: {
     }
   }
   
+  // Tabelle mit dynamischer Spaltenbreite: erste Spalte passt sich an längsten Label an
   const techTableHtml = allSpecs.length > 0
     ? `<h2>Technische Daten</h2>
-<table>
-${allSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 1em;">${e(spec.label)}</td><td>${e(spec.value)}</td></tr>`).join('\n')}
+<table style="width: auto; border-collapse: collapse;">
+${allSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 2em; vertical-align: top;">${e(spec.label)}</td><td style="vertical-align: top;">${e(spec.value)}</td></tr>`).join('\n')}
 </table>`
     : '';
 
