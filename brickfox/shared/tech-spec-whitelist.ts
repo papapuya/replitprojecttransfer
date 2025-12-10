@@ -64,7 +64,7 @@ export const TECH_SPEC_WHITELIST: TechSpecField[] = [
   {
     key: 'akkutyp',
     label: 'Akkutyp',
-    aliases: ['battery type', 'zellenchemie', 'chemie', 'v chemie/system', 'batteriesystem']
+    aliases: ['battery type', 'zellenchemie', 'chemie', 'v chemie/system', 'batteriesystem', 'zelltyp', 'zellentyp', 'akku-typ', 'batterietyp']
   },
   {
     key: 'ladeschnittstelle',
