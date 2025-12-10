@@ -36,6 +36,7 @@ import Success from "@/pages/success";
 import Account from "@/pages/account";
 import NotFound from "@/pages/not-found";
 import FieldMappingDemo from "@/pages/field-mapping-demo";
+import CSVParser from "@/pages/csv-parser";
 
 function Router() {
   return (
@@ -132,6 +133,11 @@ function Router() {
       <Route path="/field-mapping-demo">
         <ProtectedRoute>
           <FieldMappingDemo />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/csv-parser">
+        <ProtectedRoute>
+          <CSVParser />
         </ProtectedRoute>
       </Route>
       
