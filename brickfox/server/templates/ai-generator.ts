@@ -368,6 +368,8 @@ PRODUKTTITEL-REGELN (produktTitel)
 - DARF NICHT wörtlich in der Beschreibung wiederholt werden
 - Keine Aufzählungen im Titel
 - Keine Sätze, sondern Titelstruktur
+- VERBOTEN im Titel: "Zubehör", "hochwertig", "premium", "professionell", "original", "exklusiv"
+- Volt IMMER ausgeschrieben: "3,7 Volt" statt "3,7 V"
 
 WEITERE JSON-FELDER:
 - anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen!

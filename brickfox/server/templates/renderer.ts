@@ -211,8 +211,20 @@ export function renderProductHtml(options: RenderOptions): string {
   produktTitel = removeEmcomBrand(produktTitel);
   
   // Entferne falsche Wh-Angaben aus dem Titel (nur wenn es keine echte Wh-Kapazität ist)
-  // z.B. "37 Wh" wenn es eigentlich mAh sein sollte
   produktTitel = produktTitel.replace(/\s*–?\s*\d+\s*Wh\b/gi, '').trim();
+  
+  // Entferne "Zubehör" und Marketing-Floskeln aus dem Produktnamen
+  produktTitel = produktTitel
+    .replace(/\bZubeh[öo]r\b/gi, '')
+    .replace(/\bhochwertig(e|er|es|en|em)?\b/gi, '')
+    .replace(/\bpremium\b/gi, '')
+    .replace(/\bprofessionell(e|er|es|en|em)?\b/gi, '')
+    .replace(/\boriginal\b/gi, '')
+    .replace(/\bexklusiv(e|er|es|en|em)?\b/gi, '')
+    .trim();
+  
+  // "V" durch "Volt" ersetzen im Produktnamen (z.B. "3,7 V" -> "3,7 Volt")
+  produktTitel = produktTitel.replace(/(\d+[,.]?\d*)\s*V\b/g, '$1 Volt');
   
   // Entferne doppelte Leerzeichen und – am Ende
   produktTitel = produktTitel.replace(/\s+/g, ' ').replace(/\s*–\s*$/, '').trim();
