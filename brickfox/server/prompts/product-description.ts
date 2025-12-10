@@ -64,15 +64,22 @@ REGELN:
 4. Maximal 120 Zeichen
 5. Keine endlosen Gerätelisten im Titel
 
+⚠️ AUSNAHME EMCOM:
+Wenn die Marke "EMCOM" ist, wird der Markenname WEGGELASSEN!
+EMCOM ist die Eigenmarke und soll NICHT im Titel erscheinen.
+Bei EMCOM startet der Titel direkt mit der Produktart.
+
 BEISPIELE:
 ✅ Hähnel USB-Datenkabel für Apple iPhone 4/4s, 3G/3GS, iPad, iPod – 1,5 m, weiß
-✅ EMCOM Ersatzakku für Apple iPhone SE 2020 – 1821 mAh, 3,82 V
+✅ Ersatzakku für Apple iPhone SE 2020 – 1821 mAh, 3,82 V (EMCOM-Produkt, ohne Marke!)
+✅ Akku für Apple iPhone 4S – 37 Wh, Li-Polymer (EMCOM-Produkt, ohne Marke!)
 ✅ iFixit Werkzeug-Set für iPhone Reparatur – 17-teilig
 
 VERBOTEN:
 ❌ USB-Datenkabel für iPhone | Hähnel (Marke am Ende)
 ❌ | Hähnel (Pipe-Zeichen)
 ❌ Hähnel | USB-Datenkabel (Pipe irgendwo)
+❌ EMCOM Akku für iPhone (EMCOM soll NICHT im Titel stehen!)
 
 ═══════════════════════════════════════════════════════════════
 TECHNISCHE DATEN – ERLAUBTE FELDER (WHITELIST)
