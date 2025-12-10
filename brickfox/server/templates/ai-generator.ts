@@ -152,13 +152,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Dieser Ersatzakku für das iPhone 4S bietet zuverlässige Energie mit Li-Polymer Technologie. Bei nachlassender Akkuleistung ermöglicht er die volle Funktionalität des Geräts. Die integrierten Schutzschaltungen gewährleisten sicheren Betrieb."
 
-VORTEILE (NUR allgemeine Nutzen, KEINE Modelle/mAh/Volt):
-- "Lange Laufzeit für den Alltag"
-- "Hochwertige Zelltechnologie für zuverlässige Leistung"
-- "Einfache Montage für schnellen Austausch"
-- "Integrierte Schutzschaltungen"
+VORTEILE (KURZ! Max 25 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
+- "Lange Laufzeit"
+- "Zuverlässige Leistung"
+- "Einfache Montage"
+- "Integrierte Schutzschaltung"
 - "Geprüfte Qualität"
-VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
+VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen! Vorteile müssen KURZ sein!`;
 
     case 'nutzen':
       return `STIL: NUTZENORIENTIERT & ALLTAGSNAH (Version B)
@@ -170,13 +170,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Wenn das iPhone 4S nicht mehr den ganzen Tag durchhält, schafft dieser Ersatzakku Abhilfe. Mit hochwertigen Li-Polymer Zellen liefert er zuverlässige Energie für den Alltag. Der Austausch ist unkompliziert und bringt die gewohnte Laufzeit zurück."
 
-VORTEILE (NUR allgemeine Nutzen, KEINE Modelle/mAh/Volt):
-- "Zuverlässige Energieversorgung im Alltag"
-- "Hochwertige Zelltechnologie für konstante Leistung"
-- "Unkomplizierter Austausch"
-- "Mit integrierten Schutzschaltungen"
+VORTEILE (KURZ! Max 25 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
+- "Lange Laufzeit"
+- "Konstante Leistung"
+- "Einfacher Austausch"
+- "Integrierte Schutzschaltung"
 - "Bewährte Qualität"
-VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
+VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen! Vorteile müssen KURZ sein!`;
 
     case 'premium':
       return `STIL: PREMIUM & BERATEND (Version C)
@@ -188,13 +188,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Für Anwender, die Wert auf geprüfte Qualität legen, ist dieser iPhone 4S Ersatzakku die richtige Wahl. Die hochwertigen Li-Polymer Zellen bieten konstante Leistung und lange Lebensdauer. Integrierte Schutzschaltungen sorgen für sicheren Betrieb im täglichen Einsatz."
 
-VORTEILE (NUR allgemeine Nutzen, KEINE Modelle/mAh/Volt):
-- "Premium-Zelltechnologie für maximale Lebensdauer"
-- "Konstante und zuverlässige Leistung"
-- "Professioneller Austausch in wenigen Minuten"
-- "Integrierte Schutzschaltungen für sicheren Betrieb"
-- "Geprüfte Qualität für anspruchsvolle Anwender"
-VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
+VORTEILE (KURZ! Max 25 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
+- "Premium-Zelltechnologie"
+- "Konstante Leistung"
+- "Schneller Austausch"
+- "Integrierte Schutzschaltung"
+- "Geprüfte Qualität"
+VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen! Vorteile müssen KURZ sein!`;
   }
 }
 
@@ -505,8 +505,28 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     const produktTyp = parsedContent.produktTyp || 'elektronik';
     const produktTitel = parsedContent.produktTitel || '';
     const einleitung = parsedContent.einleitung || '';
-    const anwendung = parsedContent.anwendung || '';
-    const beschreibung = parsedContent.narrative || parsedContent.beschreibung || '';
+    
+    // POST-PROCESSOR: Entferne technische Daten (mAh, Ah, Volt) aus Fließtext
+    const cleanTechDataFromText = (text: string): string => {
+      if (!text) return text;
+      let cleaned = text;
+      // Entferne Volt-Angaben
+      cleaned = cleaned.replace(/\b\d+[.,]?\d*\s*V(olt)?\b/gi, '');
+      // Entferne mAh-Angaben
+      cleaned = cleaned.replace(/\b\d+\s*mAh\b/gi, '');
+      // Entferne Ah-Angaben
+      cleaned = cleaned.replace(/\b\d+[.,]?\d*\s*Ah\b/gi, '');
+      // Entferne Wh-Angaben
+      cleaned = cleaned.replace(/\b\d+[.,]?\d*\s*Wh\b/gi, '');
+      // Doppelte Leerzeichen bereinigen
+      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      // Doppelte Kommas/Punkte bereinigen
+      cleaned = cleaned.replace(/,\s*,/g, ',').replace(/\.\s*\./g, '.');
+      return cleaned;
+    };
+    
+    const anwendung = cleanTechDataFromText(parsedContent.anwendung || '');
+    const beschreibung = cleanTechDataFromText(parsedContent.narrative || parsedContent.beschreibung || '');
     const tagline = parsedContent.tagline || '';
     
     const rawVorteile = parsedContent.vorteile || parsedContent.uspBullets || [];
@@ -540,12 +560,12 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       return true;
     });
     
-    // Fallback-Vorteile falls alle gefiltert wurden
+    // Fallback-Vorteile falls alle gefiltert wurden (KURZ - max 30 Zeichen!)
     const fallbackVorteile = [
-      "Lange Laufzeit für den Alltag",
-      "Hochwertige Zelltechnologie",
+      "Lange Laufzeit",
+      "Zuverlässige Leistung",
       "Einfache Montage",
-      "Integrierte Schutzschaltungen",
+      "Integrierte Schutzschaltung",
       "Geprüfte Qualität"
     ];
     
