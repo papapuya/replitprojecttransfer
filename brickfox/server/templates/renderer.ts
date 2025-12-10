@@ -614,8 +614,14 @@ function renderMediaMarktLayout(data: {
   
   // Finale Filterung: Entferne alle Zeilen mit leerem Wert
   const finalSpecs = allSpecs.filter(spec => {
-    const val = (spec.value || '').trim();
-    return val !== '' && val !== '-' && val !== '0' && val !== 'n/a';
+    const val = (spec.value || '').trim().toLowerCase();
+    // Leere oder ungültige Werte filtern
+    if (!val || val === '' || val === '-' || val === '0' || val === 'n/a' || 
+        val === 'null' || val === 'undefined' || val === 'nicht angegeben' ||
+        val === 'keine angabe' || val === 'unbekannt' || val.length === 0) {
+      return false;
+    }
+    return true;
   });
   
   // Tabelle mit dynamischer Spaltenbreite: erste Spalte passt sich an längsten Label an

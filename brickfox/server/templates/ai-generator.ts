@@ -385,7 +385,8 @@ WEITERE JSON-FELDER:
   "Erhöht die Laufzeit Ihres Geräts spürbar"
   "Lösung für häufige Leistungsabfälle"
   KEINE generischen Phrasen wie "Hochwertig" oder "Leistungsstark"!
-- technicalSpecs: NUR bei Akkus (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik
+- technicalSpecs: NUR bei Akkus (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik.
+  WICHTIG: Nur Felder mit ECHTEN Werten aus der CSV eintragen! KEINE leeren Felder wie "Kapazität": "" generieren!
 - packageContents: PFLICHT. Mindestens das Produkt selbst
 - zeigeTabelle: true NUR bei Akkus, sonst false
 
