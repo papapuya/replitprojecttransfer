@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+local.db
+local.db-shm
+local.db-wal
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+migrations/
+attached_assets/
+uploads/

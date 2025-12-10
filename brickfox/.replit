@@ -1,0 +1,121 @@
+modules = ["python-3.11", "nodejs-20", "postgresql-16"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+packages = ["unzip", "chromium", "nss", "freetype", "harfbuzz", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libxcb", "mesa", "glib", "gtk3", "pango", "alsa-lib", "cairo", "cups", "dbus"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "App"
+
+[[workflows.workflow]]
+name = "App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 33119
+externalPort = 5000
+
+[[ports]]
+localPort = 33655
+externalPort = 8008
+
+[[ports]]
+localPort = 33713
+externalPort = 9000
+
+[[ports]]
+localPort = 34679
+externalPort = 6000
+
+[[ports]]
+localPort = 34689
+externalPort = 3003
+
+[[ports]]
+localPort = 35445
+externalPort = 4200
+
+[[ports]]
+localPort = 35485
+externalPort = 8080
+
+[[ports]]
+localPort = 38143
+externalPort = 6800
+
+[[ports]]
+localPort = 39211
+externalPort = 3002
+
+[[ports]]
+localPort = 40997
+externalPort = 8081
+
+[[ports]]
+localPort = 41175
+externalPort = 5173
+
+[[ports]]
+localPort = 41399
+externalPort = 8000
+
+[[ports]]
+localPort = 44675
+externalPort = 8099
+
+[[ports]]
+localPort = 44933
+externalPort = 3001
+
+[[ports]]
+localPort = 45729
+externalPort = 3000
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["npm", "start"]
+build = ["npm", "run", "build"]
+
+[userenv]
+
+[userenv.shared]
+PIXI_API_URL = "https://akkutools.laptopakku.eu/api/pixi/pixiItemSearch"
+PIXI_AUTH_TOKEN = "GKr7pTd-Fy6xJQb8r2nM4ks9tzdgvXNc2ZBLRw3qDPVhy_U8aaXr4LfNSweRKtqq"
+VITE_SUPABASE_URL = "https://lxemqwvdaxzeldpjmxoc.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZW1xd3ZkYXh6ZWxkcGpteG9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTM3MDgsImV4cCI6MjA3NzM4OTcwOH0.Skn1wZFzXEIbYi-CEE7VxJfL2zzkuHjAoSC6eRmM6Ts"
+DATABASE_URL = "postgresql://postgres:password@helium/heliumdb?sslmode=disable"
+SUPABASE_DB_PASSWORD = "Schneekoenigin1978#"
+ADMIN_EMAIL = "admin@pimpilot.de"
+ADMIN_PASSWORD = "Admin040582"
+
+[userenv.development]
+DEV_DATABASE_URL = "postgresql://postgres:password@helium/heliumdb?sslmode=disable"
+NODE_ENV = "development"
+DEBUG_MODE = "false"
+
+[userenv.production]
+PROD_DATABASE_URL = "postgresql://postgres.lxemqwvdaxzeldpjmxoc:Schneekoenigin1978#@db.lxemqwvdaxzeldpjmxoc.supabase.co:6543/postgres?sslmode=require"
+NODE_ENV = "production"

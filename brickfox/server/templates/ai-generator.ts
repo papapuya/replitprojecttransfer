@@ -1,0 +1,502 @@
+import OpenAI from 'openai';
+import { ProductCopyPayload } from './types';
+import { ProductCategoryConfig } from './category-config';
+import { createOrchestrator } from '../prompts/orchestrator';
+import type { PromptContext } from '../prompts/types';
+import { processProductCopy } from './post-processor';
+import { extractTechSpecs1to1 } from './tech-spec-parser';
+
+export async function generateProductCopy(
+  productData: any,
+  categoryConfig: ProductCategoryConfig,
+  openaiKey: string,
+  openaiBaseUrl?: string,
+  model: string = 'gpt-4o-mini',
+  useModularPrompts: boolean = false
+): Promise<ProductCopyPayload> {
+  if (useModularPrompts || categoryConfig.subpromptPreferences?.useModularPrompts) {
+    return await generateProductCopyModular(productData, categoryConfig, openaiKey, openaiBaseUrl, model);
+  } else {
+    return await generateProductCopyMonolithic(productData, categoryConfig, openaiKey, openaiBaseUrl, model);
+  }
+}
+
+async function generateProductCopyModular(
+  productData: any,
+  categoryConfig: ProductCategoryConfig,
+  openaiKey: string,
+  openaiBaseUrl?: string,
+  model: string = 'gpt-4o-mini'
+): Promise<ProductCopyPayload> {
+  console.log(`🔧 Using MODULAR subprompt architecture with ${model}`);
+
+  const orchestrator = createOrchestrator({
+    openaiKey,
+    openaiBaseUrl,
+    model, // Pass model to orchestrator
+  });
+
+  const context: PromptContext = {
+    categoryName: categoryConfig.name,
+    categoryDescription: categoryConfig.description,
+    productData,
+    availableFields: categoryConfig.technicalFields.map(f => 
+      `${f.label}${f.unit ? ` (${f.unit})` : ''}`
+    ),
+    uspTemplates: categoryConfig.uspTemplates,
+  };
+
+  try {
+    const result = await orchestrator.generateFullProductCopy(context);
+
+    // POST-PROCESSING: Validiere und bereinige AI-Output
+    const processed = processProductCopy({
+      narrative: result.narrative,
+      uspBullets: result.uspBullets,
+    });
+
+    if (processed.validationIssues.length > 0) {
+      console.log('⚠️ Post-processing applied:', processed.validationIssues);
+    }
+
+    // 1:1 TECH SPECS EXTRAKTION: Aus Vision-Text oder strukturierten Daten
+    const directTechSpecs = extractTechSpecs1to1(
+      productData.extractedText || '',
+      productData.structuredData || productData,
+      categoryConfig
+    );
+    
+    // Wenn direkte Extraktion erfolgreich war, nutze diese (überschreibt AI)
+    const mergedTechSpecs = {
+      ...result.technicalSpecs,      // AI-generierte Specs (Fallback)
+      ...directTechSpecs,             // 1:1 extrahierte Specs (überschreiben AI)
+    };
+
+    console.log(`📊 Tech Specs: ${Object.keys(mergedTechSpecs).length} total (${Object.keys(directTechSpecs).length} direct 1:1, ${Object.keys(result.technicalSpecs).length} AI fallback)`);
+
+    return {
+      tagline: result.tagline, // Neue Tagline für h2
+      narrative: processed.narrative,
+      uspBullets: processed.uspBullets.length >= 5 
+        ? processed.uspBullets.slice(0, 5)
+        : [...processed.uspBullets, ...categoryConfig.uspTemplates].slice(0, 5),
+      technicalSpecs: mergedTechSpecs,
+      safetyNotice: result.safetyNotice || categoryConfig.safetyNotice,
+      packageContents: result.packageContents,
+      productHighlights: categoryConfig.productHighlights.slice(0, 5),
+    };
+  } catch (error) {
+    console.error('Modular generation failed, using fallback:', error);
+    return getFallbackCopy(categoryConfig);
+  }
+}
+
+function extractSupplierTechnicalData(
+  productData: any,
+  categoryConfig: ProductCategoryConfig
+): Record<string, string> {
+  const extracted: Record<string, string> = {};
+  
+  // Prüfe auf strukturierte CSV/Excel-Daten
+  if (productData.technicalData || productData.technicalSpecs || productData.specs) {
+    const source = productData.technicalData || productData.technicalSpecs || productData.specs;
+    
+    for (const field of categoryConfig.technicalFields) {
+      const value = source[field.label] || source[field.key];
+      if (value && value !== 'Nicht angegeben' && value !== 'Nicht sichtbar') {
+        extracted[field.label] = value;
+        console.log(`✅ 1:1 Übernahme: ${field.label} = ${value}`);
+      }
+    }
+  }
+  
+  // Prüfe auf direkte Felder im productData (z.B. von CSV-Import)
+  for (const field of categoryConfig.technicalFields) {
+    if (!extracted[field.label]) {
+      const value = productData[field.label] || productData[field.key];
+      if (value && value !== 'Nicht angegeben' && value !== 'Nicht sichtbar') {
+        extracted[field.label] = value;
+        console.log(`✅ 1:1 Übernahme: ${field.label} = ${value}`);
+      }
+    }
+  }
+  
+  return extracted;
+}
+
+async function generateProductCopyMonolithic(
+  productData: any,
+  categoryConfig: ProductCategoryConfig,
+  openaiKey: string,
+  openaiBaseUrl?: string,
+  model: string = 'gpt-4o-mini'
+): Promise<ProductCopyPayload> {
+  console.log(`📦 Using NEW SACHLICH prompt with ${model}`);
+
+  const openai = new OpenAI({
+    apiKey: openaiKey,
+    baseURL: openaiBaseUrl,
+  });
+
+  const categoryId = categoryConfig.id;
+  const isToolOrAccessory = categoryId === 'tool' || categoryId === 'accessory';
+  const isBatteryOrCharger = categoryId === 'battery' || categoryId === 'charger' || categoryId === 'flashlight';
+
+  const categorySpecificInstructions = isToolOrAccessory 
+    ? `
+═══════════════════════════════════════════════════════════════
+KATEGORIE: WERKZEUG / ZUBEHÖR (Typ C)
+═══════════════════════════════════════════════════════════════
+Bei Werkzeugen und Zubehör:
+- "produktTyp": "werkzeug"
+- "werkzeuguebersicht": Liste der enthaltenen Werkzeuge als Array (WICHTIG!)
+  z.B. ["Schraubendreher (Pentalobe)", "Kreuzschlitz-Schraubendreher", "Hebelwerkzeug", "Plektron"]
+- "kompatibilitaet": Liste der kompatiblen Geräte/Modelle
+- "technicalSpecs": LEER {} - keine Tabelle bei Werkzeugen!
+- Extrahiere Werkzeuge aus Produktnamen/Beschreibung`
+    : isBatteryOrCharger 
+    ? `
+═══════════════════════════════════════════════════════════════
+KATEGORIE: AKKU / BATTERIE (Typ A)
+═══════════════════════════════════════════════════════════════
+- "produktTyp": "akku"
+- "technicalSpecs": Technische Daten als Objekt (Spannung, Kapazität, etc.)
+- "kompatibilitaet": Kompatible Geräte als Array
+- "zeigeTabelle": true`
+    : `
+═══════════════════════════════════════════════════════════════
+KATEGORIE: ELEKTRONIK / ZUBEHÖR (Typ B)
+═══════════════════════════════════════════════════════════════
+- "produktTyp": "elektronik"
+- "technicalSpecs": LEER {} - keine Tabelle!
+- "kompatibilitaet": Kompatible Geräte als Array
+- "zeigeTabelle": false`;
+
+  const showTableHint = !isToolOrAccessory;
+
+  const systemPrompt = `Du bist ein deterministischer PIM- & SEO-Textgenerator für akkushop.de.
+
+Deine Aufgabe ist es, strukturierte, SEO-optimierte HTML-Produktbeschreibungen zu erzeugen
+ausschließlich auf Basis der gelieferten Produktdaten.
+
+❗ Du darfst keine Fakten erfinden.
+❗ Du darfst keine Felder interpretieren, die leer sind.
+❗ Du darfst kein freies Marketing-Geschwafel erzeugen.
+
+═══════════════════════════════════════════════════════════════
+GRUNDREGELN (WICHTIG)
+═══════════════════════════════════════════════════════════════
+- Die Struktur ist IMMER gleich
+- Der Inhalt variiert nur auf Datenebene
+- Nie mehr als eine H1
+- Keine Bold-Tags im Fließtext
+- ✅ Häkchen nur in der Vorteile-Sektion
+- Keine technischen Tabellen ohne echte technische Werte
+
+═══════════════════════════════════════════════════════════════
+H1 / PRODUKTTITEL – EINHEITLICHES SCHEMA (SEO-KRITISCH)
+═══════════════════════════════════════════════════════════════
+SCHEMA: [Marke] [Produktart] für [Gerät/Serie], [weitere Geräte] – [messbare Attribute]
+
+⚠️ WICHTIGSTE REGEL: MARKE IMMER ZUERST! ⚠️
+
+FESTE REGELN:
+1. MARKE IMMER ZUERST (ohne Sonderzeichen, KEIN Pipe!)
+2. Dann Produktart (Hauptkeyword)
+3. Gedankenstrich (–) trennt Geräte von messbaren Attributen
+4. KEIN Pipe-Symbol (|) im Titel!
+5. KEINE endlosen Gerätelisten im Titel → gehören in Beschreibung
+6. Maximal 120 Zeichen
+
+MESSBARE ATTRIBUTE (gehören in Titel UND Tabelle):
+✅ Länge (m, cm)
+✅ Spannung (V)
+✅ Kapazität (mAh, Ah)
+✅ Stromstärke (A)
+✅ Leistung (W)
+✅ Gewicht (g, kg)
+✅ Maße (mm, cm)
+✅ Farbe
+✅ Zelltyp/Chemie (Li-Ion, Li-Po)
+
+NICHT MESSBAR (gehört NICHT in Titel):
+❌ "hochwertig", "premium", "original"
+❌ "kompatibel mit" (ohne konkretes Gerät)
+❌ Marketingbegriffe
+❌ Pipe-Symbol (|)
+
+BEISPIELE (MARKE ZUERST!):
+✅ "Hähnel USB-Datenkabel für Apple iPhone 4/4s, 3G/3GS, iPad, iPod – 1,5 m, weiß"
+✅ "EMCOM Ersatzakku für Apple iPhone SE 2020 – 1821 mAh, 3,82 V"
+✅ "iFixit Werkzeug-Set für iPhone Reparatur – 17-teilig"
+
+VERBOTEN (Marke am Ende):
+❌ "USB-Datenkabel für iPhone | Hähnel"
+❌ "Ersatzakku für iPhone SE | EMCOM"
+
+HARTE REGEL:
+Was im Titel messbar steht, MUSS auch in technicalSpecs erfasst sein!
+
+═══════════════════════════════════════════════════════════════
+VERBOTENE SACHEN
+═══════════════════════════════════════════════════════════════
+❌ Kein "ideal für jeden Einsatz"
+❌ Kein "hochwertig" ohne Begründung
+❌ Kein "leistungsstark", wenn keine Werte
+❌ Keine Emojis außerhalb der Vorteile
+❌ Keine Meta-Texte
+❌ Kein Keyword-Stuffing
+❌ Keine Bold-Tags im Fließtext
+
+═══════════════════════════════════════════════════════════════
+TECHNISCHE DATEN – ENTSCHEIDUNGSREGEL
+═══════════════════════════════════════════════════════════════
+${showTableHint 
+  ? '✅ Dieses Produkt SOLL eine technische Datentabelle haben (Akku/Ladegerät/Taschenlampe)' 
+  : '❌ Dieses Produkt soll KEINE technische Datentabelle haben (Werkzeug/Zubehör)'}
+
+✅ Tabelle NUR wenn Produktkategorie: Akku, Akkupack, Batterie, Taschenlampe, Ladegerät, Netzteil, Powerbank
+❌ Keine Tabelle bei: Werkzeug, Zubehör, Reparatursets, Adapter ohne Messwerte
+
+${categorySpecificInstructions}
+
+═══════════════════════════════════════════════════════════════
+AUSGABEFORMAT (JSON)
+═══════════════════════════════════════════════════════════════
+{
+  "produktTitel": "SEO-optimierter Titel nach Schema: [Marke] [Produktart] für [Gerät] – [Specs]",
+  "produktTyp": "akku" | "elektronik" | "werkzeug",
+  "einleitung": "2-3 sachliche Sätze. Was ist das Produkt, wofür wird es verwendet.",
+  "anwendung": "Konkrete Einsatzgebiete anhand Kategorie + Produkttyp. 2-3 Sätze.",
+  "kompatibilitaet": ["Modell 1", "Modell 2"],
+  "apnSatz": "Dieser Akku ersetzt die Apple-Teilenummern (APN) 616-0579, 616-0580.",
+  "werkzeuguebersicht": ["Werkzeug 1", "Werkzeug 2"],
+  "uspBullets": ["Vorteil 1", "Vorteil 2", "Vorteil 3", "Vorteil 4", "Vorteil 5"],
+  "technicalSpecs": {"Feldname": "Wert mit Einheit"},
+  "packageContents": ["Artikel 1", "Artikel 2"],
+  "fazit": "Kurzes Fazit (1-2 Sätze) als Kaufempfehlung.",
+  "zeigeTabelle": true/false
+}
+
+REGELN FÜR JSON-FELDER:
+- produktTitel: PFLICHT. Siehe PRODUKTTITEL-REGELN unten.
+- produktTyp: PFLICHT. "akku" für Akkus/Batterien, "werkzeug" für Werkzeug-Sets, sonst "elektronik"
+
+═══════════════════════════════════════════════════════════════
+PRODUKTTITEL-REGELN (produktTitel)
+═══════════════════════════════════════════════════════════════
+- Maximal 120 Zeichen
+- Schema: [Marke] [Produktart] für [Gerät] – [Specs]
+- MARKE IMMER ZUERST! Kein Pipe-Symbol.
+- Muss Produktart + Marke + Hauptgerät enthalten
+- DARF NICHT identisch zum Original-Produktnamen sein (verbessere ihn!)
+- DARF NICHT wörtlich in der Beschreibung wiederholt werden
+- Keine Aufzählungen im Titel
+- Keine Sätze, sondern Titelstruktur
+
+WEITERE JSON-FELDER:
+- einleitung: PFLICHT. 2-3 Sätze, kein Marketing.
+- anwendung: PFLICHT. Konkrete Einsatzgebiete, 2-3 Sätze
+- kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
+- apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
+- werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
+- uspBullets: Max 5, müssen aus Daten ableitbar sein. KEINE APNs in den Vorteilen!
+- technicalSpecs: NUR bei Akkus (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik
+- packageContents: PFLICHT. Mindestens das Produkt selbst
+- fazit: PFLICHT. 1-2 Sätze Schlussfazit als Kaufempfehlung unter der technischen Tabelle.
+- zeigeTabelle: true NUR bei Akkus, sonst false
+
+═══════════════════════════════════════════════════════════════
+ABSOLUTE REGEL: PRODUKTNAME NUR EINMAL (SEHR WICHTIG!)
+═══════════════════════════════════════════════════════════════
+Der Produktname wird vom System als <h1> ausgegeben.
+Du darfst den Produktnamen NICHT in deinen Texten wiederholen!
+
+❌ VERBOTEN:
+- Produktname am Satzanfang wiederholen
+- Produktname identisch im Text nennen
+- Produktname in einleitung/anwendung einfügen
+
+✅ ERLAUBT:
+- Allgemeine Begriffe: "Dieses Werkzeug-Set", "Der Akku", "Das Zubehör"
+- Natürliche Einbettung mit Synonymen: "das Set", "der Ersatzakku"
+
+═══════════════════════════════════════════════════════════════
+SPRACHLICHE VARIATION (PFLICHTREGELN)
+═══════════════════════════════════════════════════════════════
+Die Produktbeschreibung darf NICHT immer gleich beginnen!
+Verwende ROTIEREND unterschiedliche Einleitungsmuster:
+
+MUSTER A (Fokus Nutzen):
+"Dieser [Produkttyp] eignet sich für ..."
+
+MUSTER B (Fokus Einsatz):
+"Für den Einsatz im Bereich ... wurde dieser [Produkttyp] entwickelt."
+
+MUSTER C (Fokus Kompatibilität):
+"Dieser [Produkttyp] ist speziell abgestimmt auf ..."
+
+MUSTER D (Fokus Problem-Lösung):
+"Wenn der originale Akku nachlässt, bietet dieser [Produkttyp] ..."
+
+MUSTER E (Fokus Eigenschaft):
+"Mit [Haupteigenschaft] überzeugt dieser [Produkttyp] ..."
+
+SYNONYM-ROTATION für häufige Phrasen:
+- "eignet sich für" → ist ausgelegt für / wurde entwickelt für / kommt zum Einsatz bei
+- "bietet" → ermöglicht / gewährleistet / sorgt für
+- "ideal für" → geeignet für / passend für / konzipiert für
+
+TONALITÄT nach Kategorie:
+- Akku: sachlich & technisch
+- Werkzeug: lösungsorientiert & handwerklich
+- Zubehör: komfort- & nutzenorientiert
+- Case/Hülle: schützend & alltagstauglich
+
+WICHTIG: Satzanfänge innerhalb eines Absatzes dürfen sich NICHT wiederholen!
+
+═══════════════════════════════════════════════════════════════
+APPLE-AKKUS: APN-REGELN (Apple Part Numbers) - ZWINGENDE REGELN
+═══════════════════════════════════════════════════════════════
+
+PRODUKTNAME / H1 – ZWINGENDE REGEL:
+- Der Produktname darf NIEMALS eine Liste von APNs enthalten.
+- Der Produktname darf MAXIMAL EINE APN enthalten.
+- Wenn mehrere APNs existieren:
+  → verwende ausschließlich die ERSTE APN aus der Liste.
+  → alle weiteren APNs sind im Titel VERBOTEN.
+
+ERLAUBTES FORMAT:
+Akku für Apple <Modell> – ersetzt APN <eine Nummer>
+
+VERBOTEN IM TITEL:
+❌ Aufzählungen (Kommas, "und", mehrere Nummern)
+❌ Texte wie "entspricht APN 123, 456, 789"
+❌ Mehr als eine Ziffernfolge im Titel
+
+VALIDIERUNG:
+Wenn der Titel mehr als eine APN enthält → Ausgabe abbrechen und neu erzeugen.
+
+═══════════════════════════════════════════════════════════════
+SEMANTISCHE REGELN FÜR APNs
+═══════════════════════════════════════════════════════════════
+APNs sind technische Referenznummern, KEINE Vorteile!
+
+APNs dürfen NUR in folgenden Bereichen erscheinen:
+1. Einleitung (einmal gesammelt als Fließtext)
+2. Technische Daten → Feld "APN / ersetzt"
+
+APNs sind in diesen Bereichen STRIKT VERBOTEN:
+❌ Vorteile / uspBullets
+❌ Marketingtexte
+❌ Bulletpoints mit Nutzenargumenten
+❌ Überschriften außer H1 (optional eine APN)
+
+Wenn APNs in Vorteilen auftauchen → neu generieren.
+
+KORREKTE VORTEILE (ohne APNs):
+✅ "Passgenau für iPhone X"
+✅ "Hochwertige Zellen"
+✅ "Zuverlässige Leistung"
+✅ "Einfache Montage"
+
+FALSCHE VORTEILE:
+❌ "Ersetzt APN 616-00351"
+❌ "Kompatibel mit APN 616-00352"
+
+EINLEITUNG:
+- ALLE APNs vollständig auflisten
+- Formulierung: "ersetzt die Apple-Teilenummern (APN) ..."
+- Keine Bulletpoints, sondern Fließtext mit Kommas
+
+TECHNISCHE DATEN (technicalSpecs):
+- Feld "APN / ersetzt" mit ALLEN APNs kommagetrennt
+- Beispiel: {"APN / ersetzt": "616-00351, 616-00352, 616-00346"}`;
+
+  const variationPatterns = ['A', 'B', 'C', 'D', 'E'];
+  const randomPattern = variationPatterns[Math.floor(Math.random() * variationPatterns.length)];
+
+  const userPrompt = `Produktdaten:
+${JSON.stringify(productData, null, 2)}
+
+Kategorie: ${categoryConfig.name}
+Einleitungsmuster: ${randomPattern} (verwende dieses Muster für die Einleitung!)
+
+Erstelle jetzt das JSON-Objekt mit Produkttexten basierend auf diesen Daten.
+Verwende Muster ${randomPattern} für den Einleitungstext.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model, // COST OPTIMIZATION: Use GPT-4o-mini by default (30× günstiger!)
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+    });
+
+    const content = response.choices[0]?.message?.content?.trim() || '{}';
+    let parsedContent: any;
+
+    try {
+      parsedContent = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse AI response as JSON:', content);
+      throw new Error('AI returned invalid JSON');
+    }
+
+    const produktTyp = parsedContent.produktTyp || 'elektronik';
+    const produktTitel = parsedContent.produktTitel || '';
+    const einleitung = parsedContent.einleitung || '';
+    const anwendung = parsedContent.anwendung || '';
+    const beschreibung = parsedContent.narrative || parsedContent.beschreibung || '';
+    const tagline = parsedContent.tagline || '';
+    
+    const vorteile = parsedContent.vorteile || parsedContent.uspBullets || [];
+    const technischeDaten = parsedContent.technischeDaten || parsedContent.technicalSpecs || {};
+    const kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
+    const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
+    const apnSatz = parsedContent.apnSatz || '';
+    const fazit = parsedContent.fazit || '';
+    const lieferumfang = parsedContent.lieferumfang || parsedContent.packageContents || [];
+    const lieferumfangString = Array.isArray(lieferumfang) 
+      ? lieferumfang.join('\n') 
+      : lieferumfang;
+    const zeigeTabelle = produktTyp === 'akku' ? (parsedContent.zeigeTabelle !== false) : false;
+
+    return {
+      tagline: tagline,
+      narrative: beschreibung,
+      uspBullets: Array.isArray(vorteile) ? vorteile : [],
+      technicalSpecs: produktTyp === 'akku' ? technischeDaten : {},
+      safetyNotice: '',
+      packageContents: lieferumfangString,
+      productHighlights: [],
+      einleitung: einleitung,
+      anwendung: anwendung,
+      beschreibung: beschreibung,
+      kompatibleModelle: Array.isArray(kompatibleModelle) ? kompatibleModelle : [],
+      werkzeuguebersicht: Array.isArray(werkzeuguebersicht) ? werkzeuguebersicht : [],
+      apnSatz: apnSatz,
+      fazit: fazit,
+      zeigeTabelle: zeigeTabelle,
+      produktTyp: produktTyp as 'akku' | 'elektronik' | 'werkzeug',
+      produktTitel: produktTitel,
+    };
+
+  } catch (error) {
+    console.error('AI generation error:', error);
+    return getFallbackCopy(categoryConfig);
+  }
+}
+
+function getFallbackCopy(categoryConfig: ProductCategoryConfig): ProductCopyPayload {
+  return {
+    narrative: 'Hochwertiges Produkt für professionelle Anwendungen. Zeichnet sich durch zuverlässige Leistung und langlebige Qualität aus.',
+    uspBullets: categoryConfig.uspTemplates.slice(0, 5),
+    technicalSpecs: {},
+    packageContents: 'Produkt wie beschrieben',
+    productHighlights: categoryConfig.productHighlights.slice(0, 5),
+  };
+}

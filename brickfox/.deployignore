@@ -1,0 +1,12 @@
+node_modules/
+.git/
+.vscode/
+*.log
+attached_assets/
+docs/
+client/
+server/
+vite.config.ts
+tsconfig.json
+.replit
+replit.nix

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIMPilot System Architecture</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                curve: 'basis',
+                padding: 20
+            }
+        });
+    </script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+        }
+        .buttons {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .legend {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .legend h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .legend-item {
+            display: inline-block;
+            margin: 10px 20px 10px 0;
+            font-size: 14px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 8px;
+            vertical-align: middle;
+            border: 2px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 PIMPilot System Architecture</h1>
+        <p class="subtitle">Multi-Tenant B2B SaaS für AI-gestützte Produktbeschreibungen</p>
+        
+        <div class="buttons">
+            <button onclick="downloadSVG()">📥 Als SVG herunterladen</button>
+            <button onclick="downloadPNG()">📥 Als PNG herunterladen</button>
+            <button onclick="window.print()">🖨️ Drucken</button>
+        </div>
+
+        <div class="mermaid">
+graph TB
+    subgraph Frontend["🎨 FRONTEND (React + TypeScript)"]
+        Dashboard["📊 Dashboard<br/>/dashboard"]
+        Projects["📁 Projects<br/>/project/:id"]
+        Products["🛍️ Products<br/>/products"]
+        AIGen["🤖 AI Generator<br/>/generate<br/>• Bulk CSV Upload<br/>• AI Prompts"]
+        Scraper["🔍 Web Scraper<br/>/scraper<br/>• URL Scraping<br/>• Supplier Mgmt"]
+        Pixi["📈 Pixi Compare<br/>/pixi-compare<br/>• CSV Upload<br/>• Project Mode"]
+    end
+
+    subgraph Auth["🔐 AUTHENTICATION"]
+        AuthMW["Passport.js Middleware<br/>• JWT Token Validation<br/>• Multi-Tenant Isolation<br/>• organization_id"]
+    end
+
+    subgraph API["⚙️ BACKEND API (Express.js)"]
+        AuthAPI["🔑 /api/auth/*<br/>• login<br/>• register<br/>• logout"]
+        ProjectAPI["📂 /api/projects<br/>• CRUD<br/>• Multi-tenant"]
+        ProductAPI["🛒 /api/products<br/>• CRUD<br/>• Multi-tenant"]
+        GenAPI["🎯 /api/generate<br/>• AI Bulk Gen<br/>• Usage Tracking<br/>• Tier Limits"]
+        ScraperAPI["🕷️ /api/scraper/*<br/>• scrapeUrl<br/>• suppliers<br/>• profiles"]
+        PixiAPI["📊 /api/pixi/*<br/>• compare<br/>• compare-project<br/>• cache"]
+    end
+
+    subgraph Services["🔧 SERVICE LAYER"]
+        AIService["🧠 AI Service<br/>(OpenAI GPT-4o-mini)<br/>• Prompts & Subprompts<br/>• Templates<br/>• Usage Tracking"]
+        ScraperService["🔎 Scraper Service<br/>(Cheerio)<br/>• CSS Selectors<br/>• Auto-detect<br/>• Table Parser"]
+        PixiService["📡 Pixi Service<br/>(Pixi ERP API)<br/>• ItemSearch<br/>• Matching Logic<br/>• 5-min Cache"]
+        StripeService["💳 Stripe Service<br/>• Subscriptions<br/>• Trial Mode<br/>• Tier Limits"]
+        SupabaseStorage["💾 Supabase Storage<br/>• CRUD Operations<br/>• Mappers<br/>• Batch Updates<br/>• Organization Filter"]
+    end
+
+    subgraph Database["🗄️ DATABASE (PostgreSQL/Supabase)"]
+        Orgs["👥 organizations<br/>• id (PK)<br/>• name<br/>• created_at"]
+        Users["👤 users<br/>• id (PK)<br/>• email<br/>• password<br/>• organization_id<br/>• role"]
+        ProjectsDB["📁 projects<br/>• id (PK)<br/>• name<br/>• organization_id"]
+        ProductsDB["🛍️ products_in_projects<br/>• id (PK)<br/>• project_id<br/>• product_name<br/>• pixi_status ⭐<br/>• pixi_ean ⭐<br/>• pixi_checked_at ⭐"]
+        Suppliers["📦 suppliers<br/>• id (PK)<br/>• name<br/>• suppl_nr ⭐<br/>• selectors<br/>• organization_id"]
+        APILogs["📝 api_usage_logs<br/>• id (PK)<br/>• user_id<br/>• organization_id<br/>• api_calls<br/>• timestamp"]
+    end
+
+    subgraph External["🌐 EXTERNAL SERVICES"]
+        OpenAI["🤖 OpenAI API<br/>GPT-4o-mini<br/>• Text Generation<br/>• Streaming<br/>• Token Tracking"]
+        PixiERP["📊 Pixi ERP<br/>ItemSearch API<br/>• artikelnummer<br/>• produktname<br/>• EANUPC"]
+        StripeAPI["💳 Stripe API<br/>• Starter Plan<br/>• Pro Plan<br/>• Enterprise"]
+    end
+
+    %% Frontend connections
+    Dashboard --> AuthMW
+    Projects --> AuthMW
+    Products --> AuthMW
+    AIGen --> AuthMW
+    Scraper --> AuthMW
+    Pixi --> AuthMW
+
+    %% Auth to API
+    AuthMW --> AuthAPI
+    AuthMW --> ProjectAPI
+    AuthMW --> ProductAPI
+    AuthMW --> GenAPI
+    AuthMW --> ScraperAPI
+    AuthMW --> PixiAPI
+
+    %% API to Services
+    AuthAPI --> SupabaseStorage
+    ProjectAPI --> SupabaseStorage
+    ProductAPI --> SupabaseStorage
+    GenAPI --> AIService
+    ScraperAPI --> ScraperService
+    PixiAPI --> PixiService
+
+    %% Services connections
+    AIService --> SupabaseStorage
+    ScraperService --> SupabaseStorage
+    PixiService --> SupabaseStorage
+    StripeService --> SupabaseStorage
+
+    %% Storage to Database
+    SupabaseStorage --> Orgs
+    SupabaseStorage --> Users
+    SupabaseStorage --> ProjectsDB
+    SupabaseStorage --> ProductsDB
+    SupabaseStorage --> Suppliers
+    SupabaseStorage --> APILogs
+
+    %% External Services
+    AIService --> OpenAI
+    PixiService --> PixiERP
+    StripeService --> StripeAPI
+
+    %% Database relationships
+    Users -.->|belongs to| Orgs
+    ProjectsDB -.->|belongs to| Orgs
+    ProductsDB -.->|belongs to| ProjectsDB
+    Suppliers -.->|belongs to| Orgs
+    APILogs -.->|tracks| Users
+
+    classDef frontend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef auth fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef api fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef service fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef database fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef external fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+
+    class Dashboard,Projects,Products,AIGen,Scraper,Pixi frontend
+    class AuthMW auth
+    class AuthAPI,ProjectAPI,ProductAPI,GenAPI,ScraperAPI,PixiAPI api
+    class AIService,ScraperService,PixiService,StripeService,SupabaseStorage service
+    class Orgs,Users,ProjectsDB,ProductsDB,Suppliers,APILogs database
+    class OpenAI,PixiERP,StripeAPI external
+        </div>
+
+        <div class="legend">
+            <h3>📌 Legende</h3>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #e3f2fd; border-color: #1976d2;"></span>
+                Frontend Layer
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #fff3e0; border-color: #f57c00;"></span>
+                Authentication
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #f3e5f5; border-color: #7b1fa2;"></span>
+                Backend API
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #e8f5e9; border-color: #388e3c;"></span>
+                Service Layer
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #fce4ec; border-color: #c2185b;"></span>
+                Database
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #fff9c4; border-color: #f9a825;"></span>
+                External Services
+            </div>
+            <div style="margin-top: 15px;">
+                <strong>⭐ = Neu hinzugefügt für Pixi-Integration</strong>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadSVG() {
+            const svg = document.querySelector('.mermaid svg');
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svg);
+            const blob = new Blob([svgString], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pimpilot-architecture.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadPNG() {
+            const svg = document.querySelector('.mermaid svg');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svg);
+            const blob = new Blob([svgString], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            
+            img.onload = function() {
+                canvas.width = img.width * 2;
+                canvas.height = img.height * 2;
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                canvas.toBlob(function(blob) {
+                    const pngUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = pngUrl;
+                    a.download = 'pimpilot-architecture.png';
+                    a.click();
+                    URL.revokeObjectURL(pngUrl);
+                    URL.revokeObjectURL(url);
+                });
+            };
+            
+            img.src = url;
+        }
+    </script>
+</body>
+</html>

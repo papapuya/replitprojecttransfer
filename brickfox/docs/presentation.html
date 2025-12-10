@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIMPilot - Executive Präsentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        
+        .presentation {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .slide {
+            background: white;
+            border-radius: 16px;
+            padding: 60px;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.6s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .slide h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-align: center;
+        }
+        
+        .slide h2 {
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+        
+        .slide h3 {
+            font-size: 1.6em;
+            margin: 30px 0 15px;
+            color: #764ba2;
+        }
+        
+        .hero {
+            text-align: center;
+            padding: 80px 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .hero h1 {
+            font-size: 4em;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        .hero .subtitle {
+            font-size: 1.8em;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+        
+        .hero .tagline {
+            font-size: 1.3em;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-number {
+            font-size: 3.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 12px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            background: #e3f2fd;
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .feature-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .feature-desc {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .tech-badge {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+            margin: 40px 0;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #667eea;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+            padding-left: 30px;
+        }
+        
+        .timeline-item::before {
+            content: '✓';
+            position: absolute;
+            left: -52px;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .timeline-date {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .value-prop {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            padding: 40px;
+            border-radius: 12px;
+            margin: 30px 0;
+            border-left: 5px solid #388e3c;
+        }
+        
+        .value-prop h3 {
+            color: #1b5e20;
+            margin-bottom: 15px;
+        }
+        
+        .value-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .value-list li {
+            padding: 12px 0;
+            padding-left: 35px;
+            position: relative;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        
+        .value-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #388e3c;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        
+        .architecture-preview {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .architecture-preview img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px;
+            border-radius: 16px;
+            text-align: center;
+            margin-top: 40px;
+        }
+        
+        .cta-button {
+            background: white;
+            color: #667eea;
+            padding: 18px 40px;
+            border-radius: 30px;
+            font-size: 1.3em;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            font-size: 1.1em;
+        }
+        
+        .comparison-table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .comparison-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .highlight {
+            background: #fff9c4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        @media print {
+            .slide {
+                page-break-after: always;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation">
+        
+        <!-- Hero Slide -->
+        <div class="slide hero">
+            <h1>🚀 PIMPilot</h1>
+            <div class="subtitle">Multi-Tenant B2B SaaS Platform</div>
+            <div class="tagline">
+                Automatisierte AI-gestützte Produktbeschreibungen und PIM-Metadaten-Generierung<br/>
+                für effiziente Massendatenverarbeitung
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="slide">
+            <h2>📊 Executive Summary</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Multi-Tenant Ready</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">6</div>
+                    <div class="stat-label">Kern-Features</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Pricing Tiers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">100</div>
+                    <div class="stat-label">Gratis AI Generationen (Trial)</div>
+                </div>
+            </div>
+            
+            <div class="value-prop">
+                <h3>💡 Kernwertversprechen</h3>
+                <ul class="value-list">
+                    <li><strong>Automatisierung:</strong> Reduzierung manueller Arbeit um 90% durch KI-gestützte Textgenerierung</li>
+                    <li><strong>Skalierbarkeit:</strong> Bulk-Verarbeitung von Tausenden Produkten per CSV-Upload</li>
+                    <li><strong>Multi-Tenant:</strong> Eine Plattform für unbegrenzt viele B2B-Kunden mit vollständiger Datenisolation</li>
+                    <li><strong>ROI:</strong> Amortisation in < 3 Monaten durch Zeit- und Kosteneinsparung</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Features Overview -->
+        <div class="slide">
+            <h2>✨ Hauptfunktionen</h2>
+            <div class="features">
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <div class="feature-title">AI Content Generator</div>
+                    <div class="feature-desc">
+                        Automatische Produktbeschreibungen im MediaMarkt-Stil via OpenAI GPT-4o-mini. 
+                        Bulk CSV-Upload, dynamische Prompts, Templates & Subprompts für USPs, technische Daten, Sicherheitshinweise.
+                    </div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <div class="feature-title">Web Scraper</div>
+                    <div class="feature-desc">
+                        Cheerio-basiertes Scraping mit intelligenter Auto-Erkennung, konfigurierbaren CSS-Selektoren, 
+                        Tabellen-Parser und Multi-URL-Support. Supplier-Profile für wiederverwendbare Scraping-Konfigurationen.
+                    </div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-title">Pixi ERP Integration</div>
+                    <div class="feature-desc">
+                        Automatischer Abgleich mit Pixi ERP System. CSV- & Projekt-basierte Vergleiche, 
+                        intelligentes Matching (Artikelnummer + EAN), 5-Minuten-Caching, Status-Persistierung in Datenbank.
+                    </div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📁</div>
+                    <div class="feature-title">Projekt-Management</div>
+                    <div class="feature-desc">
+                        Organisieren Sie generierte Produkte in Projekten. Vollständige CRUD-Operationen, 
+                        Bulk-Actions, Export-Funktionen und projekt-basierte Analytics.
+                    </div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">💳</div>
+                    <div class="feature-title">Stripe-Integration</div>
+                    <div class="feature-desc">
+                        3 Pricing Tiers (Starter, Pro, Enterprise), Trial-Modus mit 100 kostenlosen Generierungen, 
+                        Echtzeit-Usage-Tracking, automatische Limit-Enforcement.
+                    </div>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔐</div>
+                    <div class="feature-title">Enterprise Security</div>
+                    <div class="feature-desc">
+                        Multi-Tenant-Architektur mit organization_id-basierter Datenisolation, 
+                        Passport.js Authentication, bcrypt Password-Hashing, Role-based Access Control.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Architecture -->
+        <div class="slide">
+            <h2>🏗️ Technische Architektur</h2>
+            
+            <h3>Technology Stack</h3>
+            <div class="tech-stack">
+                <span class="tech-badge">React 18</span>
+                <span class="tech-badge">TypeScript</span>
+                <span class="tech-badge">Express.js</span>
+                <span class="tech-badge">PostgreSQL</span>
+                <span class="tech-badge">Supabase</span>
+                <span class="tech-badge">OpenAI GPT-4o-mini</span>
+                <span class="tech-badge">Stripe</span>
+                <span class="tech-badge">Cheerio</span>
+                <span class="tech-badge">Vite</span>
+                <span class="tech-badge">Tailwind CSS</span>
+                <span class="tech-badge">Drizzle ORM</span>
+                <span class="tech-badge">Passport.js</span>
+            </div>
+            
+            <div class="architecture-preview">
+                <h3 style="margin-bottom: 20px;">System-Übersicht</h3>
+                <p style="margin-bottom: 20px; color: #666;">
+                    6-Layer Architektur: Frontend → Authentication → API → Services → Database → External Services
+                </p>
+                <a href="pimpilot-architecture.html" target="_blank" class="cta-button" style="margin-bottom: 30px; display: inline-block;">
+                    📊 Vollständiges Architektur-Diagramm öffnen
+                </a>
+            </div>
+            
+            <h3>Sicherheit & Compliance</h3>
+            <ul class="value-list">
+                <li>Multi-Tenant-Isolation auf Datenbank-Ebene (organization_id FK constraints)</li>
+                <li>JWT-basierte Authentifizierung mit automatischem Token-Refresh</li>
+                <li>bcrypt Password-Hashing (10 Runden)</li>
+                <li>Server-seitiges organization_id Filtering bei allen Queries</li>
+                <li>Keine Cross-Tenant-Zugriffe möglich (Security Logging)</li>
+            </ul>
+        </div>
+
+        <!-- Implementation Timeline -->
+        <div class="slide">
+            <h2>📅 Entwicklungs-Meilensteine</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-date">Phase 1 - Foundation</div>
+                    <div class="timeline-content">
+                        <strong>✓ Abgeschlossen:</strong> Multi-Tenant Architektur, User Authentication, 
+                        PostgreSQL/Supabase Setup, Drizzle ORM Integration, Basic UI Components
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">Phase 2 - Core Features</div>
+                    <div class="timeline-content">
+                        <strong>✓ Abgeschlossen:</strong> AI Content Generator mit OpenAI Integration, 
+                        Template System, Subprompt-Architektur, CSV Bulk-Upload, Usage Tracking
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">Phase 3 - Advanced Features</div>
+                    <div class="timeline-content">
+                        <strong>✓ Abgeschlossen:</strong> Web Scraper mit Auto-Detection, 
+                        Supplier Profile Management, Table Parser, Multi-URL Support
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">Phase 4 - ERP Integration</div>
+                    <div class="timeline-content">
+                        <strong>✓ Abgeschlossen (30. Okt 2025):</strong> Pixi ERP Integration, 
+                        CSV & Projekt-basierte Vergleiche, Intelligentes Matching, Supabase Status-Persistierung
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">Phase 5 - Business Features</div>
+                    <div class="timeline-content">
+                        <strong>✓ Abgeschlossen:</strong> Stripe Payment Integration, 
+                        3 Pricing Tiers, Trial Mode, Subscription Management
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pricing & Business Model -->
+        <div class="slide">
+            <h2>💰 Geschäftsmodell</h2>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Starter</th>
+                        <th>Pro</th>
+                        <th>Enterprise</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>AI Generierungen/Monat</td>
+                        <td>500</td>
+                        <td>5,000</td>
+                        <td>Unlimited</td>
+                    </tr>
+                    <tr>
+                        <td>Projekte</td>
+                        <td>10</td>
+                        <td>100</td>
+                        <td>Unlimited</td>
+                    </tr>
+                    <tr>
+                        <td>Web Scraper</td>
+                        <td>✓</td>
+                        <td>✓</td>
+                        <td>✓</td>
+                    </tr>
+                    <tr>
+                        <td>Pixi ERP Integration</td>
+                        <td>✓</td>
+                        <td>✓</td>
+                        <td>✓</td>
+                    </tr>
+                    <tr>
+                        <td>Multi-User</td>
+                        <td>3 Users</td>
+                        <td>10 Users</td>
+                        <td>Unlimited</td>
+                    </tr>
+                    <tr>
+                        <td>Priority Support</td>
+                        <td>—</td>
+                        <td>✓</td>
+                        <td>✓ + Dedicated Manager</td>
+                    </tr>
+                    <tr>
+                        <td>Custom Templates</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>✓</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="value-prop">
+                <h3>🎯 Trial-Modus</h3>
+                <p style="line-height: 1.8; font-size: 1.1em;">
+                    Neue Kunden erhalten <span class="highlight">100 kostenlose AI-Generierungen</span> 
+                    zum Testen der Plattform. Automatische Umstellung auf kostenpflichtige Pläne nach Trial-Phase 
+                    oder manuelles Upgrade jederzeit möglich.
+                </p>
+            </div>
+        </div>
+
+        <!-- Competitive Advantages -->
+        <div class="slide">
+            <h2>🏆 Wettbewerbsvorteile</h2>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Kriterium</th>
+                        <th>PIMPilot</th>
+                        <th>Traditionelle PIM-Systeme</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>AI-Integration</td>
+                        <td style="background: #e8f5e9;">✓ Native OpenAI GPT-4o</td>
+                        <td style="background: #ffebee;">❌ Keine oder Add-on</td>
+                    </tr>
+                    <tr>
+                        <td>Setup-Zeit</td>
+                        <td style="background: #e8f5e9;">< 5 Minuten</td>
+                        <td style="background: #ffebee;">Wochen bis Monate</td>
+                    </tr>
+                    <tr>
+                        <td>Multi-Tenant</td>
+                        <td style="background: #e8f5e9;">✓ Ab Tag 1</td>
+                        <td style="background: #ffebee;">Oft nur Single-Tenant</td>
+                    </tr>
+                    <tr>
+                        <td>Web Scraping</td>
+                        <td style="background: #e8f5e9;">✓ Integriert</td>
+                        <td style="background: #ffebee;">❌ Nicht verfügbar</td>
+                    </tr>
+                    <tr>
+                        <td>ERP-Integration</td>
+                        <td style="background: #e8f5e9;">✓ Pixi out-of-the-box</td>
+                        <td style="background: #fff9c4;">⚠️ Custom Development</td>
+                    </tr>
+                    <tr>
+                        <td>Preismodell</td>
+                        <td style="background: #e8f5e9;">Transparent & skalierbar</td>
+                        <td style="background: #ffebee;">Oft intransparent</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Next Steps / Roadmap -->
+        <div class="slide">
+            <h2>🚀 Roadmap & Nächste Schritte</h2>
+            
+            <h3>Sofort verfügbar</h3>
+            <ul class="value-list">
+                <li>Produktionsreife Platform auf Supabase/Neon PostgreSQL</li>
+                <li>Vollständige Multi-Tenant-Isolation getestet</li>
+                <li>OpenAI & Stripe Live-Integrationen aktiv</li>
+                <li>Pixi ERP Integration mit Supabase-Persistierung</li>
+            </ul>
+            
+            <h3>Q1 2026 - Geplante Erweiterungen</h3>
+            <ul class="value-list">
+                <li><strong>Analytics Dashboard:</strong> Detaillierte Usage-Statistiken, ROI-Tracking, Performance-Metriken</li>
+                <li><strong>API Access:</strong> REST API für Enterprise-Kunden zur System-Integration</li>
+                <li><strong>Weitere ERP-Systeme:</strong> SAP, Shopware, WooCommerce Connectoren</li>
+                <li><strong>AI-Modell-Auswahl:</strong> GPT-4, Claude, Gemini als Optionen</li>
+                <li><strong>Bulk-Export:</strong> PDF-Kataloge, Excel-Listen, XML-Feeds</li>
+            </ul>
+            
+            <h3>Empfohlener Go-Live-Prozess</h3>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-date">Woche 1</div>
+                    <div class="timeline-content">
+                        Beta-Testing mit 3-5 ausgewählten Kunden (Trial-Modus)
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">Woche 2-3</div>
+                    <div class="timeline-content">
+                        Feedback-Integration, Minor Bugfixes, Dokumentation
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">Woche 4</div>
+                    <div class="timeline-content">
+                        Soft Launch mit Marketing-Kampagne, Onboarding-Prozess
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">Monat 2+</div>
+                    <div class="timeline-content">
+                        Continuous Improvement basierend auf Nutzer-Feedback
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="cta-section">
+            <h2 style="color: white; font-size: 2.5em; margin-bottom: 20px;">Bereit für den Launch?</h2>
+            <p style="font-size: 1.3em; margin-bottom: 30px;">
+                Alle Kernfunktionen sind implementiert und produktionsbereit.<br/>
+                Supabase Multi-Tenant-Architektur vollständig getestet.
+            </p>
+            <a href="/" class="cta-button">🚀 Live-Demo starten</a>
+            <p style="margin-top: 30px; font-size: 1.1em; opacity: 0.9;">
+                Login: <strong>saranzerrer@icloud.com</strong> (Admin-Zugang für AkkuShop Organization)
+            </p>
+        </div>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,109 @@
+graph TB
+    subgraph Frontend["🎨 FRONTEND (React + TypeScript)"]
+        Dashboard["📊 Dashboard<br/>/dashboard"]
+        Projects["📁 Projects<br/>/project/:id"]
+        Products["🛍️ Products<br/>/products"]
+        AIGen["🤖 AI Generator<br/>/generate<br/>• Bulk CSV Upload<br/>• AI Prompts"]
+        Scraper["🔍 Web Scraper<br/>/scraper<br/>• URL Scraping<br/>• Supplier Mgmt"]
+        Pixi["📈 Pixi Compare<br/>/pixi-compare<br/>• CSV Upload<br/>• Project Mode"]
+    end
+
+    subgraph Auth["🔐 AUTHENTICATION"]
+        AuthMW["Passport.js Middleware<br/>• JWT Token Validation<br/>• Multi-Tenant Isolation<br/>• organization_id"]
+    end
+
+    subgraph API["⚙️ BACKEND API (Express.js)"]
+        AuthAPI["🔑 /api/auth/*<br/>• login<br/>• register<br/>• logout"]
+        ProjectAPI["📂 /api/projects<br/>• CRUD<br/>• Multi-tenant"]
+        ProductAPI["🛒 /api/products<br/>• CRUD<br/>• Multi-tenant"]
+        GenAPI["🎯 /api/generate<br/>• AI Bulk Gen<br/>• Usage Tracking<br/>• Tier Limits"]
+        ScraperAPI["🕷️ /api/scraper/*<br/>• scrapeUrl<br/>• suppliers<br/>• profiles"]
+        PixiAPI["📊 /api/pixi/*<br/>• compare<br/>• compare-project<br/>• cache"]
+    end
+
+    subgraph Services["🔧 SERVICE LAYER"]
+        AIService["🧠 AI Service<br/>(OpenAI GPT-4o-mini)<br/>• Prompts & Subprompts<br/>• Templates<br/>• Usage Tracking"]
+        ScraperService["🔎 Scraper Service<br/>(Cheerio)<br/>• CSS Selectors<br/>• Auto-detect<br/>• Table Parser"]
+        PixiService["📡 Pixi Service<br/>(Pixi ERP API)<br/>• ItemSearch<br/>• Matching Logic<br/>• 5-min Cache"]
+        StripeService["💳 Stripe Service<br/>• Subscriptions<br/>• Trial Mode<br/>• Tier Limits"]
+        SupabaseStorage["💾 Supabase Storage<br/>• CRUD Operations<br/>• Mappers<br/>• Batch Updates<br/>• Organization Filter"]
+    end
+
+    subgraph Database["🗄️ DATABASE (PostgreSQL/Supabase)"]
+        Orgs["👥 organizations<br/>• id (PK)<br/>• name<br/>• created_at"]
+        Users["👤 users<br/>• id (PK)<br/>• email<br/>• password<br/>• organization_id<br/>• role"]
+        ProjectsDB["📁 projects<br/>• id (PK)<br/>• name<br/>• organization_id"]
+        ProductsDB["🛍️ products_in_projects<br/>• id (PK)<br/>• project_id<br/>• product_name<br/>• pixi_status ⭐<br/>• pixi_ean ⭐<br/>• pixi_checked_at ⭐"]
+        Suppliers["📦 suppliers<br/>• id (PK)<br/>• name<br/>• suppl_nr ⭐<br/>• selectors<br/>• organization_id"]
+        APILogs["📝 api_usage_logs<br/>• id (PK)<br/>• user_id<br/>• organization_id<br/>• api_calls<br/>• timestamp"]
+    end
+
+    subgraph External["🌐 EXTERNAL SERVICES"]
+        OpenAI["🤖 OpenAI API<br/>GPT-4o-mini<br/>• Text Generation<br/>• Streaming<br/>• Token Tracking"]
+        PixiERP["📊 Pixi ERP<br/>ItemSearch API<br/>• artikelnummer<br/>• produktname<br/>• EANUPC"]
+        StripeAPI["💳 Stripe API<br/>• Starter Plan<br/>• Pro Plan<br/>• Enterprise"]
+    end
+
+    %% Frontend connections
+    Dashboard --> AuthMW
+    Projects --> AuthMW
+    Products --> AuthMW
+    AIGen --> AuthMW
+    Scraper --> AuthMW
+    Pixi --> AuthMW
+
+    %% Auth to API
+    AuthMW --> AuthAPI
+    AuthMW --> ProjectAPI
+    AuthMW --> ProductAPI
+    AuthMW --> GenAPI
+    AuthMW --> ScraperAPI
+    AuthMW --> PixiAPI
+
+    %% API to Services
+    AuthAPI --> SupabaseStorage
+    ProjectAPI --> SupabaseStorage
+    ProductAPI --> SupabaseStorage
+    GenAPI --> AIService
+    ScraperAPI --> ScraperService
+    PixiAPI --> PixiService
+
+    %% Services connections
+    AIService --> SupabaseStorage
+    ScraperService --> SupabaseStorage
+    PixiService --> SupabaseStorage
+    StripeService --> SupabaseStorage
+
+    %% Storage to Database
+    SupabaseStorage --> Orgs
+    SupabaseStorage --> Users
+    SupabaseStorage --> ProjectsDB
+    SupabaseStorage --> ProductsDB
+    SupabaseStorage --> Suppliers
+    SupabaseStorage --> APILogs
+
+    %% External Services
+    AIService --> OpenAI
+    PixiService --> PixiERP
+    StripeService --> StripeAPI
+
+    %% Database relationships
+    Users -.->|belongs to| Orgs
+    ProjectsDB -.->|belongs to| Orgs
+    ProductsDB -.->|belongs to| ProjectsDB
+    Suppliers -.->|belongs to| Orgs
+    APILogs -.->|tracks| Users
+
+    classDef frontend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef auth fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef api fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef service fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef database fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef external fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+
+    class Dashboard,Projects,Products,AIGen,Scraper,Pixi frontend
+    class AuthMW auth
+    class AuthAPI,ProjectAPI,ProductAPI,GenAPI,ScraperAPI,PixiAPI api
+    class AIService,ScraperService,PixiService,StripeService,SupabaseStorage service
+    class Orgs,Users,ProjectsDB,ProductsDB,Suppliers,APILogs database
+    class OpenAI,PixiERP,StripeAPI external

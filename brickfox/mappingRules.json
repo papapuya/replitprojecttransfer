@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Mapping-Regeln für automatische Konvertierung von Produktdaten (PDF-Scraper, URL-Scraper, ERP) in Brickfox-CSV-Format",
+  "source": "pdf_scraper",
+  "target": "brickfox_csv",
+  
+  "mapping": {
+    "Artikelnummer": ["p_item_number", "v_manufacturers_item_number", "v_supplier_item_number"],
+    "articleNumber": ["p_item_number", "v_supplier_item_number"],
+    "manufacturerArticleNumber": ["v_manufacturers_item_number"],
+    "Produktname": ["p_name[de]"],
+    "productName": ["p_name[de]"],
+    "EAN": ["v_ean"],
+    "ean": ["v_ean"],
+    "eanCode": ["v_ean"],
+    "Hersteller": ["p_brand"],
+    "manufacturer": ["p_brand"],
+    "marke": ["p_brand", "v_supplier[Eur]"],
+    "ekPrice": ["v_purchase_price"],
+    "EK (netto) €": ["v_purchase_price"],
+    "vkPrice": ["v_price[Eur]"],
+    "VK Preis €": ["v_price[Eur]"],
+    "Nominalspannung (V)": ["p_attributes[akku_v][de]"],
+    "Nominalkapazität (mAh)": ["p_attributes[akku_mah][de]"],
+    "Länge (mm)": ["v_length"],
+    "Breite (mm)": ["v_width"],
+    "Höhe (mm)": ["v_height"],
+    "Gewicht (g)": ["v_weight"],
+    "Energie (Wh)": ["p_attributes[energie_wh][de]"],
+    "Zellenchemie": ["p_attributes[akku_ch][de]"],
+    "SEO Titel": ["meta_title[de]"],
+    "SEO Keywords": ["keywords[de]"],
+    "SEO Produktbeschreibung": ["p_short_description[de]"],
+    "Produktbeschreibung (HTML)": ["p_description[de]"],
+    "Schutzschaltung (Li-Ion)": ["p_attributes[akku_schutzsch_li_ion][de]"]
+  },
+  
+  "mappingPriority": {
+    "p_description[de]": [
+      "Produktbeschreibung (HTML)",
+      "SEO Produktbeschreibung",
+      "Produktname"
+    ],
+    "v_supplier[Eur]": [
+      "marke",
+      "manufacturer",
+      "Hersteller",
+      "Lieferant"
+    ],
+    "v_purchase_price": [
+      "ekPrice",
+      "EK (netto) €"
+    ],
+    "v_price[Eur]": [
+      "vkPrice",
+      "VK Preis €"
+    ]
+  },
+  
+  "fixedValues": {
+    "p_status": "1",
+    "p_tax_class": "1",
+    "p_never_out_of_stock": "1",
+    "v_status": "1",
+    "v_never_out_of_stock[standard]": "1",
+    "p_attributes[OTTOMARKET_GEFAHRGUT][de]": "Produkt fällt unter die Gefahrgutvorschriften.",
+    "v_attributes[OTTOMARKET_GEFAHRGUT][de]": "Produkt fällt unter die Gefahrgutvorschriften.",
+    "v_classification": "X",
+    "p_country": "China",
+    "v_delivery_time[de]": "3-5 Tage",
+    "p_attributes[Wiederaufladbar][de]": "Ja",
+    "p_attributes[verp_einheit][de]": "1 Stück",
+    "v_customs_tariff_number": "85076000"
+  },
+  
+  "autoGenerate": {
+    "p_group_path[de]": {
+      "dependsOn": "Nominalspannung (V)",
+      "rule": "Akkus ##||## Akku Konfektion ##||## AkkuPacks ##||## {{Nominalspannung (V)}} Volt",
+      "fallback": "Akkus ##||## Akku Konfektion ##||## AkkuPacks"
+    }
+  },
+  
+  "transformations": {
+    "v_weight": {
+      "type": "unit_conversion",
+      "from": "g",
+      "to": "kg",
+      "formula": "value / 1000"
+    },
+    "v_length": {
+      "type": "unit_conversion",
+      "from": "mm",
+      "to": "cm",
+      "formula": "value / 10"
+    },
+    "v_width": {
+      "type": "unit_conversion",
+      "from": "mm",
+      "to": "cm",
+      "formula": "value / 10"
+    },
+    "v_height": {
+      "type": "unit_conversion",
+      "from": "mm",
+      "to": "cm",
+      "formula": "value / 10"
+    }
+  },
+  
+  "validation": {
+    "required": [
+      "p_item_number",
+      "p_name[de]",
+      "v_ean",
+      "p_brand"
+    ],
+    "dataTypes": {
+      "v_purchase_price": "number",
+      "v_price[Eur]": "number",
+      "v_weight": "number",
+      "v_length": "number",
+      "v_width": "number",
+      "v_height": "number",
+      "p_attributes[akku_v][de]": "number",
+      "p_attributes[akku_mah][de]": "number",
+      "p_attributes[energie_wh][de]": "number"
+    },
+    "ranges": {
+      "p_attributes[akku_v][de]": { "min": 0, "max": 100 },
+      "p_attributes[akku_mah][de]": { "min": 0, "max": 50000 },
+      "v_weight": { "min": 0, "max": 10 }
+    }
+  },
+  
+  "outputFormat": {
+    "type": "csv",
+    "delimiter": ";",
+    "encoding": "utf-8",
+    "includeHeader": true,
+    "columns": [
+      "p_item_number",
+      "v_manufacturers_item_number",
+      "p_name[de]",
+      "v_ean",
+      "p_brand",
+      "p_group_path[de]",
+      "v_purchase_price",
+      "v_price[Eur]",
+      "v_supplier[Eur]",
+      "p_attributes[akku_v][de]",
+      "p_attributes[akku_mah][de]",
+      "p_attributes[OTTOMARKET_GEFAHRGUT][de]",
+      "v_attributes[OTTOMARKET_GEFAHRGUT][de]",
+      "v_length",
+      "v_width",
+      "v_height",
+      "v_weight",
+      "p_attributes[energie_wh][de]",
+      "p_attributes[akku_ch][de]",
+      "v_classification",
+      "p_tax_class",
+      "p_country",
+      "v_delivery_time[de]",
+      "v_never_out_of_stock[standard]",
+      "p_attributes[Wiederaufladbar][de]",
+      "v_status",
+      "p_attributes[akku_schutzsch_li_ion][de]",
+      "p_attributes[verp_einheit][de]",
+      "p_description[de]",
+      "meta_title[de]",
+      "keywords[de]",
+      "p_short_description[de]",
+      "p_image[1]",
+      "p_image[2]",
+      "p_image[3]",
+      "p_image[4]",
+      "p_image[5]",
+      "p_image[6]",
+      "p_media[1][pdf]",
+      "p_media_name[2]",
+      "v_customs_tariff_number"
+    ]
+  }
+}
