@@ -590,8 +590,9 @@ function renderMediaMarktLayout(data: {
   const einleitung = e(data.einleitung || '');
   const anwendung = e(data.anwendung || data.beschreibung || data.narrative || '');
   
+  // Bei Werkzeugen: KEINE Vorteile anzeigen (vermeidet Wiederholungen mit Werkzeugübersicht)
   // Vorteile ohne <ul> Liste - nur Häkchen, keine Punkte
-  const vorteileHtml = data.uspBullets.length > 0
+  const vorteileHtml = (produktTyp !== 'werkzeug' && data.uspBullets.length > 0)
     ? data.uspBullets.slice(0, 5).map(usp => `✅ ${e(usp)}`).join('<br />\n')
     : '';
 
