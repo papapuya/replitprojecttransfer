@@ -417,11 +417,11 @@ function renderMediaMarktLayout(data: {
     allSpecs.push(...data.technicalSpecs);
   }
   
-  // Tabelle anzeigen wenn es Daten gibt
+  // Tabelle anzeigen wenn es Daten gibt (dynamische Spaltenbreite)
   const techTableHtml = allSpecs.length > 0
     ? `<h2>Technische Daten</h2>
 <table>
-${allSpecs.map(spec => `<tr><td>${e(spec.label)}</td><td>${e(spec.value)}</td></tr>`).join('\n')}
+${allSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 1em;">${e(spec.label)}</td><td>${e(spec.value)}</td></tr>`).join('\n')}
 </table>`
     : '';
 
