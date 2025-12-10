@@ -36,7 +36,8 @@ interface RawCSVRow {
 
 interface BulkProduct {
   id: number;
-  artikelnummer: string;
+  p_id: string;
+  v_id: string;
   produktname: string;
   produktname_neu: string;
   produktbeschreibung: string;
@@ -91,7 +92,8 @@ export default function CSVBulkDescription() {
   const existingProjects = projectsData?.projects || [];
   
   const [exportColumns, setExportColumns] = useState<ExportColumn[]>([
-    { key: 'artikelnummer', label: 'p_item_number', enabled: true },
+    { key: 'p_id', label: 'p_id', enabled: true },
+    { key: 'v_id', label: 'v_id', enabled: true },
     { key: 'produktname', label: 'p_name_original[de]', enabled: false },
     { key: 'produktname_neu', label: 'p_name[de]', enabled: true },
     { key: 'produktbeschreibung', label: 'p_description_text[de]', enabled: false },
@@ -291,20 +293,21 @@ export default function CSVBulkDescription() {
 
           // MediaMarkt V1: Produkt + Modell (z.B. "Akkupack Mignon AA / LR6")
           // Verwende den Produktnamen, der bereits "Produkt + Modell" enthält
-          const artikelnummer = productData.artikelnummer || row['Artikelnummer'] || '';
           const mmNameV1 = produktname.trim();
 
           // MediaMarkt V2: Nur Modellcodes (Großbuchstaben und Zahlen)
           // Entferne Herstellerpräfixe wie "ANS-" und behalte nur alphanumerische Codes
+          const artikelnummer = row['p_item_number'] || productData.artikelnummer || '';
           const mmNameV2 = artikelnummer.replace(/^[A-Z]+-/, '').trim();
+
+          // p_id und v_id direkt aus der Original-CSV übernehmen
+          const p_id = row['p_id'] || '';
+          const v_id = row['v_id'] || '';
 
           return {
             id: globalIndex + 1,
-            artikelnummer:
-              productData.modell ||
-              productData.artikelnummer ||
-              productData.sku ||
-              '-',
+            p_id: p_id,
+            v_id: v_id,
             produktname: produktname,
             produktname_neu: payload.produktTitel || '',
             produktbeschreibung: plainText,
@@ -329,7 +332,8 @@ export default function CSVBulkDescription() {
           console.error(`Error processing row ${globalIndex}:`, outcome.reason);
           results[globalIndex] = {
             id: globalIndex + 1,
-            artikelnummer: '-',
+            p_id: '-',
+            v_id: '-',
             produktname: 'Fehler',
             produktname_neu: '',
             produktbeschreibung: '',
@@ -549,7 +553,7 @@ export default function CSVBulkDescription() {
 
       const productData = {
         name: product.produktname || 'Unbekanntes Produkt',
-        articleNumber: product.artikelnummer || '',
+        articleNumber: product.p_id || '',
         htmlCode: product.produktbeschreibung || '',
         previewText: product.seo_beschreibung || product.kurzbeschreibung || '',
         exactProductName: product.mediamarktname_v1 || product.mediamarktname_v2 || product.produktname || '',

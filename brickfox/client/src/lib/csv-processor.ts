@@ -44,39 +44,25 @@ async function readFileWithEncoding(file: File): Promise<string> {
   
   let text = '';
   
-  // First try: ISO-8859-1 (Western European) - common for German/European CSVs
-  try {
-    text = new TextDecoder('iso-8859-1').decode(uint8Array);
-    
-    // Check for UTF-8 BOM or UTF-8 specific characters
-    if (text.charCodeAt(0) === 0xFEFF) {
-      // Has UTF-8 BOM, re-decode as UTF-8
-      text = new TextDecoder('utf-8').decode(uint8Array);
-      text = text.slice(1); // Remove BOM
-      console.log('[CSV] Detected UTF-8 with BOM');
-    } else {
-      // Check if ISO-8859-1 looks correct (has valid Western European chars)
-      const hasWesternEuropeanChars = /[äöüßÄÖÜ€àâéèêëîïôùûüçñ]/g.test(text);
-      if (hasWesternEuropeanChars) {
-        console.log('[CSV] Detected Western European encoding (ISO-8859-1)');
-      } else {
-        // Fallback to UTF-8 if no Western European chars found
-        const utf8Text = new TextDecoder('utf-8').decode(uint8Array);
-        if (utf8Text.charCodeAt(0) === 0xFEFF) {
-          text = utf8Text.slice(1);
-        } else {
-          text = utf8Text;
-        }
-        console.log('[CSV] Detected UTF-8 encoding');
-      }
-    }
-  } catch (err: any) {
-    // Last resort: UTF-8
+  // Check for UTF-8 BOM first (0xEF 0xBB 0xBF)
+  const hasUtf8Bom = uint8Array[0] === 0xEF && uint8Array[1] === 0xBB && uint8Array[2] === 0xBF;
+  
+  if (hasUtf8Bom) {
+    // File has UTF-8 BOM - decode as UTF-8
     text = new TextDecoder('utf-8').decode(uint8Array);
-    if (text.charCodeAt(0) === 0xFEFF) {
-      text = text.slice(1);
+    text = text.slice(1); // Remove BOM character
+    console.log('[CSV] Detected UTF-8 with BOM');
+  } else {
+    // Try UTF-8 first (most common modern encoding)
+    try {
+      const utf8Text = new TextDecoder('utf-8', { fatal: true }).decode(uint8Array);
+      text = utf8Text;
+      console.log('[CSV] Detected valid UTF-8 encoding');
+    } catch (utf8Error) {
+      // UTF-8 decoding failed - file is likely ISO-8859-1
+      text = new TextDecoder('iso-8859-1').decode(uint8Array);
+      console.log('[CSV] Detected ISO-8859-1 encoding (UTF-8 failed)');
     }
-    console.log('[CSV] Fallback to UTF-8 encoding');
   }
   
   // Remove surrounding quotes from each line if present
