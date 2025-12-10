@@ -1,0 +1,84 @@
+# PIMPilot - Product Information Management SaaS
+
+## Overview
+
+PIMPilot is a multi-tenant B2B SaaS platform that automates AI-powered product description and PIM metadata generation from supplier data. The application processes product data via CSV uploads, URL scraping, and image analysis to generate SEO-optimized, structured HTML product descriptions for e-commerce platforms (specifically akkushop.de/akku500.de targeting Shopware/Brickfox export format).
+
+The system handles three main product types:
+- **Type A (Batteries/Akkus)**: Includes technical data tables
+- **Type B (Electronics/Accessories)**: Standard descriptions without tables
+- **Type C (Tool Sets)**: Includes tool overview lists
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite for fast development and production builds
+- **Styling**: Tailwind CSS with shadcn/ui component library (Radix UI primitives)
+- **State Management**: TanStack Query (React Query) for server state and API calls
+- **Path Aliases**: `@/` maps to `client/src/`, `@shared/` maps to `shared/`
+
+### Backend Architecture
+- **Runtime**: Node.js with TypeScript
+- **Framework**: Express.js REST API
+- **Build**: esbuild for production bundling, tsx for development
+- **API Pattern**: RESTful endpoints under `/api/` prefix
+- **File Uploads**: Multer for handling CSV, PDF, and image uploads
+
+### Database Layer
+- **ORM**: Drizzle ORM with PostgreSQL dialect
+- **Production Database**: PostgreSQL via Neon serverless or Supabase
+- **Schema Location**: `shared/schema.ts`
+- **Migrations**: Drizzle Kit (`drizzle-kit push` for schema sync)
+
+### Multi-Tenancy
+- Organization-based isolation using `organization_id` on data tables
+- User authentication via Supabase Auth with webhook sync to local database
+- Tenant assignment happens automatically on user registration
+
+### AI Content Generation
+The system uses a modular prompt architecture with specialized modules:
+1. USP generation for sales benefits
+2. Technical data extraction
+3. SEO-optimized product titles following specific schema
+4. HTML-formatted descriptions with strict structure rules
+
+**Product Title Schema**: `[Brand] [ProductType] for [Device/Series], [additional devices] – [measurable attributes]`
+
+**HTML Structure Rules**:
+- Single `<h1>` for product name only
+- No product name repetition in body text
+- Benefits marked with ✅ checkmarks
+- Technical tables only for battery products
+
+## External Dependencies
+
+### AI Services
+- **OpenAI GPT-4o**: Primary AI for text generation and image analysis (Vision API)
+- **Firecrawl API**: Professional web scraping for supplier product pages
+- **Tesseract.js**: Fallback OCR for product images
+
+### Authentication & Database
+- **Supabase**: Cloud authentication provider with webhook integration
+- **Neon/PostgreSQL**: Serverless PostgreSQL for production data storage
+
+### Payment Processing
+- **Stripe**: Subscription billing with three tiers (Starter €29, Pro €79, Enterprise €199)
+
+### Third-Party Integrations
+- **Pixi ERP**: Product comparison and duplicate detection via REST API with 5-minute caching
+- **Brickfox CSV Export**: Target format for product data mapping
+
+### Key Environment Variables
+```
+DATABASE_URL          # PostgreSQL connection string
+OPENAI_API_KEY        # OpenAI API for content generation
+FIRECRAWL_API_KEY     # Web scraping service
+STRIPE_SECRET_KEY     # Payment processing
+VITE_SUPABASE_URL     # Supabase project URL
+VITE_SUPABASE_ANON_KEY # Supabase public key
+```
