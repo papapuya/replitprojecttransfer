@@ -1,4 +1,4 @@
-import { createAdminUser } from './supabase-auth';
+import { createAdminUser } from './local-auth';
 
 const email = process.env.ADMIN_EMAIL;
 const password = process.env.ADMIN_PASSWORD;
