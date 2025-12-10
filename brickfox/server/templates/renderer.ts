@@ -1,6 +1,7 @@
 import { ProductCopyPayload } from './types';
 import { ProductCategoryConfig, TechnicalField } from './category-config';
 import { filterToWhitelist, isWhitelistedField } from '../../shared/tech-spec-whitelist';
+import { correctVoltageValue } from './tech-spec-parser';
 
 export interface RenderOptions {
   productName: string;
@@ -258,9 +259,39 @@ function buildTechnicalSpecsTable(
       continue;
     }
     
+    let processedValue = cleanMarkdown(value);
+    
+    // Korrigiere unlogische Volt-Werte (z.B. 37 → 3,7 V)
+    const labelLower = label.toLowerCase();
+    if (labelLower.includes('spannung') || labelLower.includes('volt') || 
+        labelLower.includes('v_nominal') || labelLower.includes('akku_v') ||
+        whitelistedField.label.toLowerCase().includes('spannung')) {
+      // Nur korrigieren wenn kein "V" bereits im Wert ist oder Wert numerisch aussieht
+      const numericValue = parseFloat(processedValue.replace(',', '.').replace(/[^\d.,]/g, ''));
+      if (!isNaN(numericValue) && !processedValue.toLowerCase().includes(' v')) {
+        processedValue = correctVoltageValue(numericValue);
+        console.log(`⚡ Spannung korrigiert: ${value} → ${processedValue}`);
+      }
+    }
+    
+    // Filtere "Wh" Kapazitätswerte - nur anzeigen wenn Wert realistisch und explizit als Wh vorhanden
+    if (whitelistedField.label.toLowerCase().includes('kapazität')) {
+      // Prüfe ob der Originalwert wirklich "Wh" enthält
+      const hasWhInOriginal = value.toLowerCase().includes('wh');
+      const hasMahInOriginal = value.toLowerCase().includes('mah');
+      
+      // Wenn der Wert nur eine Zahl ist (z.B. "37") ohne Einheit, könnte es mAh sein - nicht Wh annehmen
+      const numericOnly = /^\d+([.,]\d+)?$/.test(processedValue.trim());
+      if (numericOnly && !hasWhInOriginal && !hasMahInOriginal) {
+        // Numerischer Wert ohne Einheit - mAh annehmen, nicht Wh
+        processedValue = `${processedValue} mAh`;
+        console.log(`🔋 Kapazität als mAh interpretiert: ${value} → ${processedValue}`);
+      }
+    }
+    
     result.push({
       label: whitelistedField.label,
-      value: cleanMarkdown(value)
+      value: processedValue
     });
   }
 
