@@ -420,20 +420,45 @@ function buildTechnicalSpecsTable(
       }
     }
     
-    // Filtere "Wh" Kapazitätswerte - KOMPLETT ENTFERNEN wenn Wh enthalten
-    // Wh-Werte werden von der AI fälschlicherweise generiert
+    // Filtere ungültige Kapazitätswerte
     if (whitelistedField.label.toLowerCase().includes('kapazität')) {
-      // Wenn der Wert "Wh" enthält, komplett überspringen (AI-Halluzination)
-      if (processedValue.toLowerCase().includes('wh')) {
-        console.log(`🔋 Kapazität mit Wh übersprungen (nicht in CSV): ${value}`);
-        continue; // Überspringe diesen Eintrag komplett
+      const valueLower = processedValue.toLowerCase();
+      
+      // Kapazität MUSS eine Zahl mit mAh oder Ah enthalten
+      const hasValidCapacity = /\d+\s*(mah|ah)/i.test(processedValue);
+      
+      // Wenn keine gültige Kapazitätsangabe, überspringen (z.B. "Li-Polymer" ist Akkutyp, nicht Kapazität)
+      if (!hasValidCapacity) {
+        console.log(`🔋 Ungültige Kapazität übersprungen (keine mAh/Ah): "${value}"`);
+        continue;
       }
       
-      // Wenn der Wert nur eine Zahl ist ohne Einheit, auch überspringen
-      const numericOnly = /^\d+([.,]\d+)?$/.test(processedValue.trim());
-      if (numericOnly) {
-        console.log(`🔋 Kapazität ohne Einheit übersprungen: ${value}`);
-        continue; // Überspringe diesen Eintrag
+      // Wenn der Wert "Wh" enthält, komplett überspringen (AI-Halluzination)
+      if (valueLower.includes('wh') && !valueLower.includes('mah')) {
+        console.log(`🔋 Kapazität mit Wh übersprungen (nicht in CSV): ${value}`);
+        continue;
+      }
+    }
+    
+    // Filtere ungültige Spannungswerte
+    if (whitelistedField.label.toLowerCase().includes('spannung')) {
+      // Spannung MUSS eine Zahl enthalten
+      const hasNumeric = /\d/.test(processedValue);
+      if (!hasNumeric) {
+        console.log(`⚡ Ungültige Spannung übersprungen (keine Zahl): "${value}"`);
+        continue;
+      }
+    }
+    
+    // Filtere ungültige Akkutyp-Werte (darf keine Zahlen als Hauptinhalt haben)
+    if (whitelistedField.label.toLowerCase().includes('akkutyp') || 
+        whitelistedField.label.toLowerCase().includes('chemie')) {
+      // Akkutyp sollte Text sein wie "Li-Ion", "Li-Polymer", "NiMH" etc.
+      const validAkkuTypes = ['li-ion', 'li-polymer', 'lipo', 'nimh', 'nicd', 'lifepo4', 'lithium'];
+      const hasValidType = validAkkuTypes.some(type => processedValue.toLowerCase().includes(type));
+      if (!hasValidType && !/[a-z]{2,}/i.test(processedValue)) {
+        console.log(`🔬 Ungültiger Akkutyp übersprungen: "${value}"`);
+        continue;
       }
     }
     
