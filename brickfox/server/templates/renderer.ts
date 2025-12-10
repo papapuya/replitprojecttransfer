@@ -615,13 +615,8 @@ ${packageItems.map(item => `<li>${e(item)}</li>`).join('\n')}
   const productName = e(data.productName);
   
   // H1 entfernt - Shop generiert eigenen Titel
+  // Nur noch ein kompakter Anwendungsabsatz (einleitung+fazit entfernt)
   let html = `<p>${anwendung}</p>`;
-
-  // Fließtext/Schlusssatz nach Anwendung
-  if (data.fazit && data.fazit.trim()) {
-    html += `
-<p>${e(data.fazit)}</p>`;
-  }
 
   if (werkzeuguebersichtHtml) {
     html += `
