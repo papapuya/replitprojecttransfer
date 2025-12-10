@@ -133,8 +133,7 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 
 {
   "produktTitel": "[Marke] [Produktart] für [Geräte] – [messbare Attribute]",
-  "einleitung": "2-3 sachliche Sätze. Was ist das Produkt, wofür wird es verwendet, für wen ist es geeignet. Hauptkeyword natürlich enthalten.",
-  "anwendung": "Konkrete Einsatzgebiete anhand Kategorie + Produkttyp. 2-3 Sätze.",
+  "anwendung": "EIN kompakter Absatz (3-4 Sätze max). Kombiniert: Was ist das Produkt + konkreter Einsatz + Nutzen. KEINE Wiederholungen. KEINE Phrasen wie 'wiederherzustellen' mehrfach. Direkt und präzise.",
   "kompatibilitaet": ["Modell 1", "Modell 2"],
   "vorteile": ["Vorteil 1", "Vorteil 2", "Vorteil 3"],
   "technischeDaten": {"Feldname": "Wert mit Einheit"},
@@ -144,8 +143,7 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 
 REGELN FÜR JSON-FELDER:
 - produktTitel: PFLICHT. Schema: [Marke] [Produktart] für [Geräte] – [Attribute]. Marke IMMER zuerst! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen!
-- einleitung: PFLICHT. 2-3 Sätze, Hauptkeyword enthalten, kein Marketing-Blabla. KEINE APN-Nummern hier!
-- anwendung: PFLICHT. Konkrete Einsatzgebiete, 2-3 Sätze. KEINE APN-Nummern hier!
+- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen, KEINE APN-Nummern, KEINE Phrasen doppelt!
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - vorteile: Max 5, müssen aus Daten ableitbar sein
 - technischeDaten: NUR bei Akkus/Ladegeräten/etc. APN-Nummern gehören HIER rein (z.B. "APN": "616-0579, 616-0580")

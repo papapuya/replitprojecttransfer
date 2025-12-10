@@ -360,15 +360,13 @@ AUSGABEFORMAT (JSON)
 {
   "produktTitel": "SEO-optimierter Titel nach Schema: [Marke] [Produktart] für [Gerät] – [Specs]",
   "produktTyp": "akku" | "elektronik" | "werkzeug",
-  "einleitung": "2-3 sachliche Sätze. Was ist das Produkt, wofür wird es verwendet.",
-  "anwendung": "Konkrete Einsatzgebiete anhand Kategorie + Produkttyp. 2-3 Sätze.",
+  "anwendung": "EIN kompakter Absatz (3-4 Sätze max). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen. Direkt und präzise.",
   "kompatibilitaet": ["Modell 1", "Modell 2"],
   "apnSatz": "Dieser Akku ersetzt die Apple-Teilenummern (APN) 616-0579, 616-0580.",
   "werkzeuguebersicht": ["Werkzeug 1", "Werkzeug 2"],
   "uspBullets": ["Vorteil 1", "Vorteil 2", "Vorteil 3", "Vorteil 4", "Vorteil 5"],
   "technicalSpecs": {"Feldname": "Wert mit Einheit"},
   "packageContents": ["Artikel 1", "Artikel 2"],
-  "fazit": "Kurzer Schlusssatz (1-2 Sätze) als Kaufempfehlung. Beginne direkt mit dem Text, NICHT mit 'Fazit:'!",
   "zeigeTabelle": true/false
 }
 
@@ -389,15 +387,13 @@ PRODUKTTITEL-REGELN (produktTitel)
 - Keine Sätze, sondern Titelstruktur
 
 WEITERE JSON-FELDER:
-- einleitung: PFLICHT. 2-3 Sätze, kein Marketing.
-- anwendung: PFLICHT. Konkrete Einsatzgebiete, 2-3 Sätze
+- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen!
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
 - uspBullets: Max 5, müssen aus Daten ableitbar sein. KEINE APNs in den Vorteilen!
 - technicalSpecs: NUR bei Akkus (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik
 - packageContents: PFLICHT. Mindestens das Produkt selbst
-- fazit: PFLICHT. 1-2 Sätze Schlussfazit als Kaufempfehlung unter der technischen Tabelle.
 - zeigeTabelle: true NUR bei Akkus, sonst false
 
 ═══════════════════════════════════════════════════════════════
@@ -409,7 +405,7 @@ Du darfst den Produktnamen NICHT in deinen Texten wiederholen!
 ❌ VERBOTEN:
 - Produktname am Satzanfang wiederholen
 - Produktname identisch im Text nennen
-- Produktname in einleitung/anwendung einfügen
+- Produktname im Anwendungstext einfügen
 
 ✅ ERLAUBT:
 - Allgemeine Begriffe: "Dieses Werkzeug-Set", "Der Akku", "Das Zubehör"
