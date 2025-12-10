@@ -20,7 +20,8 @@ import {
 
 interface BulkProduct {
   id: number;
-  artikelnummer: string;
+  p_id: string;
+  v_id: string;
   produktname: string;
   produktbeschreibung: string;
   produktbeschreibung_html: string;
@@ -83,8 +84,11 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
           <Table data-testid="table-products">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="min-w-[140px]">
-                  Artikelnummer
+                <TableHead className="min-w-[80px]">
+                  p_id
+                </TableHead>
+                <TableHead className="min-w-[80px]">
+                  v_id
                 </TableHead>
                 <TableHead className="min-w-[200px]">
                   Produktname
@@ -116,8 +120,13 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                   data-testid={`row-product-${product.id}`}
                 >
                   <TableCell>
-                    <span className="text-sm font-mono" data-testid={`text-sku-${product.id}`}>
-                      {product.artikelnummer || '-'}
+                    <span className="text-sm font-mono" data-testid={`text-pid-${product.id}`}>
+                      {product.p_id || '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-mono" data-testid={`text-vid-${product.id}`}>
+                      {product.v_id || '-'}
                     </span>
                   </TableCell>
                   <TableCell>
