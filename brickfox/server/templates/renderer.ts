@@ -585,10 +585,13 @@ function renderMediaMarktLayout(data: {
   if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
     const filteredSpecs = data.technicalSpecs.filter(spec => {
       const labelLower = spec.label.toLowerCase();
-      const valueTrimmed = (spec.value || '').trim();
+      // Entferne alle Nicht-Zeichen um wirklich leeren Wert zu erkennen
+      const valueTrimmed = (spec.value || '').replace(/[\s\u00A0\u200B\uFEFF]/g, '').trim();
       
-      // Entferne leere Werte
-      if (!valueTrimmed || valueTrimmed === '' || valueTrimmed === '-' || valueTrimmed === '0') {
+      // Entferne leere Werte - auch HTML-Entitäten berücksichtigen
+      if (!valueTrimmed || valueTrimmed === '' || valueTrimmed === '-' || valueTrimmed === '0' ||
+          valueTrimmed === '&nbsp;' || valueTrimmed.length === 0) {
+        console.log(`🚫 Leerer Wert gefiltert: "${spec.label}" = "${spec.value}"`);
         return false;
       }
       
@@ -614,13 +617,23 @@ function renderMediaMarktLayout(data: {
   
   // Finale Filterung: Entferne alle Zeilen mit leerem Wert
   const finalSpecs = allSpecs.filter(spec => {
-    const val = (spec.value || '').trim().toLowerCase();
-    // Leere oder ungültige Werte filtern
-    if (!val || val === '' || val === '-' || val === '0' || val === 'n/a' || 
-        val === 'null' || val === 'undefined' || val === 'nicht angegeben' ||
-        val === 'keine angabe' || val === 'unbekannt' || val.length === 0) {
+    const val = (spec.value || '').trim();
+    const valLower = val.toLowerCase();
+    
+    // Debug-Log um leere Werte zu identifizieren
+    if (!val || val.length === 0) {
+      console.log(`🚫 FINALE FILTERUNG: "${spec.label}" hat leeren Wert`);
       return false;
     }
+    
+    // Leere oder ungültige Werte filtern
+    if (valLower === '-' || valLower === '0' || valLower === 'n/a' || 
+        valLower === 'null' || valLower === 'undefined' || valLower === 'nicht angegeben' ||
+        valLower === 'keine angabe' || valLower === 'unbekannt') {
+      console.log(`🚫 FINALE FILTERUNG: "${spec.label}" = "${val}" (ungültiger Wert)`);
+      return false;
+    }
+    
     return true;
   });
   
