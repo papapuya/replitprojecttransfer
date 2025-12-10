@@ -109,9 +109,22 @@ export default function CSVBulkDescription() {
   const SESSION_KEY_PRODUCTS = 'csv-bulk-products';
   const SESSION_KEY_RAW_DATA = 'csv-bulk-raw-data';
   const SESSION_KEY_FILE_NAME = 'csv-bulk-file-name';
+  const SESSION_KEY_VERSION = 'csv-bulk-version';
+  const CURRENT_SCHEMA_VERSION = '2'; // Increment when BulkProduct structure changes
 
   // Beim Laden der Komponente: Daten aus sessionStorage wiederherstellen
   useEffect(() => {
+    // Prüfe Schema-Version - bei Änderung Cache leeren
+    const savedVersion = sessionStorage.getItem(SESSION_KEY_VERSION);
+    if (savedVersion !== CURRENT_SCHEMA_VERSION) {
+      console.log('[CSV] Schema version changed, clearing cache');
+      sessionStorage.removeItem(SESSION_KEY_PRODUCTS);
+      sessionStorage.removeItem(SESSION_KEY_RAW_DATA);
+      sessionStorage.removeItem(SESSION_KEY_FILE_NAME);
+      sessionStorage.setItem(SESSION_KEY_VERSION, CURRENT_SCHEMA_VERSION);
+      return;
+    }
+
     const savedProducts = sessionStorage.getItem(SESSION_KEY_PRODUCTS);
     const savedRawData = sessionStorage.getItem(SESSION_KEY_RAW_DATA);
     const savedFileName = sessionStorage.getItem(SESSION_KEY_FILE_NAME);
@@ -120,6 +133,15 @@ export default function CSVBulkDescription() {
       try {
         const products = JSON.parse(savedProducts);
         const rawData = JSON.parse(savedRawData);
+        
+        // Prüfe ob Produkte das neue Format haben (p_id statt artikelnummer)
+        if (products.length > 0 && !('p_id' in products[0])) {
+          console.log('[CSV] Old product format detected, clearing cache');
+          sessionStorage.removeItem(SESSION_KEY_PRODUCTS);
+          sessionStorage.removeItem(SESSION_KEY_RAW_DATA);
+          sessionStorage.removeItem(SESSION_KEY_FILE_NAME);
+          return;
+        }
         
         setBulkProducts(products);
         setRawData(rawData);
