@@ -147,70 +147,47 @@ function getStyleInstructions(style: StyleVariant): string {
       return `STIL: SACHLICH-TECHNISCH (Version A)
 Dieser Text wirkt wie von einem technischen Händler oder Hersteller.
 
-EINLEITUNG:
-- Beschreibe das Produkt mit Fokus auf technischen Werten und Kompatibilität
+ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
+- Kombiniere Produktbeschreibung + Einsatz + Nutzen in EINEM flüssigen Absatz
+- Fokus auf technischen Werten und Kompatibilität
 - Keine überflüssigen Adjektive, klarer Informationsstil
-- Beispiel: "Der [Akku] wurde entwickelt, um eine zuverlässige Energieversorgung sicherzustellen."
-
-ANWENDUNG & EINSATZBEREICH:
-- Kurz und objektiv: Austausch, Funktionswiederherstellung, Kompatibilität
-- Technische Schutzschaltungen erwähnen wenn vorhanden
-- Sachliche Sprache ohne emotionale Wertung
+- KEINE Wiederholungen von Wörtern oder Phrasen
+- Beispiel: "Dieser Ersatzakku für das iPhone 4S bietet zuverlässige Energie mit Li-Polymer Technologie. Bei nachlassender Akkuleistung ermöglicht er die volle Funktionalität des Geräts. Die integrierten Schutzschaltungen gewährleisten sicheren Betrieb."
 
 VORTEILE (kurz, technisch präzise):
 - "Hochwertige Li-Polymer Zellen"
 - "Konstante Leistungsabgabe"
-- "Integrierte Schutzschaltungen"
-
-SCHLUSSSATZ:
-- Neutraler, fachlicher Abschluss ohne emotionalen Touch
-- Beispiel: "Eine zuverlässige Alternative zum Originalakku."`;
+- "Integrierte Schutzschaltungen"`;
 
     case 'nutzen':
       return `STIL: NUTZENORIENTIERT & ALLTAGSNAH (Version B)
 Dieser Text ist kundenzentriert und vermeidet den "Datenblatt-Stil".
 
-EINLEITUNG:
+ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
+- Kombiniere Alltagsszenario + Problemlösung + Nutzen in EINEM flüssigen Absatz
 - Stelle das Alltagsszenario in den Fokus
-- Beispiel: "Wenn das Smartphone zu früh schlapp macht, ist dieser Ersatzakku die Lösung."
-- Technische Daten einbetten, aber nicht dominieren lassen
-
-ANWENDUNG & EINSATZBEREICH:
-- Erkläre, wie das Produkt konkret Probleme löst
-- Kurze Laufzeiten, unerwartete Abschaltungen, häufige Nutzung
-- Fokus auf Kundensituationen
+- KEINE Wiederholungen von Wörtern oder Phrasen
+- Beispiel: "Wenn das iPhone 4S nicht mehr den ganzen Tag durchhält, schafft dieser Ersatzakku Abhilfe. Mit hochwertigen Li-Polymer Zellen liefert er zuverlässige Energie für den Alltag. Der Austausch ist unkompliziert und bringt die gewohnte Laufzeit zurück."
 
 VORTEILE (nutzenorientiert):
 - "Spürbar längere Nutzung im Alltag"
 - "Verlässliche Energie für den Tag"
-- "Problemlöser bei Leistungsabfall"
-
-SCHLUSSSATZ:
-- Erkläre kurz, warum dieses Produkt eine praktische Lösung ist
-- Beispiel: "Die ideale Wahl für alle, die auf zuverlässige Energie angewiesen sind."`;
+- "Problemlöser bei Leistungsabfall"`;
 
     case 'premium':
       return `STIL: PREMIUM & BERATEND (Version C)
 Dieser Text wirkt wie von einem Premium-Elektronikhändler – hochwertig und vertrauensbildend.
 
-EINLEITUNG:
+ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
+- Kombiniere Qualitätsversprechen + Einsatz + Empfehlung in EINEM flüssigen Absatz
 - Betone Qualität, Zuverlässigkeit, geprüfte Komponenten
-- Wirkt wie eine Kaufberatung
-- Beispiel: "Für Anwender, die Wert auf geprüfte Qualität legen, bietet dieser Akku..."
-
-ANWENDUNG & EINSATZBEREICH:
-- Erkläre, warum dieses Produkt eine technisch saubere Wahl ist
-- Qualitätskontrolle, langlebige Zellen, geprüfte Sicherheitsstandards
-- Professioneller Beratungston
+- KEINE Wiederholungen von Wörtern oder Phrasen
+- Beispiel: "Für Anwender, die Wert auf geprüfte Qualität legen, ist dieser iPhone 4S Ersatzakku die richtige Wahl. Die hochwertigen Li-Polymer Zellen bieten konstante Leistung und lange Lebensdauer. Integrierte Schutzschaltungen sorgen für sicheren Betrieb im täglichen Einsatz."
 
 VORTEILE (hochwertig formuliert):
 - "Konstant stabile Spannungslage"
 - "Optimierte Zyklenfestigkeit"
-- "Präzise abgestimmte Parameter"
-
-SCHLUSSSATZ:
-- Betone Wertigkeit und sicheren Einsatz
-- Beispiel: "Eine durchdachte Wahl für anspruchsvolle Anwender."`;
+- "Präzise abgestimmte Parameter"`;
   }
 }
 
