@@ -433,7 +433,7 @@ export default function CSVBulkDescription() {
       });
 
       const csvContent = [
-        headers.join(';'),
+        headers.map(h => `"${h}"`).join(';'),
         ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
       ].join('\n');
 
