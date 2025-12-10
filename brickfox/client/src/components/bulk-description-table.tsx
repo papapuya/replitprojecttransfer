@@ -26,6 +26,10 @@ interface BulkProduct {
   produktname_neu: string;
   produktbeschreibung: string;
   produktbeschreibung_html: string;
+  produktname_nl: string;
+  produktbeschreibung_nl: string;
+  produktbeschreibung_html_nl: string;
+  produktbeschreibung_original?: string;
   mediamarktname_v1: string;
   mediamarktname_v2: string;
   seo_beschreibung: string;
@@ -102,6 +106,15 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                 </TableHead>
                 <TableHead className="min-w-[500px]">
                   Produktbeschreibung HTML
+                </TableHead>
+                <TableHead className="min-w-[250px]">
+                  Produktname (NL)
+                </TableHead>
+                <TableHead className="min-w-[500px]">
+                  Produktbeschreibung (NL)
+                </TableHead>
+                <TableHead className="min-w-[400px]">
+                  Produktbeschreibung (Original CSV)
                 </TableHead>
                 <TableHead className="min-w-[300px]">
                   MediaMarkt Titel V1
@@ -208,6 +221,114 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                             className="flex-shrink-0"
                           >
                             {copiedIds.has(product.id) ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  {/* Produktname Niederländisch */}
+                  <TableCell>
+                    <div className="flex gap-2 items-start">
+                      <Textarea
+                        value={product.produktname_nl || ''}
+                        onChange={(e) => onUpdateProduct(product.id, 'produktname_nl', e.target.value)}
+                        className="text-xs resize-none min-h-[80px] font-sans flex-1 bulk-description-textarea"
+                        placeholder="Niederländischer Produktname..."
+                        data-testid={`input-produktname-nl-${product.id}`}
+                      />
+                      <div className="flex flex-col gap-1 mt-1">
+                        {product.produktname_nl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyToClipboard(product.produktname_nl, product.id * 1000 + 1)}
+                            title="NL Name kopieren"
+                            className="flex-shrink-0"
+                          >
+                            {copiedIds.has(product.id * 1000 + 1) ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  {/* Produktbeschreibung Niederländisch */}
+                  <TableCell>
+                    <div className="flex gap-2 items-start">
+                      <Textarea
+                        value={product.produktbeschreibung_html_nl || ''}
+                        onChange={(e) => onUpdateProduct(product.id, 'produktbeschreibung_html_nl', e.target.value)}
+                        className="text-xs resize-none min-h-[100px] font-mono flex-1 bulk-description-textarea"
+                        data-testid={`input-beschreibung-nl-${product.id}`}
+                      />
+                      <div className="flex flex-col gap-1 mt-1">
+                        {onPreviewHtml && product.produktbeschreibung_html_nl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onPreviewHtml(product.produktbeschreibung_html_nl, `${product.produktname_nl || product.produktname} (NL)`)}
+                            title="NL Vorschau anzeigen"
+                            className="flex-shrink-0"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {product.produktbeschreibung_html_nl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyToClipboard(product.produktbeschreibung_html_nl, product.id * 1000 + 2)}
+                            title="NL HTML kopieren"
+                            className="flex-shrink-0"
+                          >
+                            {copiedIds.has(product.id * 1000 + 2) ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  {/* Produktbeschreibung Original CSV */}
+                  <TableCell>
+                    <div className="flex gap-2 items-start">
+                      <Textarea
+                        value={product.produktbeschreibung_original || ''}
+                        onChange={(e) => onUpdateProduct(product.id, 'produktbeschreibung_original', e.target.value)}
+                        className="text-xs resize-none min-h-[100px] font-sans flex-1 bulk-description-textarea bg-muted/30"
+                        readOnly
+                        data-testid={`input-beschreibung-original-${product.id}`}
+                      />
+                      <div className="flex flex-col gap-1 mt-1">
+                        {onPreviewHtml && product.produktbeschreibung_original && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onPreviewHtml(product.produktbeschreibung_original || '', `${product.produktname} (Original)`)}
+                            title="Original Vorschau anzeigen"
+                            className="flex-shrink-0"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {product.produktbeschreibung_original && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyToClipboard(product.produktbeschreibung_original || '', product.id * 1000 + 3)}
+                            title="Original kopieren"
+                            className="flex-shrink-0"
+                          >
+                            {copiedIds.has(product.id * 1000 + 3) ? (
                               <Check className="w-4 h-4 text-green-600" />
                             ) : (
                               <Copy className="w-4 h-4" />
