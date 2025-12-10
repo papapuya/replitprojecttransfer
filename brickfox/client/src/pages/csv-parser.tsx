@@ -57,6 +57,11 @@ export default function CSVParser() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Reset file input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
     setIsProcessing(true);
     setProgress(0);
     setBulkData([]);
