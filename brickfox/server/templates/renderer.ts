@@ -390,15 +390,40 @@ function renderMediaMarktLayout(data: {
     ? data.uspBullets.slice(0, 5).map(usp => `✅ ${e(usp)}`).join('<br />\n')
     : '';
 
-  const showTable = produktTyp === 'akku' && data.zeigeTabelle !== false && data.technicalSpecs.length > 0;
-  const techTableHtml = showTable
+  // Dynamische technische Tabelle mit Kompatibilität und Teilenummern
+  const allSpecs: Array<{label: string, value: string}> = [];
+  
+  // Kompatibilität als erste Zeile
+  if (data.kompatibleModelle && data.kompatibleModelle.length > 0) {
+    allSpecs.push({
+      label: 'Kompatibilit\u00e4t',
+      value: data.kompatibleModelle.join(', ')
+    });
+  }
+  
+  // Teilenummer(n) aus APN-Satz extrahieren
+  if (data.apnSatz && data.apnSatz.trim()) {
+    const apnNumbers = data.apnSatz.match(/\d{3}-\d{5}/g);
+    if (apnNumbers && apnNumbers.length > 0) {
+      allSpecs.push({
+        label: 'Teilenummer(n)',
+        value: apnNumbers.join(', ')
+      });
+    }
+  }
+  
+  // Technische Specs hinzufügen (bei Akkus)
+  if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
+    allSpecs.push(...data.technicalSpecs);
+  }
+  
+  // Tabelle anzeigen wenn es Daten gibt
+  const techTableHtml = allSpecs.length > 0
     ? `<h2>Technische Daten</h2>
 <table>
-${data.technicalSpecs.map(spec => `<tr><td>${e(spec.label)}</td><td>${e(spec.value)}</td></tr>`).join('\n')}
+${allSpecs.map(spec => `<tr><td>${e(spec.label)}</td><td>${e(spec.value)}</td></tr>`).join('\n')}
 </table>`
     : '';
-
-  const kompatibleModelleHtml = renderKompatibilitaet(data.kompatibleModelle || [], e);
 
   const werkzeugItems = data.werkzeuguebersicht || [];
   const werkzeuguebersichtHtml = (produktTyp === 'werkzeug' && werkzeugItems.length > 0)
@@ -427,25 +452,10 @@ ${packageItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 <h2>Anwendung &amp; Einsatzbereich</h2>
 <p>${anwendung}</p>`;
 
-  // Fließtext/Schlusssatz vor Kompatibilität (aufgeräumter)
+  // Fließtext/Schlusssatz nach Anwendung
   if (data.fazit && data.fazit.trim()) {
     html += `
 <p>${e(data.fazit)}</p>`;
-  }
-
-  if (kompatibleModelleHtml) {
-    html += `
-${kompatibleModelleHtml}`;
-  }
-
-  // Teilenummer(n) kompakt nach Kompatibilität
-  if (data.apnSatz && data.apnSatz.trim()) {
-    // Extrahiere nur die APN-Nummern aus dem Satz
-    const apnNumbers = data.apnSatz.match(/\d{3}-\d{5}/g);
-    if (apnNumbers && apnNumbers.length > 0) {
-      html += `
-<p><strong>Teilenummer(n):</strong> ${apnNumbers.join(', ')}</p>`;
-    }
   }
 
   if (werkzeuguebersichtHtml) {
