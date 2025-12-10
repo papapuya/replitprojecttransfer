@@ -1,4 +1,4 @@
-import { Home, FileSpreadsheet, Globe, FolderOpen, Settings, Zap, Building2, User, CreditCard, LayoutDashboard, Crown, GitCompare, LogOut, ShoppingCart, Upload } from "lucide-react";
+import { Home, FileSpreadsheet, Globe, FolderOpen, Settings, Zap, Building2, User, CreditCard, LayoutDashboard, Crown, GitCompare, LogOut, ShoppingCart, Upload, Battery } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +64,11 @@ const menuItems = [
     title: "MediaMarkt Generator",
     url: "/mediamarkt-generator",
     icon: ShoppingCart,
+  },
+  {
+    title: "CSV Parser",
+    url: "/csv-parser",
+    icon: Battery,
   },
   {
     title: "Mein Account",
