@@ -614,8 +614,8 @@ ${packageItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 
   const productName = e(data.productName);
   
-  let html = `<h1>${productName}</h1>
-<p>${anwendung}</p>`;
+  // H1 entfernt - Shop generiert eigenen Titel
+  let html = `<p>${anwendung}</p>`;
 
   // Fließtext/Schlusssatz nach Anwendung
   if (data.fazit && data.fazit.trim()) {
