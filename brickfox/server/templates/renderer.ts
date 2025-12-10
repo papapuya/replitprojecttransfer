@@ -612,11 +612,17 @@ function renderMediaMarktLayout(data: {
     }
   }
   
+  // Finale Filterung: Entferne alle Zeilen mit leerem Wert
+  const finalSpecs = allSpecs.filter(spec => {
+    const val = (spec.value || '').trim();
+    return val !== '' && val !== '-' && val !== '0' && val !== 'n/a';
+  });
+  
   // Tabelle mit dynamischer Spaltenbreite: erste Spalte passt sich an längsten Label an
-  const techTableHtml = allSpecs.length > 0
+  const techTableHtml = finalSpecs.length > 0
     ? `<h2>Technische Daten</h2>
 <table style="width: auto; border-collapse: collapse;">
-${allSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 2em; vertical-align: top;">${e(spec.label)}</td><td style="vertical-align: top;">${e(spec.value)}</td></tr>`).join('\n')}
+${finalSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 2em; vertical-align: top;">${e(spec.label)}</td><td style="vertical-align: top;">${e(spec.value)}</td></tr>`).join('\n')}
 </table>`
     : '';
 
