@@ -704,7 +704,7 @@ ${werkzeuguebersichtHtml}`;
 
   if (vorteileHtml) {
     html += `
-<h2>Ihre Vorteile</h2>
+<p><b>Ihre Vorteile</b></p>
 <p>
 ${vorteileHtml}
 </p>`;
