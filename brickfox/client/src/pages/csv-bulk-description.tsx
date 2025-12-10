@@ -381,6 +381,26 @@ export default function CSVBulkDescription() {
     return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   };
 
+  const decodeHtmlEntities = (text: string): string => {
+    if (!text) return '';
+    const entities: Record<string, string> = {
+      '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>',
+      '&quot;': '"', '&apos;': "'", '&#39;': "'",
+      '&auml;': 'ä', '&ouml;': 'ö', '&uuml;': 'ü',
+      '&Auml;': 'Ä', '&Ouml;': 'Ö', '&Uuml;': 'Ü',
+      '&szlig;': 'ß', '&euro;': '€', '&ndash;': '–', '&mdash;': '—',
+      '&copy;': '©', '&reg;': '®', '&trade;': '™',
+      '&laquo;': '«', '&raquo;': '»', '&bull;': '•',
+    };
+    let result = text;
+    Object.keys(entities).forEach(entity => {
+      result = result.replace(new RegExp(entity, 'gi'), entities[entity]);
+    });
+    result = result.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+    result = result.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    return result;
+  };
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
@@ -407,7 +427,8 @@ export default function CSVBulkDescription() {
       const rows = bulkProducts.map(product => {
         return selectedColumns.map(col => {
           const value = product[col.key as keyof BulkProduct];
-          return typeof value === 'string' ? value : String(value);
+          const strValue = typeof value === 'string' ? value : String(value);
+          return decodeHtmlEntities(strValue);
         });
       });
 
