@@ -384,7 +384,7 @@ export default function CSVBulkDescription() {
     return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   };
 
-  // Bereinigt den SEO-Produktnamen: EMCOM entfernen, Wh/mAh entfernen, Volt hinzufügen
+  // Bereinigt den SEO-Produktnamen: EMCOM entfernen, Wh/mAh entfernen, APN entfernen, Volt hinzufügen
   const cleanSeoProductName = (name: string, voltValue?: string): string => {
     if (!name) return '';
     let cleaned = name;
@@ -397,6 +397,14 @@ export default function CSVBulkDescription() {
     cleaned = cleaned.replace(/\s+EMCOM$/i, '');
     // "von EMCOM" oder "by EMCOM" entfernen
     cleaned = cleaned.replace(/\s+(von|by|from)\s+EMCOM\b/gi, '');
+    
+    // APN-Angaben komplett entfernen
+    // "entspricht APN 616-0579, 616-0580, 616-0581, 616-0582"
+    cleaned = cleaned.replace(/,?\s*entspricht\s+APN\s+[\d\-,\s]+/gi, '');
+    // "APN 616-0579, 616-0580"
+    cleaned = cleaned.replace(/,?\s*APN\s+[\d\-,\s]+/gi, '');
+    // "(APN: 616-0579)"
+    cleaned = cleaned.replace(/\s*\(APN[:\s]*[\d\-,\s]+\)/gi, '');
     
     // Wh-Angaben entfernen (z.B. "37 Wh", "– 37 Wh")
     cleaned = cleaned.replace(/\s*–?\s*\d+\s*Wh\b/gi, '');
@@ -416,6 +424,8 @@ export default function CSVBulkDescription() {
     
     // Doppelte Leerzeichen und – am Ende bereinigen
     cleaned = cleaned.replace(/\s+/g, ' ').replace(/\s*–\s*$/, '').trim();
+    // Komma am Ende entfernen
+    cleaned = cleaned.replace(/,\s*$/, '').trim();
     
     return cleaned;
   };

@@ -612,10 +612,10 @@ ${packageItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 </ul>`
     : '';
 
-  // H1 wird vom Shop selbst generiert, daher hier weglassen
-  // Starte direkt mit dem Einleitungstext
+  const productName = e(data.productName);
   
-  let html = `<p>${anwendung}</p>`;
+  let html = `<h1>${productName}</h1>
+<p>${anwendung}</p>`;
 
   // Fließtext/Schlusssatz nach Anwendung
   if (data.fazit && data.fazit.trim()) {
