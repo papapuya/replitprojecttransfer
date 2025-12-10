@@ -101,11 +101,11 @@ The frontend utilizes React 18, TypeScript, Vite, shadcn/ui, Radix UI, and Tailw
 - **AI/ML**: OpenAI API (GPT-4o-mini for text generation, GPT-4o-mini Vision for image analysis)
 - **Web Scraping**: Cheerio (Custom scraper service with error handling)
 - **Browser Automation**: Puppeteer for JavaScript-rendered content (Phonetastik login + dynamic rendering)
-- **Authentication**: Supabase Auth (JWT-based)
+- **Authentication**: Local session-based auth with bcrypt password hashing (no external service dependencies)
 
 ### Feature Specifications
 - **Multi-Tenant Architecture**: Ensures data isolation, dynamic tenant creation, and robust slug generation.
-- **User Authentication**: Supabase Auth with session management.
+- **User Authentication**: Local session-based authentication with bcrypt password hashing and cryptographically secure tokens.
 - **Subscription Management**: Stripe integration for tiered access and trials, with default features for new customers (URL Web-Scraper, CSV Mass Import, AI Product Descriptions).
 - **Usage Tracking**: Real-time API call monitoring with limit enforcement.
 - **CSV Bulk Processing**: Upload and process product data for mass AI generation, with standardized column selection for PIM mapping and full image URL export. Brickfox CSV export now includes separate columns for up to 10 image URLs and consistent preview/export.
