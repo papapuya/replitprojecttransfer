@@ -46,6 +46,8 @@ interface BulkProduct {
   produktname_nl: string;
   produktbeschreibung_nl: string;
   produktbeschreibung_html_nl: string;
+  // Original Beschreibung aus CSV
+  produktbeschreibung_original?: string;
   mediamarktname_v1: string;
   mediamarktname_v2: string;
   seo_titel?: string;
@@ -105,6 +107,8 @@ export default function CSVBulkDescription() {
     // Niederländische Felder (via DeepL)
     { key: 'produktname_nl', label: 'p_name[nl]', enabled: true },
     { key: 'produktbeschreibung_html_nl', label: 'p_description[nl]', enabled: true },
+    // Original aus CSV
+    { key: 'produktbeschreibung_original', label: 'p_description_original[de]', enabled: false },
     { key: 'mediamarktname_v1', label: 'p_mediamarkt_v1', enabled: false },
     { key: 'mediamarktname_v2', label: 'p_mediamarkt_v2', enabled: false },
     { key: 'seo_beschreibung', label: 'p_seo_description[de]', enabled: true },
@@ -339,6 +343,10 @@ export default function CSVBulkDescription() {
           // Niederländische Übersetzungen (von DeepL API)
           const plainTextNL = stripHtml(payload.descriptionNL || '');
           
+          // Original-Beschreibung aus CSV extrahieren
+          const originalDescription = row['p_description[de]'] || row['P Description[de]'] || 
+                                      row['p_description'] || row['beschreibung'] || '';
+          
           return {
             id: globalIndex + 1,
             p_id: p_id,
@@ -351,6 +359,8 @@ export default function CSVBulkDescription() {
             produktname_nl: payload.produktTitelNL || '',
             produktbeschreibung_nl: cleanDescription(plainTextNL),
             produktbeschreibung_html_nl: cleanDescription(payload.descriptionNL || ''),
+            // Original aus CSV
+            produktbeschreibung_original: originalDescription,
             mediamarktname_v1: mmNameV1.substring(0, 60),
             mediamarktname_v2: mmNameV2.substring(0, 40),
             seo_beschreibung: seoDesc,
