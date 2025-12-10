@@ -48,15 +48,19 @@ async function readFileWithEncoding(file: File): Promise<string> {
   const hasUtf8Bom = uint8Array[0] === 0xEF && uint8Array[1] === 0xBB && uint8Array[2] === 0xBF;
   
   if (hasUtf8Bom) {
-    // File has UTF-8 BOM - decode as UTF-8
-    text = new TextDecoder('utf-8').decode(uint8Array);
-    text = text.slice(1); // Remove BOM character
+    // File has UTF-8 BOM - decode starting after BOM bytes
+    const withoutBom = uint8Array.slice(3); // Skip the 3 BOM bytes
+    text = new TextDecoder('utf-8').decode(withoutBom);
     console.log('[CSV] Detected UTF-8 with BOM');
   } else {
     // Try UTF-8 first (most common modern encoding)
     try {
       const utf8Text = new TextDecoder('utf-8', { fatal: true }).decode(uint8Array);
       text = utf8Text;
+      // Remove BOM if present (U+FEFF)
+      if (text.charCodeAt(0) === 0xFEFF) {
+        text = text.slice(1);
+      }
       console.log('[CSV] Detected valid UTF-8 encoding');
     } catch (utf8Error) {
       // UTF-8 decoding failed - file is likely ISO-8859-1
