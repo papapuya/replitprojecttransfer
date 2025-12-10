@@ -112,6 +112,8 @@ VERBOTENE SACHEN
 ❌ Keine Meta-Texte
 ❌ Kein Keyword-Stuffing
 ❌ Keine Bold-Tags (<b>, <strong>) im Fließtext
+❌ KEINE APN-Nummern im Fließtext erwähnen! APN gehört NUR in die technische Datentabelle!
+❌ NIEMALS "EMCOM" im Text oder Titel erwähnen! EMCOM ist die Eigenmarke und wird komplett weggelassen!
 
 ═══════════════════════════════════════════════════════════════
 AUSGABEFORMAT (JSON)
@@ -130,12 +132,12 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 }
 
 REGELN FÜR JSON-FELDER:
-- produktTitel: PFLICHT. Schema: [Marke] [Produktart] für [Geräte] – [Attribute]. Marke IMMER zuerst!
-- einleitung: PFLICHT. 2-3 Sätze, Hauptkeyword enthalten, kein Marketing-Blabla
-- anwendung: PFLICHT. Konkrete Einsatzgebiete, 2-3 Sätze
+- produktTitel: PFLICHT. Schema: [Marke] [Produktart] für [Geräte] – [Attribute]. Marke IMMER zuerst! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen!
+- einleitung: PFLICHT. 2-3 Sätze, Hauptkeyword enthalten, kein Marketing-Blabla. KEINE APN-Nummern hier!
+- anwendung: PFLICHT. Konkrete Einsatzgebiete, 2-3 Sätze. KEINE APN-Nummern hier!
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - vorteile: Max 5, müssen aus Daten ableitbar sein
-- technischeDaten: NUR bei Akkus/Ladegeräten/etc. Leeres Objekt {} wenn keine Tabelle
+- technischeDaten: NUR bei Akkus/Ladegeräten/etc. APN-Nummern gehören HIER rein (z.B. "APN": "616-0579, 616-0580")
 - lieferumfang: PFLICHT. Mindestens "1x [Produktname]"
 - zeigeTabelle: true/false - ob technische Datentabelle angezeigt werden soll
 
