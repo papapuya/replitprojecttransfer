@@ -71,6 +71,28 @@ export function parseTechSpecsFromText(
     console.log(`✅ 1:1 Text-Parse: ${mappedFieldName} = ${cleanedValue}`);
   }
   
+  // SPEZIAL: Extrahiere APN-Nummern aus dem gesamten Text
+  const apnMatch = extractedText.match(/APN[:\s]+([0-9\-,\s]+)/i);
+  if (apnMatch) {
+    const apnValue = apnMatch[1].trim().replace(/\s+/g, ' ');
+    if (apnValue && apnValue.length > 0) {
+      specs['APN'] = apnValue;
+      console.log(`✅ APN extrahiert: ${apnValue}`);
+    }
+  }
+  
+  // Alternative APN-Patterns (z.B. "entspricht APN 616-0579, 616-0580")
+  if (!specs['APN']) {
+    const altApnMatch = extractedText.match(/entspricht\s+APN\s+([0-9\-,\s]+)/i);
+    if (altApnMatch) {
+      const apnValue = altApnMatch[1].trim().replace(/\s+/g, ' ');
+      if (apnValue && apnValue.length > 0) {
+        specs['APN'] = apnValue;
+        console.log(`✅ APN extrahiert (alt): ${apnValue}`);
+      }
+    }
+  }
+  
   return {
     specs,
     source: Object.keys(specs).length > 0 ? 'vision_text' : 'none',
@@ -245,22 +267,68 @@ export function extractTechSpecs1to1(
   structuredData: any,
   categoryConfig: ProductCategoryConfig
 ): Record<string, string> {
+  let specs: Record<string, string> = {};
+  
   // Priorität 1: Strukturierte Daten (wenn vorhanden)
   const structuredResult = extractTechSpecsFromStructured(structuredData, categoryConfig);
   if (structuredResult.source !== 'none') {
     console.log(`📊 Using ${Object.keys(structuredResult.specs).length} specs from structured data`);
-    return structuredResult.specs;
+    specs = { ...structuredResult.specs };
   }
   
-  // Priorität 2: Text-Parsing
+  // Priorität 2: Text-Parsing (als Ergänzung, nicht als Ersatz)
   const textResult = parseTechSpecsFromText(extractedText, categoryConfig);
   if (textResult.source !== 'none') {
-    console.log(`📊 Using ${Object.keys(textResult.specs).length} specs from text parsing`);
-    return textResult.specs;
+    // Ergänze fehlende Felder aus Text-Parsing (z.B. APN)
+    for (const [key, value] of Object.entries(textResult.specs)) {
+      if (!specs[key]) {
+        specs[key] = value;
+        console.log(`📊 Added from text parsing: ${key} = ${value}`);
+      }
+    }
   }
   
-  console.log('⚠️ No tech specs found in data');
-  return {};
+  // SPEZIAL: Extrahiere APN aus Produktname falls noch nicht vorhanden
+  if (!specs['APN'] && structuredData) {
+    // Suche in verschiedenen Produktname-Spalten
+    const productName = structuredData['P Name[de]'] || 
+                       structuredData['P_name[de]'] || 
+                       structuredData['p_name[de]'] ||
+                       structuredData['P Name'] ||
+                       structuredData.produktname || 
+                       structuredData.name || '';
+    
+    // Pattern 1: "APN: 616-0579, 616-0580" oder "APN 616-0579"
+    const apnMatch = productName.match(/APN[:\s]+([0-9\-,\s]+)/i);
+    if (apnMatch) {
+      specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ');
+      console.log(`✅ APN aus Produktname: ${specs['APN']}`);
+    }
+    
+    // Pattern 2: "entspricht APN 616-0579, 616-0580"
+    if (!specs['APN']) {
+      const altMatch = productName.match(/entspricht\s+APN\s+([0-9\-,\s]+)/i);
+      if (altMatch) {
+        specs['APN'] = altMatch[1].trim().replace(/\s+/g, ' ');
+        console.log(`✅ APN aus Produktname (entspricht): ${specs['APN']}`);
+      }
+    }
+    
+    // Pattern 3: Suche auch im extractedText nach APN falls noch nicht gefunden
+    if (!specs['APN'] && extractedText) {
+      const textApnMatch = extractedText.match(/APN[:\s]+([0-9\-,\s]+)/i);
+      if (textApnMatch) {
+        specs['APN'] = textApnMatch[1].trim().replace(/\s+/g, ' ');
+        console.log(`✅ APN aus extractedText: ${specs['APN']}`);
+      }
+    }
+  }
+  
+  if (Object.keys(specs).length === 0) {
+    console.log('⚠️ No tech specs found in data');
+  }
+  
+  return specs;
 }
 
 /**
