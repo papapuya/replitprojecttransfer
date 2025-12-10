@@ -425,6 +425,46 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
     }
   }
   
+  // ═══════════════════════════════════════════════════════════════
+  // SPEZIAL: APN/Teilenummer aus Produktnamen extrahieren
+  // ═══════════════════════════════════════════════════════════════
+  if (!specs['APN']) {
+    // Suche in allen möglichen Produktname-Spalten
+    const productNameFields = [
+      'P Name[de]', 'P_name[de]', 'p_name[de]', 'P Name', 'p_name',
+      'produktname', 'name', 'titel', 'title', 'description', 'beschreibung'
+    ];
+    
+    for (const field of productNameFields) {
+      const fieldValue = structuredData[field];
+      if (fieldValue && typeof fieldValue === 'string') {
+        // Pattern: "APN 616-0579, 616-0580" oder "APN: 616-0579"
+        let apnMatch = fieldValue.match(/APN[:\s]+([0-9\-,\s]+)/i);
+        if (apnMatch) {
+          specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
+          console.log(`🔢 APN aus ${field}: ${specs['APN']}`);
+          break;
+        }
+        
+        // Pattern: "entspricht APN 616-0579"
+        apnMatch = fieldValue.match(/entspricht\s+APN\s+([0-9\-,\s]+)/i);
+        if (apnMatch) {
+          specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
+          console.log(`🔢 APN (entspricht) aus ${field}: ${specs['APN']}`);
+          break;
+        }
+        
+        // Pattern: "Apple-Teilenummern 616-0579, 616-0580"
+        apnMatch = fieldValue.match(/Apple-?Teilenummer[n]?\s*[:\s]*([0-9\-,\s]+)/i);
+        if (apnMatch) {
+          specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
+          console.log(`🔢 Apple-Teilenummer aus ${field}: ${specs['APN']}`);
+          break;
+        }
+      }
+    }
+  }
+  
   return specs;
 }
 
