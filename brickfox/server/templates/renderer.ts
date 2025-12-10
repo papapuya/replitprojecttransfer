@@ -478,6 +478,12 @@ ${packageItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 <h2>Anwendung &amp; Einsatzbereich</h2>
 <p>${anwendung}</p>`;
 
+  // Fließtext/Schlusssatz vor Kompatibilität (aufgeräumter)
+  if (data.fazit && data.fazit.trim()) {
+    html += `
+<p>${e(data.fazit)}</p>`;
+  }
+
   if (kompatibleModelleHtml) {
     html += `
 ${kompatibleModelleHtml}`;
@@ -505,12 +511,6 @@ ${vorteileHtml}
   if (techTableHtml) {
     html += `
 ${techTableHtml}`;
-  }
-
-  // Schlusssatz vor Lieferumfang (ohne "Fazit:" Label)
-  if (data.fazit && data.fazit.trim()) {
-    html += `
-<p>${e(data.fazit)}</p>`;
   }
 
   // Lieferumfang immer zum Schluss
