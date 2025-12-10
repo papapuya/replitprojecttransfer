@@ -8,21 +8,16 @@ import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
 import { apiRequest } from "@/lib/queryClient";
 
-interface ProductWeight {
-  id: string;
-  sku: string;
-  name: string;
-  description: string;
-  brand: string;
-  category: string;
-  currentWeight: string;
+interface ProductRow {
+  originalData: Record<string, string>;
   estimatedWeight: number | null;
   confidence: "high" | "medium" | "low" | "error";
   needsEstimation: boolean;
 }
 
 export default function WeightGenerator() {
-  const [products, setProducts] = useState<ProductWeight[]>([]);
+  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [headers, setHeaders] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<"upload" | "estimating" | "done">("upload");
@@ -40,6 +35,7 @@ export default function WeightGenerator() {
     setIsProcessing(true);
     setProgress(0);
     setProducts([]);
+    setHeaders([]);
     setCurrentStep("upload");
 
     Papa.parse(file, {
@@ -48,19 +44,16 @@ export default function WeightGenerator() {
       delimiter: ";",
       encoding: "ISO-8859-1",
       complete: (results) => {
-        if (results && results.data) {
-          const parsed = (results.data as Record<string, string>[]).map((row, index) => {
+        if (results && results.data && results.meta.fields) {
+          const csvHeaders = results.meta.fields;
+          setHeaders(csvHeaders);
+          
+          const parsed = (results.data as Record<string, string>[]).map((row) => {
             const currentWeight = row["v_weight"] || "";
             const needsEstimation = !currentWeight || currentWeight === "0" || currentWeight === "0.00";
             
             return {
-              id: row["p_id"] || row["v_id"] || String(index),
-              sku: row["p_item_number"] || row["v_sku"] || "",
-              name: row["p_name[de]"] || row["p_name"] || "",
-              description: row["p_description[de]"] || row["p_description"] || "",
-              brand: row["p_brand"] || "",
-              category: row["p_group_path[de]"] || row["p_group_path"] || "",
-              currentWeight,
+              originalData: row,
               estimatedWeight: null,
               confidence: "low" as const,
               needsEstimation
@@ -88,6 +81,26 @@ export default function WeightGenerator() {
     });
   };
 
+  const getProductId = (row: ProductRow) => {
+    return row.originalData["p_id"] || row.originalData["v_id"] || "";
+  };
+
+  const getProductName = (row: ProductRow) => {
+    return row.originalData["p_name[de]"] || row.originalData["p_name"] || "";
+  };
+
+  const getProductDescription = (row: ProductRow) => {
+    return row.originalData["p_description[de]"] || row.originalData["p_description"] || "";
+  };
+
+  const getProductBrand = (row: ProductRow) => {
+    return row.originalData["p_brand"] || "";
+  };
+
+  const getProductCategory = (row: ProductRow) => {
+    return row.originalData["p_group_path[de]"] || row.originalData["p_group_path"] || "";
+  };
+
   const estimateWeights = async () => {
     const productsToEstimate = products.filter(p => p.needsEstimation);
     
@@ -112,11 +125,11 @@ export default function WeightGenerator() {
       try {
         const response = await apiRequest("POST", "/api/estimate-weight", {
           products: batch.map(p => ({
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            brand: p.brand,
-            category: p.category
+            id: getProductId(p),
+            name: getProductName(p),
+            description: getProductDescription(p),
+            brand: getProductBrand(p),
+            category: getProductCategory(p)
           }))
         });
 
@@ -124,7 +137,7 @@ export default function WeightGenerator() {
         
         if (data.success && data.results) {
           data.results.forEach((result: any) => {
-            const index = updatedProducts.findIndex(p => p.id === result.id);
+            const index = updatedProducts.findIndex(p => getProductId(p) === result.id);
             if (index !== -1) {
               updatedProducts[index] = {
                 ...updatedProducts[index],
@@ -157,20 +170,25 @@ export default function WeightGenerator() {
   const downloadResults = () => {
     if (products.length === 0) return;
 
-    const csvData = products.map(p => ({
-      "p_id": p.id,
-      "p_item_number": p.sku,
-      "p_name[de]": p.name,
-      "p_brand": p.brand,
-      "v_weight_original": p.currentWeight,
-      "v_weight_estimated": p.estimatedWeight !== null ? p.estimatedWeight.toString() : "",
-      "v_weight_final": p.needsEstimation && p.estimatedWeight !== null 
-        ? p.estimatedWeight.toString() 
-        : p.currentWeight,
-      "confidence": p.confidence
-    }));
+    const csvData = products.map(p => {
+      const row = { ...p.originalData };
+      if (p.needsEstimation && p.estimatedWeight !== null) {
+        row["v_weight"] = p.estimatedWeight.toString();
+      }
+      row["v_weight_estimated"] = p.estimatedWeight !== null ? p.estimatedWeight.toString() : "";
+      row["confidence"] = p.confidence;
+      return row;
+    });
 
-    const csv = "\uFEFF" + Papa.unparse(csvData, { quotes: true, delimiter: ";" });
+    const exportHeaders = [...headers];
+    if (!exportHeaders.includes("v_weight_estimated")) {
+      exportHeaders.push("v_weight_estimated");
+    }
+    if (!exportHeaders.includes("confidence")) {
+      exportHeaders.push("confidence");
+    }
+
+    const csv = "\uFEFF" + Papa.unparse(csvData, { quotes: true, delimiter: ";", columns: exportHeaders });
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -196,6 +214,10 @@ export default function WeightGenerator() {
 
   const needsEstimationCount = products.filter(p => p.needsEstimation).length;
   const estimatedCount = products.filter(p => p.estimatedWeight !== null).length;
+
+  const displayHeaders = headers.length > 0 
+    ? [...headers.slice(0, 8), "Geschätzt (g)", "Status"]
+    : [];
 
   return (
     <div className="p-6 bg-background overflow-auto">
@@ -276,7 +298,7 @@ export default function WeightGenerator() {
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
-                  onClick={() => setProducts([])}
+                  onClick={() => { setProducts([]); setHeaders([]); }}
                   disabled={isProcessing}
                 >
                   <Trash2 className="w-4 h-4 mr-2" /> Reset
@@ -316,53 +338,41 @@ export default function WeightGenerator() {
                   <table className="w-full text-sm text-left">
                     <thead className="bg-muted sticky top-0 z-10">
                       <tr>
-                        <th className="p-4 font-medium text-muted-foreground">SKU</th>
-                        <th className="p-4 font-medium text-muted-foreground">Produktname</th>
-                        <th className="p-4 font-medium text-muted-foreground">Marke</th>
-                        <th className="p-4 font-medium text-muted-foreground">Aktuell (g)</th>
-                        <th className="p-4 font-medium text-muted-foreground">Geschätzt (g)</th>
-                        <th className="p-4 font-medium text-muted-foreground">Konfidenz</th>
-                        <th className="p-4 font-medium text-muted-foreground">Status</th>
+                        {displayHeaders.map((header, idx) => (
+                          <th key={idx} className="p-3 font-medium text-muted-foreground whitespace-nowrap text-xs">
+                            {header}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {products.slice(0, 100).map((item, i) => (
                         <tr key={i} className={`hover:bg-muted/50 transition-colors ${item.needsEstimation ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : ''}`}>
-                          <td className="p-4 font-mono text-xs">{item.sku || "-"}</td>
-                          <td className="p-4 font-medium max-w-[300px] truncate" title={item.name}>
-                            {item.name || "-"}
-                          </td>
-                          <td className="p-4">{item.brand || "-"}</td>
-                          <td className="p-4">
-                            {item.currentWeight && item.currentWeight !== "0" ? (
-                              <span>{item.currentWeight} g</span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </td>
-                          <td className="p-4">
+                          {headers.slice(0, 8).map((header, idx) => (
+                            <td key={idx} className="p-3 text-xs max-w-[200px] truncate" title={item.originalData[header] || ""}>
+                              {item.originalData[header] || "-"}
+                            </td>
+                          ))}
+                          <td className="p-3 text-xs">
                             {item.estimatedWeight !== null ? (
                               <span className="font-semibold text-primary">{item.estimatedWeight} g</span>
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
                           </td>
-                          <td className="p-4">
-                            {item.estimatedWeight !== null ? getConfidenceBadge(item.confidence) : "-"}
-                          </td>
-                          <td className="p-4">
+                          <td className="p-3">
                             {item.needsEstimation ? (
                               item.estimatedWeight !== null ? (
-                                <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                                <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-xs">
                                   <CheckCircle2 className="w-3 h-3 mr-1" /> Geschätzt
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+                                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-xs">
                                   <AlertCircle className="w-3 h-3 mr-1" /> Ausstehend
                                 </Badge>
                               )
                             ) : (
-                              <Badge variant="outline" className="bg-gray-500/10">OK</Badge>
+                              <Badge variant="outline" className="bg-gray-500/10 text-xs">OK</Badge>
                             )}
                           </td>
                         </tr>
