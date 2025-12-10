@@ -593,9 +593,11 @@ function renderMediaMarktLayout(data: {
   // Bei Werkzeugen: KEINE Vorteile anzeigen (vermeidet Wiederholungen mit Werkzeugübersicht)
   // Vorteile mit hängendem Einzug: Folgezeilen beginnen unter dem Text, nicht unter dem Häkchen
   const vorteileHtml = (produktTyp !== 'werkzeug' && data.uspBullets.length > 0)
-    ? data.uspBullets.slice(0, 5).map(usp => 
-        `<span style="display:inline-block;padding-left:1.5em;text-indent:-1.5em;">✅ ${e(usp)}</span>`
-      ).join('<br />\n')
+    ? data.uspBullets.slice(0, 5).map(usp => {
+        // Entferne führende ">" Zeichen (von GPT als Markdown-Zitat generiert)
+        const cleanedUsp = usp.replace(/^>\s*/, '').trim();
+        return `<span style="display:inline-block;padding-left:1.5em;text-indent:-1.5em;">✅ ${e(cleanedUsp)}</span>`;
+      }).join('<br />\n')
     : '';
 
   // Dynamische technische Tabelle mit Kompatibilität und Teilenummern
