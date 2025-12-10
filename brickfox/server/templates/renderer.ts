@@ -568,29 +568,29 @@ function renderMediaMarktLayout(data: {
     });
   }
   
-  // Teilenummer(n) werden jetzt als Fließtext unter der Tabelle angezeigt
-  // NICHT mehr in der Tabelle!
-  
   // Technische Specs hinzufügen (bei Akkus)
   if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
     allSpecs.push(...data.technicalSpecs);
   }
   
-  // Tabelle anzeigen wenn es Daten gibt (dynamische Spaltenbreite)
-  // APN-Fließtext unter der Tabelle (nicht in der Tabelle)
-  let apnFliesstextHtml = '';
+  // Teilenummer (APN) als letzte Zeile IN der Tabelle
   if (data.apnSatz && data.apnSatz.trim()) {
-    // Zeige den kompletten APN-Satz als Fließtext unter der Tabelle
-    apnFliesstextHtml = `<p>${data.apnSatz}</p>`;
+    // Extrahiere die APN-Nummern aus dem Satz
+    const apnMatch = data.apnSatz.match(/(\d{3}-\d{4}[\d\s,\-]*)/);
+    if (apnMatch) {
+      allSpecs.push({
+        label: 'Teilenummer (APN)',
+        value: apnMatch[0].replace(/,\s*/g, ', ').trim()
+      });
+    }
   }
   
   const techTableHtml = allSpecs.length > 0
     ? `<h2>Technische Daten</h2>
 <table>
 ${allSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 1em;">${e(spec.label)}</td><td>${e(spec.value)}</td></tr>`).join('\n')}
-</table>
-${apnFliesstextHtml}`
-    : apnFliesstextHtml;
+</table>`
+    : '';
 
   const werkzeugItems = data.werkzeuguebersicht || [];
   const werkzeuguebersichtHtml = (produktTyp === 'werkzeug' && werkzeugItems.length > 0)
