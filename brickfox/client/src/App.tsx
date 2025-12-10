@@ -36,7 +36,7 @@ import Success from "@/pages/success";
 import Account from "@/pages/account";
 import NotFound from "@/pages/not-found";
 import FieldMappingDemo from "@/pages/field-mapping-demo";
-import CSVParser from "@/pages/csv-parser";
+import WeightGenerator from "@/pages/weight-generator";
 
 function Router() {
   return (
@@ -135,9 +135,9 @@ function Router() {
           <FieldMappingDemo />
         </ProtectedRoute>
       </Route>
-      <Route path="/csv-parser">
+      <Route path="/weight-generator">
         <ProtectedRoute>
-          <CSVParser />
+          <WeightGenerator />
         </ProtectedRoute>
       </Route>
       
