@@ -325,13 +325,16 @@ export default function CSVBulkDescription() {
           // p_id und v_id direkt aus der Original-CSV übernehmen
           const p_id = row['p_id'] || '';
           const v_id = row['v_id'] || '';
+          
+          // Volt-Wert aus CSV extrahieren für SEO-Namen
+          const voltValue = row['V_Nominal'] || row['v_nominal'] || row['Spannung'] || row['spannung'] || '';
 
           return {
             id: globalIndex + 1,
             p_id: p_id,
             v_id: v_id,
             produktname: produktname,
-            produktname_neu: payload.produktTitel || '',
+            produktname_neu: cleanSeoProductName(payload.produktTitel || '', voltValue),
             produktbeschreibung: plainText,
             produktbeschreibung_html: payload.description || '',
             mediamarktname_v1: mmNameV1.substring(0, 60),
@@ -379,6 +382,38 @@ export default function CSVBulkDescription() {
 
   const stripHtml = (html: string): string => {
     return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  };
+
+  // Bereinigt den SEO-Produktnamen: EMCOM entfernen, Wh durch Volt ersetzen
+  const cleanSeoProductName = (name: string, voltValue?: string): string => {
+    if (!name) return '';
+    let cleaned = name;
+    
+    // EMCOM am Anfang entfernen
+    cleaned = cleaned.replace(/^EMCOM\s+/i, '');
+    // EMCOM in der Mitte entfernen
+    cleaned = cleaned.replace(/\s+EMCOM\s+/gi, ' ');
+    // EMCOM am Ende entfernen
+    cleaned = cleaned.replace(/\s+EMCOM$/i, '');
+    // "von EMCOM" oder "by EMCOM" entfernen
+    cleaned = cleaned.replace(/\s+(von|by|from)\s+EMCOM\b/gi, '');
+    
+    // Wh-Angaben entfernen (z.B. "37 Wh", "– 37 Wh")
+    cleaned = cleaned.replace(/\s*–?\s*\d+\s*Wh\b/gi, '');
+    
+    // Wenn Volt-Wert vorhanden, am Ende hinzufügen
+    if (voltValue && voltValue.trim()) {
+      // Prüfe ob bereits Volt im Namen
+      if (!/\d+[,.]?\d*\s*V(olt)?/i.test(cleaned)) {
+        cleaned = cleaned.replace(/\s*–\s*$/, ''); // Entferne trailing –
+        cleaned = `${cleaned.trim()} – ${voltValue.replace('.', ',')} V`;
+      }
+    }
+    
+    // Doppelte Leerzeichen und – am Ende bereinigen
+    cleaned = cleaned.replace(/\s+/g, ' ').replace(/\s*–\s*$/, '').trim();
+    
+    return cleaned;
   };
 
   const decodeHtmlEntities = (text: string): string => {
