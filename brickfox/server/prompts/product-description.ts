@@ -66,31 +66,38 @@ PRODUKTTITEL-SCHEMA (SEO-KRITISCH)
 ═══════════════════════════════════════════════════════════════
 Das Feld "produktTitel" MUSS diesem Schema folgen:
 
-[Marke] [Produktart] für [Gerät/Serie], [weitere Geräte] – [messbare Attribute]
+FÜR AKKUS/BATTERIEN:
+[Marke] [mAh-Wert] [Produktart] für [Gerät/Serie] – [weitere Attribute]
+
+FÜR ANDERE PRODUKTE:
+[Marke] [Produktart] für [Gerät/Serie] – [messbare Attribute]
 
 REGELN:
 1. Marke IMMER ZUERST (ohne Sonderzeichen, kein Pipe)
-2. Dann Produktart (Hauptkeyword)
-3. Gedankenstrich (–) trennt Geräte von Attributen
-4. Maximal 120 Zeichen
-5. Keine endlosen Gerätelisten im Titel
+2. Bei Akkus: mAh-Wert DIREKT NACH der Marke (z.B. "Varta 1821 mAh Akku")
+3. Dann Produktart (Hauptkeyword)
+4. Gedankenstrich (–) trennt Geräte von Attributen
+5. Maximal 120 Zeichen
+6. Keine endlosen Gerätelisten im Titel
 
 ⚠️ AUSNAHME EMCOM:
-Wenn die Marke "EMCOM" ist, wird der Markenname WEGGELASSEN!
-EMCOM ist die Eigenmarke und soll NICHT im Titel erscheinen.
-Bei EMCOM startet der Titel direkt mit der Produktart.
+Wenn die Marke "EMCOM" ist, wird der Markenname KOMPLETT WEGGELASSEN!
+EMCOM ist die Eigenmarke und soll NIEMALS im Titel erscheinen.
+Bei EMCOM startet der Titel direkt mit mAh (bei Akkus) oder Produktart.
 
 BEISPIELE:
-✅ Hähnel USB-Datenkabel für Apple iPhone 4/4s, 3G/3GS, iPad, iPod – 1,5 m, weiß
-✅ Ersatzakku für Apple iPhone SE 2020 – 1821 mAh, 3,82 V (EMCOM-Produkt, ohne Marke!)
-✅ Akku für Apple iPhone 4S – 37 Wh, Li-Polymer (EMCOM-Produkt, ohne Marke!)
+✅ Varta 1821 mAh Ersatzakku für Apple iPhone SE 2020 – 3,82 Volt
+✅ Cameron Sino 2100 mAh Akku für Samsung Galaxy S5 – Li-Ion
+✅ 1821 mAh Ersatzakku für Apple iPhone SE 2020 – 3,82 Volt (EMCOM = keine Marke!)
+✅ Hähnel USB-Datenkabel für Apple iPhone 4/4s, iPad – 1,5 m, weiß
 ✅ iFixit Werkzeug-Set für iPhone Reparatur – 17-teilig
 
 VERBOTEN:
 ❌ USB-Datenkabel für iPhone | Hähnel (Marke am Ende)
 ❌ | Hähnel (Pipe-Zeichen)
 ❌ Hähnel | USB-Datenkabel (Pipe irgendwo)
-❌ EMCOM Akku für iPhone (EMCOM soll NICHT im Titel stehen!)
+❌ EMCOM Akku für iPhone (EMCOM darf NIEMALS im Titel stehen!)
+❌ Ersatzakku 1821 mAh für iPhone (mAh muss VOR Produktart!)
 
 ═══════════════════════════════════════════════════════════════
 TECHNISCHE DATEN – ERLAUBTE FELDER (WHITELIST)
@@ -142,7 +149,7 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 }
 
 REGELN FÜR JSON-FELDER:
-- produktTitel: PFLICHT. Schema: [Marke] [Produktart] für [Geräte] – [Attribute]. Marke IMMER zuerst! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen!
+- produktTitel: PFLICHT. Bei Akkus: [Marke] [mAh] [Produktart] für [Geräte] – [Attribute]. Marke + mAh IMMER am Anfang! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen (mAh bleibt am Anfang)!
 - anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen, KEINE APN-Nummern, KEINE Phrasen doppelt!
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - vorteile: Max 5, müssen aus Daten ableitbar sein

@@ -593,6 +593,37 @@ export function extractTechSpecs1to1(
     }
   }
   
+  // SPEZIAL: Extrahiere mAh aus Produktname/Beschreibung falls noch nicht vorhanden
+  if (!specs['Kapazität'] && structuredData) {
+    // Suche in p_name und p_description nach mAh-Werten
+    const fieldsToCheck = [
+      structuredData['P Name[de]'],
+      structuredData['P_name[de]'],
+      structuredData['p_name[de]'],
+      structuredData['P Name'],
+      structuredData['p_name'],
+      structuredData['P Description[de]'],
+      structuredData['p_description[de]'],
+      structuredData['P Short Intro[de]'],
+      structuredData['p_short_intro[de]'],
+      structuredData.produktname,
+      structuredData.name,
+      structuredData.beschreibung,
+      structuredData.description,
+    ].filter(v => v && typeof v === 'string');
+    
+    for (const field of fieldsToCheck) {
+      // Pattern: "1821 mAh", "1821mAh", "1.821 mAh"
+      const mahMatch = field.match(/(\d+[.,]?\d*)\s*mAh/i);
+      if (mahMatch) {
+        const mahValue = mahMatch[1].replace('.', '').replace(',', '');
+        specs['Kapazität'] = `${mahValue} mAh`;
+        console.log(`🔋 mAh aus CSV-Feld extrahiert: ${specs['Kapazität']}`);
+        break;
+      }
+    }
+  }
+  
   // WICHTIG: Entferne jegliche "Wh" Kapazität wenn nicht explizit in CSV
   if (specs['Kapazität'] && specs['Kapazität'].toLowerCase().includes('wh')) {
     // Prüfe ob Wh wirklich in den Originaldaten war
