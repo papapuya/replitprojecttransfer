@@ -75,13 +75,11 @@ async function generateProductCopyModular(
     
     console.log(`🔍 directTechSpecs nach Extraktion: ${JSON.stringify(directTechSpecs)}`);
     
-    // Wenn direkte Extraktion erfolgreich war, nutze diese (überschreibt AI)
-    const mergedTechSpecs = {
-      ...result.technicalSpecs,      // AI-generierte Specs (Fallback)
-      ...directTechSpecs,             // 1:1 extrahierte Specs (überschreiben AI)
-    };
+    // NUR 1:1 extrahierte Specs verwenden - KEINE AI-Fallbacks für technische Daten!
+    // AI darf technische Werte nicht erfinden (z.B. falsche Kapazität)
+    const mergedTechSpecs = directTechSpecs;
 
-    console.log(`📊 Tech Specs: ${Object.keys(mergedTechSpecs).length} total (${Object.keys(directTechSpecs).length} direct 1:1, ${Object.keys(result.technicalSpecs).length} AI fallback)`);
+    console.log(`📊 Tech Specs: ${Object.keys(mergedTechSpecs).length} Felder (nur 1:1 aus CSV, AI-Specs ignoriert)`);
 
     return {
       tagline: result.tagline, // Neue Tagline für h2
@@ -508,7 +506,6 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     const tagline = parsedContent.tagline || '';
     
     const vorteile = parsedContent.vorteile || parsedContent.uspBullets || [];
-    const technischeDaten = parsedContent.technischeDaten || parsedContent.technicalSpecs || {};
     const kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
     const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
     const apnSatz = parsedContent.apnSatz || '';
@@ -519,11 +516,21 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       : lieferumfang;
     const zeigeTabelle = produktTyp === 'akku' ? (parsedContent.zeigeTabelle !== false) : false;
 
+    // NUR 1:1 extrahierte Specs verwenden - KEINE AI-Fallbacks für technische Daten!
+    // AI darf technische Werte nicht erfinden
+    const structuredDataSource = productData.structuredData || productData;
+    const directTechSpecs = extractTechSpecs1to1(
+      productData.extractedText || '',
+      structuredDataSource,
+      categoryConfig
+    );
+    console.log(`📊 Tech Specs (monolithic): ${Object.keys(directTechSpecs).length} Felder (nur 1:1 aus CSV)`);
+
     return {
       tagline: tagline,
       narrative: beschreibung,
       uspBullets: Array.isArray(vorteile) ? vorteile : [],
-      technicalSpecs: produktTyp === 'akku' ? technischeDaten : {},
+      technicalSpecs: produktTyp === 'akku' ? directTechSpecs : {},
       safetyNotice: '',
       packageContents: lieferumfangString,
       productHighlights: [],
