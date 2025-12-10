@@ -29,6 +29,21 @@ export default function CSVParser() {
   const handleSingleInputChange = (value: string) => {
     setCsvInput(value);
     if (value.trim()) {
+      // Parse as CSV with header to get structured object like batch mode
+      const lines = value.trim().split('\n');
+      if (lines.length >= 2) {
+        // Has header + data row - parse as structured CSV
+        const delimiter = value.includes(";") ? ";" : ",";
+        const parseResult = Papa.parse(value, { header: true, delimiter, skipEmptyLines: true });
+        if (parseResult.data && parseResult.data.length > 0) {
+          const row = parseResult.data[0] as Record<string, string>;
+          const parsed = parseBatteryCSV(row);
+          setSingleData(parsed);
+          setSingleHtml(generateHTML(parsed));
+          return;
+        }
+      }
+      // Fallback: single line without header
       const parsed = parseBatteryCSV(value);
       setSingleData(parsed);
       setSingleHtml(generateHTML(parsed));
