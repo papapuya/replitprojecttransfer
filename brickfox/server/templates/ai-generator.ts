@@ -540,7 +540,11 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     const beschreibung = cleanTechDataFromText(parsedContent.narrative || parsedContent.beschreibung || '');
     const tagline = parsedContent.tagline || '';
     
-    const rawVorteile = parsedContent.vorteile || parsedContent.uspBullets || [];
+    const rawVorteile = (parsedContent.vorteile || parsedContent.uspBullets || []).map((v: string) => {
+      if (typeof v !== 'string') return v;
+      // Entferne führende "> " oder ">" (Markdown-Zitat-Marker von GPT)
+      return v.replace(/^>\s*/, '').trim();
+    });
     
     // POST-PROCESSOR: Filter Vorteile mit technischen Daten (Modelle, mAh, Ah, Volt)
     const filteredVorteile = (Array.isArray(rawVorteile) ? rawVorteile : []).filter((vorteil: string) => {
