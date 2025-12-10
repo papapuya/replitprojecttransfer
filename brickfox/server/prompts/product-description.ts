@@ -82,6 +82,16 @@ ERLAUBT in Vorteilen (nur allgemeine Nutzen):
 
 Die konkreten Werte und Modelle erscheinen NUR in der technischen Tabelle!
 
+⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
+Bei BATTERIEN (Einwegbatterien wie CR2032, AA, AAA):
+- Verwende: "passend zu", "geeignet für", "ersetzt"
+- NICHT: "kompatibel" (das ist für Akkus!)
+- Beispiel: "Varta Batterie passend zu CR2032"
+
+Bei AKKUS (wiederaufladbar):
+- Verwende: "kompatibel mit", "Ersatzakku für"
+- Beispiel: "Ersatzakku kompatibel mit iPhone 12"
+
 ═══════════════════════════════════════════════════════════════
 PRODUKTTITEL-SCHEMA (SEO-KRITISCH)
 ═══════════════════════════════════════════════════════════════

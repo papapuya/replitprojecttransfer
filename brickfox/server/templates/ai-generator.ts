@@ -152,13 +152,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Dieser Ersatzakku für das iPhone 4S bietet zuverlässige Energie mit Li-Polymer Technologie. Bei nachlassender Akkuleistung ermöglicht er die volle Funktionalität des Geräts. Die integrierten Schutzschaltungen gewährleisten sicheren Betrieb."
 
-VORTEILE (KURZ! Max 25 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
+VORTEILE (SEHR KURZ! Max 18 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
 - "Lange Laufzeit"
-- "Zuverlässige Leistung"
-- "Einfache Montage"
-- "Integrierte Schutzschaltung"
-- "Geprüfte Qualität"
-VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen! Vorteile müssen KURZ sein!`;
+- "Hohe Qualität"
+- "Einfach einsetzbar"
+- "Sicher"
+- "Bewährt"
+VERBOTEN: Modellnummern, mAh, Ah, Volt! Vorteile SEHR KURZ halten!`;
 
     case 'nutzen':
       return `STIL: NUTZENORIENTIERT & ALLTAGSNAH (Version B)
@@ -170,13 +170,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Wenn das iPhone 4S nicht mehr den ganzen Tag durchhält, schafft dieser Ersatzakku Abhilfe. Mit hochwertigen Li-Polymer Zellen liefert er zuverlässige Energie für den Alltag. Der Austausch ist unkompliziert und bringt die gewohnte Laufzeit zurück."
 
-VORTEILE (KURZ! Max 25 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
+VORTEILE (SEHR KURZ! Max 18 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
 - "Lange Laufzeit"
-- "Konstante Leistung"
-- "Einfacher Austausch"
-- "Integrierte Schutzschaltung"
-- "Bewährte Qualität"
-VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen! Vorteile müssen KURZ sein!`;
+- "Hohe Qualität"
+- "Einfach einsetzbar"
+- "Sicher"
+- "Bewährt"
+VERBOTEN: Modellnummern, mAh, Ah, Volt! Vorteile SEHR KURZ halten!`;
 
     case 'premium':
       return `STIL: PREMIUM & BERATEND (Version C)
@@ -188,13 +188,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Für Anwender, die Wert auf geprüfte Qualität legen, ist dieser iPhone 4S Ersatzakku die richtige Wahl. Die hochwertigen Li-Polymer Zellen bieten konstante Leistung und lange Lebensdauer. Integrierte Schutzschaltungen sorgen für sicheren Betrieb im täglichen Einsatz."
 
-VORTEILE (KURZ! Max 25 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
-- "Premium-Zelltechnologie"
-- "Konstante Leistung"
-- "Schneller Austausch"
-- "Integrierte Schutzschaltung"
-- "Geprüfte Qualität"
-VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen! Vorteile müssen KURZ sein!`;
+VORTEILE (SEHR KURZ! Max 18 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
+- "Lange Laufzeit"
+- "Hohe Qualität"
+- "Einfach einsetzbar"
+- "Sicher"
+- "Bewährt"
+VERBOTEN: Modellnummern, mAh, Ah, Volt! Vorteile SEHR KURZ halten!`;
   }
 }
 
@@ -379,13 +379,17 @@ WEITERE JSON-FELDER:
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
-- uspBullets: Max 5 ALLGEMEINE Vorteile (OHNE Modelle, mAh, Volt!). Beispiele:
-  "Lange Laufzeit für den Alltag"
-  "Hochwertige Zelltechnologie für zuverlässige Leistung"
-  "Einfache Montage für schnellen Austausch"
-  "Integrierte Schutzschaltungen für sicheren Betrieb"
-  "Geprüfte Qualität"
-  VERBOTEN: Modellnummern wie "V2000", "iPhone 12", "CR2032", mAh, Ah, Volt-Werte!
+- uspBullets: Max 5 SEHR KURZE Vorteile (max 18 Zeichen! OHNE Modelle, mAh, Volt!). Beispiele:
+  "Lange Laufzeit"
+  "Hohe Qualität"
+  "Einfach einsetzbar"
+  "Sicher"
+  "Bewährt"
+  VERBOTEN: Modellnummern, mAh, Ah, Volt! MUSS in eine Zeile passen!
+
+⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
+Bei BATTERIEN (CR2032, AA, AAA): "passend zu", "geeignet für", "ersetzt" - NICHT "kompatibel"!
+Bei AKKUS (wiederaufladbar): "kompatibel mit", "Ersatzakku für"
 - technicalSpecs: NUR bei Akkus (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik.
   WICHTIG: Nur Felder mit ECHTEN Werten aus der CSV eintragen! KEINE leeren Felder wie "Kapazität": "" generieren!
 - packageContents: PFLICHT. Mindestens das Produkt selbst
@@ -560,13 +564,13 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       return true;
     });
     
-    // Fallback-Vorteile falls alle gefiltert wurden (KURZ - max 30 Zeichen!)
+    // Fallback-Vorteile falls alle gefiltert wurden (SEHR KURZ - max 20 Zeichen!)
     const fallbackVorteile = [
       "Lange Laufzeit",
-      "Zuverlässige Leistung",
-      "Einfache Montage",
-      "Integrierte Schutzschaltung",
-      "Geprüfte Qualität"
+      "Hohe Qualität",
+      "Einfach einsetzbar",
+      "Sicher im Betrieb",
+      "Bewährt"
     ];
     
     const vorteile = filteredVorteile.length >= 3 
