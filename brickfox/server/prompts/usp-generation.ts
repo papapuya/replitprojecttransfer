@@ -19,22 +19,21 @@ Analysiere die Produktdaten und erstelle GENAU 5 USP-Bulletpoints, die:
 1. Auf KONKRETEN Produkteigenschaften basieren
 2. SPEZIFISCH für dieses Produkt sind
 3. Den echten Kundennutzen beschreiben
-4. KURZ UND KNAPP formuliert sind
-5. ⚠️ MAXIMAL 6-8 Wörter pro USP (mobile-optimiert!)
+4. EXTREM KURZ formuliert sind
+5. ⚠️ MAXIMAL 4-5 Wörter pro USP (mobile-optimiert!)
 
 BEISPIEL-ANALYSE:
 
-Produkt: Keeppower RCR123A 950mAh Akku mit BMS
-❌ SCHLECHT (zu lang für Mobile):
-- "Integrierte BMS-Schutzelektronik für maximale Zellensicherheit" (zu lang!)
-- "Entwickelt für professionelle Anwendungen wie Taschenlampen" (zu lang!)
+❌ SCHLECHT (zu lang):
+- "USB 2.0 für schnelle Datenübertragung" (6 Wörter - zu lang!)
+- "Hochwertige Verarbeitung für Langlebigkeit" (5 Wörter - grenzwertig)
 
-✅ GUT (kurz & mobil-optimiert):
-- "BMS-Schutz für Zellensicherheit"
-- "CR123A-kompatibel, wiederaufladbar"
-- "Stabile Spannung bei Belastung"
-- "Langlebige Qualitätszelle"
-- "Ideal für Taschenlampen & Messgeräte"
+✅ GUT (4-5 Wörter max):
+- "Schnelle USB 2.0 Übertragung"
+- "Plug and Play"
+- "1,5 Meter Kabellänge"
+- "Robuste Verarbeitung"
+- "Apple-zertifiziert"
 
 STIL-BEISPIELE (zeigen den gewünschten Stil - NICHT 1:1 kopieren, sondern an das Produkt anpassen):
 ${context.uspTemplates?.map((usp, i) => `${i + 1}. ${usp}`).join('\n') || 'Keine Vorlagen'}
