@@ -426,39 +426,64 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
   }
   
   // ═══════════════════════════════════════════════════════════════
-  // SPEZIAL: APN/Teilenummer aus Produktnamen extrahieren
+  // SPEZIAL: APN/Teilenummer aus ALLEN Feldern extrahieren
+  // CSV-Spalten werden vom Frontend zu Kleinbuchstaben normalisiert!
   // ═══════════════════════════════════════════════════════════════
   if (!specs['APN']) {
-    // Suche in allen möglichen Produktname-Spalten
-    const productNameFields = [
-      'P Name[de]', 'P_name[de]', 'p_name[de]', 'P Name', 'p_name',
-      'produktname', 'name', 'titel', 'title', 'description', 'beschreibung'
+    // Erstelle eine normalisierte Map für einfacheren Zugriff
+    const normalizedData: Record<string, string> = {};
+    for (const [key, value] of Object.entries(structuredData)) {
+      if (value && typeof value === 'string') {
+        normalizedData[key.toLowerCase()] = value;
+      }
+    }
+    
+    // Produktname-Felder in verschiedenen Schreibweisen (alle lowercase)
+    const productNameKeys = [
+      'p_name[de]', 'p name[de]', 'p_name', 'p name', 
+      'p_name_lang[de]', 'p_name_kurz[de]', 'p_short_description[de]',
+      'produktname', 'name', 'titel', 'title', 'description', 'beschreibung',
+      'product_name', 'extractedtext'
     ];
     
-    for (const field of productNameFields) {
-      const fieldValue = structuredData[field];
-      if (fieldValue && typeof fieldValue === 'string') {
-        // Pattern: "APN 616-0579, 616-0580" oder "APN: 616-0579"
-        let apnMatch = fieldValue.match(/APN[:\s]+([0-9\-,\s]+)/i);
+    // Suche in Produktname-Feldern nach APN
+    for (const key of productNameKeys) {
+      const value = normalizedData[key];
+      if (!value) continue;
+      
+      // Pattern: "APN 616-0579, 616-0580" oder "APN: 616-0579"
+      let apnMatch = value.match(/APN[:\s]+([0-9\-,\s]+)/i);
+      if (apnMatch) {
+        specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
+        console.log(`🔢 APN aus "${key}": ${specs['APN']}`);
+        break;
+      }
+      
+      // Pattern: "entspricht APN 616-0579"
+      apnMatch = value.match(/entspricht\s+APN\s+([0-9\-,\s]+)/i);
+      if (apnMatch) {
+        specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
+        console.log(`🔢 APN (entspricht) aus "${key}": ${specs['APN']}`);
+        break;
+      }
+      
+      // Pattern: "Apple-Teilenummern 616-0579, 616-0580"
+      apnMatch = value.match(/Apple-?Teilenummer[n]?\s*[:\s]*([0-9\-,\s]+)/i);
+      if (apnMatch) {
+        specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
+        console.log(`🔢 Apple-Teilenummer aus "${key}": ${specs['APN']}`);
+        break;
+      }
+    }
+    
+    // Falls nicht gefunden, durchsuche ALLE Felder
+    if (!specs['APN']) {
+      for (const [key, value] of Object.entries(normalizedData)) {
+        // Pattern: "APN 616-0579" irgendwo im Text
+        const apnMatch = value.match(/APN[:\s]+([0-9\-,\s]+)/i);
         if (apnMatch) {
           specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
-          console.log(`🔢 APN aus ${field}: ${specs['APN']}`);
-          break;
-        }
-        
-        // Pattern: "entspricht APN 616-0579"
-        apnMatch = fieldValue.match(/entspricht\s+APN\s+([0-9\-,\s]+)/i);
-        if (apnMatch) {
-          specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
-          console.log(`🔢 APN (entspricht) aus ${field}: ${specs['APN']}`);
-          break;
-        }
-        
-        // Pattern: "Apple-Teilenummern 616-0579, 616-0580"
-        apnMatch = fieldValue.match(/Apple-?Teilenummer[n]?\s*[:\s]*([0-9\-,\s]+)/i);
-        if (apnMatch) {
-          specs['APN'] = apnMatch[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
-          console.log(`🔢 Apple-Teilenummer aus ${field}: ${specs['APN']}`);
+          console.log(`🔢 APN aus beliebigem Feld "${key}": ${specs['APN']}`);
           break;
         }
       }
