@@ -152,12 +152,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Dieser Ersatzakku für das iPhone 4S bietet zuverlässige Energie mit Li-Polymer Technologie. Bei nachlassender Akkuleistung ermöglicht er die volle Funktionalität des Geräts. Die integrierten Schutzschaltungen gewährleisten sicheren Betrieb."
 
-VORTEILE (produktspezifisch, konkret):
-- "Passgenau für [Gerätemodell]"
-- "[Zellenchemie] Technologie für zuverlässige Leistung"
+VORTEILE (NUR allgemeine Nutzen, KEINE Modelle/mAh/Volt):
+- "Lange Laufzeit für den Alltag"
+- "Hochwertige Zelltechnologie für zuverlässige Leistung"
 - "Einfache Montage für schnellen Austausch"
-- "Erhöht die Laufzeit Ihres Geräts spürbar"
-- "Lösung für häufige Leistungsabfälle"`;
+- "Integrierte Schutzschaltungen"
+- "Geprüfte Qualität"
+VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
 
     case 'nutzen':
       return `STIL: NUTZENORIENTIERT & ALLTAGSNAH (Version B)
@@ -169,12 +170,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Wenn das iPhone 4S nicht mehr den ganzen Tag durchhält, schafft dieser Ersatzakku Abhilfe. Mit hochwertigen Li-Polymer Zellen liefert er zuverlässige Energie für den Alltag. Der Austausch ist unkompliziert und bringt die gewohnte Laufzeit zurück."
 
-VORTEILE (produktspezifisch, nutzenorientiert):
-- "Passgenau für [Gerätemodell]"
-- "[Zellenchemie] Technologie für zuverlässige Leistung"
-- "Einfache Montage für schnellen Austausch"
-- "Erhöht die Laufzeit Ihres Geräts spürbar"
-- "Lösung für häufige Leistungsabfälle"`;
+VORTEILE (NUR allgemeine Nutzen, KEINE Modelle/mAh/Volt):
+- "Zuverlässige Energieversorgung im Alltag"
+- "Hochwertige Zelltechnologie für konstante Leistung"
+- "Unkomplizierter Austausch"
+- "Mit integrierten Schutzschaltungen"
+- "Bewährte Qualität"
+VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
 
     case 'premium':
       return `STIL: PREMIUM & BERATEND (Version C)
@@ -186,12 +188,13 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Für Anwender, die Wert auf geprüfte Qualität legen, ist dieser iPhone 4S Ersatzakku die richtige Wahl. Die hochwertigen Li-Polymer Zellen bieten konstante Leistung und lange Lebensdauer. Integrierte Schutzschaltungen sorgen für sicheren Betrieb im täglichen Einsatz."
 
-VORTEILE (produktspezifisch, hochwertig):
-- "Passgenau für [Gerätemodell]"
-- "[Zellenchemie] Technologie für zuverlässige Leistung"
-- "Einfache Montage für schnellen Austausch"
-- "Erhöht die Laufzeit Ihres Geräts spürbar"
-- "Lösung für häufige Leistungsabfälle"`;
+VORTEILE (NUR allgemeine Nutzen, KEINE Modelle/mAh/Volt):
+- "Premium-Zelltechnologie für maximale Lebensdauer"
+- "Konstante und zuverlässige Leistung"
+- "Professioneller Austausch in wenigen Minuten"
+- "Integrierte Schutzschaltungen für sicheren Betrieb"
+- "Geprüfte Qualität für anspruchsvolle Anwender"
+VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
   }
 }
 
@@ -376,13 +379,13 @@ WEITERE JSON-FELDER:
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
-- uspBullets: Max 5 PRODUKTSPEZIFISCHE Vorteile. Beispiele für Akkus:
-  "Passgenau für [Gerätemodell]"
-  "[Zellenchemie] Technologie für zuverlässige Leistung"
+- uspBullets: Max 5 ALLGEMEINE Vorteile (OHNE Modelle, mAh, Volt!). Beispiele:
+  "Lange Laufzeit für den Alltag"
+  "Hochwertige Zelltechnologie für zuverlässige Leistung"
   "Einfache Montage für schnellen Austausch"
-  "Erhöht die Laufzeit Ihres Geräts spürbar"
-  "Lösung für häufige Leistungsabfälle"
-  KEINE generischen Phrasen wie "Hochwertig" oder "Leistungsstark"!
+  "Integrierte Schutzschaltungen für sicheren Betrieb"
+  "Geprüfte Qualität"
+  VERBOTEN: Modellnummern wie "V2000", "iPhone 12", "CR2032", mAh, Ah, Volt-Werte!
 - technicalSpecs: NUR bei Akkus (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik.
   WICHTIG: Nur Felder mit ECHTEN Werten aus der CSV eintragen! KEINE leeren Felder wie "Kapazität": "" generieren!
 - packageContents: PFLICHT. Mindestens das Produkt selbst
@@ -449,11 +452,12 @@ APNs sind in diesen Bereichen STRIKT VERBOTEN:
 
 Wenn APNs in Vorteilen auftauchen → neu generieren.
 
-KORREKTE VORTEILE (ohne APNs):
-✅ "Passgenau für iPhone X"
-✅ "Hochwertige Zellen"
+KORREKTE VORTEILE (ohne APNs, ohne Modelle, ohne mAh/Volt):
+✅ "Lange Laufzeit für den Alltag"
+✅ "Hochwertige Zelltechnologie"
 ✅ "Zuverlässige Leistung"
 ✅ "Einfache Montage"
+✅ "Integrierte Schutzschaltungen"
 
 FALSCHE VORTEILE:
 ❌ "Ersetzt APN 616-00351"
@@ -505,7 +509,50 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     const beschreibung = parsedContent.narrative || parsedContent.beschreibung || '';
     const tagline = parsedContent.tagline || '';
     
-    const vorteile = parsedContent.vorteile || parsedContent.uspBullets || [];
+    const rawVorteile = parsedContent.vorteile || parsedContent.uspBullets || [];
+    
+    // POST-PROCESSOR: Filter Vorteile mit technischen Daten (Modelle, mAh, Ah, Volt)
+    const filteredVorteile = (Array.isArray(rawVorteile) ? rawVorteile : []).filter((vorteil: string) => {
+      if (typeof vorteil !== 'string') return false;
+      
+      // Patterns für verbotene technische Daten in Vorteilen
+      const verbotenePatterns = [
+        /\b\d+\s*mAh\b/i,           // mAh-Werte
+        /\b\d+\s*Ah\b/i,            // Ah-Werte
+        /\b\d+[.,]?\d*\s*V(olt)?\b/i, // Volt-Werte
+        /\b(V|M)\d{3,}/i,           // Modellnummern wie V2000, M2000
+        /\b[A-Z]{2,}\d{4,}/i,       // Modelle wie CR2032, DL2032
+        /Passgenau für .+[A-Z]\d/i, // "Passgenau für" mit Modellnummer
+        /Kompatibel mit .+\d{3,}/i, // "Kompatibel mit" gefolgt von Nummern
+        /iPhone\s+\d+/i,            // iPhone Modelle
+        /iPad\s+(Pro|Air|Mini)?\s*\d*/i, // iPad Modelle
+        /Galaxy\s+[SA]\d+/i,        // Samsung Galaxy Modelle
+        /Presario\s+[A-Z]?\d+/i,    // Compaq Presario Modelle
+        /ECR\d+|EA-\d+/i,           // Batterie-Codes
+      ];
+      
+      for (const pattern of verbotenePatterns) {
+        if (pattern.test(vorteil)) {
+          console.log(`🚫 Vorteil gefiltert (technische Daten): "${vorteil}"`);
+          return false;
+        }
+      }
+      return true;
+    });
+    
+    // Fallback-Vorteile falls alle gefiltert wurden
+    const fallbackVorteile = [
+      "Lange Laufzeit für den Alltag",
+      "Hochwertige Zelltechnologie",
+      "Einfache Montage",
+      "Integrierte Schutzschaltungen",
+      "Geprüfte Qualität"
+    ];
+    
+    const vorteile = filteredVorteile.length >= 3 
+      ? filteredVorteile.slice(0, 5)
+      : [...filteredVorteile, ...fallbackVorteile].slice(0, 5);
+    
     const kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
     const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
     const apnSatz = parsedContent.apnSatz || '';
