@@ -35,7 +35,7 @@ export class PromptOrchestrator {
       apiKey: options.openaiKey,
       baseURL: options.openaiBaseUrl,
     });
-    this.model = options.model || 'gpt-4o';
+    this.model = options.model || 'gpt-4o-mini'; // COST OPTIMIZATION: 30× günstiger!
   }
 
   async executeSubprompt(
