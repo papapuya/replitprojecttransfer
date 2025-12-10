@@ -581,10 +581,17 @@ function renderMediaMarktLayout(data: {
     });
   }
   
-  // Technische Specs hinzufügen (bei Akkus) - filtere doppelte Teilenummer/APN Einträge
+  // Technische Specs hinzufügen (bei Akkus) - filtere doppelte Teilenummer/APN Einträge und leere Werte
   if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
     const filteredSpecs = data.technicalSpecs.filter(spec => {
       const labelLower = spec.label.toLowerCase();
+      const valueTrimmed = (spec.value || '').trim();
+      
+      // Entferne leere Werte
+      if (!valueTrimmed || valueTrimmed === '' || valueTrimmed === '-' || valueTrimmed === '0') {
+        return false;
+      }
+      
       // Entferne Zeilen die Teilenummer/APN enthalten (wird separat hinzugefügt)
       return !labelLower.includes('teilenummer') && 
              !labelLower.includes('apn') &&
