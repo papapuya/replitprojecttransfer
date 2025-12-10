@@ -304,23 +304,18 @@ function buildTechnicalSpecsTable(
       }
     }
     
-    // Filtere "Wh" Kapazitätswerte - NICHT anzeigen wenn Wh nicht explizit in Originaldaten
+    // Filtere "Wh" Kapazitätswerte - KOMPLETT ENTFERNEN wenn Wh enthalten
+    // Wh-Werte werden von der AI fälschlicherweise generiert
     if (whitelistedField.label.toLowerCase().includes('kapazität')) {
-      // Prüfe ob der Originalwert wirklich "Wh" enthält
-      const hasWhInOriginal = value.toLowerCase().includes('wh');
-      const hasMahInOriginal = value.toLowerCase().includes('mah');
-      
-      // Entferne falsche Wh-Angaben (z.B. "37 Wh" wenn es eigentlich mAh sein sollte)
-      if (processedValue.toLowerCase().includes('wh') && !hasWhInOriginal) {
-        // Wh wurde fälschlicherweise hinzugefügt - entfernen
-        processedValue = processedValue.replace(/\s*Wh\b/gi, ' mAh').trim();
-        console.log(`🔋 Wh zu mAh korrigiert: ${value} → ${processedValue}`);
+      // Wenn der Wert "Wh" enthält, komplett überspringen (AI-Halluzination)
+      if (processedValue.toLowerCase().includes('wh')) {
+        console.log(`🔋 Kapazität mit Wh übersprungen (nicht in CSV): ${value}`);
+        continue; // Überspringe diesen Eintrag komplett
       }
       
-      // Wenn der Wert nur eine Zahl ist (z.B. "37") ohne Einheit, könnte es mAh sein
+      // Wenn der Wert nur eine Zahl ist ohne Einheit, auch überspringen
       const numericOnly = /^\d+([.,]\d+)?$/.test(processedValue.trim());
-      if (numericOnly && !hasWhInOriginal && !hasMahInOriginal) {
-        // Numerischer Wert ohne Einheit - NICHT anzeigen da unklar ob mAh oder Wh
+      if (numericOnly) {
         console.log(`🔋 Kapazität ohne Einheit übersprungen: ${value}`);
         continue; // Überspringe diesen Eintrag
       }
