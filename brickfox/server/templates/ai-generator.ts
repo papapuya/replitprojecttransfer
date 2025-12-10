@@ -373,6 +373,8 @@ PRODUKTTITEL-REGELN (produktTitel)
 
 WEITERE JSON-FELDER:
 - anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen!
+  VERBOTEN IM FLIEßTEXT: Gewicht, Maße (mm/cm), Kapazität (mAh/Wh), Spannung (V/Volt), Teilenummern, APNs, technische Werte.
+  Alle technischen Daten gehören NUR in die Tabelle, NICHT in den Fließtext!
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
