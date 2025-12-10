@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { supabase, supabaseAdmin } from './supabase';
 import { supabaseStorage } from './supabase-storage';
-import { createAdminUser, getSupabaseUser } from './supabase-auth';
+import { loginUser, createLocalUser, getUserById, createSession, getSession, deleteSession, createAdminUser } from './local-auth';
 import { registerUserSchema, loginUserSchema } from '@shared/schema';
 import { db as heliumDb } from './db';
 import { sql, eq, and, isNotNull } from 'drizzle-orm';
@@ -70,30 +70,16 @@ async function requireAuth(req: any, res: any, next: any) {
 
   const token = authHeader.split(' ')[1]?.trim();
   
-  // LOCAL ADMIN FALLBACK: Accept ANY local admin token for development mode
-  if (token?.startsWith('local-admin-token')) {
-    console.log('[LOCAL AUTH] Using local admin fallback token:', token.substring(0, 30) + '...');
-    req.user = {
-      id: 'local-admin-user',
-      email: 'admin@pimpilot.de',
-      username: 'Admin',
-      isAdmin: true,
-      tenantId: null,
-      subscriptionStatus: 'trial',
-      planId: 'trial',
-      apiCallsUsed: 0,
-      apiCallsLimit: 10000,
-      role: 'admin'
-    };
-    req.userId = 'local-admin-user';
-    req.tenantId = null;
-    return next();
+  // Local session-based auth
+  const session = getSession(token);
+  if (!session) {
+    return res.status(401).json({ error: 'Ungültiges Token' });
   }
   
-  const user = await getSupabaseUser(token);
+  const user = await getUserById(session.userId);
 
   if (!user) {
-    return res.status(401).json({ error: 'Ungültiges Token' });
+    return res.status(401).json({ error: 'Benutzer nicht gefunden' });
   }
 
   req.user = user;
@@ -118,7 +104,6 @@ async function requireAuth(req: any, res: any, next: any) {
       }
     } catch (error) {
       console.error('[requireAuth] CRITICAL: Failed to set tenant context on DB connection:', error);
-      // Don't proceed without RLS context - this would allow cross-tenant access!
       return res.status(500).json({ error: 'Fehler beim Setzen des Tenant-Kontexts' });
     }
   }
@@ -305,12 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/register', async (req, res) => {
     try {
       const validatedData = registerUserSchema.parse(req.body);
-      
-      if (!supabaseAdmin) {
-        return res.status(500).json({ error: 'Server-Konfigurationsfehler' });
-      }
 
-      // Step 1: Create new tenant for this company
       // Generate slug with proper German umlaut handling
       let tenantSlug = validatedData.companyName
         .toLowerCase()
@@ -318,18 +298,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .replace(/ö/g, 'oe')
         .replace(/ü/g, 'ue')
         .replace(/ß/g, 'ss')
-        .normalize('NFD') // Decompose remaining combined characters
-        .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
-        .replace(/[^a-z0-9]+/g, '-') // Replace special chars with dashes
-        .replace(/^-+|-+$/g, '') // Remove leading/trailing dashes
-        .replace(/--+/g, '-'); // Collapse multiple dashes
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .replace(/--+/g, '-');
 
-      // Ensure non-empty slug (fallback to "company" if empty)
       if (!tenantSlug || tenantSlug.length === 0) {
         tenantSlug = 'company';
       }
 
-      // Handle slug collisions by appending a number
       let finalSlug = tenantSlug;
       let counter = 2;
       let slugExists = true;
@@ -357,60 +335,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`[Register] Tenant created: ${newTenant.id}`);
 
-      // Step 2: Create user in Supabase Auth with tenant_id in metadata
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email: validatedData.email,
-        password: validatedData.password,
-        email_confirm: true,
-        user_metadata: {
-          username: validatedData.username || validatedData.email.split('@')[0],
-          tenant_id: newTenant.id,
-          company_name: validatedData.companyName,
-        }
-      });
-
-      if (error) {
-        return res.status(400).json({ error: error.message });
-      }
-
-      if (!data.user) {
-        return res.status(400).json({ error: 'Registrierung fehlgeschlagen' });
-      }
-
-      // User created successfully in Supabase Auth
-      console.log(`[Register] User created in Supabase Auth: ${validatedData.email}`);
-      console.log(`[Register] User assigned to tenant: ${newTenant.id} (${validatedData.companyName})`);
-      
-      // Insert user directly into Helium DB (don't wait for webhook)
-      // First user of tenant becomes admin
-      await heliumDb.insert(usersTable).values({
-        id: data.user.id,
-        email: validatedData.email,
+      // Create user with local auth
+      const user = await createLocalUser(validatedData.email, validatedData.password, {
         username: validatedData.username || validatedData.email.split('@')[0],
+        isAdmin: true,
         tenantId: newTenant.id,
-        isAdmin: true, // First user is always admin
-        role: 'admin',
-        subscriptionStatus: 'trial',
-        planId: 'trial',
-        apiCallsLimit: 50,
-        apiCallsUsed: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      
-      console.log(`✅ [Register] User ${validatedData.email} created in Helium DB (admin role)`);
-
-      const { data: sessionData } = await supabase.auth.signInWithPassword({
-        email: validatedData.email,
-        password: validatedData.password,
       });
 
-      const user = await supabaseStorage.getUserById(data.user.id);
+      console.log(`✅ [Register] User ${validatedData.email} created locally (admin role)`);
+
+      const token = createSession(user.id);
 
       res.json({ 
         user, 
-        session: sessionData.session,
-        access_token: sessionData.session?.access_token 
+        session: { access_token: token },
+        access_token: token 
       });
     } catch (error: any) {
       res.status(400).json({ error: error.message || 'Ungültige Registrierungsdaten' });
@@ -423,110 +362,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let emailToUse = req.body.email;
       
-      console.log(`[LOGIN] Input: "${emailToUse}", contains @: ${emailToUse.includes('@')}`);
+      console.log(`[LOGIN] Input: "${emailToUse}"`);
       
-      // LOCAL ADMIN LOGIN (fallback when Supabase is unreachable)
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@pimpilot.de';
-      const adminPassword = process.env.ADMIN_PASSWORD;
-      
-      if (emailToUse === adminEmail && adminPassword && req.body.password === adminPassword) {
-        console.log(`[LOGIN] ✅ Local admin login successful for ${adminEmail}`);
-        
-        // Return mock admin user
-        return res.json({
-          user: {
-            id: 'admin-local',
-            email: adminEmail,
-            username: 'admin',
-            is_admin: true,
-            role: 'admin',
-          },
-          session: {
-            access_token: 'local-admin-token-' + Date.now(),
-            user: { id: 'admin-local', email: adminEmail }
-          },
-          access_token: 'local-admin-token-' + Date.now()
-        });
-      }
-      
+      // Handle username login
       if (!emailToUse.includes('@')) {
         console.log(`[LOGIN] Looking up username: "${emailToUse}"`);
         const userByUsername = await supabaseStorage.getUserByUsername(emailToUse);
-        console.log(`[LOGIN] Username lookup result:`, userByUsername ? `Found: ${userByUsername.email}` : 'Not found');
         if (userByUsername) {
           emailToUse = userByUsername.email;
-        } else {
-          console.log(`[LOGIN] ⚠️ Username "${emailToUse}" not found in database`);
         }
       }
       
-      console.log(`[LOGIN] Attempting Supabase auth with email: "${emailToUse}"`);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
-        password: req.body.password,
-      });
+      // Local auth login
+      const user = await loginUser(emailToUse, req.body.password);
 
-      if (error || !data.user) {
-        console.log(`[LOGIN] ❌ Supabase auth failed:`, error?.message || 'No user returned');
+      if (!user) {
+        console.log(`[LOGIN] ❌ Auth failed for: ${emailToUse}`);
         return res.status(401).json({ error: 'Ungültiger Benutzername/E-Mail oder Passwort' });
       }
 
-      let user = await supabaseStorage.getUserById(data.user.id);
-
-      // AUTO-FIX: If user doesn't exist in Helium DB, create it
-      if (!user && data.user.email) {
-        console.log(`🔧 [LOGIN AUTO-FIX] User ${data.user.email} exists in Supabase Auth but not in Helium DB. Creating...`);
-        
-        // Get or create AkkuShop tenant (fallback for legacy users)
-        const { data: akkushopTenant } = await supabaseAdmin!
-          .from('tenants')
-          .select('id')
-          .eq('slug', 'akkushop')
-          .single();
-        
-        if (akkushopTenant) {
-          const { error: insertError } = await supabaseAdmin!
-            .from('users')
-            .insert({
-              id: data.user.id,
-              email: data.user.email,
-              username: data.user.email.split('@')[0],
-              is_admin: false, // Regular user
-              role: 'member',
-              tenant_id: akkushopTenant.id,
-              subscription_status: 'trial',
-              plan_id: 'trial',
-              api_calls_limit: 50,
-              api_calls_used: 0,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-          
-          if (insertError) {
-            console.error(`❌ Failed to create user in Helium DB:`, insertError);
-          } else {
-            console.log(`✅ User ${data.user.email} created in Helium DB`);
-            user = await supabaseStorage.getUserById(data.user.id);
-          }
-        }
-      }
-
-      // AUTO-FIX: Update old limit to new standard (50 calls)
-      if (user && user.apiCallsLimit < 50) {
-        console.log(`🔄 Auto-updating ${user.email} to 50 credits (Trial Standard)`);
-        await supabaseAdmin!
-          .from('users')
-          .update({ api_calls_limit: 50 })
-          .eq('id', user.id);
-        
-        // Refresh user data
-        user = await supabaseStorage.getUserById(data.user.id);
-      }
+      const token = createSession(user.id);
+      console.log(`[LOGIN] ✅ Login successful for ${user.email}`);
 
       res.json({ 
         user,
-        session: data.session,
-        access_token: data.session?.access_token
+        session: { access_token: token },
+        access_token: token
       });
     } catch (error) {
       res.status(400).json({ error: 'Ungültige Login-Daten' });
@@ -537,7 +398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
-      await supabase.auth.signOut();
+      deleteSession(token);
     }
     res.json({ success: true });
   });
@@ -551,26 +412,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const token = authHeader.split(' ')[1];
     
-    // Check if it's a local admin token
-    if (token.startsWith('local-admin-token-')) {
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@pimpilot.de';
-      return res.json({ 
-        user: {
-          id: 'admin-local',
-          email: adminEmail,
-          username: 'admin',
-          isAdmin: true,
-          role: 'admin',
-          apiCallsUsed: 0,
-          apiCallsLimit: 9999
-        }
-      });
+    // Local session-based auth
+    const session = getSession(token);
+    if (!session) {
+      return res.status(401).json({ error: 'Ungültiges Token' });
     }
-    
-    const user = await getSupabaseUser(token);
 
+    const user = await getUserById(session.userId);
     if (!user) {
-      return res.status(401).json({ error: 'Ungültige Session' });
+      return res.status(401).json({ error: 'Benutzer nicht gefunden' });
     }
 
     res.json({ user });

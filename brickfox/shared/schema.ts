@@ -209,11 +209,11 @@ export const tenants = pgTable("tenants", {
 });
 
 // Users table for authentication and subscription management
-// Note: passwords are managed by Supabase Auth, not stored here
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   username: text("username"),
+  passwordHash: text("password_hash"),
   isAdmin: boolean("is_admin").default(false),
   
   // Multi-tenant fields
