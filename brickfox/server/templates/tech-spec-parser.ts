@@ -365,6 +365,44 @@ function isValidValue(value: string): boolean {
   return !invalid.includes(normalized) && normalized.length > 0;
 }
 
+/**
+ * Korrigiert unlogische Volt-Werte (z.B. 37 → 3,7 V)
+ * Akkus haben typischerweise Spannungen zwischen 1,2 V und 48 V
+ */
+export function correctVoltageValue(value: string | number): string {
+  const numValue = typeof value === 'string' ? parseFloat(value.replace(',', '.')) : value;
+  
+  if (isNaN(numValue)) return String(value);
+  
+  // Typische Akku-Spannungen: 1.2V, 3.6V, 3.7V, 3.8V, 7.2V, 7.4V, 10.8V, 11.1V, 14.4V, 18V, 36V, 48V
+  // Wenn Wert > 50, ist wahrscheinlich das Komma falsch (z.B. 37 = 3,7 oder 72 = 7,2)
+  
+  let correctedValue = numValue;
+  
+  if (numValue >= 100) {
+    // 370 → 3,70, 720 → 7,20, 1108 → 11,08
+    correctedValue = numValue / 100;
+  } else if (numValue >= 30 && numValue <= 49) {
+    // 37 → 3,7, 38 → 3,8, 36 → 3,6
+    correctedValue = numValue / 10;
+  } else if (numValue >= 70 && numValue <= 79) {
+    // 72 → 7,2, 74 → 7,4
+    correctedValue = numValue / 10;
+  } else if (numValue >= 108 && numValue <= 115) {
+    // 108 → 10,8, 111 → 11,1
+    correctedValue = numValue / 10;
+  } else if (numValue >= 144 && numValue <= 148) {
+    // 144 → 14,4
+    correctedValue = numValue / 10;
+  }
+  
+  // Formatiere mit Komma (deutsches Format)
+  const formatted = correctedValue.toFixed(1).replace('.', ',');
+  
+  // Füge "V" hinzu wenn nicht bereits vorhanden
+  return `${formatted} V`;
+}
+
 function formatFieldName(key: string): string {
   // Entferne Unterstriche und formatiere
   let formatted = key.replace(/_/g, ' ');
