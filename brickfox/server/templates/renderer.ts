@@ -51,6 +51,26 @@ function encodeHtmlEntities(text: string): string {
     .replace(/°/g, '&deg;');
 }
 
+/**
+ * Entfernt EMCOM-Marke aus Text (Eigenmarke soll nicht sichtbar sein)
+ */
+function removeEmcomBrand(text: string): string {
+  if (!text) return text;
+  
+  // EMCOM am Anfang entfernen
+  let cleaned = text.replace(/^EMCOM\s+/i, '');
+  // EMCOM in der Mitte entfernen
+  cleaned = cleaned.replace(/\s+EMCOM\s+/gi, ' ');
+  // EMCOM am Ende entfernen
+  cleaned = cleaned.replace(/\s+EMCOM$/i, '');
+  // "von EMCOM" oder "by EMCOM" entfernen
+  cleaned = cleaned.replace(/\s+(von|by|from)\s+EMCOM\b/gi, '');
+  // Doppelte Leerzeichen bereinigen
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
 export function renderProductHtml(options: RenderOptions): string {
   const { productName, categoryConfig, copy, layoutStyle = 'mediamarkt', technicalDataTable, safetyWarnings, pdfManualUrl } = options;
   
@@ -69,9 +89,9 @@ export function renderProductHtml(options: RenderOptions): string {
     .filter(usp => usp && usp.trim().length > 0)
     .slice(0, 5);
 
-  const einleitung = cleanMarkdown(copy.einleitung || '');
-  const anwendung = cleanMarkdown(copy.anwendung || '');
-  const beschreibung = cleanMarkdown(copy.beschreibung || '');
+  const einleitung = removeEmcomBrand(cleanMarkdown(copy.einleitung || ''));
+  const anwendung = removeEmcomBrand(cleanMarkdown(copy.anwendung || ''));
+  const beschreibung = removeEmcomBrand(cleanMarkdown(copy.beschreibung || ''));
   const tagline = cleanMarkdown(copy.tagline || '');
   const kompatibleModelle = (copy.kompatibleModelle || []).map(m => cleanMarkdown(m));
   const werkzeuguebersicht = (copy.werkzeuguebersicht || []).map(w => cleanMarkdown(w));
@@ -81,7 +101,17 @@ export function renderProductHtml(options: RenderOptions): string {
   const zeigeTabelle = copy.zeigeTabelle === true;
   
   // Verwende AI-generierten produktTitel wenn vorhanden, sonst Original-Produktname
-  const produktTitel = cleanMarkdown(copy.produktTitel || '') || cleanProductName;
+  let produktTitel = cleanMarkdown(copy.produktTitel || '') || cleanProductName;
+  
+  // EMCOM aus Produkttitel entfernen (Eigenmarke soll nicht erscheinen)
+  produktTitel = removeEmcomBrand(produktTitel);
+  
+  // Entferne falsche Wh-Angaben aus dem Titel (nur wenn es keine echte Wh-Kapazität ist)
+  // z.B. "37 Wh" wenn es eigentlich mAh sein sollte
+  produktTitel = produktTitel.replace(/\s*–?\s*\d+\s*Wh\b/gi, '').trim();
+  
+  // Entferne doppelte Leerzeichen und – am Ende
+  produktTitel = produktTitel.replace(/\s+/g, ' ').replace(/\s*–\s*$/, '').trim();
 
   return renderMediaMarktLayout({
     productName: produktTitel,
@@ -274,18 +304,25 @@ function buildTechnicalSpecsTable(
       }
     }
     
-    // Filtere "Wh" Kapazitätswerte - nur anzeigen wenn Wert realistisch und explizit als Wh vorhanden
+    // Filtere "Wh" Kapazitätswerte - NICHT anzeigen wenn Wh nicht explizit in Originaldaten
     if (whitelistedField.label.toLowerCase().includes('kapazität')) {
       // Prüfe ob der Originalwert wirklich "Wh" enthält
       const hasWhInOriginal = value.toLowerCase().includes('wh');
       const hasMahInOriginal = value.toLowerCase().includes('mah');
       
-      // Wenn der Wert nur eine Zahl ist (z.B. "37") ohne Einheit, könnte es mAh sein - nicht Wh annehmen
+      // Entferne falsche Wh-Angaben (z.B. "37 Wh" wenn es eigentlich mAh sein sollte)
+      if (processedValue.toLowerCase().includes('wh') && !hasWhInOriginal) {
+        // Wh wurde fälschlicherweise hinzugefügt - entfernen
+        processedValue = processedValue.replace(/\s*Wh\b/gi, ' mAh').trim();
+        console.log(`🔋 Wh zu mAh korrigiert: ${value} → ${processedValue}`);
+      }
+      
+      // Wenn der Wert nur eine Zahl ist (z.B. "37") ohne Einheit, könnte es mAh sein
       const numericOnly = /^\d+([.,]\d+)?$/.test(processedValue.trim());
       if (numericOnly && !hasWhInOriginal && !hasMahInOriginal) {
-        // Numerischer Wert ohne Einheit - mAh annehmen, nicht Wh
-        processedValue = `${processedValue} mAh`;
-        console.log(`🔋 Kapazität als mAh interpretiert: ${value} → ${processedValue}`);
+        // Numerischer Wert ohne Einheit - NICHT anzeigen da unklar ob mAh oder Wh
+        console.log(`🔋 Kapazität ohne Einheit übersprungen: ${value}`);
+        continue; // Überspringe diesen Eintrag
       }
     }
     
