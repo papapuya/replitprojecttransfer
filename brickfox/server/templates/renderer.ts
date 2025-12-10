@@ -554,7 +554,7 @@ function renderMediaMarktLayout(data: {
   const anwendung = e(data.anwendung || data.beschreibung || data.narrative || '');
   
   const vorteileHtml = data.uspBullets.length > 0
-    ? data.uspBullets.slice(0, 5).map(usp => `✅ ${e(usp)}`).join('<br />\n')
+    ? `<ul>\n${data.uspBullets.slice(0, 5).map(usp => `<li>✅ ${e(usp)}</li>`).join('\n')}\n</ul>`
     : '';
 
   // Dynamische technische Tabelle mit Kompatibilität und Teilenummern
@@ -612,12 +612,10 @@ ${packageItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 </ul>`
     : '';
 
-  const productName = e(data.productName);
+  // H1 wird vom Shop selbst generiert, daher hier weglassen
+  // Starte direkt mit dem Einleitungstext
   
-  let html = `<h1>${productName}</h1>
-<p>${einleitung}</p>
-<h2>Anwendung &amp; Einsatzbereich</h2>
-<p>${anwendung}</p>`;
+  let html = `<p>${anwendung}</p>`;
 
   // Fließtext/Schlusssatz nach Anwendung
   if (data.fazit && data.fazit.trim()) {
@@ -643,9 +641,10 @@ ${vorteileHtml}
 ${techTableHtml}`;
   }
 
-  // Lieferumfang immer zum Schluss
+  // Lieferumfang immer zum Schluss - mit mehr Abstand zur Tabelle
   if (lieferumfangHtml) {
     html += `
+<br />
 ${lieferumfangHtml}`;
   }
 
