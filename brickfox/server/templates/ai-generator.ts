@@ -390,7 +390,14 @@ WEITERE JSON-FELDER:
 ⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
 Bei BATTERIEN (CR2032, AA, AAA): "passend zu", "geeignet für", "ersetzt" - NICHT "kompatibel"!
 Bei AKKUS (wiederaufladbar): "kompatibel mit", "Ersatzakku für"
-- technicalSpecs: NUR bei Akkus (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik.
+
+⚠️ BATTERIE-TYPEN IN DIE TABELLE:
+Wenn eine Batterie andere Typen ersetzt (z.B. CR2032, DL2032, ECR2032, EA-2032C),
+dann gehören diese in die technische Tabelle als:
+"Batterie-Typ": "CR2032, DL2032, ECR2032, EA-2032C"
+NICHT in die Vorteile, NICHT in den Fließtext!
+
+- technicalSpecs: Bei Akkus UND Batterien (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik.
   WICHTIG: Nur Felder mit ECHTEN Werten aus der CSV eintragen! KEINE leeren Felder wie "Kapazität": "" generieren!
 - packageContents: PFLICHT. Mindestens das Produkt selbst
 - zeigeTabelle: true NUR bei Akkus, sonst false

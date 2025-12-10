@@ -154,6 +154,16 @@ export const TECH_SPEC_WHITELIST: TechSpecField[] = [
     key: 'apn',
     label: 'Teilenummer',
     aliases: ['apn', 'apple part number', 'apple-partnummer', 'partnummer', 'part number', 'apple teilenummer']
+  },
+  {
+    key: 'batterietyp_ersatz',
+    label: 'Batterie-Typ',
+    aliases: ['battery-typ', 'ersetzt batterie', 'passend zu', 'ersetzt', 'compatible batteries', 'ersatzbatterien', 'ersetzt batterien']
+  },
+  {
+    key: 'kompatibilitaet',
+    label: 'Kompatibilität',
+    aliases: ['kompatibel', 'compatible', 'passend für', 'geeignet für', 'fits', 'passt zu']
   }
 ];
 
