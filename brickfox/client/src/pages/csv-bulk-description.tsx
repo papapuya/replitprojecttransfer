@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone } from "lucide-react";
+import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -781,6 +781,19 @@ export default function CSVBulkDescription() {
                   <p className="text-sm text-muted-foreground">
                     Die AI-Generierung benötigt ca. {Math.round(rawData.length * 8 / 60)} Minuten
                   </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFile(null);
+                      setRawData([]);
+                      setBulkProducts([]);
+                      setSuccessMessage("");
+                      setError("");
+                    }}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Zurück
+                  </Button>
                 </div>
               </Card>
             )}
