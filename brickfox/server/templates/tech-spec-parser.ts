@@ -262,21 +262,23 @@ export function extractTechSpecsFromStructured(
 /**
  * Extrahiert BrickFox-spezifische Attribute aus CSV-Daten
  * z.B. p_attributes[akku_v][de] -> Spannung, p_attributes[akku_mah][de] -> Kapazität
+ * Erweitert um: Maße, Gewicht, Farbe und alle technischen Daten
  */
 function extractBrickfoxAttributes(structuredData: any): Record<string, string> {
   const specs: Record<string, string> = {};
   
   if (!structuredData) return specs;
   
-  // Durchsuche alle Spalten nach p_attributes Pattern
+  // Durchsuche alle Spalten nach p_attributes Pattern und anderen technischen Feldern
   for (const [key, value] of Object.entries(structuredData)) {
     if (!value || typeof value !== 'string' || value.trim() === '') continue;
     
     const keyLower = key.toLowerCase();
+    const valTrimmed = value.trim();
     
     // Spannung: p_attributes[akku_v][de]
     if (keyLower.includes('akku_v') || keyLower.includes('voltage') || keyLower.includes('spannung')) {
-      const correctedVoltage = correctVoltageValue(value);
+      const correctedVoltage = correctVoltageValue(valTrimmed);
       specs['Spannung'] = correctedVoltage;
       console.log(`⚡ BrickFox Spannung: ${value} → ${correctedVoltage}`);
     }
@@ -284,16 +286,12 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
     // Kapazität: p_attributes[akku_mah][de] oder ähnlich
     if (keyLower.includes('akku_mah') || keyLower.includes('capacity') || 
         (keyLower.includes('kapazit') && !specs['Kapazität'])) {
-      // Nur mAh verwenden, NICHT Wh erfinden!
-      let capacityValue = value.trim();
-      // Entferne "Wh" falls vorhanden und nicht explizit in CSV
+      let capacityValue = valTrimmed;
       if (!value.toLowerCase().includes('wh') && !value.toLowerCase().includes('mah')) {
-        // Numerischer Wert ohne Einheit - als mAh interpretieren
         capacityValue = `${capacityValue} mAh`;
       } else if (value.toLowerCase().includes('mah')) {
         capacityValue = value;
       }
-      // NICHT als Wh interpretieren wenn es nicht explizit drin steht!
       if (!value.toLowerCase().includes('wh')) {
         specs['Kapazität'] = capacityValue;
         console.log(`🔋 BrickFox Kapazität: ${value} → ${capacityValue}`);
@@ -302,8 +300,128 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
     
     // Akkutyp/Chemie: p_attributes[akku_chemie][de]
     if (keyLower.includes('chemie') || keyLower.includes('chemistry') || keyLower.includes('akku_typ')) {
-      specs['Akkutyp'] = value.trim();
+      specs['Akkutyp'] = valTrimmed;
       console.log(`🔬 BrickFox Akkutyp: ${value}`);
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // DYNAMISCHE ERWEITERUNG: Maße, Gewicht, Farbe, technische Daten
+    // ═══════════════════════════════════════════════════════════════
+    
+    // Gewicht
+    if ((keyLower.includes('gewicht') || keyLower.includes('weight') || keyLower.includes('p_weight')) && !specs['Gewicht']) {
+      let gewichtVal = valTrimmed;
+      // Einheit hinzufügen wenn nicht vorhanden
+      if (!/\b(g|kg|gramm|kilogramm)\b/i.test(gewichtVal)) {
+        // Prüfe ob es eine kleine Zahl ist (wahrscheinlich kg) oder große (wahrscheinlich g)
+        const numVal = parseFloat(gewichtVal.replace(',', '.'));
+        if (!isNaN(numVal)) {
+          gewichtVal = numVal < 10 ? `${gewichtVal} kg` : `${gewichtVal} g`;
+        }
+      }
+      specs['Gewicht'] = gewichtVal;
+      console.log(`⚖️ BrickFox Gewicht: ${value} → ${gewichtVal}`);
+    }
+    
+    // Länge
+    if ((keyLower.includes('länge') || keyLower.includes('laenge') || keyLower.includes('length') || keyLower.includes('p_length')) && !specs['Länge']) {
+      let laengeVal = valTrimmed;
+      if (!/\b(mm|cm|m)\b/i.test(laengeVal)) {
+        laengeVal = `${laengeVal} mm`;
+      }
+      specs['Länge'] = laengeVal;
+      console.log(`📏 BrickFox Länge: ${value} → ${laengeVal}`);
+    }
+    
+    // Breite
+    if ((keyLower.includes('breite') || keyLower.includes('width') || keyLower.includes('p_width')) && !specs['Breite']) {
+      let breiteVal = valTrimmed;
+      if (!/\b(mm|cm|m)\b/i.test(breiteVal)) {
+        breiteVal = `${breiteVal} mm`;
+      }
+      specs['Breite'] = breiteVal;
+      console.log(`📐 BrickFox Breite: ${value} → ${breiteVal}`);
+    }
+    
+    // Höhe / Dicke
+    if ((keyLower.includes('höhe') || keyLower.includes('hoehe') || keyLower.includes('height') || 
+         keyLower.includes('dicke') || keyLower.includes('thickness') || keyLower.includes('p_height')) && !specs['Höhe']) {
+      let hoeheVal = valTrimmed;
+      if (!/\b(mm|cm|m)\b/i.test(hoeheVal)) {
+        hoeheVal = `${hoeheVal} mm`;
+      }
+      specs['Höhe'] = hoeheVal;
+      console.log(`📊 BrickFox Höhe: ${value} → ${hoeheVal}`);
+    }
+    
+    // Durchmesser
+    if ((keyLower.includes('durchmesser') || keyLower.includes('diameter') || keyLower.includes('ø')) && !specs['Durchmesser']) {
+      let dmVal = valTrimmed;
+      if (!/\b(mm|cm)\b/i.test(dmVal)) {
+        dmVal = `${dmVal} mm`;
+      }
+      specs['Durchmesser'] = dmVal;
+      console.log(`⭕ BrickFox Durchmesser: ${value} → ${dmVal}`);
+    }
+    
+    // Farbe
+    if ((keyLower.includes('farbe') || keyLower.includes('color') || keyLower.includes('colour')) && !specs['Farbe']) {
+      specs['Farbe'] = valTrimmed;
+      console.log(`🎨 BrickFox Farbe: ${value}`);
+    }
+    
+    // Material
+    if ((keyLower.includes('material') || keyLower.includes('werkstoff')) && !specs['Material']) {
+      specs['Material'] = valTrimmed;
+      console.log(`🔧 BrickFox Material: ${value}`);
+    }
+    
+    // Kabellänge
+    if ((keyLower.includes('kabellänge') || keyLower.includes('kabellaenge') || keyLower.includes('cable_length')) && !specs['Kabellänge']) {
+      let kabelVal = valTrimmed;
+      if (!/\b(m|cm|mm)\b/i.test(kabelVal)) {
+        kabelVal = `${kabelVal} m`;
+      }
+      specs['Kabellänge'] = kabelVal;
+      console.log(`🔌 BrickFox Kabellänge: ${value} → ${kabelVal}`);
+    }
+    
+    // Anschluss/Stecker
+    if ((keyLower.includes('anschluss') || keyLower.includes('stecker') || keyLower.includes('connector')) && !specs['Anschluss']) {
+      specs['Anschluss'] = valTrimmed;
+      console.log(`🔌 BrickFox Anschluss: ${value}`);
+    }
+    
+    // Ladezeit
+    if ((keyLower.includes('ladezeit') || keyLower.includes('charging_time')) && !specs['Ladezeit']) {
+      let ladezeitVal = valTrimmed;
+      if (!/\b(h|min|stunden|minuten)\b/i.test(ladezeitVal)) {
+        ladezeitVal = `${ladezeitVal} h`;
+      }
+      specs['Ladezeit'] = ladezeitVal;
+      console.log(`⏱️ BrickFox Ladezeit: ${value} → ${ladezeitVal}`);
+    }
+    
+    // Ladeleistung
+    if ((keyLower.includes('ladeleistung') || keyLower.includes('charging_power') || keyLower.includes('watt')) && !specs['Max. Ladeleistung']) {
+      let leistungVal = valTrimmed;
+      if (!/\b(w|watt)\b/i.test(leistungVal)) {
+        leistungVal = `${leistungVal} W`;
+      }
+      specs['Max. Ladeleistung'] = leistungVal;
+      console.log(`⚡ BrickFox Ladeleistung: ${value} → ${leistungVal}`);
+    }
+    
+    // IP-Schutzart
+    if ((keyLower.includes('ip_') || keyLower.includes('schutzart') || keyLower.includes('wasserschutz') || keyLower.includes('ipx')) && !specs['Wasserschutz']) {
+      specs['Wasserschutz'] = valTrimmed;
+      console.log(`💧 BrickFox Wasserschutz: ${value}`);
+    }
+    
+    // Zertifizierung
+    if ((keyLower.includes('zertifizierung') || keyLower.includes('certification') || keyLower.includes('ce_')) && !specs['Zertifizierung']) {
+      specs['Zertifizierung'] = valTrimmed;
+      console.log(`✅ BrickFox Zertifizierung: ${value}`);
     }
   }
   
