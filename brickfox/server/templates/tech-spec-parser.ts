@@ -267,7 +267,15 @@ export function extractTechSpecsFromStructured(
 function extractBrickfoxAttributes(structuredData: any): Record<string, string> {
   const specs: Record<string, string> = {};
   
-  if (!structuredData) return specs;
+  if (!structuredData) {
+    console.log('⚠️ extractBrickfoxAttributes: structuredData ist null/undefined');
+    return specs;
+  }
+  
+  // Debug: Zeige alle Schlüssel in structuredData
+  const keys = Object.keys(structuredData);
+  console.log(`📋 extractBrickfoxAttributes: ${keys.length} Felder vorhanden`);
+  console.log(`📋 Erste 10 Schlüssel: ${keys.slice(0, 10).join(', ')}`);
   
   // Durchsuche alle Spalten nach p_attributes Pattern und anderen technischen Feldern
   for (const [key, value] of Object.entries(structuredData)) {
