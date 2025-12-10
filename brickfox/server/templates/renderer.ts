@@ -512,10 +512,10 @@ ${techTableHtml}`;
 ${lieferumfangHtml}`;
   }
 
-  // Fazit/Schlusssatz am Ende
+  // Schlusssatz am Ende (ohne "Fazit:" Label)
   if (data.fazit && data.fazit.trim()) {
     html += `
-<p><strong>Fazit:</strong> ${e(data.fazit)}</p>`;
+<p>${e(data.fazit)}</p>`;
   }
 
   return html;

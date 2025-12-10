@@ -274,7 +274,7 @@ AUSGABEFORMAT (JSON)
   "uspBullets": ["Vorteil 1", "Vorteil 2", "Vorteil 3", "Vorteil 4", "Vorteil 5"],
   "technicalSpecs": {"Feldname": "Wert mit Einheit"},
   "packageContents": ["Artikel 1", "Artikel 2"],
-  "fazit": "Kurzes Fazit (1-2 Sätze) als Kaufempfehlung.",
+  "fazit": "Kurzer Schlusssatz (1-2 Sätze) als Kaufempfehlung. Beginne direkt mit dem Text, NICHT mit 'Fazit:'!",
   "zeigeTabelle": true/false
 }
 
