@@ -2855,6 +2855,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount mapping routes
   app.use('/api', mappingRouter);
 
+  // Weight estimation endpoint
+  app.post('/api/estimate-weight', requireAuth, async (req, res) => {
+    try {
+      const { products } = req.body;
+      
+      if (!products || !Array.isArray(products)) {
+        return res.status(400).json({ error: 'products array required' });
+      }
+      
+      const { getSecureOpenAIKey } = await import('./api-key-manager');
+      const apiKey = getSecureOpenAIKey();
+      
+      if (!apiKey) {
+        return res.status(500).json({ error: 'OpenAI API key not configured' });
+      }
+      
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ 
+        apiKey,
+        baseURL: process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
+      });
+      
+      const results = [];
+      
+      for (const product of products) {
+        const { name, description, category, brand } = product;
+        
+        const prompt = `Schätze das Gewicht für folgendes Produkt in Gramm.
+
+Produktname: ${name || 'Unbekannt'}
+Marke: ${brand || 'Unbekannt'}
+Kategorie: ${category || 'Unbekannt'}
+Beschreibung: ${description || 'Keine Beschreibung'}
+
+Antworte NUR mit einer Zahl (Gewicht in Gramm). Keine Einheit, keine Erklärung.
+Beispiel: 150`;
+
+        try {
+          const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'Du bist ein Experte für Produktgewichte im E-Commerce. Schätze realistische Gewichte basierend auf Produktbeschreibungen.' },
+              { role: 'user', content: prompt }
+            ],
+            max_tokens: 20,
+            temperature: 0.3
+          });
+          
+          const weightStr = response.choices[0]?.message?.content?.trim() || '';
+          const weight = parseFloat(weightStr.replace(/[^\d.,]/g, '').replace(',', '.'));
+          
+          results.push({
+            ...product,
+            estimatedWeight: isNaN(weight) ? null : weight,
+            confidence: isNaN(weight) ? 'low' : 'medium'
+          });
+        } catch (aiError) {
+          console.error('[Weight Estimation] AI error for product:', name, aiError);
+          results.push({
+            ...product,
+            estimatedWeight: null,
+            confidence: 'error'
+          });
+        }
+      }
+      
+      res.json({ success: true, results });
+    } catch (error: any) {
+      console.error('[Weight Estimation] Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
