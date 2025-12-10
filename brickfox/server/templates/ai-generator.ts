@@ -154,10 +154,12 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Dieser Ersatzakku für das iPhone 4S bietet zuverlässige Energie mit Li-Polymer Technologie. Bei nachlassender Akkuleistung ermöglicht er die volle Funktionalität des Geräts. Die integrierten Schutzschaltungen gewährleisten sicheren Betrieb."
 
-VORTEILE (kurz, technisch präzise):
-- "Hochwertige Li-Polymer Zellen"
-- "Konstante Leistungsabgabe"
-- "Integrierte Schutzschaltungen"`;
+VORTEILE (produktspezifisch, konkret):
+- "Passgenau für [Gerätemodell]"
+- "[Zellenchemie] Technologie für zuverlässige Leistung"
+- "Einfache Montage für schnellen Austausch"
+- "Erhöht die Laufzeit Ihres Geräts spürbar"
+- "Lösung für häufige Leistungsabfälle"`;
 
     case 'nutzen':
       return `STIL: NUTZENORIENTIERT & ALLTAGSNAH (Version B)
@@ -169,10 +171,12 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Wenn das iPhone 4S nicht mehr den ganzen Tag durchhält, schafft dieser Ersatzakku Abhilfe. Mit hochwertigen Li-Polymer Zellen liefert er zuverlässige Energie für den Alltag. Der Austausch ist unkompliziert und bringt die gewohnte Laufzeit zurück."
 
-VORTEILE (nutzenorientiert):
-- "Spürbar längere Nutzung im Alltag"
-- "Verlässliche Energie für den Tag"
-- "Problemlöser bei Leistungsabfall"`;
+VORTEILE (produktspezifisch, nutzenorientiert):
+- "Passgenau für [Gerätemodell]"
+- "[Zellenchemie] Technologie für zuverlässige Leistung"
+- "Einfache Montage für schnellen Austausch"
+- "Erhöht die Laufzeit Ihres Geräts spürbar"
+- "Lösung für häufige Leistungsabfälle"`;
 
     case 'premium':
       return `STIL: PREMIUM & BERATEND (Version C)
@@ -184,10 +188,12 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Für Anwender, die Wert auf geprüfte Qualität legen, ist dieser iPhone 4S Ersatzakku die richtige Wahl. Die hochwertigen Li-Polymer Zellen bieten konstante Leistung und lange Lebensdauer. Integrierte Schutzschaltungen sorgen für sicheren Betrieb im täglichen Einsatz."
 
-VORTEILE (hochwertig formuliert):
-- "Konstant stabile Spannungslage"
-- "Optimierte Zyklenfestigkeit"
-- "Präzise abgestimmte Parameter"`;
+VORTEILE (produktspezifisch, hochwertig):
+- "Passgenau für [Gerätemodell]"
+- "[Zellenchemie] Technologie für zuverlässige Leistung"
+- "Einfache Montage für schnellen Austausch"
+- "Erhöht die Laufzeit Ihres Geräts spürbar"
+- "Lösung für häufige Leistungsabfälle"`;
   }
 }
 
@@ -368,7 +374,13 @@ WEITERE JSON-FELDER:
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
-- uspBullets: Max 5, müssen aus Daten ableitbar sein. KEINE APNs in den Vorteilen!
+- uspBullets: Max 5 PRODUKTSPEZIFISCHE Vorteile. Beispiele für Akkus:
+  "Passgenau für [Gerätemodell]"
+  "[Zellenchemie] Technologie für zuverlässige Leistung"
+  "Einfache Montage für schnellen Austausch"
+  "Erhöht die Laufzeit Ihres Geräts spürbar"
+  "Lösung für häufige Leistungsabfälle"
+  KEINE generischen Phrasen wie "Hochwertig" oder "Leistungsstark"!
 - technicalSpecs: NUR bei Akkus (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik
 - packageContents: PFLICHT. Mindestens das Produkt selbst
 - zeigeTabelle: true NUR bei Akkus, sonst false
