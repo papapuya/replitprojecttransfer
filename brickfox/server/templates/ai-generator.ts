@@ -60,11 +60,20 @@ async function generateProductCopyModular(
     }
 
     // 1:1 TECH SPECS EXTRAKTION: Aus Vision-Text oder strukturierten Daten
+    const structuredDataSource = productData.structuredData || productData;
+    console.log(`🔍 structuredData Typ: ${typeof structuredDataSource}, Schlüssel: ${Object.keys(structuredDataSource).slice(0, 5).join(', ')}`);
+    
+    // Prüfe ob p_name[de] vorhanden ist
+    const pNameValue = structuredDataSource['p_name[de]'] || structuredDataSource['P Name[de]'] || structuredDataSource['p_name'] || 'NICHT GEFUNDEN';
+    console.log(`🔍 p_name[de] Wert: ${typeof pNameValue === 'string' ? pNameValue.substring(0, 100) : 'kein String'}`);
+    
     const directTechSpecs = extractTechSpecs1to1(
       productData.extractedText || '',
-      productData.structuredData || productData,
+      structuredDataSource,
       categoryConfig
     );
+    
+    console.log(`🔍 directTechSpecs nach Extraktion: ${JSON.stringify(directTechSpecs)}`);
     
     // Wenn direkte Extraktion erfolgreich war, nutze diese (überschreibt AI)
     const mergedTechSpecs = {
