@@ -61,6 +61,27 @@ Schreibe NIEMALS Sätze wie "Er ersetzt die Apple-Teilenummern (APN) 616-0579" i
 VERBOTEN: "Er ersetzt die APN..." / "entspricht der Teilenummer..." / "Apple Part Number..."
 Die APN erscheint NUR in der technischen Tabelle als Zeile "Teilenummer: 616-0579, 616-0580"
 
+⚠️ TECHNISCHE DATEN (mAh, Ah, Volt, Modelle) NIEMALS IN VORTEILEN ODER FLIEßTEXT:
+Alle technischen Daten gehören AUSSCHLIESSLICH in die technische Datentabelle!
+Modellbezeichnungen, Kapazitäten (mAh, Ah), Spannungen (Volt) und kompatible Gerätemodelle
+dürfen NIEMALS als Vorteile mit ✅ aufgelistet oder im Fließtext erwähnt werden.
+
+VERBOTEN in Vorteilen:
+❌ ✅ Passgenau für CR2032, DL2032, ECR2032
+❌ ✅ Mit 1821 mAh Kapazität
+❌ ✅ 3,82 Volt Spannung
+❌ ✅ Kompatibel mit iPhone 12, iPhone 13, iPhone 14
+❌ ✅ 2100 mAh für lange Laufzeit
+
+ERLAUBT in Vorteilen (nur allgemeine Nutzen):
+✅ Lange Laufzeit
+✅ Schnelle Ladezeiten
+✅ Zuverlässige Stromversorgung
+✅ Einfache Installation
+✅ Hochwertige Li-Ion Technologie
+
+Die konkreten Werte und Modelle erscheinen NUR in der technischen Tabelle!
+
 ═══════════════════════════════════════════════════════════════
 PRODUKTTITEL-SCHEMA (SEO-KRITISCH)
 ═══════════════════════════════════════════════════════════════
@@ -150,9 +171,9 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 
 REGELN FÜR JSON-FELDER:
 - produktTitel: PFLICHT. Schema: [Marke] [Produktart] für [Geräte] – [Volt], [mAh]. Marke IMMER am Anfang! Bei Akkus: Volt vor mAh! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen!
-- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen, KEINE APN-Nummern, KEINE Phrasen doppelt!
+- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen, KEINE APN-Nummern, KEINE Phrasen doppelt! KEINE mAh/Ah/Volt-Werte, KEINE Modellnummern im Fließtext - diese gehören NUR in die Tabelle!
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
-- vorteile: Max 5, müssen aus Daten ableitbar sein
+- vorteile: Max 5, müssen aus Daten ableitbar sein. KEINE mAh, Ah, Volt-Werte, KEINE Modellnummern! Nur allgemeine Nutzen wie "Lange Laufzeit", "Einfache Installation"
 - technischeDaten: NUR bei Akkus/Ladegeräten/etc. APN-Nummern gehören HIER rein (z.B. "APN": "616-0579, 616-0580")
 - lieferumfang: PFLICHT. Mindestens "1x [Produktname]"
 - zeigeTabelle: true/false - ob technische Datentabelle angezeigt werden soll
