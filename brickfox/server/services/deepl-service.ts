@@ -12,6 +12,30 @@ interface DeepLResponse {
   translations: DeepLTranslation[];
 }
 
+/**
+ * Entfernt EMCOM aus übersetzten Texten
+ * EMCOM ist die Eigenmarke und darf nie im Text erscheinen
+ */
+function removeEmcomFromText(text: string): string {
+  if (!text) return text;
+  
+  let cleaned = text;
+  // EMCOM am Anfang entfernen
+  cleaned = cleaned.replace(/^EMCOM\s+/gi, '');
+  // EMCOM in der Mitte entfernen
+  cleaned = cleaned.replace(/\s+EMCOM\s+/gi, ' ');
+  // EMCOM am Ende entfernen
+  cleaned = cleaned.replace(/\s+EMCOM$/gi, '');
+  // "von EMCOM", "by EMCOM", "van EMCOM" entfernen
+  cleaned = cleaned.replace(/\s+(von|by|from|van|door)\s+EMCOM\b/gi, '');
+  // Alleinstehend "EMCOM" entfernen
+  cleaned = cleaned.replace(/\bEMCOM\b/gi, '');
+  // Doppelte Leerzeichen bereinigen
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
 export class DeepLService {
   private apiKey: string;
   private baseUrl: string;
@@ -55,7 +79,7 @@ export class DeepLService {
       }
 
       const data: DeepLResponse = await response.json();
-      const translatedText = data.translations[0]?.text || '';
+      const translatedText = removeEmcomFromText(data.translations[0]?.text || '');
       console.log(`🇳🇱 Übersetzt: "${text.substring(0, 50)}..." → "${translatedText.substring(0, 50)}..."`);
       return translatedText;
     } catch (error) {
@@ -103,7 +127,8 @@ export class DeepLService {
       
       for (const originalText of texts) {
         if (originalText && originalText.trim() !== '') {
-          results.push(data.translations[translationIndex]?.text || '');
+          const translated = removeEmcomFromText(data.translations[translationIndex]?.text || '');
+          results.push(translated);
           translationIndex++;
         } else {
           results.push('');
