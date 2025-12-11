@@ -388,7 +388,7 @@ export default function CSVBulkDescription() {
             v_id: v_id,
             p_item_number: artikelnummer,
             produktname: produktname,
-            produktname_neu: cleanSeoProductName(payload.produktTitel || '', voltValue),
+            produktname_neu: produktname, // Original-Produktname übernehmen (kein SEO-Name mehr)
             produktbeschreibung: cleanDescription(plainText),
             produktbeschreibung_html: cleanDescription(payload.description || ''),
             // Niederländische Übersetzungen
