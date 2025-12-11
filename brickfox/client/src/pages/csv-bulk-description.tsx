@@ -173,14 +173,25 @@ export default function CSVBulkDescription() {
     }
   }, []);
 
-  // Bei Änderungen: Daten in sessionStorage speichern
+  // Bei Änderungen: Daten in sessionStorage speichern (nur für kleine Datensätze)
   useEffect(() => {
-    if (bulkProducts.length > 0) {
-      sessionStorage.setItem(SESSION_KEY_PRODUCTS, JSON.stringify(bulkProducts));
-      sessionStorage.setItem(SESSION_KEY_RAW_DATA, JSON.stringify(rawData));
-      if (file) {
-        sessionStorage.setItem(SESSION_KEY_FILE_NAME, file.name);
+    if (bulkProducts.length > 0 && bulkProducts.length <= 50) {
+      try {
+        sessionStorage.setItem(SESSION_KEY_PRODUCTS, JSON.stringify(bulkProducts));
+        sessionStorage.setItem(SESSION_KEY_RAW_DATA, JSON.stringify(rawData));
+        if (file) {
+          sessionStorage.setItem(SESSION_KEY_FILE_NAME, file.name);
+        }
+      } catch (e) {
+        console.warn('[CSV] SessionStorage quota exceeded, skipping cache');
+        sessionStorage.removeItem(SESSION_KEY_PRODUCTS);
+        sessionStorage.removeItem(SESSION_KEY_RAW_DATA);
+        sessionStorage.removeItem(SESSION_KEY_FILE_NAME);
       }
+    } else if (bulkProducts.length > 50) {
+      sessionStorage.removeItem(SESSION_KEY_PRODUCTS);
+      sessionStorage.removeItem(SESSION_KEY_RAW_DATA);
+      sessionStorage.removeItem(SESSION_KEY_FILE_NAME);
     }
   }, [bulkProducts, rawData, file]);
 
