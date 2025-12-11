@@ -306,7 +306,7 @@ export default function CSVBulkDescription() {
           });
 
           // Produktname aus verschiedenen möglichen Spalten lesen (inklusive BrickFox Format)
-          const produktname =
+          const rawProduktname =
             productData.produktname ||
             productData.bezeichnung ||
             productData.name ||
@@ -320,6 +320,31 @@ export default function CSVBulkDescription() {
             row['P Name[de]'] ||
             row['P Name de'] ||
             'Unbekanntes Produkt';
+
+          // Bereinige abgeschnittene Produktnamen
+          // z.B. "Apple Akku für iPhone 4 – ersetzt." → "Apple Ersatzakku für iPhone 4"
+          // z.B. "Apple Earpiece Hörmuschel für iPhone 6 Plus – passend für..." → "Apple Earpiece Hörmuschel für iPhone 6 Plus"
+          const cleanProductName = (name: string): string => {
+            // Entferne abgeschnittene Endungen wie "– ersetzt.", "– passend für...", "– passend für", etc.
+            let cleaned = name
+              .replace(/\s*[–-]\s*(ersetzt\.?|passend für\.{0,3}|passend\s*für\s*\.{0,3}|kompatibel mit\.{0,3})\s*$/i, '')
+              .replace(/\s*[–-]\s*\.{2,}$/, '') // Entferne "– ..."
+              .replace(/\s*\.{3}$/, '') // Entferne "..." am Ende
+              .trim();
+            
+            // Wenn "– ersetzt" entfernt wurde, füge "Ersatz" vor dem Produkttyp ein
+            // z.B. "Apple Akku für iPhone 4" → "Apple Ersatzakku für iPhone 4"
+            if (name.toLowerCase().includes('– ersetzt') || name.toLowerCase().includes('- ersetzt')) {
+              // Finde Produkttypen und füge "Ersatz" davor
+              cleaned = cleaned.replace(/\b(Akku|Batterie|Display|Screen|Ladekabel|Kabel)\b/i, (match) => {
+                return 'Ersatz' + match.toLowerCase();
+              });
+            }
+            
+            return cleaned;
+          };
+          
+          const produktname = cleanProductName(rawProduktname);
 
           productData.productName = produktname;
 
