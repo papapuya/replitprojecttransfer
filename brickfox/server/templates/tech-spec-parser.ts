@@ -338,6 +338,53 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
     }
   }
   
+  // ═══════════════════════════════════════════════════════════════
+  // KOMPATIBILITÄT EXTRAKTION: Geräte aus Produktbeschreibung
+  // Format: "Marke: Modell1, Modell2" oder einfach Modellcodes
+  // ═══════════════════════════════════════════════════════════════
+  const descriptionFields = ['p_description[de]', 'beschreibung', 'description', 'produktbeschreibung'];
+  for (const field of descriptionFields) {
+    const description = structuredData[field];
+    if (description && typeof description === 'string' && description.length > 10) {
+      // Suche nach Modellcodes im Format "Marke: Modell" oder reine Modellcodes
+      const allModels: string[] = [];
+      
+      // Pattern 1: "Marke: Modell1, Modell2" (z.B. "Midland: XTC-300, XTC-350")
+      const brandModelPattern = /([A-Za-z][A-Za-z\s]*?):\s*([A-Z0-9][A-Z0-9\-]+(?:,\s*[A-Z0-9][A-Z0-9\-]+)*)/gi;
+      let brandMatch;
+      while ((brandMatch = brandModelPattern.exec(description)) !== null) {
+        const brand = brandMatch[1].trim();
+        const models = brandMatch[2].trim();
+        // Ignoriere technische Labels wie "Spannung:", "Kapazität:", "Typ:"
+        const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'länge', 'breite', 'höhe', 'chemie', 'voltage', 'capacity'];
+        if (!technicalLabels.includes(brand.toLowerCase())) {
+          allModels.push(`${brand}: ${models}`);
+        }
+      }
+      
+      // Pattern 2: Eigenständige Modellcodes (z.B. "AHDBT-001", "HDDV2100")
+      // Nur wenn keine Marken-Modell-Paare gefunden wurden
+      if (allModels.length === 0) {
+        const standaloneModels = description.match(/\b[A-Z]{2,}[\-]?[A-Z0-9]{2,}[\-]?[A-Z0-9]*\b/g);
+        if (standaloneModels) {
+          // Filtere technische Begriffe heraus
+          const filtered = standaloneModels.filter(m => 
+            !['LI-ION', 'LI-POLYMER', 'NIMH', 'NICD', 'USB-C', 'MICRO-USB'].includes(m.toUpperCase())
+          );
+          allModels.push(...filtered);
+        }
+      }
+      
+      if (allModels.length > 0) {
+        // Dedupliziere und formatiere
+        const uniqueModels = Array.from(new Set(allModels));
+        specs['Kompatibilität'] = uniqueModels.join(', ');
+        console.log(`📱 Kompatibilität aus Beschreibung extrahiert: ${uniqueModels.length} Einträge`);
+        break;
+      }
+    }
+  }
+  
   // Durchsuche alle Spalten nach p_attributes Pattern und anderen technischen Feldern
   for (const [key, value] of Object.entries(structuredData)) {
     if (!value || typeof value !== 'string' || value.trim() === '') continue;
