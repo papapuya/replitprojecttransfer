@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft, XCircle } from "lucide-react";
+import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft, XCircle, Languages, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -90,6 +90,7 @@ export default function CSVBulkDescription() {
   const [htmlPreviewProductName, setHtmlPreviewProductName] = useState("");
   const [isMobilePreview, setIsMobilePreview] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   
   // Abbruch-Referenz für die AI-Generierung
   const abortRef = useRef(false);
@@ -684,6 +685,74 @@ export default function CSVBulkDescription() {
     }
   };
 
+  // NL-Übersetzung für alle Produkte (on-demand)
+  const handleTranslateAll = async () => {
+    const productsToTranslate = bulkProducts.filter(p => 
+      (p.produktname_neu && !p.produktname_nl) || 
+      (p.produktbeschreibung_html && !p.produktbeschreibung_html_nl)
+    );
+
+    if (productsToTranslate.length === 0) {
+      toast({
+        title: "Info",
+        description: "Alle Produkte sind bereits übersetzt",
+      });
+      return;
+    }
+
+    setIsTranslating(true);
+    let translated = 0;
+
+    try {
+      for (const product of productsToTranslate) {
+        try {
+          const response = await fetch('/api/translate-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              produktTitel: product.produktname_neu,
+              produktBeschreibung: product.produktbeschreibung_html
+            })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            
+            setBulkProducts(prev =>
+              prev.map(p =>
+                p.id === product.id
+                  ? {
+                      ...p,
+                      produktname_nl: result.produktTitelNL || p.produktname_nl,
+                      produktbeschreibung_nl: result.produktBeschreibungNL || p.produktbeschreibung_nl,
+                      produktbeschreibung_html_nl: result.produktBeschreibungNL || p.produktbeschreibung_html_nl
+                    }
+                  : p
+              )
+            );
+            translated++;
+          }
+        } catch (err) {
+          console.error(`Übersetzungsfehler bei Produkt ${product.id}:`, err);
+        }
+      }
+
+      toast({
+        title: "Erfolg",
+        description: `${translated} Produkt(e) ins Niederländische übersetzt`,
+      });
+    } catch (error) {
+      console.error('Übersetzungsfehler:', error);
+      toast({
+        title: "Fehler",
+        description: "Fehler bei der Übersetzung",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const reset = () => {
     setFile(null);
     setRawData([]);
@@ -1108,6 +1177,24 @@ export default function CSVBulkDescription() {
                   >
                     <FolderPlus className="w-4 h-4 mr-2" />
                     Als Projekt speichern
+                  </Button>
+                  <Button
+                    onClick={handleTranslateAll}
+                    disabled={bulkProducts.length === 0 || isTranslating}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {isTranslating ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Übersetze...
+                      </>
+                    ) : (
+                      <>
+                        <Languages className="w-4 h-4 mr-2" />
+                        NL Übersetzen
+                      </>
+                    )}
                   </Button>
                   <Button
                     onClick={handleDownload}

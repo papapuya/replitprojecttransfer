@@ -2014,32 +2014,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ].slice(0, 20); // Limit to top 20 keywords
       const seoKeywords = allKeywords.join(', ');
 
-      // DeepL-Übersetzung ins Niederländische (gleiche HTML-Struktur)
-      let descriptionNL = '';
-      let produktTitelNL = '';
-      
-      if (process.env.DEEPL_API_KEY) {
-        try {
-          // Batch-Übersetzung für bessere Performance
-          const [translatedDesc, translatedTitle] = await deeplService.translateBatch([
-            description || '',
-            produktTitel || ''
-          ]);
-          descriptionNL = translatedDesc;
-          produktTitelNL = translatedTitle;
-          console.log(`🇳🇱 NL-Übersetzung erfolgreich: Titel ${produktTitelNL.length} chars, Beschreibung ${descriptionNL.length} chars`);
-        } catch (error) {
-          console.error('❌ DeepL Übersetzungsfehler:', error);
-        }
-      }
+      // DeepL-Übersetzung deaktiviert - wird nur on-demand über /api/translate-product aufgerufen
+      // Spart Kosten: ~150.000 Produkte × 2 Übersetzungen = erhebliche DeepL-Kosten
+      const descriptionNL = '';
+      const produktTitelNL = '';
 
       await trackApiUsage(req, res, () => {});
       res.json({ 
         success: true, 
         description,
-        descriptionNL, // Niederländische Beschreibung (gleiche HTML-Struktur)
+        descriptionNL, // Leer - wird on-demand übersetzt
         produktTitel, // AI-generierter SEO-optimierter Produktname
-        produktTitelNL, // Niederländischer Produktname
+        produktTitelNL, // Leer - wird on-demand übersetzt
         seoTitle,
         seoDescription,
         seoKeywords,
@@ -2130,6 +2116,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Regenerate product name error:', error);
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Regenerierung fehlgeschlagen'
+      });
+    }
+  });
+
+  // On-demand NL-Übersetzung (spart DeepL-Kosten)
+  app.post('/api/translate-product', async (req, res) => {
+    try {
+      const { produktTitel, produktBeschreibung } = req.body;
+
+      if (!produktTitel && !produktBeschreibung) {
+        return res.status(400).json({ error: 'Keine Daten zum Übersetzen' });
+      }
+
+      if (!process.env.DEEPL_API_KEY) {
+        return res.status(400).json({ error: 'DeepL API Key nicht konfiguriert' });
+      }
+
+      let produktTitelNL = '';
+      let produktBeschreibungNL = '';
+
+      // Batch-Übersetzung für bessere Performance
+      const textsToTranslate: string[] = [];
+      if (produktTitel) textsToTranslate.push(produktTitel);
+      if (produktBeschreibung) textsToTranslate.push(produktBeschreibung);
+
+      const translated = await deeplService.translateBatch(textsToTranslate);
+
+      let idx = 0;
+      if (produktTitel) {
+        produktTitelNL = translated[idx++] || '';
+      }
+      if (produktBeschreibung) {
+        produktBeschreibungNL = translated[idx++] || '';
+      }
+
+      console.log(`🇳🇱 On-demand Übersetzung: Titel ${produktTitelNL.length} chars, Beschreibung ${produktBeschreibungNL.length} chars`);
+
+      res.json({
+        success: true,
+        produktTitelNL,
+        produktBeschreibungNL
+      });
+    } catch (error) {
+      console.error('Translate product error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Übersetzung fehlgeschlagen'
       });
     }
   });
