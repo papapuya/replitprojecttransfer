@@ -61,10 +61,18 @@ Schreibe NIEMALS Sätze wie "Er ersetzt die Apple-Teilenummern (APN) 616-0579" i
 VERBOTEN: "Er ersetzt die APN..." / "entspricht der Teilenummer..." / "Apple Part Number..."
 Die APN erscheint NUR in der technischen Tabelle als Zeile "Teilenummer: 616-0579, 616-0580"
 
-⚠️ TECHNISCHE DATEN (mAh, Ah, Volt, Modelle) NIEMALS IN VORTEILEN ODER FLIEßTEXT:
+⚠️ TECHNISCHE DATEN (mAh, Ah, Volt, Modelle) NIEMALS IN VORTEILEN, EINLEITUNG ODER FLIEßTEXT:
 Alle technischen Daten gehören AUSSCHLIESSLICH in die technische Datentabelle!
 Modellbezeichnungen, Kapazitäten (mAh, Ah), Spannungen (Volt) und kompatible Gerätemodelle
-dürfen NIEMALS als Vorteile mit ✅ aufgelistet oder im Fließtext erwähnt werden.
+dürfen NIEMALS in der Einleitung, als Vorteile mit ✅ oder im Fließtext erwähnt werden.
+Die Einleitung beschreibt NUR allgemein was das Produkt ist und welchen Nutzen es bietet - OHNE technische Details!
+
+⚠️ WIEDERHOLUNGEN STRIKT VERMEIDEN:
+Jede Information darf nur EINMAL in der gesamten Produktbeschreibung vorkommen!
+- Wenn die Kompatibilität in der Tabelle steht, NICHT nochmal im Text erwähnen
+- Wenn Volt/mAh in der Tabelle steht, NICHT nochmal im Fließtext
+- Keine doppelten Phrasen oder Formulierungen
+- Jeder Satz muss neue Information bieten
 
 VERBOTEN in Vorteilen:
 ❌ ✅ Passgenau für CR2032, DL2032, ECR2032
@@ -98,18 +106,19 @@ PRODUKTTITEL-SCHEMA (SEO-KRITISCH)
 Das Feld "produktTitel" MUSS diesem Schema folgen:
 
 FÜR AKKUS/BATTERIEN:
-[Marke] [Produktart] für [Gerät/Serie] – [Volt], [mAh]
+[Marke] [Produktart] – [Volt], [mAh]
 
 FÜR ANDERE PRODUKTE:
-[Marke] [Produktart] für [Gerät/Serie] – [messbare Attribute]
+[Marke] [Produktart] – [messbare Attribute]
 
 REGELN:
 1. Marke IMMER ZUERST (ohne Sonderzeichen, kein Pipe)
 2. Dann Produktart (Hauptkeyword)
-3. Gedankenstrich (–) trennt Geräte von Attributen
+3. Gedankenstrich (–) trennt Produktart von technischen Attributen
 4. Bei Akkus: Volt ZUERST, dann mAh (z.B. "– 3,82 Volt, 1821 mAh")
-5. Maximal 120 Zeichen
-6. Keine endlosen Gerätelisten im Titel
+5. Bei Ah-Werten: IMMER in mAh umrechnen (1 Ah = 1000 mAh, z.B. 2,1 Ah → 2100 mAh)
+6. Maximal 120 Zeichen
+7. KEINE Gerätelisten im Titel - Modelle gehören in die Tabelle!
 
 ⚠️ AUSNAHME EMCOM:
 Wenn die Marke "EMCOM" ist, wird der Markenname KOMPLETT WEGGELASSEN!
@@ -117,11 +126,11 @@ EMCOM ist die Eigenmarke und soll NIEMALS im Titel erscheinen.
 Bei EMCOM startet der Titel direkt mit der Produktart.
 
 BEISPIELE:
-✅ Varta Ersatzakku für Apple iPhone SE 2020 – 3,82 Volt, 1821 mAh
-✅ Cameron Sino Akku für Samsung Galaxy S5 – 3,85 Volt, 2100 mAh, Li-Ion
-✅ Ersatzakku für Apple iPhone SE 2020 – 3,82 Volt, 1821 mAh (EMCOM = keine Marke!)
-✅ Hähnel USB-Datenkabel für Apple iPhone 4/4s, iPad – 1,5 m, weiß
-✅ iFixit Werkzeug-Set für iPhone Reparatur – 17-teilig
+✅ Varta Ersatzakku – 3,82 Volt, 1821 mAh
+✅ Cameron Sino Akku – 3,85 Volt, 2100 mAh
+✅ Ersatzakku – 3,82 Volt, 1821 mAh (EMCOM = keine Marke!)
+✅ Hähnel USB-Datenkabel – 1,5 m, weiß
+✅ iFixit Werkzeug-Set – 17-teilig
 
 VERBOTEN:
 ❌ USB-Datenkabel für iPhone | Hähnel (Marke am Ende)
@@ -129,6 +138,7 @@ VERBOTEN:
 ❌ Hähnel | USB-Datenkabel (Pipe irgendwo)
 ❌ EMCOM Akku für iPhone (EMCOM darf NIEMALS im Titel stehen!)
 ❌ Akku für iPhone – 1821 mAh, 3,82 Volt (Volt muss VOR mAh!)
+❌ Varta Akku für iPhone 12, iPhone 13, iPhone 14 – 3,8V (KEINE Modelle im Titel!)
 
 ═══════════════════════════════════════════════════════════════
 TECHNISCHE DATEN – ERLAUBTE FELDER (WHITELIST)
@@ -180,11 +190,11 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 }
 
 REGELN FÜR JSON-FELDER:
-- produktTitel: PFLICHT. Schema: [Marke] [Produktart] für [Geräte] – [Volt], [mAh]. Marke IMMER am Anfang! Bei Akkus: Volt vor mAh! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen!
-- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Produkt + Einsatz + Nutzen kombiniert. KEINE Wiederholungen, KEINE APN-Nummern, KEINE Phrasen doppelt! KEINE mAh/Ah/Volt-Werte, KEINE Modellnummern im Fließtext - diese gehören NUR in die Tabelle!
-- kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
+- produktTitel: PFLICHT. Schema: [Marke] [Produktart] – [Volt], [mAh]. Marke IMMER am Anfang! Bei Akkus: Volt vor mAh! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen! KEINE Modelle im Titel!
+- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). NUR allgemeiner Nutzen! KEINE technischen Daten (mAh, Volt, Modelle) - die gehören NUR in die Tabelle! KEINE Wiederholungen!
+- kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten. Diese Daten erscheinen NUR in der Tabelle!
 - vorteile: Max 5, müssen aus Daten ableitbar sein. KEINE mAh, Ah, Volt-Werte, KEINE Modellnummern! Nur allgemeine Nutzen wie "Lange Laufzeit", "Einfache Installation"
-- technischeDaten: NUR bei Akkus/Ladegeräten/etc. APN-Nummern gehören HIER rein (z.B. "APN": "616-0579, 616-0580")
+- technischeDaten: NUR bei Akkus/Ladegeräten/etc. HIER gehören alle technischen Details: mAh, Volt, Modelle, APN, Gewicht, Maße
 - lieferumfang: PFLICHT. Mindestens "1x [Produktname]"
 - zeigeTabelle: true/false - ob technische Datentabelle angezeigt werden soll
 

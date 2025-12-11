@@ -101,9 +101,6 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                 <TableHead className="min-w-[250px]">
                   SEO-Produktname
                 </TableHead>
-                <TableHead className="min-w-[400px]">
-                  Produktbeschreibung Text
-                </TableHead>
                 <TableHead className="min-w-[500px]">
                   Produktbeschreibung HTML
                 </TableHead>
@@ -170,27 +167,6 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                       placeholder="SEO-optimierter Produktname..."
                       data-testid={`input-produktname-neu-${product.id}`}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2 items-start">
-                      <Textarea
-                        value={product.produktbeschreibung}
-                        onChange={(e) => onUpdateProduct(product.id, 'produktbeschreibung', e.target.value)}
-                        className="text-xs resize-none min-h-[100px] font-sans flex-1 bulk-description-textarea"
-                        data-testid={`input-beschreibung-${product.id}`}
-                      />
-                      {product.produktbeschreibung && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onPreviewHtml?.(product.produktbeschreibung, product.produktname)}
-                          title="Text-Vorschau anzeigen"
-                          className="mt-1 flex-shrink-0"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2 items-start">
