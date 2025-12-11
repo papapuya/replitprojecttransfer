@@ -20,17 +20,19 @@ function removeEmcomFromText(text: string): string {
   if (!text) return text;
   
   let cleaned = text;
-  // EMCOM am Anfang entfernen
-  cleaned = cleaned.replace(/^EMCOM\s+/gi, '');
-  // EMCOM in der Mitte entfernen
-  cleaned = cleaned.replace(/\s+EMCOM\s+/gi, ' ');
-  // EMCOM am Ende entfernen
-  cleaned = cleaned.replace(/\s+EMCOM$/gi, '');
+  // EMCOM mit Bindestrich am Anfang entfernen (z.B. "EMCOM-batterij")
+  cleaned = cleaned.replace(/^EMCOM[-–]?\s*/gi, '');
+  // EMCOM mit Bindestrich in der Mitte entfernen
+  cleaned = cleaned.replace(/\s+EMCOM[-–]?\s*/gi, ' ');
   // "von EMCOM", "by EMCOM", "van EMCOM" entfernen
   cleaned = cleaned.replace(/\s+(von|by|from|van|door)\s+EMCOM\b/gi, '');
+  // EMCOM mit nachfolgendem Bindestrich/Komma/Doppelpunkt
+  cleaned = cleaned.replace(/\bEMCOM[-–,:]\s*/gi, '');
   // Alleinstehend "EMCOM" entfernen
   cleaned = cleaned.replace(/\bEMCOM\b/gi, '');
-  // Doppelte Leerzeichen bereinigen
+  // Führende Bindestriche nach Entfernung bereinigen
+  cleaned = cleaned.replace(/^[-–]\s*/g, '');
+  // Doppelte Leerzeichen und Bindestriche bereinigen
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   
   return cleaned;
@@ -69,6 +71,7 @@ export class DeepLService {
           source_lang: 'DE',
           target_lang: 'NL',
           preserve_formatting: true,
+          tag_handling: 'html',
         }),
       });
 
@@ -111,6 +114,7 @@ export class DeepLService {
           source_lang: 'DE',
           target_lang: 'NL',
           preserve_formatting: true,
+          tag_handling: 'html',
         }),
       });
 
