@@ -151,6 +151,7 @@ VERBOTEN:
 ❌ EMCOM Akku für iPhone (EMCOM darf NIEMALS im Titel stehen!)
 ❌ Akku für iPhone – 1821 mAh, 3,82 Volt (Volt muss VOR mAh!)
 ❌ Komplette Neuformulierung wenn Original gut war
+❌ Vibrationsmotor für iPhone 4 – passend für iPhone 4 (WIEDERHOLUNG! Gerät darf nur EINMAL genannt werden!)
 
 ═══════════════════════════════════════════════════════════════
 TECHNISCHE DATEN – ERLAUBTE FELDER (WHITELIST)
