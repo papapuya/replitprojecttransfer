@@ -2043,6 +2043,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Regeneriere nur den Produktnamen (für ausgewählte Produkte)
+  app.post('/api/regenerate-product-name', async (req, res) => {
+    try {
+      const { produktname, csvData } = req.body;
+
+      if (!produktname) {
+        return res.status(400).json({ error: 'Produktname fehlt' });
+      }
+
+      // Extrahiere relevante Daten für den Produktnamen
+      const manufacturer = csvData?.['p_manufacturer'] || csvData?.['Hersteller'] || '';
+      const volt = csvData?.['V_Nominal'] || csvData?.['v_nominal'] || csvData?.['Spannung'] || '';
+      const mah = csvData?.['Nominalkapazitaet'] || csvData?.['nominalkapazitaet'] || csvData?.['mAh'] || '';
+
+      // Einfache Logik: Originalname übernehmen, bei Akkus Volt/mAh ergänzen
+      let produktTitel = produktname;
+
+      // Prüfe ob es ein Akku ist
+      const isAkku = /akku|batterie|battery/i.test(produktname);
+
+      if (isAkku && volt && mah) {
+        // Entferne bestehende Volt/mAh falls vorhanden
+        produktTitel = produktTitel.replace(/\s*–\s*[\d,.]+ ?V(olt)?,?\s*[\d,.]+ ?mAh/i, '');
+        produktTitel = produktTitel.replace(/\s*–\s*[\d,.]+ ?mAh,?\s*[\d,.]+ ?V(olt)?/i, '');
+        
+        // Formatiere mAh (Ah zu mAh konvertieren)
+        let mahValue = mah;
+        if (/Ah$/i.test(mah) && !/mAh$/i.test(mah)) {
+          const numericValue = parseFloat(mah.replace(/[^\d,.]/g, '').replace(',', '.'));
+          mahValue = `${Math.round(numericValue * 1000)} mAh`;
+        } else if (!/mAh$/i.test(mah)) {
+          mahValue = `${mah} mAh`;
+        }
+
+        // Formatiere Volt
+        let voltValue = volt;
+        if (!/V(olt)?$/i.test(volt)) {
+          voltValue = `${volt} Volt`;
+        }
+
+        produktTitel = `${produktTitel.trim()} – ${voltValue}, ${mahValue}`;
+      }
+
+      // EMCOM entfernen
+      produktTitel = produktTitel.replace(/^EMCOM[-–]?\s*/gi, '');
+      produktTitel = produktTitel.replace(/\bEMCOM\b/gi, '').trim();
+
+      // Wiederholungen entfernen (z.B. "für iPhone 4 – passend für iPhone 4")
+      // Entferne "– passend für X" wenn "für X" bereits im Titel steht
+      const fuerMatch = produktTitel.match(/für\s+([^–]+?)(?:\s*–|$)/i);
+      if (fuerMatch) {
+        const devicePart = fuerMatch[1].trim();
+        // Entferne redundante Suffixe wie "– passend für iPhone 4" oder "– für iPhone 4"
+        produktTitel = produktTitel.replace(new RegExp(`\\s*–\\s*(passend\\s+)?für\\s+${devicePart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i'), '');
+      }
+
+      // NL-Übersetzung
+      let produktTitelNL = '';
+      if (process.env.DEEPL_API_KEY) {
+        try {
+          const translatedTitle = await deeplService.translateToNL(produktTitel);
+          produktTitelNL = translatedTitle;
+          console.log(`🇳🇱 NL-Titel regeneriert: "${produktTitelNL}"`);
+        } catch (error) {
+          console.error('❌ DeepL Übersetzungsfehler:', error);
+        }
+      }
+
+      res.json({
+        success: true,
+        produktTitel,
+        produktTitelNL
+      });
+    } catch (error) {
+      console.error('Regenerate product name error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Regenerierung fehlgeschlagen'
+      });
+    }
+  });
+
   app.post('/api/pixi/compare', requireAuth, requireFeature('pixiIntegration'), upload.single('csvFile'), async (req: any, res) => {
     try {
       const { supplNr } = req.body;
