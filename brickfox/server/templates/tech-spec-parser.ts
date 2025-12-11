@@ -350,15 +350,25 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       const allModels: string[] = [];
       
       // Pattern 1: "Marke: Modell1, Modell2" (z.B. "Midland: XTC-300, XTC-350")
-      const brandModelPattern = /([A-Za-z][A-Za-z\s]*?):\s*([A-Z0-9][A-Z0-9\-]+(?:,\s*[A-Z0-9][A-Z0-9\-]+)*)/gi;
+      // Nur Modellcodes mit mindestens 3 Zeichen und Bindestrich oder Zahlen
+      const brandModelPattern = /([A-Za-z][A-Za-z\s]*?):\s*([A-Z0-9][A-Z0-9\-]{2,}(?:,\s*[A-Z0-9][A-Z0-9\-]{2,})*)/gi;
       let brandMatch;
       while ((brandMatch = brandModelPattern.exec(description)) !== null) {
         const brand = brandMatch[1].trim();
         const models = brandMatch[2].trim();
-        // Ignoriere technische Labels wie "Spannung:", "Kapazität:", "Typ:"
-        const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'länge', 'breite', 'höhe', 'chemie', 'voltage', 'capacity'];
-        if (!technicalLabels.includes(brand.toLowerCase())) {
-          allModels.push(`${brand}: ${models}`);
+        // Ignoriere technische Labels, CSS-Properties und kurze Wörter
+        const technicalLabels = [
+          'spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'länge', 'breite', 'höhe', 'chemie', 
+          'voltage', 'capacity', 'weight', 'color', 'font', 'style', 'border', 'margin', 'padding',
+          'width', 'height', 'background', 'display', 'text', 'size', 'family'
+        ];
+        // Ignoriere wenn Marke ein CSS-Property ist oder zu kurz
+        if (!technicalLabels.includes(brand.toLowerCase()) && brand.length > 2) {
+          // Ignoriere CSS-Werte wie "bold", "normal", "italic"
+          const cssValues = ['bold', 'normal', 'italic', 'none', 'block', 'inline', 'flex', 'grid', 'auto'];
+          if (!cssValues.includes(models.toLowerCase())) {
+            allModels.push(`${brand}: ${models}`);
+          }
         }
       }
       
