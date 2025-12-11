@@ -103,42 +103,54 @@ Bei AKKUS (wiederaufladbar):
 ═══════════════════════════════════════════════════════════════
 PRODUKTTITEL-SCHEMA (SEO-KRITISCH)
 ═══════════════════════════════════════════════════════════════
-Das Feld "produktTitel" MUSS diesem Schema folgen:
+⚠️ WICHTIG: ORIGINALNAME ALS BASIS VERWENDEN!
+Der Originalproduktname ist oft bereits gut formuliert. Übernimm ihn, wenn er:
+- Klar beschreibt was das Produkt ist
+- Die richtige Produktart enthält (z.B. "Front Kamera", "Akku", "Kabel")
+- Das Zielgerät nennt (z.B. "für iPhone 4")
 
-FÜR AKKUS/BATTERIEN:
-[Marke] [Produktart] – [Volt], [mAh]
+NUR KLEINE KORREKTUREN wenn nötig:
+- Marke an den Anfang setzen (falls vorhanden und nicht EMCOM)
+- Bei zu vielen Modellen: nur das erste Modell im Titel, Rest in Tabelle
+- Bei Akkus: Volt und mAh am Ende hinzufügen
 
-FÜR ANDERE PRODUKTE:
-[Marke] [Produktart] – [messbare Attribute]
+ORIGINALNAME BEIBEHALTEN - Beispiele:
+✅ Original: "Front Kamera für iPhone 4" → Titel: "Front Kamera für iPhone 4"
+✅ Original: "Haupt Kamera für iPhone 4" → Titel: "Haupt Kamera für iPhone 4"
+✅ Original: "USB-Datenkabel für iPhone 4/4s" → Titel: "USB-Datenkabel für iPhone 4/4s"
+✅ Original: "Schrauben Set Komplett für iPhone 4" → Titel: "Schrauben Set Komplett für iPhone 4"
+
+NUR BEI AKKUS/BATTERIEN erweitern:
+Original: "Akku für iPhone 4" + CSV hat 3,7V/1420mAh
+→ Titel: "Akku für iPhone 4 – 3,7 Volt, 1420 mAh"
 
 REGELN:
-1. Marke IMMER ZUERST (ohne Sonderzeichen, kein Pipe)
-2. Dann Produktart (Hauptkeyword)
-3. Gedankenstrich (–) trennt Produktart von technischen Attributen
-4. Bei Akkus: Volt ZUERST, dann mAh (z.B. "– 3,82 Volt, 1821 mAh")
-5. Bei Ah-Werten: IMMER in mAh umrechnen (1 Ah = 1000 mAh, z.B. 2,1 Ah → 2100 mAh)
-6. Maximal 120 Zeichen
-7. KEINE Gerätelisten im Titel - Modelle gehören in die Tabelle!
+1. Originalname übernehmen wenn er das Produkt klar beschreibt
+2. Marke an den Anfang NUR wenn sie im Original fehlt (außer EMCOM)
+3. Bei Akkus: Volt ZUERST, dann mAh am Ende (z.B. "– 3,7 Volt, 1420 mAh")
+4. Bei Ah-Werten: in mAh umrechnen (1 Ah = 1000 mAh)
+5. Maximal 120 Zeichen
+6. Bei zu vielen Modellen: nur erstes Modell im Titel, Rest in Tabelle
 
 ⚠️ AUSNAHME EMCOM:
 Wenn die Marke "EMCOM" ist, wird der Markenname KOMPLETT WEGGELASSEN!
 EMCOM ist die Eigenmarke und soll NIEMALS im Titel erscheinen.
 Bei EMCOM startet der Titel direkt mit der Produktart.
 
-BEISPIELE:
-✅ Varta Ersatzakku – 3,82 Volt, 1821 mAh
-✅ Cameron Sino Akku – 3,85 Volt, 2100 mAh
-✅ Ersatzakku – 3,82 Volt, 1821 mAh (EMCOM = keine Marke!)
-✅ Hähnel USB-Datenkabel – 1,5 m, weiß
-✅ iFixit Werkzeug-Set – 17-teilig
+BEISPIELE (Originalname übernehmen):
+✅ Front Kamera für iPhone 4 (Original übernommen)
+✅ Haupt Kamera für iPhone 4 (Original übernommen)
+✅ USB-Datenkabel für iPhone 4/4s (Original übernommen)
+✅ Schrauben Set Komplett für iPhone 4 (Original übernommen)
+✅ Akku für iPhone 4 – 3,7 Volt, 1420 mAh (Akku: Volt/mAh ergänzt)
+✅ Varta Ersatzakku für iPhone 12 – 3,82 Volt, 1821 mAh (Marke + Volt/mAh)
 
 VERBOTEN:
-❌ USB-Datenkabel für iPhone | Hähnel (Marke am Ende)
-❌ | Hähnel (Pipe-Zeichen)
-❌ Hähnel | USB-Datenkabel (Pipe irgendwo)
+❌ Apple Akku für iPhone 4 – ersetzt Typencode (ERFUNDENE Texte!)
+❌ Apple Vibrationsmotor (falsche Produktart - Original war "Kamera"!)
 ❌ EMCOM Akku für iPhone (EMCOM darf NIEMALS im Titel stehen!)
 ❌ Akku für iPhone – 1821 mAh, 3,82 Volt (Volt muss VOR mAh!)
-❌ Varta Akku für iPhone 12, iPhone 13, iPhone 14 – 3,8V (KEINE Modelle im Titel!)
+❌ Komplette Neuformulierung wenn Original gut war
 
 ═══════════════════════════════════════════════════════════════
 TECHNISCHE DATEN – ERLAUBTE FELDER (WHITELIST)
