@@ -38,6 +38,7 @@ interface BulkProduct {
   id: number;
   p_id: string;
   v_id: string;
+  p_item_number: string;
   produktname: string;
   produktname_neu: string;
   produktbeschreibung: string;
@@ -372,6 +373,7 @@ export default function CSVBulkDescription() {
             id: globalIndex + 1,
             p_id: p_id,
             v_id: v_id,
+            p_item_number: artikelnummer,
             produktname: produktname,
             produktname_neu: cleanSeoProductName(payload.produktTitel || '', voltValue),
             produktbeschreibung: cleanDescription(plainText),
@@ -404,6 +406,7 @@ export default function CSVBulkDescription() {
             id: globalIndex + 1,
             p_id: '-',
             v_id: '-',
+            p_item_number: '',
             produktname: 'Fehler',
             produktname_neu: '',
             produktbeschreibung: '',
