@@ -25,6 +25,7 @@ interface BulkProduct {
   p_item_number: string;
   produktname: string;
   produktname_neu: string;
+  produktname_csv_original: string;
   produktbeschreibung: string;
   produktbeschreibung_html: string;
   produktname_nl: string;
@@ -153,20 +154,26 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                     </span>
                   </TableCell>
                   <TableCell>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <p className="text-sm line-clamp-3">
-                            {product.produktname || '-'}
-                          </p>
-                        </TooltipTrigger>
-                        {product.produktname && product.produktname.length > 50 && (
-                          <TooltipContent className="max-w-md">
-                            <p className="text-xs">{product.produktname}</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
+                    <div className="flex items-start gap-2">
+                      <p className="text-sm line-clamp-3 flex-1">
+                        {product.produktname || '-'}
+                      </p>
+                      {product.produktname_csv_original && product.produktname_csv_original !== product.produktname && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" className="p-1 h-auto flex-shrink-0">
+                                <Eye className="w-4 h-4 text-muted-foreground" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-lg">
+                              <p className="text-xs font-semibold mb-1">CSV Original:</p>
+                              <p className="text-xs">{product.produktname_csv_original}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Textarea
