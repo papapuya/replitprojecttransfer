@@ -5,6 +5,40 @@
 
 import { ProductCategoryConfig } from './category-config';
 
+/**
+ * Konvertiert Maße in mm (von cm oder m)
+ * KONSERVATIV: Nur explizite einfache Werte konvertieren, alles andere unverändert lassen
+ * Behält volle Dezimalpräzision bei
+ */
+function convertToMm(value: string): string {
+  const trimmed = value.trim();
+  
+  // Bereits mm oder keine Einheit erkennbar - unverändert lassen
+  if (/\bmm\b/i.test(trimmed)) {
+    return trimmed;
+  }
+  
+  // Nur einfache "Zahl cm" oder "Zahl m" Muster konvertieren
+  // Alles andere (Bereiche, Toleranzen, Qualifizierer, unitlose Werte) bleibt unverändert
+  
+  // Pattern: "5 cm" oder "5,5 cm" oder "5.5cm" - exakt nur Zahl + cm
+  const cmMatch = trimmed.match(/^(\d+(?:[.,]\d+)?)\s*cm$/i);
+  if (cmMatch) {
+    const numVal = parseFloat(cmMatch[1].replace(',', '.')) * 10;
+    return `${numVal} mm`;
+  }
+  
+  // Pattern: "0.5 m" oder "1,5 m" - exakt nur Zahl + m
+  const mMatch = trimmed.match(/^(\d+(?:[.,]\d+)?)\s*m$/i);
+  if (mMatch) {
+    const numVal = parseFloat(mMatch[1].replace(',', '.')) * 1000;
+    return `${numVal} mm`;
+  }
+  
+  // Alle anderen Fälle unverändert lassen (Bereiche, Toleranzen, Qualifizierer, unitlose Werte)
+  return trimmed;
+}
+
 export interface ParsedTechSpecs {
   specs: Record<string, string>;
   source: 'vision_text' | 'structured_data' | 'none';
@@ -316,60 +350,45 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
     // DYNAMISCHE ERWEITERUNG: Maße, Gewicht, Farbe, technische Daten
     // ═══════════════════════════════════════════════════════════════
     
-    // Gewicht
+    // Gewicht - KONSERVATIV: Nur explizite kg-Werte in g umrechnen
     if ((keyLower.includes('gewicht') || keyLower.includes('weight') || keyLower.includes('p_weight')) && !specs['Gewicht']) {
       let gewichtVal = valTrimmed;
-      // Einheit hinzufügen wenn nicht vorhanden
-      if (!/\b(g|kg|gramm|kilogramm)\b/i.test(gewichtVal)) {
-        // Prüfe ob es eine kleine Zahl ist (wahrscheinlich kg) oder große (wahrscheinlich g)
-        const numVal = parseFloat(gewichtVal.replace(',', '.'));
-        if (!isNaN(numVal)) {
-          gewichtVal = numVal < 10 ? `${gewichtVal} kg` : `${gewichtVal} g`;
-        }
+      
+      // Nur einfache "Zahl kg" Muster konvertieren - alles andere unverändert lassen
+      const kgMatch = gewichtVal.match(/^(\d+(?:[.,]\d+)?)\s*(kg|kilogramm)$/i);
+      if (kgMatch) {
+        const numVal = parseFloat(kgMatch[1].replace(',', '.')) * 1000;
+        gewichtVal = `${numVal} g`;
       }
+      // Alle anderen Werte (g, gramm, unitlos, Bereiche, Toleranzen) unverändert lassen
+      
       specs['Gewicht'] = gewichtVal;
       console.log(`⚖️ BrickFox Gewicht: ${value} → ${gewichtVal}`);
     }
     
-    // Länge
+    // Länge - IMMER in mm umrechnen
     if ((keyLower.includes('länge') || keyLower.includes('laenge') || keyLower.includes('length') || keyLower.includes('p_length')) && !specs['Länge']) {
-      let laengeVal = valTrimmed;
-      if (!/\b(mm|cm|m)\b/i.test(laengeVal)) {
-        laengeVal = `${laengeVal} mm`;
-      }
-      specs['Länge'] = laengeVal;
-      console.log(`📏 BrickFox Länge: ${value} → ${laengeVal}`);
+      specs['Länge'] = convertToMm(valTrimmed);
+      console.log(`📏 BrickFox Länge: ${value} → ${specs['Länge']}`);
     }
     
-    // Breite
+    // Breite - IMMER in mm umrechnen
     if ((keyLower.includes('breite') || keyLower.includes('width') || keyLower.includes('p_width')) && !specs['Breite']) {
-      let breiteVal = valTrimmed;
-      if (!/\b(mm|cm|m)\b/i.test(breiteVal)) {
-        breiteVal = `${breiteVal} mm`;
-      }
-      specs['Breite'] = breiteVal;
-      console.log(`📐 BrickFox Breite: ${value} → ${breiteVal}`);
+      specs['Breite'] = convertToMm(valTrimmed);
+      console.log(`📐 BrickFox Breite: ${value} → ${specs['Breite']}`);
     }
     
-    // Höhe / Dicke
+    // Höhe / Dicke - IMMER in mm umrechnen
     if ((keyLower.includes('höhe') || keyLower.includes('hoehe') || keyLower.includes('height') || 
          keyLower.includes('dicke') || keyLower.includes('thickness') || keyLower.includes('p_height')) && !specs['Höhe']) {
-      let hoeheVal = valTrimmed;
-      if (!/\b(mm|cm|m)\b/i.test(hoeheVal)) {
-        hoeheVal = `${hoeheVal} mm`;
-      }
-      specs['Höhe'] = hoeheVal;
-      console.log(`📊 BrickFox Höhe: ${value} → ${hoeheVal}`);
+      specs['Höhe'] = convertToMm(valTrimmed);
+      console.log(`📊 BrickFox Höhe: ${value} → ${specs['Höhe']}`);
     }
     
-    // Durchmesser
+    // Durchmesser - IMMER in mm umrechnen
     if ((keyLower.includes('durchmesser') || keyLower.includes('diameter') || keyLower.includes('ø')) && !specs['Durchmesser']) {
-      let dmVal = valTrimmed;
-      if (!/\b(mm|cm)\b/i.test(dmVal)) {
-        dmVal = `${dmVal} mm`;
-      }
-      specs['Durchmesser'] = dmVal;
-      console.log(`⭕ BrickFox Durchmesser: ${value} → ${dmVal}`);
+      specs['Durchmesser'] = convertToMm(valTrimmed);
+      console.log(`⭕ BrickFox Durchmesser: ${value} → ${specs['Durchmesser']}`);
     }
     
     // Farbe
