@@ -613,6 +613,9 @@ function renderMediaMarktLayout(data: {
   
   // Technische Specs hinzufügen (bei Akkus) - filtere doppelte Teilenummer/APN Einträge und leere Werte
   if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
+    // Sammle bereits verwendete Labels zur Deduplizierung
+    const existingLabels = new Set(allSpecs.map(s => s.label.toLowerCase()));
+    
     const filteredSpecs = data.technicalSpecs.filter(spec => {
       const labelLower = spec.label.toLowerCase();
       // Entferne alle Nicht-Zeichen um wirklich leeren Wert zu erkennen
@@ -622,6 +625,12 @@ function renderMediaMarktLayout(data: {
       if (!valueTrimmed || valueTrimmed === '' || valueTrimmed === '-' || valueTrimmed === '0' ||
           valueTrimmed === '&nbsp;' || valueTrimmed.length === 0) {
         console.log(`🚫 Leerer Wert gefiltert: "${spec.label}" = "${spec.value}"`);
+        return false;
+      }
+      
+      // Entferne Duplikate - wenn Label bereits existiert, nicht erneut hinzufügen
+      if (existingLabels.has(labelLower)) {
+        console.log(`🚫 Duplikat gefiltert: "${spec.label}" existiert bereits`);
         return false;
       }
       
