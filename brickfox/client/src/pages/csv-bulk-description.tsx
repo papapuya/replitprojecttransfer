@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -88,6 +88,9 @@ export default function CSVBulkDescription() {
   const [htmlPreviewContent, setHtmlPreviewContent] = useState("");
   const [htmlPreviewProductName, setHtmlPreviewProductName] = useState("");
   const [isMobilePreview, setIsMobilePreview] = useState(false);
+  
+  // Abbruch-Referenz für die AI-Generierung
+  const abortRef = useRef(false);
 
   // Lade bestehende Projekte
   const { data: projectsData } = useQuery<{ success: boolean; projects: Project[] }>({
@@ -239,6 +242,7 @@ export default function CSVBulkDescription() {
       return;
     }
 
+    abortRef.current = false;
     setProcessing(true);
     setError("");
     setProgress(0);
@@ -247,9 +251,20 @@ export default function CSVBulkDescription() {
       await generateDescriptions(rawData);
     } catch (err) {
       console.error('Generierungsfehler:', err);
-      setError(err instanceof Error ? err.message : 'Fehler bei der AI-Generierung');
+      if (!abortRef.current) {
+        setError(err instanceof Error ? err.message : 'Fehler bei der AI-Generierung');
+      }
       setProcessing(false);
     }
+  };
+  
+  const cancelGeneration = () => {
+    abortRef.current = true;
+    setProcessing(false);
+    toast({
+      title: "Abgebrochen",
+      description: `Generierung abgebrochen. ${bulkProducts.length} Produkte wurden bereits verarbeitet.`,
+    });
   };
 
   const generateDescriptions = async (data: RawCSVRow[]) => {
@@ -259,6 +274,12 @@ export default function CSVBulkDescription() {
     let processedCount = 0;
 
     for (let i = 0; i < total; i += BATCH_SIZE) {
+      // Prüfe ob abgebrochen wurde
+      if (abortRef.current) {
+        console.log('Generierung abgebrochen bei Batch', i);
+        break;
+      }
+      
       const batch = data.slice(i, Math.min(i + BATCH_SIZE, total));
 
       const settled = await Promise.allSettled(
@@ -855,6 +876,14 @@ export default function CSVBulkDescription() {
                         </p>
                       </div>
                     </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={cancelGeneration}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Abbrechen
+                    </Button>
                   </div>
                   <div className="h-3 bg-muted rounded-full overflow-hidden">
                     <div 
