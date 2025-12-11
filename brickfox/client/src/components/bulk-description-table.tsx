@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, Eye, Copy, Check, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Copy, Check } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -42,49 +41,12 @@ interface BulkDescriptionTableProps {
   products: BulkProduct[];
   onUpdateProduct: (id: number, field: keyof BulkProduct, value: string) => void;
   onPreviewHtml?: (htmlContent: string, productName?: string) => void;
-  onRegenerateProductNames?: (productIds: number[]) => Promise<void>;
-  isRegenerating?: boolean;
 }
 
-export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml, onRegenerateProductNames, isRegenerating }: BulkDescriptionTableProps) {
+export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml }: BulkDescriptionTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedIds, setCopiedIds] = useState<Set<number>>(new Set());
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const itemsPerPage = 6;
-
-  const toggleSelection = (id: number) => {
-    setSelectedIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  };
-
-  const toggleAllOnPage = () => {
-    const pageIds = displayedProducts.map(p => p.id);
-    const allSelected = pageIds.every(id => selectedIds.has(id));
-    
-    setSelectedIds(prev => {
-      const newSet = new Set(prev);
-      if (allSelected) {
-        pageIds.forEach(id => newSet.delete(id));
-      } else {
-        pageIds.forEach(id => newSet.add(id));
-      }
-      return newSet;
-    });
-  };
-
-  const handleRegenerate = async () => {
-    if (onRegenerateProductNames && selectedIds.size > 0) {
-      await onRegenerateProductNames(Array.from(selectedIds));
-      setSelectedIds(new Set());
-    }
-  };
 
   const handleCopyToClipboard = (text: string, productId: number) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -124,33 +86,10 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml,
         }
       `}</style>
       <Card className="overflow-hidden">
-        {/* Regenerieren-Button */}
-        {onRegenerateProductNames && selectedIds.size > 0 && (
-          <div className="p-3 border-b bg-muted/50 flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">
-              {selectedIds.size} Produkt{selectedIds.size > 1 ? 'e' : ''} ausgewählt
-            </span>
-            <Button
-              size="sm"
-              onClick={handleRegenerate}
-              disabled={isRegenerating}
-              className="gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-              {isRegenerating ? 'Generiere...' : 'SEO-Namen neu generieren'}
-            </Button>
-          </div>
-        )}
         <div className="overflow-x-auto">
           <Table data-testid="table-products">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="w-[50px] sticky left-0 bg-background z-20">
-                  <Checkbox
-                    checked={displayedProducts.length > 0 && displayedProducts.every(p => selectedIds.has(p.id))}
-                    onCheckedChange={toggleAllOnPage}
-                  />
-                </TableHead>
                 <TableHead className="min-w-[80px]">
                   p_id
                 </TableHead>
@@ -197,14 +136,7 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml,
                 <TableRow
                   key={product.id}
                   data-testid={`row-product-${product.id}`}
-                  className={selectedIds.has(product.id) ? 'bg-muted/30' : ''}
                 >
-                  <TableCell className="sticky left-0 bg-background z-10">
-                    <Checkbox
-                      checked={selectedIds.has(product.id)}
-                      onCheckedChange={() => toggleSelection(product.id)}
-                    />
-                  </TableCell>
                   <TableCell>
                     <span className="text-sm font-mono" data-testid={`text-pid-${product.id}`}>
                       {product.p_id || '-'}

@@ -89,7 +89,6 @@ export default function CSVBulkDescription() {
   const [htmlPreviewContent, setHtmlPreviewContent] = useState("");
   const [htmlPreviewProductName, setHtmlPreviewProductName] = useState("");
   const [isMobilePreview, setIsMobilePreview] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   
   // Abbruch-Referenz für die AI-Generierung
@@ -618,71 +617,6 @@ export default function CSVBulkDescription() {
         product.id === id ? { ...product, [field]: value } : product
       )
     );
-  };
-
-  // Regeneriere SEO-Produktnamen für ausgewählte Produkte
-  const handleRegenerateProductNames = async (productIds: number[]) => {
-    setIsRegenerating(true);
-    
-    try {
-      // Finde die zu regenerierenden Produkte
-      const productsToRegenerate = bulkProducts.filter(p => productIds.includes(p.id));
-      
-      for (const product of productsToRegenerate) {
-        // Finde die Originaldaten aus rawData basierend auf p_id
-        const originalRow = rawData.find(row => row['p_id'] === product.p_id);
-        
-        if (!originalRow) {
-          console.warn(`Keine Originaldaten für Produkt ${product.id} gefunden`);
-          continue;
-        }
-
-        try {
-          // Nur den Produktnamen neu generieren (mit NL-Übersetzung)
-          const response = await fetch('/api/regenerate-product-name', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              produktname: product.produktname,
-              csvData: originalRow
-            })
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            
-            // Aktualisiere nur produktname_neu und produktname_nl
-            setBulkProducts(prev =>
-              prev.map(p =>
-                p.id === product.id
-                  ? {
-                      ...p,
-                      produktname_neu: result.produktTitel || p.produktname_neu,
-                      produktname_nl: result.produktTitelNL || p.produktname_nl
-                    }
-                  : p
-              )
-            );
-          }
-        } catch (err) {
-          console.error(`Fehler bei Regenerierung von Produkt ${product.id}:`, err);
-        }
-      }
-
-      toast({
-        title: "Erfolg",
-        description: `${productsToRegenerate.length} SEO-Produktname(n) neu generiert`,
-      });
-    } catch (error) {
-      console.error('Regenerierungsfehler:', error);
-      toast({
-        title: "Fehler",
-        description: "Fehler bei der Regenerierung",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRegenerating(false);
-    }
   };
 
   // NL-Übersetzung für alle Produkte (on-demand)
@@ -1264,8 +1198,6 @@ export default function CSVBulkDescription() {
                 setHtmlPreviewProductName(productName || 'Unbekanntes Produkt');
                 setShowHtmlPreview(true);
               }}
-              onRegenerateProductNames={handleRegenerateProductNames}
-              isRegenerating={isRegenerating}
             />
           </div>
         )}
