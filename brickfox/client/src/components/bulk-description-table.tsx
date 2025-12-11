@@ -22,6 +22,7 @@ interface BulkProduct {
   id: number;
   p_id: string;
   v_id: string;
+  p_item_number: string;
   produktname: string;
   produktname_neu: string;
   produktbeschreibung: string;
@@ -95,6 +96,9 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                 <TableHead className="min-w-[80px]">
                   v_id
                 </TableHead>
+                <TableHead className="min-w-[120px]">
+                  p_item_number
+                </TableHead>
                 <TableHead className="min-w-[200px]">
                   Produktname (Original)
                 </TableHead>
@@ -141,6 +145,11 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                   <TableCell>
                     <span className="text-sm font-mono" data-testid={`text-vid-${product.id}`}>
                       {product.v_id || '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-mono" data-testid={`text-item-number-${product.id}`}>
+                      {product.p_item_number || '-'}
                     </span>
                   </TableCell>
                   <TableCell>
