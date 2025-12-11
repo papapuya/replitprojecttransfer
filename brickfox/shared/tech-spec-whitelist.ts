@@ -12,6 +12,11 @@ export interface TechSpecField {
 
 export const TECH_SPEC_WHITELIST: TechSpecField[] = [
   {
+    key: 'modelle',
+    label: 'Modelle',
+    aliases: ['models', 'ersatzmodelle', 'kompatible modelle', 'wie', 'ersetzt']
+  },
+  {
     key: 'modell',
     label: 'Modell',
     aliases: ['model', 'modellnummer', 'modell-nr', 'artikelmodell']

@@ -311,6 +311,33 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
   console.log(`📋 extractBrickfoxAttributes: ${keys.length} Felder vorhanden`);
   console.log(`📋 Erste 10 Schlüssel: ${keys.slice(0, 10).join(', ')}`);
   
+  // ═══════════════════════════════════════════════════════════════
+  // MODELLE EXTRAKTION: "wie ABPAK-001, AHDBT-001" aus Produktnamen
+  // ═══════════════════════════════════════════════════════════════
+  const productNameFields = ['p_name[de]', 'produktname', 'productname', 'name', 'bezeichnung'];
+  for (const field of productNameFields) {
+    const productName = structuredData[field];
+    if (productName && typeof productName === 'string') {
+      // Pattern: "wie ABPAK-001, AHDBT-001, AHDBT-002"
+      // Erfasst alphanumerische Modellcodes mit Bindestrichen
+      // Stoppt vor Einheiten wie Li-Ion, Li-Polymer, V, mAh, Wh
+      const wieMatch = productName.match(/,?\s*wie[:\s]+([A-Z0-9][A-Z0-9\-]+(?:,\s*[A-Z0-9][A-Z0-9\-]+)*)/i);
+      if (wieMatch) {
+        let modelle = wieMatch[1].trim();
+        // Entferne nachfolgende Einheiten/Chemie-Angaben die versehentlich erfasst wurden
+        modelle = modelle.replace(/,?\s*(Li-Ion|Li-Polymer|Li-Po|NiMH|NiCd|Lithium|Alkaline)\b.*/i, '');
+        modelle = modelle.replace(/,?\s*\d+[.,]?\d*\s*(V|mAh|Ah|Wh|W)\b.*/i, '');
+        modelle = modelle.trim().replace(/,\s*$/, ''); // Trailing comma entfernen
+        
+        if (modelle && modelle.length > 2) {
+          specs['Modelle'] = modelle;
+          console.log(`🔖 Modelle aus Produktname extrahiert: ${modelle}`);
+          break;
+        }
+      }
+    }
+  }
+  
   // Durchsuche alle Spalten nach p_attributes Pattern und anderen technischen Feldern
   for (const [key, value] of Object.entries(structuredData)) {
     if (!value || typeof value !== 'string' || value.trim() === '') continue;
