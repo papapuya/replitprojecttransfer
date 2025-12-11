@@ -379,13 +379,25 @@ WEITERE JSON-FELDER:
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
-- uspBullets: Max 5 Vorteile (max 30 Zeichen! OHNE Modelle, mAh, Volt!). Beispiele:
-  "Zuverlässige Stromversorgung"
-  "Lange Lebensdauer"
-  "Einfache Installation"
-  "Sichere Schutzschaltung"
-  "Geprüfte Qualität"
-  VERBOTEN: Modellnummern, mAh, Ah, Volt!
+- uspBullets: Max 5 Vorteile (max 30 Zeichen! OHNE Modelle, mAh, Volt!).
+  WICHTIG: Wähle Vorteile passend zur Produktkategorie!
+  
+  Bei AKKUS/BATTERIEN (produktTyp="akku"):
+  "Zuverlässige Stromversorgung", "Lange Lebensdauer", "Sichere Schutzschaltung", "Hohe Kapazität", "Schnelles Aufladen"
+  
+  Bei HÜLLEN/CASES/SCHUTZFOLIEN (Schutzzubehör):
+  "Optimaler Displayschutz", "Perfekte Passform", "Kratzfeste Oberfläche", "Schlankes Design", "Einfache Montage"
+  
+  Bei KABELN/ADAPTERN/LADEGERÄTEN:
+  "Schnelle Datenübertragung", "Robustes Kabel", "Sichere Verbindung", "Universell einsetzbar", "Kompaktes Design"
+  
+  Bei TASCHEN/HALTERUNGEN:
+  "Sichere Aufbewahrung", "Praktische Handhabung", "Robustes Material", "Platzsparend", "Schneller Zugriff"
+  
+  Bei WERKZEUG-SETS (produktTyp="werkzeug"):
+  "Robuste Qualität", "Ergonomische Griffe", "Präzise Verarbeitung", "Vielseitig einsetzbar", "Langlebige Materialien"
+  
+  VERBOTEN: Modellnummern, mAh, Ah, Volt, Gerätenamen!
 
 ⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
 Bei BATTERIEN (CR2032, AA, AAA): "passend zu", "geeignet für", "ersetzt" - NICHT "kompatibel"!
@@ -576,30 +588,67 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     });
     
     // Produkttypspezifische Fallback-Vorteile (max 30 Zeichen)
-    const fallbackVorteileMap: Record<string, string[]> = {
-      'akku': [
+    // Wähle Fallbacks basierend auf Produktname für bessere Relevanz
+    const produktNameLower = (productData.name || '').toLowerCase();
+    
+    let fallbackVorteile: string[];
+    if (produktTyp === 'akku') {
+      fallbackVorteile = [
         "Zuverlässige Stromversorgung",
         "Lange Lebensdauer",
         "Einfache Installation",
         "Sichere Schutzschaltung",
         "Geprüfte Qualität"
-      ],
-      'elektronik': [
-        "Hochwertige Verarbeitung",
-        "Perfekte Passform",
-        "Optimaler Schutz",
-        "Einfache Handhabung",
-        "Geprüfte Qualität"
-      ],
-      'werkzeug': [
+      ];
+    } else if (produktTyp === 'werkzeug') {
+      fallbackVorteile = [
         "Robuste Qualität",
         "Ergonomisches Design",
         "Langlebige Materialien",
         "Präzise Verarbeitung",
         "Vielseitig einsetzbar"
-      ]
-    };
-    const fallbackVorteile = fallbackVorteileMap[produktTyp] || fallbackVorteileMap['elektronik'];
+      ];
+    } else if (/case|hülle|cover|schutzhülle|backcase|bumper/i.test(produktNameLower)) {
+      fallbackVorteile = [
+        "Perfekte Passform",
+        "Optimaler Schutz",
+        "Schlankes Design",
+        "Einfache Montage",
+        "Hochwertige Verarbeitung"
+      ];
+    } else if (/folie|displayschutz|screen.*protector/i.test(produktNameLower)) {
+      fallbackVorteile = [
+        "Optimaler Displayschutz",
+        "Kratzfeste Oberfläche",
+        "Blasenfreie Montage",
+        "Hohe Transparenz",
+        "Einfache Anbringung"
+      ];
+    } else if (/kabel|cable|adapter|ladegerät|charger/i.test(produktNameLower)) {
+      fallbackVorteile = [
+        "Schnelle Datenübertragung",
+        "Robustes Kabel",
+        "Sichere Verbindung",
+        "Universell einsetzbar",
+        "Kompaktes Design"
+      ];
+    } else if (/tasche|halterung|ständer|halter|stand/i.test(produktNameLower)) {
+      fallbackVorteile = [
+        "Sichere Aufbewahrung",
+        "Praktische Handhabung",
+        "Robustes Material",
+        "Platzsparend",
+        "Schneller Zugriff"
+      ];
+    } else {
+      fallbackVorteile = [
+        "Hochwertige Verarbeitung",
+        "Perfekte Passform",
+        "Optimaler Schutz",
+        "Einfache Handhabung",
+        "Geprüfte Qualität"
+      ];
+    }
     
     const vorteile = filteredVorteile.length >= 3 
       ? filteredVorteile.slice(0, 5)
