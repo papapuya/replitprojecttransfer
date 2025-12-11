@@ -41,6 +41,7 @@ interface BulkProduct {
   p_item_number: string;
   produktname: string;
   produktname_neu: string;
+  produktname_csv_original: string; // Vollständiger Original-Name aus CSV
   produktbeschreibung: string;
   produktbeschreibung_html: string;
   // Niederländische Übersetzungen (via DeepL)
@@ -413,6 +414,7 @@ export default function CSVBulkDescription() {
             p_item_number: artikelnummer,
             produktname: produktname,
             produktname_neu: produktname, // Original-Produktname übernehmen (kein SEO-Name mehr)
+            produktname_csv_original: rawProduktname, // Vollständiger Original-Name aus CSV
             produktbeschreibung: cleanDescription(plainText),
             produktbeschreibung_html: cleanDescription(payload.description || ''),
             // Niederländische Übersetzungen
@@ -446,6 +448,7 @@ export default function CSVBulkDescription() {
             p_item_number: '',
             produktname: 'Fehler',
             produktname_neu: '',
+            produktname_csv_original: '',
             produktbeschreibung: '',
             produktbeschreibung_html: '',
             produktname_nl: '',
