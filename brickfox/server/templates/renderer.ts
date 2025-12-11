@@ -698,7 +698,7 @@ ${werkzeugItems.map(item => `<li>${e(item)}</li>`).join('\n')}
     .filter(item => item.length > 0);
   
   const lieferumfangHtml = packageItems.length > 0
-    ? `<h2>Lieferumfang</h2>
+    ? `<h2 style="margin-top: 1.5em;">Lieferumfang</h2>
 <ul>
 ${packageItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 </ul>`
@@ -717,7 +717,7 @@ ${werkzeuguebersichtHtml}`;
 
   if (vorteileHtml) {
     html += `
-<p><b>Ihre Vorteile</b></p>
+<h2>Ihre Vorteile</h2>
 <p>
 ${vorteileHtml}
 </p>`;
