@@ -575,14 +575,31 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       return true;
     });
     
-    // Fallback-Vorteile falls alle gefiltert wurden (max 30 Zeichen)
-    const fallbackVorteile = [
-      "Zuverlässige Stromversorgung",
-      "Lange Lebensdauer",
-      "Einfache Installation",
-      "Sichere Schutzschaltung",
-      "Geprüfte Qualität"
-    ];
+    // Produkttypspezifische Fallback-Vorteile (max 30 Zeichen)
+    const fallbackVorteileMap: Record<string, string[]> = {
+      'akku': [
+        "Zuverlässige Stromversorgung",
+        "Lange Lebensdauer",
+        "Einfache Installation",
+        "Sichere Schutzschaltung",
+        "Geprüfte Qualität"
+      ],
+      'elektronik': [
+        "Hochwertige Verarbeitung",
+        "Perfekte Passform",
+        "Optimaler Schutz",
+        "Einfache Handhabung",
+        "Geprüfte Qualität"
+      ],
+      'werkzeug': [
+        "Robuste Qualität",
+        "Ergonomisches Design",
+        "Langlebige Materialien",
+        "Präzise Verarbeitung",
+        "Vielseitig einsetzbar"
+      ]
+    };
+    const fallbackVorteile = fallbackVorteileMap[produktTyp] || fallbackVorteileMap['elektronik'];
     
     const vorteile = filteredVorteile.length >= 3 
       ? filteredVorteile.slice(0, 5)
