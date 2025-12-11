@@ -1943,7 +1943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // COST OPTIMIZATION: Use GPT-4o-mini (30× cheaper) by default
       const aiModel = model || 'gpt-4o-mini';
-      const { html: description, categoryId: detectedCategory, enrichedProductData, produktTitel } = await generateProductDescription(
+      let { html: description, categoryId: detectedCategory, enrichedProductData, produktTitel } = await generateProductDescription(
         enhancedData, 
         undefined, 
         {
@@ -1955,6 +1955,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }, 
         aiModel
       );
+
+      // Automatische Korrektur: Wiederholungen im Produktnamen entfernen
+      // z.B. "Vibrationsmotor für iPhone 4 – passend für iPhone 4" → "Vibrationsmotor für iPhone 4"
+      if (produktTitel) {
+        const fuerMatch = produktTitel.match(/für\s+([^–]+?)(?:\s*–|$)/i);
+        if (fuerMatch) {
+          const devicePart = fuerMatch[1].trim();
+          produktTitel = produktTitel.replace(new RegExp(`\\s*–\\s*(passend\\s+)?für\\s+${devicePart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i'), '');
+        }
+      }
 
       // Extract SEO fields from product data
       const firstData = extractedData[0] || {};
