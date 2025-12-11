@@ -145,7 +145,7 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml,
           <Table data-testid="table-products">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="w-[50px]">
+                <TableHead className="w-[50px] sticky left-0 bg-background z-20">
                   <Checkbox
                     checked={displayedProducts.length > 0 && displayedProducts.every(p => selectedIds.has(p.id))}
                     onCheckedChange={toggleAllOnPage}
@@ -199,7 +199,7 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml,
                   data-testid={`row-product-${product.id}`}
                   className={selectedIds.has(product.id) ? 'bg-muted/30' : ''}
                 >
-                  <TableCell>
+                  <TableCell className="sticky left-0 bg-background z-10">
                     <Checkbox
                       checked={selectedIds.has(product.id)}
                       onCheckedChange={() => toggleSelection(product.id)}
