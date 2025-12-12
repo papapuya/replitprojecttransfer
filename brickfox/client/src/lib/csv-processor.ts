@@ -86,6 +86,48 @@ async function readFileWithEncoding(file: File): Promise<string> {
 }
 
 /**
+ * Repair broken quotes in CSV text to prevent parse errors
+ * This fixes "unterminated quoted field" errors
+ */
+function repairBrokenQuotes(text: string, delimiter: string): string {
+  const lines = text.split('\n');
+  const repairedLines: string[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    
+    // Count unescaped quotes in the line
+    // Escaped quotes are "" (two consecutive quotes)
+    const unescapedQuoteCount = (line.match(/(?<!")"(?!")/g) || []).length;
+    
+    // If odd number of quotes, there's an unterminated quote
+    if (unescapedQuoteCount % 2 !== 0) {
+      // Find fields and repair them
+      const fields = line.split(delimiter);
+      const repairedFields = fields.map(field => {
+        const fieldQuoteCount = (field.match(/(?<!")"(?!")/g) || []).length;
+        if (fieldQuoteCount % 2 !== 0) {
+          // Odd quotes in this field - escape any lone quotes or add closing quote
+          if (field.startsWith('"') && !field.endsWith('"')) {
+            // Opening quote without closing - add closing quote
+            return field + '"';
+          } else if (!field.startsWith('"') && field.includes('"')) {
+            // Lone quote in middle - escape it
+            return field.replace(/(?<!")"(?!")/g, '""');
+          }
+        }
+        return field;
+      });
+      line = repairedFields.join(delimiter);
+    }
+    
+    repairedLines.push(line);
+  }
+  
+  return repairedLines.join('\n');
+}
+
+/**
  * Detect CSV delimiter by analyzing the first few lines
  */
 function detectDelimiter(text: string): string {
@@ -113,12 +155,15 @@ function detectDelimiter(text: string): string {
  */
 export async function parseCSV(file: File): Promise<CSVParseResult> {
   try {
-    const text = await readFileWithEncoding(file);
+    let text = await readFileWithEncoding(file);
     
     // Detect delimiter
     const delimiter = detectDelimiter(text);
     
     console.log(`[CSV] Using delimiter: "${delimiter === '\t' ? 'TAB' : delimiter}"`);
+    
+    // Repair broken quotes before parsing to prevent "unterminated quoted field" errors
+    text = repairBrokenQuotes(text, delimiter);
     
     // Use PapaParse to parse the CSV with multiline support
     const parseConfig: Papa.ParseConfig = {
