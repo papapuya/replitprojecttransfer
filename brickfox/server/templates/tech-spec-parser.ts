@@ -701,20 +701,25 @@ export function extractTechSpecs1to1(
   // Kapazität, Farbe, Akku-Chemie aus Produktname holen wenn nicht in CSV
   // ═══════════════════════════════════════════════════════════════
   
-  const fieldsToCheck = [
-    structuredData?.['P Name[de]'],
-    structuredData?.['P_name[de]'],
-    structuredData?.['p_name[de]'],
-    structuredData?.['P Name'],
-    structuredData?.['p_name'],
-    structuredData?.produktname,
-    structuredData?.productName,  // Hinzugefügt: camelCase
-    structuredData?.productname,  // Hinzugefügt: lowercase
-    structuredData?.name,
-    structuredData?.['P Description[de]'],
-    structuredData?.['p_description[de]'],
-    structuredData?.beschreibung,
-  ].filter(v => v && typeof v === 'string');
+  // Suche Produktname in allen möglichen Feldvarianten
+  const fieldsToCheck: string[] = [];
+  if (structuredData) {
+    // Durchsuche ALLE Felder nach p_name Pattern
+    for (const [key, value] of Object.entries(structuredData)) {
+      if (typeof value === 'string' && value.trim()) {
+        const keyLower = key.toLowerCase();
+        // Produktname-Felder (höchste Priorität)
+        if (keyLower.includes('p_name') || keyLower.includes('produktname') || 
+            keyLower.includes('productname') || keyLower === 'name' || keyLower === 'bezeichnung') {
+          fieldsToCheck.unshift(value); // Am Anfang einfügen
+        }
+        // Beschreibungs-Felder (niedrigere Priorität)
+        else if (keyLower.includes('p_description') || keyLower.includes('beschreibung')) {
+          fieldsToCheck.push(value);
+        }
+      }
+    }
+  }
   
   // Debug: Zeige welche Felder gefunden wurden
   if (fieldsToCheck.length > 0) {
