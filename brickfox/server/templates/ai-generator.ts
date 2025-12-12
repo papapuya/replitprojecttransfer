@@ -152,6 +152,11 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Dieser Ersatzakku für das iPhone 4S bietet zuverlässige Energie mit Li-Polymer Technologie. Bei nachlassender Akkuleistung ermöglicht er die volle Funktionalität des Geräts. Die integrierten Schutzschaltungen gewährleisten sicheren Betrieb."
 
+EINSATZBEREICHE (Version A - beginne mit "Geeignet für..."):
+- Beginne mit "Geeignet für..." oder "Passend für..."
+- Beispiel: "Geeignet für Uhren, Fernbedienungen und Taschenrechner."
+- NICHT mit "Ideal" beginnen!
+
 VORTEILE (Max 30 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
 - "Zuverlässige Stromversorgung"
 - "Lange Lebensdauer"
@@ -170,6 +175,10 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Wenn das iPhone 4S nicht mehr den ganzen Tag durchhält, schafft dieser Ersatzakku Abhilfe. Mit hochwertigen Li-Polymer Zellen liefert er zuverlässige Energie für den Alltag. Der Austausch ist unkompliziert und bringt die gewohnte Laufzeit zurück."
 
+EINSATZBEREICHE (Version B - beginne mit "Ideal für..."):
+- Beginne mit "Ideal für..." oder "Perfekt für..."
+- Beispiel: "Ideal für Uhren, Fernbedienungen und Taschenrechner."
+
 VORTEILE (Max 30 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
 - "Zuverlässige Stromversorgung"
 - "Lange Lebensdauer"
@@ -187,6 +196,11 @@ ANWENDUNGSTEXT (EIN kompakter Absatz, 3-4 Sätze max):
 - Betone Qualität, Zuverlässigkeit, geprüfte Komponenten
 - KEINE Wiederholungen von Wörtern oder Phrasen
 - Beispiel: "Für Anwender, die Wert auf geprüfte Qualität legen, ist dieser iPhone 4S Ersatzakku die richtige Wahl. Die hochwertigen Li-Polymer Zellen bieten konstante Leistung und lange Lebensdauer. Integrierte Schutzschaltungen sorgen für sicheren Betrieb im täglichen Einsatz."
+
+EINSATZBEREICHE (Version C - beginne mit "Findet Verwendung..."):
+- Beginne mit "Findet Verwendung in..." oder "Bewährt sich in..."
+- Beispiel: "Findet Verwendung in Uhren, Fernbedienungen und medizinischen Geräten."
+- NICHT mit "Ideal" oder "Geeignet" beginnen!
 
 VORTEILE (Max 30 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
 - "Zuverlässige Stromversorgung"
