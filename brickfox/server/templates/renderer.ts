@@ -389,28 +389,13 @@ function buildTechnicalSpecsTable(
   fields: TechnicalField[]
 ): Array<{label: string, value: string}> {
   const result: Array<{label: string, value: string}> = [];
-  
-  // DEBUG: Prüfe ob Kapazität in specs ankommt
-  console.log(`🔍 buildTechnicalSpecsTable: specs enthält ${Object.keys(specs).length} Felder`);
-  console.log(`🔍 buildTechnicalSpecsTable: Kapazität = "${specs['Kapazität'] || 'NICHT VORHANDEN'}"`);
-  console.log(`🔍 buildTechnicalSpecsTable: Alle Schlüssel: ${Object.keys(specs).join(', ')}`);
 
   for (const [label, value] of Object.entries(specs)) {
-    if (isExcludedMetadataField(label)) {
-      console.log(`🚫 Gefiltert (Metadaten): ${label}`);
-      continue;
-    }
-    
-    if (isEmptyOrInvalidValue(value)) {
-      console.log(`🚫 Gefiltert (leerer Wert): ${label} = "${value}"`);
-      continue;
-    }
+    if (isExcludedMetadataField(label)) continue;
+    if (isEmptyOrInvalidValue(value)) continue;
     
     const whitelistedField = isWhitelistedField(label);
-    if (!whitelistedField) {
-      console.log(`🚫 Gefiltert (nicht in Whitelist): ${label}`);
-      continue;
-    }
+    if (!whitelistedField) continue;
     
     let processedValue = cleanMarkdown(value);
     
@@ -423,7 +408,6 @@ function buildTechnicalSpecsTable(
       const numericValue = parseFloat(processedValue.replace(',', '.').replace(/[^\d.,]/g, ''));
       if (!isNaN(numericValue) && !processedValue.toLowerCase().includes(' v')) {
         processedValue = correctVoltageValue(numericValue);
-        console.log(`⚡ Spannung korrigiert: ${value} → ${processedValue}`);
       }
     }
     
@@ -434,39 +418,25 @@ function buildTechnicalSpecsTable(
       // Kapazität MUSS eine Zahl mit mAh oder Ah enthalten
       const hasValidCapacity = /\d+\s*(mah|ah)/i.test(processedValue);
       
-      // Wenn keine gültige Kapazitätsangabe, überspringen (z.B. "Li-Polymer" ist Akkutyp, nicht Kapazität)
-      if (!hasValidCapacity) {
-        console.log(`🔋 Ungültige Kapazität übersprungen (keine mAh/Ah): "${value}"`);
-        continue;
-      }
+      // Wenn keine gültige Kapazitätsangabe, überspringen
+      if (!hasValidCapacity) continue;
       
       // Wenn der Wert "Wh" enthält, komplett überspringen (AI-Halluzination)
-      if (valueLower.includes('wh') && !valueLower.includes('mah')) {
-        console.log(`🔋 Kapazität mit Wh übersprungen (nicht in CSV): ${value}`);
-        continue;
-      }
+      if (valueLower.includes('wh') && !valueLower.includes('mah')) continue;
     }
     
     // Filtere ungültige Spannungswerte
     if (whitelistedField.label.toLowerCase().includes('spannung')) {
-      // Spannung MUSS eine Zahl enthalten
       const hasNumeric = /\d/.test(processedValue);
-      if (!hasNumeric) {
-        console.log(`⚡ Ungültige Spannung übersprungen (keine Zahl): "${value}"`);
-        continue;
-      }
+      if (!hasNumeric) continue;
     }
     
-    // Filtere ungültige Akkutyp-Werte (darf keine Zahlen als Hauptinhalt haben)
+    // Filtere ungültige Akkutyp-Werte
     if (whitelistedField.label.toLowerCase().includes('akkutyp') || 
         whitelistedField.label.toLowerCase().includes('chemie')) {
-      // Akkutyp sollte Text sein wie "Li-Ion", "Li-Polymer", "NiMH" etc.
       const validAkkuTypes = ['li-ion', 'li-polymer', 'lipo', 'nimh', 'nicd', 'lifepo4', 'lithium'];
       const hasValidType = validAkkuTypes.some(type => processedValue.toLowerCase().includes(type));
-      if (!hasValidType && !/[a-z]{2,}/i.test(processedValue)) {
-        console.log(`🔬 Ungültiger Akkutyp übersprungen: "${value}"`);
-        continue;
-      }
+      if (!hasValidType && !/[a-z]{2,}/i.test(processedValue)) continue;
     }
     
     result.push({
@@ -475,7 +445,6 @@ function buildTechnicalSpecsTable(
     });
   }
 
-  console.log(`📊 Technische Daten: ${result.length} Felder (Whitelist-gefiltert)`);
   return result;
 }
 
@@ -616,36 +585,24 @@ function renderMediaMarktLayout(data: {
     ? `<p style="margin-top: 1em; margin-bottom: 32px;"><strong>Kompatibilit&auml;t:</strong> Passend f&uuml;r ${data.kompatibleModelle.slice(0, 10).join(', ')}${data.kompatibleModelle.length > 10 ? ' und weitere Modelle' : ''}.</p>`
     : '';
   
-  // Technische Specs hinzufügen (bei Akkus) - filtere doppelte Teilenummer/APN Einträge und leere Werte
+  // Technische Specs hinzufügen (bei Akkus)
   if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
-    // DEBUG: Zeige was in data.technicalSpecs ankommt
-    console.log(`🔍 renderMediaMarktLayout: data.technicalSpecs hat ${data.technicalSpecs.length} Einträge`);
-    data.technicalSpecs.forEach((spec, i) => {
-      console.log(`   [${i}] "${spec.label}" = "${spec.value}"`);
-    });
-    
-    // Sammle bereits verwendete Labels zur Deduplizierung
     const existingLabels = new Set(allSpecs.map(s => s.label.toLowerCase()));
     
     const filteredSpecs = data.technicalSpecs.filter(spec => {
       const labelLower = spec.label.toLowerCase();
-      // Entferne alle Nicht-Zeichen um wirklich leeren Wert zu erkennen
       const valueTrimmed = (spec.value || '').replace(/[\s\u00A0\u200B\uFEFF]/g, '').trim();
       
-      // Entferne leere Werte - auch HTML-Entitäten berücksichtigen
+      // Leere Werte filtern
       if (!valueTrimmed || valueTrimmed === '' || valueTrimmed === '-' || valueTrimmed === '0' ||
           valueTrimmed === '&nbsp;' || valueTrimmed.length === 0) {
-        console.log(`🚫 Leerer Wert gefiltert: "${spec.label}" = "${spec.value}"`);
         return false;
       }
       
-      // Entferne Duplikate - wenn Label bereits existiert, nicht erneut hinzufügen
-      if (existingLabels.has(labelLower)) {
-        console.log(`🚫 Duplikat gefiltert: "${spec.label}" existiert bereits`);
-        return false;
-      }
+      // Duplikate filtern
+      if (existingLabels.has(labelLower)) return false;
       
-      // Entferne Zeilen die Teilenummer/APN, Kompatibilität, Modelle oder Schutzschaltung enthalten
+      // Bestimmte Felder ausschließen
       return !labelLower.includes('teilenummer') && 
              !labelLower.includes('apn') &&
              !labelLower.includes('kompatibil') &&
@@ -668,28 +625,16 @@ function renderMediaMarktLayout(data: {
     }
   }
   
-  // DEBUG: Zeige was nach der Filterung übrig ist
-  console.log(`🔍 Nach filteredSpecs: ${allSpecs.length} Einträge`);
-  allSpecs.forEach((spec, i) => {
-    console.log(`   [${i}] "${spec.label}" = "${spec.value}"`);
-  });
-  
-  // Finale Filterung: Entferne alle Zeilen mit leerem Wert
+  // Finale Filterung: leere und ungültige Werte entfernen
   const finalSpecs = allSpecs.filter(spec => {
     const val = (spec.value || '').trim();
     const valLower = val.toLowerCase();
     
-    // Debug-Log um leere Werte zu identifizieren
-    if (!val || val.length === 0) {
-      console.log(`🚫 FINALE FILTERUNG: "${spec.label}" hat leeren Wert`);
-      return false;
-    }
+    if (!val || val.length === 0) return false;
     
-    // Leere oder ungültige Werte filtern
     if (valLower === '-' || valLower === '0' || valLower === 'n/a' || 
         valLower === 'null' || valLower === 'undefined' || valLower === 'nicht angegeben' ||
         valLower === 'keine angabe' || valLower === 'unbekannt') {
-      console.log(`🚫 FINALE FILTERUNG: "${spec.label}" = "${val}" (ungültiger Wert)`);
       return false;
     }
     
