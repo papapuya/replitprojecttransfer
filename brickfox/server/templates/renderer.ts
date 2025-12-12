@@ -600,16 +600,13 @@ function renderMediaMarktLayout(data: {
       }).join('<br />\n')
     : '';
 
-  // Dynamische technische Tabelle mit Kompatibilität und Teilenummern
+  // Dynamische technische Tabelle (ohne Kompatibilität - die kommt als Fließtext darunter)
   const allSpecs: Array<{label: string, value: string}> = [];
   
-  // Kompatibilität als erste Zeile
-  if (data.kompatibleModelle && data.kompatibleModelle.length > 0) {
-    allSpecs.push({
-      label: 'Kompatibilit\u00e4t',
-      value: data.kompatibleModelle.join(', ')
-    });
-  }
+  // Kompatibilität als Fließtext unter die Tabelle (nicht in Tabelle!)
+  const kompatibilitaetHtml = (data.kompatibleModelle && data.kompatibleModelle.length > 0)
+    ? `<p style="margin-top: 1em;"><strong>Kompatibilit&auml;t:</strong> Passend f&uuml;r ${data.kompatibleModelle.slice(0, 10).join(', ')}${data.kompatibleModelle.length > 10 ? ' und weitere Modelle' : ''}.</p>`
+    : '';
   
   // Technische Specs hinzufügen (bei Akkus) - filtere doppelte Teilenummer/APN Einträge und leere Werte
   if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
@@ -679,7 +676,7 @@ function renderMediaMarktLayout(data: {
   // Tabelle mit dynamischer Spaltenbreite: erste Spalte passt sich an längsten Label an
   const techTableHtml = finalSpecs.length > 0
     ? `<h2>Technische Daten</h2>
-<table style="width: 100%; max-width: 600px; border-collapse: collapse;">
+<table style="width: auto; border-collapse: collapse;">
 ${finalSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 2em; vertical-align: top;">${e(spec.label)}</td><td style="vertical-align: top;">${e(spec.value)}</td></tr>`).join('\n')}
 </table>`
     : '';
@@ -708,9 +705,7 @@ ${packageItems.map(item => `<li>${e(item)}</li>`).join('\n')}
   
   // H1 entfernt - Shop generiert eigenen Titel
   // Nur noch ein kompakter Anwendungsabsatz (einleitung+fazit entfernt)
-  // Container mit max-width für einheitliche Textbreite
-  let html = `<div style="max-width: 600px;">
-<p>${anwendung}</p>`;
+  let html = `<p>${anwendung}</p>`;
 
   if (werkzeuguebersichtHtml) {
     html += `
@@ -730,16 +725,18 @@ ${vorteileHtml}
 ${techTableHtml}`;
   }
 
+  // Kompatibilität als Fließtext unter die Tabelle
+  if (kompatibilitaetHtml) {
+    html += `
+${kompatibilitaetHtml}`;
+  }
+
   // Lieferumfang immer zum Schluss - mit mehr Abstand zur Tabelle
   if (lieferumfangHtml) {
     html += `
 <br />
 ${lieferumfangHtml}`;
   }
-
-  // Container schließen
-  html += `
-</div>`;
 
   return html;
 }
