@@ -86,45 +86,79 @@ async function readFileWithEncoding(file: File): Promise<string> {
 }
 
 /**
- * Repair broken quotes in CSV text to prevent parse errors
- * This fixes "unterminated quoted field" errors
+ * Strip all quotes from CSV and re-quote properly
+ * This is a more aggressive fix for broken quote handling
  */
-function repairBrokenQuotes(text: string, delimiter: string): string {
+function sanitizeCSVQuotes(text: string, delimiter: string): string {
   const lines = text.split('\n');
-  const repairedLines: string[] = [];
+  const sanitizedLines: string[] = [];
   
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-    
-    // Count unescaped quotes in the line
-    // Escaped quotes are "" (two consecutive quotes)
-    const unescapedQuoteCount = (line.match(/(?<!")"(?!")/g) || []).length;
-    
-    // If odd number of quotes, there's an unterminated quote
-    if (unescapedQuoteCount % 2 !== 0) {
-      // Find fields and repair them
-      const fields = line.split(delimiter);
-      const repairedFields = fields.map(field => {
-        const fieldQuoteCount = (field.match(/(?<!")"(?!")/g) || []).length;
-        if (fieldQuoteCount % 2 !== 0) {
-          // Odd quotes in this field - escape any lone quotes or add closing quote
-          if (field.startsWith('"') && !field.endsWith('"')) {
-            // Opening quote without closing - add closing quote
-            return field + '"';
-          } else if (!field.startsWith('"') && field.includes('"')) {
-            // Lone quote in middle - escape it
-            return field.replace(/(?<!")"(?!")/g, '""');
-          }
-        }
-        return field;
-      });
-      line = repairedFields.join(delimiter);
+  for (const line of lines) {
+    if (!line.trim()) {
+      sanitizedLines.push(line);
+      continue;
     }
     
-    repairedLines.push(line);
+    // Split by delimiter, handling quoted fields
+    const fields: string[] = [];
+    let currentField = '';
+    let inQuotes = false;
+    let i = 0;
+    
+    while (i < line.length) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      
+      if (char === '"') {
+        if (!inQuotes) {
+          // Start of quoted field
+          inQuotes = true;
+          i++;
+          continue;
+        } else if (nextChar === '"') {
+          // Escaped quote inside field
+          currentField += '"';
+          i += 2;
+          continue;
+        } else if (nextChar === delimiter || nextChar === undefined || nextChar === '\r') {
+          // End of quoted field
+          inQuotes = false;
+          i++;
+          continue;
+        } else {
+          // Quote in middle of field - keep it
+          currentField += char;
+          i++;
+          continue;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        // End of field
+        fields.push(currentField);
+        currentField = '';
+        i++;
+        continue;
+      } else {
+        currentField += char;
+        i++;
+      }
+    }
+    
+    // Push last field
+    fields.push(currentField.replace(/\r$/, ''));
+    
+    // Re-quote fields that need it (contain delimiter, newline, or quotes)
+    const quotedFields = fields.map(field => {
+      if (field.includes(delimiter) || field.includes('"') || field.includes('\n')) {
+        // Escape any quotes and wrap in quotes
+        return '"' + field.replace(/"/g, '""') + '"';
+      }
+      return field;
+    });
+    
+    sanitizedLines.push(quotedFields.join(delimiter));
   }
   
-  return repairedLines.join('\n');
+  return sanitizedLines.join('\n');
 }
 
 /**
@@ -162,8 +196,8 @@ export async function parseCSV(file: File): Promise<CSVParseResult> {
     
     console.log(`[CSV] Using delimiter: "${delimiter === '\t' ? 'TAB' : delimiter}"`);
     
-    // Repair broken quotes before parsing to prevent "unterminated quoted field" errors
-    text = repairBrokenQuotes(text, delimiter);
+    // Sanitize quotes before parsing to prevent "unterminated quoted field" errors
+    text = sanitizeCSVQuotes(text, delimiter);
     
     // Use PapaParse to parse the CSV with multiline support
     const parseConfig: Papa.ParseConfig = {
