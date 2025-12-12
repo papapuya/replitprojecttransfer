@@ -379,16 +379,20 @@ WEITERE JSON-FELDER:
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
-- uspBullets: 2-4 PRODUKTSPEZIFISCHE Vorteile (max 30 Zeichen! OHNE Modelle, mAh, Volt!).
+- uspBullets: 2-4 PRODUKTSPEZIFISCHE Vorteile (max 50 Zeichen, OHNE Modelle, mAh, Volt!).
   
   ⚠️ KRITISCH: NUR Vorteile nennen, die WIRKLICH auf DIESES Produkt zutreffen!
   Leite Vorteile aus den CSV-DATEN ab - nicht aus generischen Phrasen!
   
-  BEISPIELE für produktspezifische Vorteile:
-  - Lithium-Batterie → "Lange Haltbarkeit", "Temperaturbeständig"
-  - Knopfzelle für Uhren → "Präzise Zeitmessung", "Auslaufsicher"
-  - Akku mit hoher Kapazität → "Lange Laufzeit", "Weniger Ladezyklen"
-  - Werkzeug-Set → "Vielseitig einsetzbar", "Komplett ausgestattet"
+  BEISPIELE für produktspezifische Vorteile (nicht generisch!):
+  - Lithium-Knopfzelle CR2032 → "Ideal für Uhren und Fernbedienungen", "Bis zu 10 Jahre lagerfähig"
+  - Laptop-Akku → "Schnelle Wiederherstellung der Mobilität", "Passgenau für Ihr Gerät"
+  - Werkzeug-Set 45-teilig → "Alles für die Haushaltsreparatur", "Ordentlich im Koffer verstaut"
+  - Handy-Akku → "Volle Power für Ihr Smartphone", "Einfacher Akkutausch möglich"
+  
+  ❌ ZU GENERISCH (VERBOTEN):
+  "Zuverlässige Stromversorgung", "Lange Lebensdauer", "Hohe Qualität", "Geprüfte Qualität"
+  → Diese Phrasen passen auf JEDES Produkt und sagen nichts Konkretes!
   
   ❌ VERBOTEN in uspBullets:
   - "Schutzschaltung" (nur wenn explizit in CSV!)
