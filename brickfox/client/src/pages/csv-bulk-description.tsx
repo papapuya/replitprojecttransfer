@@ -294,7 +294,7 @@ export default function CSVBulkDescription() {
   };
 
   const generateDescriptions = async (data: RawCSVRow[]) => {
-    const BATCH_SIZE = 10;
+    const BATCH_SIZE = 15; // 15 parallele Anfragen für schnellere Generierung
     const total = data.length;
     const results: (BulkProduct | undefined)[] = new Array(total);
     let processedCount = 0;
