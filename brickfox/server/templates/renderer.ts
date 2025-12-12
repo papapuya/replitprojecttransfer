@@ -197,6 +197,7 @@ export function renderProductHtml(options: RenderOptions): string {
   const fazit = cleanMarkdown(copy.fazit || '');
   const produktTyp = copy.produktTyp || 'elektronik';
   const zeigeTabelle = copy.zeigeTabelle === true;
+  const einsatzbereiche = cleanMarkdown(copy.einsatzbereiche || '');
   
   // Extrahiere APN aus dem Produktnamen für den Fließtext unter der Tabelle
   const extractedApn = extractApnFromText(productName);
@@ -248,6 +249,7 @@ export function renderProductHtml(options: RenderOptions): string {
     categoryId: categoryConfig.id,
     zeigeTabelle,
     produktTyp,
+    einsatzbereiche,
   });
 }
 
