@@ -668,6 +668,12 @@ function renderMediaMarktLayout(data: {
     }
   }
   
+  // DEBUG: Zeige was nach der Filterung übrig ist
+  console.log(`🔍 Nach filteredSpecs: ${allSpecs.length} Einträge`);
+  allSpecs.forEach((spec, i) => {
+    console.log(`   [${i}] "${spec.label}" = "${spec.value}"`);
+  });
+  
   // Finale Filterung: Entferne alle Zeilen mit leerem Wert
   const finalSpecs = allSpecs.filter(spec => {
     const val = (spec.value || '').trim();
