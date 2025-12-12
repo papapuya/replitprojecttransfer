@@ -96,6 +96,11 @@ export default function CSVBulkDescription() {
   const [generationMode, setGenerationMode] = useState<'generate' | 'adjust'>('generate');
   const [adjustmentPrompt, setAdjustmentPrompt] = useState<string>('');
   
+  // Filter für bereits generierte Produkte (zum selektiven Regenerieren)
+  const [productFilter, setProductFilter] = useState<string>('');
+  const [regeneratePrompt, setRegeneratePrompt] = useState<string>('');
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  
   // Abbruch-Referenz für die AI-Generierung
   const abortRef = useRef(false);
 
@@ -831,6 +836,95 @@ export default function CSVBulkDescription() {
     );
   };
 
+  // Gefilterte Produkte berechnen
+  const filteredProducts = productFilter.trim()
+    ? bulkProducts.filter(p => 
+        p.produktname.toLowerCase().includes(productFilter.toLowerCase()) ||
+        p.produktname_neu.toLowerCase().includes(productFilter.toLowerCase()) ||
+        p.produktbeschreibung.toLowerCase().includes(productFilter.toLowerCase())
+      )
+    : bulkProducts;
+
+  // Selektives Regenerieren nur für gefilterte Produkte
+  const handleRegenerateFiltered = async () => {
+    if (filteredProducts.length === 0) {
+      toast({
+        title: "Keine Produkte gefunden",
+        description: "Bitte Filter anpassen",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!regeneratePrompt.trim()) {
+      toast({
+        title: "Prompt fehlt",
+        description: "Bitte beschreiben Sie, was geändert werden soll",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRegenerating(true);
+    let updated = 0;
+
+    try {
+      for (const product of filteredProducts) {
+        if (abortRef.current) break;
+
+        try {
+          const token = localStorage.getItem('authToken') || 'local-admin-token-pimpilot-dev';
+          
+          const response = await fetch('/api/adjust-description', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              produktname: product.produktname,
+              produktnameNeu: product.produktname_neu,
+              existingDescription: product.produktbeschreibung_html,
+              adjustmentPrompt: regeneratePrompt.trim()
+            })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            
+            setBulkProducts(prev =>
+              prev.map(p =>
+                p.id === product.id
+                  ? { 
+                      ...p, 
+                      produktbeschreibung_html: result.description || p.produktbeschreibung_html,
+                      produktbeschreibung: result.descriptionText || p.produktbeschreibung
+                    }
+                  : p
+              )
+            );
+            updated++;
+          }
+        } catch (err) {
+          console.error(`Fehler bei Produkt ${product.id}:`, err);
+        }
+      }
+
+      toast({
+        title: "Regenerierung abgeschlossen",
+        description: `${updated} von ${filteredProducts.length} Produkten aktualisiert`,
+      });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: "Fehler bei der Regenerierung",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   // NL-Übersetzung für alle Produkte (on-demand)
   const handleTranslateAll = async () => {
     const productsToTranslate = bulkProducts.filter(p => 
@@ -1471,10 +1565,76 @@ export default function CSVBulkDescription() {
                   </div>
                 </div>
               )}
+
+              {/* Filter und Selektive Regenerierung */}
+              <div className="mt-6 p-4 bg-blue-500/5 rounded-lg border border-blue-500/20">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Produkte filtern & gezielt regenerieren
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex gap-4 items-end">
+                    <div className="flex-1">
+                      <Label htmlFor="product-filter" className="text-xs text-muted-foreground mb-1 block">
+                        Filter (durchsucht Produktname und Beschreibung)
+                      </Label>
+                      <Input
+                        id="product-filter"
+                        value={productFilter}
+                        onChange={(e) => setProductFilter(e.target.value)}
+                        placeholder="z.B. Kabel, Flexkabel, Dock-Connector..."
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="text-sm text-muted-foreground whitespace-nowrap">
+                      {productFilter ? (
+                        <span className="font-medium text-blue-600">{filteredProducts.length} von {bulkProducts.length} gefunden</span>
+                      ) : (
+                        <span>{bulkProducts.length} Produkte</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {productFilter && filteredProducts.length > 0 && (
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="regenerate-prompt" className="text-xs text-muted-foreground mb-1 block">
+                          Was soll bei den gefilterten Produkten geändert werden?
+                        </Label>
+                        <textarea
+                          id="regenerate-prompt"
+                          value={regeneratePrompt}
+                          onChange={(e) => setRegeneratePrompt(e.target.value)}
+                          placeholder="z.B. 'Ändere den Einsatzbereich: Kein Fachmann nötig, fokussiere auf den Nutzen nach dem Austausch'"
+                          className="w-full min-h-[80px] p-3 text-sm border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleRegenerateFiltered}
+                        disabled={isRegenerating || !regeneratePrompt.trim()}
+                        size="sm"
+                        className="w-full"
+                      >
+                        {isRegenerating ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Regeneriere {filteredProducts.length} Produkte...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            {filteredProducts.length} gefilterte Produkte regenerieren
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </Card>
 
             <BulkDescriptionTable
-              products={bulkProducts}
+              products={productFilter ? filteredProducts : bulkProducts}
               onUpdateProduct={handleUpdateProduct}
               onPreviewHtml={(html, productName) => {
                 setHtmlPreviewContent(html);
