@@ -26,10 +26,10 @@ INHALT (produktspezifisch):
 BEISPIEL:
 
 ❌ SCHLECHT (generisch):
-"Dieser Akku ist ein hochwertiger und zuverlässiger Energiespeicher. Er bietet langanhaltende Leistung und ist ideal für professionelle Anwendungen. Die integrierte Schutzschaltung gewährleistet maximale Sicherheit."
+"Dieser Akku ist ein hochwertiger und zuverlässiger Energiespeicher. Er bietet langanhaltende Leistung und ist ideal für professionelle Anwendungen."
 
 ✅ GUT (produktspezifisch, ohne Produktname am Anfang!):
-"Dieser wiederaufladbare Li-Ion-Akku im kompakten 16340 Format eignet sich ideal für LED-Taschenlampen, Fotokameras und Sicherheitstechnik. Mit 950 mAh Kapazität bietet er lange Betriebszeiten, während die PCB/BMS Schutzschaltung zuverlässig vor Überladung und Tiefentladung schützt. Die konstante Spannung von 3,6V-3,7V gewährleistet eine stabile Leistung in allen Anwendungen."
+"Dieser wiederaufladbare Li-Ion-Akku im kompakten 16340 Format eignet sich ideal für LED-Taschenlampen, Fotokameras und Sicherheitstechnik. Mit 950 mAh Kapazität bietet er lange Betriebszeiten. Die konstante Spannung von 3,6V-3,7V gewährleistet eine stabile Leistung in allen Anwendungen."
 
 STIL:
 - Nutze konkrete Produktdaten (Modell, Kapazität, Format)
