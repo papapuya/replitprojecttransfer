@@ -2039,6 +2039,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Passe bestehende Beschreibungen nach individuellem Prompt an
+  app.post('/api/adjust-description', async (req, res) => {
+    try {
+      const { produktname, existingDescription, adjustmentPrompt, produktnameNeu } = req.body;
+
+      if (!existingDescription) {
+        return res.status(400).json({ error: 'Bestehende Beschreibung fehlt' });
+      }
+
+      if (!adjustmentPrompt) {
+        return res.status(400).json({ error: 'Anpassungs-Prompt fehlt' });
+      }
+
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ 
+        apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY 
+      });
+      
+      const systemPrompt = `Du bist ein Experte für E-Commerce Produktbeschreibungen. 
+Deine Aufgabe ist es, bestehende Produktbeschreibungen nach den Vorgaben des Benutzers anzupassen.
+
+WICHTIGE REGELN:
+- Behalte die HTML-Struktur bei (Tags wie <h1>, <h2>, <p>, <ul>, <li>, etc.)
+- EMCOM darf NIEMALS im Text erscheinen - entferne jede Erwähnung
+- Technische Daten (mAh, Volt, Modellnummern) gehören NUR in Tabellen, NICHT in Fließtext
+- Der Produktname darf nicht im Fließtext wiederholt werden
+- Behalte ✅ Checkmarks für Vorteile bei
+
+Passe die Beschreibung EXAKT nach dem Benutzer-Prompt an.`;
+
+      const userPrompt = `Produktname: ${produktnameNeu || produktname}
+
+BESTEHENDE BESCHREIBUNG:
+${existingDescription}
+
+ANPASSUNGS-ANWEISUNG:
+${adjustmentPrompt}
+
+Gib NUR die angepasste HTML-Beschreibung zurück, ohne Erklärungen.`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 2000
+      });
+
+      let adjustedDescription = response.choices[0]?.message?.content || existingDescription;
+      
+      // EMCOM-Filter anwenden
+      adjustedDescription = adjustedDescription.replace(/\b(EMCOM[-–,:]?\s*|van\s+EMCOM\s*|EMCOM\s+)/gi, '');
+
+      await trackApiUsage(req, res, () => {});
+      res.json({ 
+        success: true, 
+        description: adjustedDescription,
+        produktTitel: produktnameNeu || produktname
+      });
+    } catch (error) {
+      console.error('Description adjustment error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Description adjustment failed' 
+      });
+    }
+  });
+
   // Regeneriere nur den Produktnamen (für ausgewählte Produkte)
   app.post('/api/regenerate-product-name', async (req, res) => {
     try {
