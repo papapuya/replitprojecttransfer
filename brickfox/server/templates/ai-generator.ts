@@ -579,6 +579,25 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
         /Schutzschaltung/i,         // Schutzschaltung nur wenn explizit in CSV
       ];
       
+      // Kategoriespezifische verbotene Begriffe (bei Batterien macht "Installation" keinen Sinn)
+      const produktNameLowerCheck = (productData.name || '').toLowerCase();
+      const istBatterie = /batterie|knopfzelle|cr\d{4}|lr\d{2}|aa|aaa/i.test(produktNameLowerCheck);
+      
+      if (istBatterie) {
+        // Bei Batterien: Installation, Montage, Einbau etc. filtern
+        const batterieVerboten = [
+          /Installation/i,
+          /Montage/i,
+          /Einbau/i,
+        ];
+        for (const pattern of batterieVerboten) {
+          if (pattern.test(vorteil)) {
+            console.log(`🚫 Vorteil gefiltert (nicht passend für Batterie): "${vorteil}"`);
+            return false;
+          }
+        }
+      }
+      
       for (const pattern of verbotenePatterns) {
         if (pattern.test(vorteil)) {
           console.log(`🚫 Vorteil gefiltert (technische Daten): "${vorteil}"`);
@@ -597,8 +616,8 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       fallbackVorteile = [
         "Zuverlässige Stromversorgung",
         "Lange Lebensdauer",
-        "Einfache Installation",
         "Hohe Kapazität",
+        "Konstante Spannung",
         "Geprüfte Qualität"
       ];
     } else if (produktTyp === 'werkzeug') {
