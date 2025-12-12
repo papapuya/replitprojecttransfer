@@ -39,6 +39,48 @@ function convertToMm(value: string): string {
   return trimmed;
 }
 
+/**
+ * Übersetzt englische Farben ins Deutsche
+ * REGEL: Farben IMMER auf Deutsch anzeigen
+ */
+function translateColorToGerman(color: string): string {
+  const colorMap: Record<string, string> = {
+    'black': 'Schwarz',
+    'white': 'Weiß',
+    'red': 'Rot',
+    'blue': 'Blau',
+    'green': 'Grün',
+    'yellow': 'Gelb',
+    'orange': 'Orange',
+    'purple': 'Lila',
+    'violet': 'Violett',
+    'pink': 'Rosa',
+    'grey': 'Grau',
+    'gray': 'Grau',
+    'silver': 'Silber',
+    'gold': 'Gold',
+    'bronze': 'Bronze',
+    'brown': 'Braun',
+    'beige': 'Beige',
+    'turquoise': 'Türkis',
+    'cyan': 'Cyan',
+    'magenta': 'Magenta',
+    'navy': 'Dunkelblau',
+    'olive': 'Oliv',
+    'transparent': 'Transparent',
+    'clear': 'Transparent',
+  };
+  
+  const lowerColor = color.trim().toLowerCase();
+  if (colorMap[lowerColor]) {
+    console.log(`🌈 Farbe übersetzt: ${color} → ${colorMap[lowerColor]}`);
+    return colorMap[lowerColor];
+  }
+  
+  // Erste Buchstabe groß, falls noch nicht
+  return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
+}
+
 export interface ParsedTechSpecs {
   specs: Record<string, string>;
   source: 'vision_text' | 'structured_data' | 'none';
@@ -475,10 +517,10 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       console.log(`⭕ BrickFox Durchmesser: ${value} → ${specs['Durchmesser']}`);
     }
     
-    // Farbe
+    // Farbe - IMMER auf Deutsch
     if ((keyLower.includes('farbe') || keyLower.includes('color') || keyLower.includes('colour')) && !specs['Farbe']) {
-      specs['Farbe'] = valTrimmed;
-      console.log(`🎨 BrickFox Farbe: ${value}`);
+      specs['Farbe'] = translateColorToGerman(valTrimmed);
+      console.log(`🎨 BrickFox Farbe: ${value} → ${specs['Farbe']}`);
     }
     
     // Material
@@ -748,16 +790,15 @@ export function extractTechSpecs1to1(
     }
   }
   
-  // 2. FARBE aus Produktname extrahieren (falls nicht vorhanden)
+  // 2. FARBE aus Produktname extrahieren (falls nicht vorhanden) - IMMER auf Deutsch
   if (!specs['Farbe'] && structuredData) {
     const farbenPattern = /\b(Schwarz|Weiß|Weiss|Rot|Blau|Grün|Gelb|Orange|Lila|Violett|Rosa|Pink|Grau|Silber|Gold|Bronze|Braun|Beige|Türkis|Black|White|Red|Blue|Green|Yellow|Silver|Grey|Gray)\b/i;
     for (const field of fieldsToCheck) {
       const farbeMatch = field.match(farbenPattern);
       if (farbeMatch) {
-        // Erste Buchstabe groß
-        const farbe = farbeMatch[1].charAt(0).toUpperCase() + farbeMatch[1].slice(1).toLowerCase();
-        specs['Farbe'] = farbe;
-        console.log(`🎨 Farbe aus Produktname: ${specs['Farbe']}`);
+        // IMMER ins Deutsche übersetzen
+        specs['Farbe'] = translateColorToGerman(farbeMatch[1]);
+        console.log(`🎨 Farbe aus Produktname: ${farbeMatch[1]} → ${specs['Farbe']}`);
         break;
       }
     }
