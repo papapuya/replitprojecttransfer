@@ -92,6 +92,10 @@ export default function CSVBulkDescription() {
   const [isMobilePreview, setIsMobilePreview] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   
+  // Modus: 'generate' = Erstgenerierung, 'adjust' = Anpassung bestehender Beschreibungen
+  const [generationMode, setGenerationMode] = useState<'generate' | 'adjust'>('generate');
+  const [adjustmentPrompt, setAdjustmentPrompt] = useState<string>('');
+  
   // Abbruch-Referenz für die AI-Generierung
   const abortRef = useRef(false);
 
@@ -256,13 +260,23 @@ export default function CSVBulkDescription() {
       return;
     }
 
+    // Für Anpassungsmodus: Prompt muss vorhanden sein
+    if (generationMode === 'adjust' && !adjustmentPrompt.trim()) {
+      setError('Bitte geben Sie einen Anpassungs-Prompt ein');
+      return;
+    }
+
     abortRef.current = false;
     setProcessing(true);
     setError("");
     setProgress(0);
     
     try {
-      await generateDescriptions(rawData);
+      if (generationMode === 'adjust') {
+        await adjustDescriptions(rawData);
+      } else {
+        await generateDescriptions(rawData);
+      }
     } catch (err) {
       console.error('Generierungsfehler:', err);
       if (!abortRef.current) {
@@ -279,6 +293,149 @@ export default function CSVBulkDescription() {
       title: "Abgebrochen",
       description: `Generierung abgebrochen. ${bulkProducts.length} Produkte wurden bereits verarbeitet.`,
     });
+  };
+
+  // Anpassungsmodus: Bestehende Beschreibungen nach Prompt anpassen
+  const adjustDescriptions = async (data: RawCSVRow[]) => {
+    const BATCH_SIZE = 10;
+    const total = data.length;
+    const results: (BulkProduct | undefined)[] = new Array(total);
+    let processedCount = 0;
+
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      if (abortRef.current) {
+        console.log('Anpassung abgebrochen bei Batch', i);
+        break;
+      }
+      
+      const batch = data.slice(i, Math.min(i + BATCH_SIZE, total));
+
+      const settled = await Promise.allSettled(
+        batch.map(async (row, batchIndex) => {
+          const globalIndex = i + batchIndex;
+
+          // Produktname aus CSV lesen
+          const produktname = row['p_name[de]'] || row['P Name[de]'] || row['produktname'] || row['Produktname'] || 'Unbekanntes Produkt';
+          
+          // Bestehende Beschreibung aus CSV lesen
+          const existingDescription = row['p_description[de]'] || row['P Description[de]'] || row['produktbeschreibung'] || row['beschreibung'] || '';
+          
+          // p_id und v_id
+          const p_id = row['p_id'] || '';
+          const v_id = row['v_id'] || '';
+          const artikelnummer = row['p_item_number'] || '';
+
+          if (!existingDescription.trim()) {
+            // Keine bestehende Beschreibung - überspringe
+            return {
+              id: globalIndex + 1,
+              p_id,
+              v_id,
+              p_item_number: artikelnummer,
+              produktname,
+              produktname_neu: produktname,
+              produktname_csv_original: produktname,
+              produktbeschreibung: '',
+              produktbeschreibung_html: '',
+              produktname_nl: '',
+              produktbeschreibung_nl: '',
+              produktbeschreibung_html_nl: '',
+              produktbeschreibung_original: existingDescription,
+              mediamarktname_v1: '',
+              mediamarktname_v2: '',
+              seo_beschreibung: '',
+              seo_keywords: '',
+              kurzbeschreibung: '',
+            } satisfies BulkProduct;
+          }
+
+          const token = 'local-admin-token-pimpilot-dev';
+          
+          const response = await fetch('/api/adjust-description', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              produktname,
+              produktnameNeu: produktname,
+              existingDescription,
+              adjustmentPrompt: adjustmentPrompt.trim()
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`API request failed (${response.status})`);
+          }
+
+          const payload = await response.json();
+          const plainText = stripHtml(payload.description || '');
+          const sentences = plainText.split('.').filter((s: string) => s.trim().length > 10);
+          const seoDesc = sentences.length > 0 ? `${sentences[0].trim().substring(0, 150)}${sentences[0].length > 150 ? '...' : ''}` : '';
+          const shortDesc = sentences.slice(0, 2).join('. ') + (sentences.length > 2 ? '.' : '');
+
+          return {
+            id: globalIndex + 1,
+            p_id,
+            v_id,
+            p_item_number: artikelnummer,
+            produktname,
+            produktname_neu: payload.produktTitel || produktname,
+            produktname_csv_original: produktname,
+            produktbeschreibung: cleanDescription(plainText),
+            produktbeschreibung_html: cleanDescription(payload.description || ''),
+            produktname_nl: '',
+            produktbeschreibung_nl: '',
+            produktbeschreibung_html_nl: '',
+            produktbeschreibung_original: existingDescription,
+            mediamarktname_v1: produktname.substring(0, 60),
+            mediamarktname_v2: artikelnummer.replace(/^[A-Z]+-/, '').trim().substring(0, 40),
+            seo_beschreibung: seoDesc,
+            seo_keywords: '',
+            kurzbeschreibung: shortDesc.substring(0, 300),
+          } satisfies BulkProduct;
+        })
+      );
+
+      settled.forEach((outcome, batchIndex) => {
+        const globalIndex = i + batchIndex;
+        processedCount += 1;
+        setProgress(Math.round((processedCount / total) * 100));
+
+        if (outcome.status === 'fulfilled') {
+          results[globalIndex] = outcome.value;
+        } else {
+          console.error(`Error adjusting row ${globalIndex}:`, outcome.reason);
+          const row = batch[batchIndex];
+          results[globalIndex] = {
+            id: globalIndex + 1,
+            p_id: row['p_id'] || '-',
+            v_id: row['v_id'] || '-',
+            p_item_number: '',
+            produktname: 'Fehler',
+            produktname_neu: '',
+            produktname_csv_original: '',
+            produktbeschreibung: '',
+            produktbeschreibung_html: '',
+            produktname_nl: '',
+            produktbeschreibung_nl: '',
+            produktbeschreibung_html_nl: '',
+            mediamarktname_v1: '',
+            mediamarktname_v2: '',
+            seo_beschreibung: '',
+            seo_keywords: '',
+            kurzbeschreibung: '',
+          } satisfies BulkProduct;
+        }
+      });
+    }
+
+    const completedResults = results.filter(Boolean) as BulkProduct[];
+    setBulkProducts(completedResults);
+    setSuccessMessage(`${completedResults.length} Beschreibungen erfolgreich angepasst`);
+    setProgress(100);
+    setProcessing(false);
   };
 
   const generateDescriptions = async (data: RawCSVRow[]) => {
@@ -888,43 +1045,102 @@ export default function CSVBulkDescription() {
         )}
 
         {!file && !processing && bulkProducts.length === 0 && (
-          <Card
-            className={`p-8 transition-colors ${
-              isDragging ? 'border-primary bg-accent/50' : ''
-            }`}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-          >
-            <div className="flex flex-col items-center justify-center gap-6 min-h-[400px]">
-              <div className="p-6 rounded-full bg-primary/10">
-                <Upload className="w-12 h-12 text-primary" />
+          <div className="space-y-6">
+            {/* Modus-Auswahl */}
+            <Card className="p-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground">Verarbeitungsmodus wählen</h3>
+                <div className="flex gap-4">
+                  <Button
+                    variant={generationMode === 'generate' ? 'default' : 'outline'}
+                    onClick={() => setGenerationMode('generate')}
+                    className="flex-1 h-auto py-4"
+                  >
+                    <div className="text-left">
+                      <div className="font-semibold">Erstgenerierung</div>
+                      <div className="text-xs opacity-80">Neue Beschreibungen aus CSV-Daten erstellen</div>
+                    </div>
+                  </Button>
+                  <Button
+                    variant={generationMode === 'adjust' ? 'default' : 'outline'}
+                    onClick={() => setGenerationMode('adjust')}
+                    className="flex-1 h-auto py-4"
+                  >
+                    <div className="text-left">
+                      <div className="font-semibold">Anpassung</div>
+                      <div className="text-xs opacity-80">Bestehende Beschreibungen nach Prompt anpassen</div>
+                    </div>
+                  </Button>
+                </div>
+                
+                {/* Prompt-Eingabe für Anpassungsmodus */}
+                {generationMode === 'adjust' && (
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor="adjustment-prompt" className="text-sm font-medium">
+                      Anpassungs-Prompt
+                    </Label>
+                    <textarea
+                      id="adjustment-prompt"
+                      value={adjustmentPrompt}
+                      onChange={(e) => setAdjustmentPrompt(e.target.value)}
+                      placeholder="z.B. 'Kürze alle Beschreibungen auf maximal 3 Sätze' oder 'Füge Bullet Points für die wichtigsten Eigenschaften hinzu' oder 'Entferne alle technischen Daten aus dem Fließtext'"
+                      className="w-full min-h-[100px] p-3 text-sm border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Beschreiben Sie, wie die bestehenden Beschreibungen angepasst werden sollen. Die AI wird Ihren Prompt auf jede Beschreibung anwenden.
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-semibold text-foreground">
-                  CSV-Datei hochladen
-                </h2>
-                <p className="text-muted-foreground max-w-md">
-                  Laden Sie Ihre Produktdaten-CSV hoch und generieren Sie automatisch vollständige PIM-Attribute mit AI
-                </p>
+            </Card>
+
+            {/* Upload-Bereich */}
+            <Card
+              className={`p-8 transition-colors ${
+                isDragging ? 'border-primary bg-accent/50' : ''
+              }`}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+            >
+              <div className="flex flex-col items-center justify-center gap-6 min-h-[300px]">
+                <div className="p-6 rounded-full bg-primary/10">
+                  <Upload className="w-12 h-12 text-primary" />
+                </div>
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-semibold text-foreground">
+                    CSV-Datei hochladen
+                  </h2>
+                  <p className="text-muted-foreground max-w-md">
+                    {generationMode === 'generate' 
+                      ? 'Laden Sie Ihre Produktdaten-CSV hoch und generieren Sie automatisch vollständige PIM-Attribute mit AI'
+                      : 'Laden Sie Ihre CSV mit bestehenden Beschreibungen hoch, die nach Ihrem Prompt angepasst werden sollen'
+                    }
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label htmlFor="file-upload">
+                  <Button asChild size="lg" disabled={generationMode === 'adjust' && !adjustmentPrompt.trim()}>
+                    <span className="cursor-pointer">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Datei auswählen
+                    </span>
+                  </Button>
+                </label>
+                {generationMode === 'adjust' && !adjustmentPrompt.trim() && (
+                  <p className="text-sm text-amber-600">
+                    Bitte geben Sie zuerst einen Anpassungs-Prompt ein
+                  </p>
+                )}
               </div>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
-                className="hidden"
-                id="file-upload"
-              />
-              <label htmlFor="file-upload">
-                <Button asChild size="lg">
-                  <span className="cursor-pointer">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Datei auswählen
-                  </span>
-                </Button>
-              </label>
-            </div>
-          </Card>
+            </Card>
+          </div>
         )}
 
         {/* Schritt 1 & 2: CSV eingelesen - zeige Rohdaten + Live-Updates während AI-Generierung */}
@@ -949,11 +1165,23 @@ export default function CSVBulkDescription() {
                     className="px-8 py-6 text-lg"
                   >
                     <Sparkles className="w-5 h-5 mr-2" />
-                    AI Beschreibungen generieren ({rawData.length} Produkte)
+                    {generationMode === 'adjust' 
+                      ? `Beschreibungen anpassen (${rawData.length} Produkte)`
+                      : `AI Beschreibungen generieren (${rawData.length} Produkte)`
+                    }
                   </Button>
                   <p className="text-sm text-muted-foreground">
-                    Die AI-Generierung benötigt ca. {Math.round(rawData.length * 8 / 60)} Minuten
+                    {generationMode === 'adjust'
+                      ? `Die AI-Anpassung benötigt ca. ${Math.round(rawData.length * 3 / 60)} Minuten`
+                      : `Die AI-Generierung benötigt ca. ${Math.round(rawData.length * 8 / 60)} Minuten`
+                    }
                   </p>
+                  {generationMode === 'adjust' && (
+                    <div className="mt-2 p-3 bg-muted/50 rounded-md max-w-md">
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Anpassungs-Prompt:</p>
+                      <p className="text-sm">{adjustmentPrompt}</p>
+                    </div>
+                  )}
                   <Button
                     variant="outline"
                     onClick={() => {
