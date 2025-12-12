@@ -363,7 +363,7 @@ AUSGABEFORMAT (JSON)
   "apnSatz": "Dieser Akku ersetzt die Apple-Teilenummern (APN) 616-0579, 616-0580.",
   "werkzeuguebersicht": ["Werkzeug 1", "Werkzeug 2"],
   "uspBullets": ["Produkteigenschaft 1", "Produkteigenschaft 2"],
-  "einsatzbereiche": "1-2 Sätze wo/wofür das Produkt verwendet wird. Beispiel: Ideal für Uhren, Fernbedienungen und Taschenrechner.",
+  "einsatzbereiche": "3-4 Sätze mit Sie-Ansprache, verkaufsfördernd, ohne Call-to-Action. Beschreibt wo/wofür das Produkt verwendet wird.",
   "technicalSpecs": {"Feldname": "Wert mit Einheit"},
   "packageContents": ["Artikel 1", "Artikel 2"],
   "zeigeTabelle": true/false
@@ -431,9 +431,20 @@ EINSATZBEREICHE = WO/WOFÜR wird das Produkt verwendet?
   
   ✅ Lieber 2 gute Vorteile als 4 generische!
 
-- einsatzbereiche: 1-2 Sätze zu konkreten Anwendungsgebieten.
-  NUR wo/wofür das Produkt verwendet wird!
-  Beispiel: "Ideal für Uhren, Fernbedienungen und Taschenrechner."
+- einsatzbereiche: 3-4 Sätze zu konkreten Anwendungsgebieten.
+  STIL: Direkte Ansprache mit "Sie", verkaufsfördernd aber OHNE Call-to-Action!
+  Beschreibe WO und WOFÜR das Produkt verwendet wird.
+  Hebe den Nutzen für den Kunden hervor.
+  
+  ✅ GUTES BEISPIEL:
+  "Mit diesem Akku sind Sie bestens für Ihre Outdoor-Abenteuer gerüstet. 
+  Ob beim Wandern, Radfahren oder auf Reisen – Sie haben immer genügend Energie dabei. 
+  Die kompakte Bauweise ermöglicht Ihnen einen schnellen Akkuwechsel auch unterwegs. 
+  So verpassen Sie keinen wichtigen Moment mehr."
+  
+  ❌ VERBOTEN:
+  - Call-to-Actions wie "Bestellen Sie jetzt", "Jetzt kaufen"
+  - Technische Daten (mAh, Volt) – gehören in die Tabelle!
 
 ⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
 Bei BATTERIEN (CR2032, AA, AAA): "passend zu", "geeignet für", "ersetzt" - NICHT "kompatibel"!
