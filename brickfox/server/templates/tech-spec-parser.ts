@@ -778,32 +778,44 @@ export function extractTechSpecs1to1(
     console.log(`📋 Erstes Feld: "${fieldsToCheck[0]?.substring(0, 80)}..."`);
   }
   
-  // 1. KAPAZITÄT aus Produktname extrahieren (falls nicht vorhanden ODER leer)
-  const currentKapazitaet = specs['Kapazität']?.trim();
-  console.log(`📊 Kapazität-Check: Aktueller Wert = "${currentKapazitaet || '(leer)'}"`);
+  // 1. KAPAZITÄT IMMER aus Produktname extrahieren (dort steht der korrekte Wert wie "40 mAh")
+  // Das CSV-Feld p_attributes[akku_mah][de] enthält oft nur die Zahl ohne Einheit oder ist leer
+  console.log(`🔍 Suche Kapazität in ${fieldsToCheck.length} Produktname-Feldern...`);
   
-  if ((!currentKapazitaet || currentKapazitaet === '' || currentKapazitaet === '-') && structuredData) {
-    console.log(`🔍 Kapazität ist leer, suche in ${fieldsToCheck.length} Produktname-Feldern...`);
-    for (const field of fieldsToCheck) {
-      // Pattern: "50 mAh", "1821mAh", "1.821 mAh", auch nach Komma: ", 50 mAh"
-      const mahMatch = field.match(/(\d+[.,]?\d*)\s*mAh/i);
-      if (mahMatch) {
-        // Bereinige den Wert - entferne Tausenderpunkte, behalte Dezimalkomma
-        let mahValue = mahMatch[1];
-        // Wenn es ein Punkt ist und danach 3+ Ziffern kommen, ist es ein Tausenderpunkt
-        if (mahValue.includes('.') && mahValue.split('.')[1]?.length >= 3) {
-          mahValue = mahValue.replace('.', '');
-        }
-        mahValue = mahValue.replace(',', '');
-        specs['Kapazität'] = `${mahValue} mAh`;
-        console.log(`🔋 Kapazität aus Produktname extrahiert: ${specs['Kapazität']} (aus: "${field.substring(0, 80)}")`);
-        break;
-      } else {
-        console.log(`⏭️ Kein mAh-Pattern in: "${field.substring(0, 60)}..."`);
+  for (const field of fieldsToCheck) {
+    // Pattern 1: "50 mAh", "1821mAh", "1.821 mAh", auch nach Komma: ", 50 mAh"
+    const mahMatch = field.match(/(\d+[.,]?\d*)\s*mAh/i);
+    if (mahMatch) {
+      let mahValue = mahMatch[1];
+      // Tausenderpunkte entfernen
+      if (mahValue.includes('.') && mahValue.split('.')[1]?.length >= 3) {
+        mahValue = mahValue.replace('.', '');
       }
+      mahValue = mahValue.replace(',', '');
+      specs['Kapazität'] = `${mahValue} mAh`;
+      console.log(`🔋 Kapazität aus Produktname: ${specs['Kapazität']} (aus: "${field.substring(0, 60)}")`);
+      break;
     }
-  } else {
-    console.log(`✅ Kapazität bereits vorhanden: "${currentKapazitaet}"`);
+    
+    // Pattern 2: "5 Ah", "5Ah", "2.5 Ah" → in mAh umrechnen
+    const ahMatch = field.match(/(\d+[.,]?\d*)\s*Ah\b/i);
+    if (ahMatch && !field.match(/mAh/i)) { // Nur wenn NICHT auch mAh vorkommt
+      let ahValue = parseFloat(ahMatch[1].replace(',', '.'));
+      const mahValue = Math.round(ahValue * 1000);
+      specs['Kapazität'] = `${mahValue} mAh`;
+      console.log(`🔋 Kapazität aus Produktname (Ah→mAh): ${ahMatch[1]} Ah → ${specs['Kapazität']} (aus: "${field.substring(0, 60)}")`);
+      break;
+    }
+  }
+  
+  // Fallback: Falls nichts im Produktnamen, prüfe CSV-Feld
+  if (!specs['Kapazität']) {
+    const csvKapazitaet = specs['Kapazität']?.trim();
+    if (csvKapazitaet && csvKapazitaet !== '' && csvKapazitaet !== '-') {
+      console.log(`✅ Kapazität aus CSV-Feld: "${csvKapazitaet}"`);
+    } else {
+      console.log(`⚠️ Keine Kapazität gefunden`);
+    }
   }
   
   // 2. FARBE aus Produktname extrahieren - NUR deutsche Farben (englische gehören zu Modellnamen wie "Hero7 Black")
