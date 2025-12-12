@@ -1161,7 +1161,7 @@ export default function CSVBulkDescription() {
                     variant="outline"
                     size="sm"
                     onClick={async () => {
-                      // DeepL Übersetzung für rawData
+                      // DeepL Übersetzung für rawData - parallel für Geschwindigkeit
                       const descKey = Object.keys(rawData[0] || {}).find(k => k.toLowerCase().includes('p_description[de]'));
                       const nameKey = Object.keys(rawData[0] || {}).find(k => k.toLowerCase().includes('p_name[de]'));
                       if (!descKey) {
@@ -1169,47 +1169,67 @@ export default function CSVBulkDescription() {
                         return;
                       }
                       
+                      const nlDescKey = descKey.replace('[de]', '[nl]');
+                      const nlNameKey = nameKey?.replace('[de]', '[nl]');
+                      
                       setIsTranslating(true);
+                      
+                      // Finde Zeilen die übersetzt werden müssen
+                      const toTranslate = rawData.map((row, i) => ({ row, index: i }))
+                        .filter(({ row }) => !row[nlDescKey] || String(row[nlDescKey]).length < 10);
+                      
+                      toast({ title: "Starte Übersetzung", description: `${toTranslate.length} Produkte werden übersetzt...` });
+                      
+                      // Parallel übersetzen in Batches von 10
+                      const BATCH_SIZE = 10;
                       let translated = 0;
                       
-                      for (let i = 0; i < rawData.length; i++) {
-                        const row = rawData[i];
-                        const nlDescKey = descKey.replace('[de]', '[nl]');
-                        const nlNameKey = nameKey?.replace('[de]', '[nl]');
+                      for (let batch = 0; batch < toTranslate.length; batch += BATCH_SIZE) {
+                        const batchItems = toTranslate.slice(batch, batch + BATCH_SIZE);
                         
-                        // Nur übersetzen wenn noch keine NL-Version vorhanden
-                        if (row[nlDescKey] && String(row[nlDescKey]).length > 10) continue;
-                        
-                        try {
-                          const response = await fetch('/api/translate-product', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              produktName: nameKey ? row[nameKey] : '',
-                              produktBeschreibung: row[descKey]
-                            })
-                          });
-                          
-                          if (response.ok) {
-                            const result = await response.json();
-                            setRawData(prev => {
-                              const updated = [...prev];
-                              updated[i] = { 
-                                ...updated[i], 
-                                [nlDescKey]: result.produktBeschreibungNL || '',
-                                ...(nlNameKey ? { [nlNameKey]: result.produktNameNL || '' } : {})
-                              };
-                              return updated;
+                        const results = await Promise.allSettled(
+                          batchItems.map(async ({ row, index }) => {
+                            const response = await fetch('/api/translate-product', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                produktTitel: nameKey ? row[nameKey] : '',
+                                produktBeschreibung: row[descKey]
+                              })
                             });
-                            translated++;
-                          }
-                        } catch (err) {
-                          console.error('Übersetzungsfehler:', err);
-                        }
+                            
+                            if (response.ok) {
+                              const result = await response.json();
+                              return { 
+                                index, 
+                                nlDesc: result.produktBeschreibungNL || '',
+                                nlName: result.produktTitelNL || ''
+                              };
+                            }
+                            return null;
+                          })
+                        );
+                        
+                        // Update rawData mit den Ergebnissen
+                        setRawData(prev => {
+                          const updated = [...prev];
+                          results.forEach(r => {
+                            if (r.status === 'fulfilled' && r.value) {
+                              const { index, nlDesc, nlName } = r.value;
+                              updated[index] = {
+                                ...updated[index],
+                                [nlDescKey]: nlDesc,
+                                ...(nlNameKey ? { [nlNameKey]: nlName } : {})
+                              };
+                              translated++;
+                            }
+                          });
+                          return updated;
+                        });
                       }
                       
                       setIsTranslating(false);
-                      toast({ title: "Übersetzung abgeschlossen", description: `${translated} Beschreibungen übersetzt` });
+                      toast({ title: "Übersetzung abgeschlossen", description: `${translated} Produkte übersetzt` });
                     }}
                     disabled={isTranslating}
                   >
