@@ -349,15 +349,7 @@ export function extractTechSpecsFromStructured(
 function extractBrickfoxAttributes(structuredData: any): Record<string, string> {
   const specs: Record<string, string> = {};
   
-  if (!structuredData) {
-    console.log('⚠️ extractBrickfoxAttributes: structuredData ist null/undefined');
-    return specs;
-  }
-  
-  // Debug: Zeige alle Schlüssel in structuredData
-  const keys = Object.keys(structuredData);
-  console.log(`📋 extractBrickfoxAttributes: ${keys.length} Felder vorhanden`);
-  console.log(`📋 Erste 10 Schlüssel: ${keys.slice(0, 10).join(', ')}`);
+  if (!structuredData) return specs;
   
   // ═══════════════════════════════════════════════════════════════
   // MODELLE EXTRAKTION: "wie ABPAK-001, AHDBT-001" aus Produktnamen
@@ -379,7 +371,6 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
         
         if (modelle && modelle.length > 2) {
           specs['Modelle'] = modelle;
-          console.log(`🔖 Modelle aus Produktname extrahiert: ${modelle}`);
           break;
         }
       }
@@ -434,10 +425,8 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       }
       
       if (allModels.length > 0) {
-        // Dedupliziere und formatiere
         const uniqueModels = Array.from(new Set(allModels));
         specs['Kompatibilität'] = uniqueModels.join(', ');
-        console.log(`📱 Kompatibilität aus Beschreibung extrahiert: ${uniqueModels.length} Einträge`);
         break;
       }
     }
@@ -452,27 +441,20 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
     
     // Spannung: p_attributes[akku_v][de]
     if (keyLower.includes('akku_v') || keyLower.includes('voltage') || keyLower.includes('spannung')) {
-      const correctedVoltage = correctVoltageValue(valTrimmed);
-      specs['Spannung'] = correctedVoltage;
-      console.log(`⚡ BrickFox Spannung: ${value} → ${correctedVoltage}`);
+      specs['Spannung'] = correctVoltageValue(valTrimmed);
     }
     
     // Kapazität: p_attributes[akku_mah][de] - einfach Zahl + "mAh" anhängen
     if (keyLower.includes('akku_mah')) {
-      // Extrahiere nur die Zahl(en) und formatiere
       const numMatch = valTrimmed.match(/^(\d+)/);
       if (numMatch) {
-        const capacityValue = `${numMatch[1]} mAh`;
-        specs['Kapazität'] = capacityValue;
-        console.log(`🔋 CSV-Kapazität: ${valTrimmed} → ${capacityValue}`);
-        console.log(`🔋 specs['Kapazität'] jetzt: "${specs['Kapazität']}"`);
+        specs['Kapazität'] = `${numMatch[1]} mAh`;
       }
     }
     
     // Akkutyp/Chemie: p_attributes[akku_chemie][de]
     if (keyLower.includes('chemie') || keyLower.includes('chemistry') || keyLower.includes('akku_typ')) {
       specs['Akkutyp'] = valTrimmed;
-      console.log(`🔬 BrickFox Akkutyp: ${value}`);
     }
     
     // ═══════════════════════════════════════════════════════════════
@@ -492,26 +474,22 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       // Alle anderen Werte (g, gramm, unitlos, Bereiche, Toleranzen) unverändert lassen
       
       specs['Gewicht'] = gewichtVal;
-      console.log(`⚖️ BrickFox Gewicht: ${value} → ${gewichtVal}`);
     }
     
     // Länge - IMMER in mm umrechnen
     if ((keyLower.includes('länge') || keyLower.includes('laenge') || keyLower.includes('length') || keyLower.includes('p_length')) && !specs['Länge']) {
       specs['Länge'] = convertToMm(valTrimmed);
-      console.log(`📏 BrickFox Länge: ${value} → ${specs['Länge']}`);
     }
     
     // Breite - IMMER in mm umrechnen
     if ((keyLower.includes('breite') || keyLower.includes('width') || keyLower.includes('p_width')) && !specs['Breite']) {
       specs['Breite'] = convertToMm(valTrimmed);
-      console.log(`📐 BrickFox Breite: ${value} → ${specs['Breite']}`);
     }
     
     // Höhe / Dicke - IMMER in mm umrechnen
     if ((keyLower.includes('höhe') || keyLower.includes('hoehe') || keyLower.includes('height') || 
          keyLower.includes('dicke') || keyLower.includes('thickness') || keyLower.includes('p_height')) && !specs['Höhe']) {
       specs['Höhe'] = convertToMm(valTrimmed);
-      console.log(`📊 BrickFox Höhe: ${value} → ${specs['Höhe']}`);
     }
     
     // Durchmesser - IMMER in mm umrechnen
@@ -568,7 +546,6 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
         leistungVal = `${leistungVal} W`;
       }
       specs['Max. Ladeleistung'] = leistungVal;
-      console.log(`⚡ BrickFox Ladeleistung: ${value} → ${leistungVal}`);
     }
     
     // IP-Schutzart
@@ -665,14 +642,12 @@ export function extractTechSpecs1to1(
   // HÖCHSTE PRIORITÄT: BrickFox-Attribute direkt aus CSV
   const brickfoxSpecs = extractBrickfoxAttributes(structuredData);
   if (Object.keys(brickfoxSpecs).length > 0) {
-    console.log(`📊 Using ${Object.keys(brickfoxSpecs).length} specs from BrickFox attributes`);
     specs = { ...brickfoxSpecs };
   }
   
   // Priorität 2: Strukturierte Daten (wenn vorhanden)
   const structuredResult = extractTechSpecsFromStructured(structuredData, categoryConfig);
   if (structuredResult.source !== 'none') {
-    console.log(`📊 Using ${Object.keys(structuredResult.specs).length} specs from structured data`);
     // BrickFox-Specs haben Vorrang, nur fehlende ergänzen
     for (const [key, value] of Object.entries(structuredResult.specs)) {
       if (!specs[key]) {
@@ -688,7 +663,6 @@ export function extractTechSpecs1to1(
     for (const [key, value] of Object.entries(textResult.specs)) {
       if (!specs[key]) {
         specs[key] = value;
-        console.log(`📊 Added from text parsing: ${key} = ${value}`);
       }
     }
   }
@@ -758,7 +732,6 @@ export function extractTechSpecs1to1(
         // Exakte Matches für p_name[de] (verschiedene Schreibweisen)
         if (key === 'p_name[de]' || key === 'P Name[de]' || key === 'P_name[de]') {
           fieldsToCheck.unshift(value);
-          console.log(`🎯 Produktname-Feld gefunden: "${key}" = "${value.substring(0, 60)}..."`);
         }
       }
     }
@@ -790,13 +763,10 @@ export function extractTechSpecs1to1(
   
   // Debug: Zeige welche Felder gefunden wurden
   if (fieldsToCheck.length > 0) {
-    console.log(`📋 Produktname-Felder für Extraktion: ${fieldsToCheck.length} gefunden`);
-    console.log(`📋 Erstes Feld: "${fieldsToCheck[0]?.substring(0, 80)}..."`);
   }
   
   // 1. KAPAZITÄT IMMER aus Produktname extrahieren (dort steht der korrekte Wert wie "40 mAh")
   // Das CSV-Feld p_attributes[akku_mah][de] enthält oft nur die Zahl ohne Einheit oder ist leer
-  console.log(`🔍 Suche Kapazität in ${fieldsToCheck.length} Produktname-Feldern...`);
   
   for (const field of fieldsToCheck) {
     // Pattern 1: "50 mAh", "1821mAh", "1.821 mAh", auch nach Komma: ", 50 mAh"
@@ -809,7 +779,6 @@ export function extractTechSpecs1to1(
       }
       mahValue = mahValue.replace(',', '');
       specs['Kapazität'] = `${mahValue} mAh`;
-      console.log(`🔋 Kapazität aus Produktname: ${specs['Kapazität']} (aus: "${field.substring(0, 60)}")`);
       break;
     }
     
@@ -819,7 +788,6 @@ export function extractTechSpecs1to1(
       let ahValue = parseFloat(ahMatch[1].replace(',', '.'));
       const mahValue = Math.round(ahValue * 1000);
       specs['Kapazität'] = `${mahValue} mAh`;
-      console.log(`🔋 Kapazität aus Produktname (Ah→mAh): ${ahMatch[1]} Ah → ${specs['Kapazität']} (aus: "${field.substring(0, 60)}")`);
       break;
     }
   }
@@ -869,7 +837,6 @@ export function extractTechSpecs1to1(
           chemie = 'NiCd';
         }
         specs['Akkutyp'] = chemie;
-        console.log(`⚡ Akku-Chemie aus Produktname: ${specs['Akkutyp']}`);
         break;
       }
     }
@@ -890,10 +857,8 @@ export function extractTechSpecs1to1(
       const numericPart = specs['Kapazität'].replace(/[^\d.,]/g, '');
       if (numericPart) {
         specs['Kapazität'] = `${numericPart} mAh`;
-        console.log(`🔋 Wh zu mAh korrigiert: ${specs['Kapazität']}`);
       } else {
         delete specs['Kapazität'];
-        console.log(`🔋 Kapazität mit falschem Wh entfernt`);
       }
     }
   }

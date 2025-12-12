@@ -61,11 +61,9 @@ async function generateProductCopyModular(
 
     // 1:1 TECH SPECS EXTRAKTION: Aus Vision-Text oder strukturierten Daten
     const structuredDataSource = productData.structuredData || productData;
-    console.log(`🔍 structuredData Typ: ${typeof structuredDataSource}, Schlüssel: ${Object.keys(structuredDataSource).slice(0, 5).join(', ')}`);
     
     // Prüfe ob p_name[de] vorhanden ist
     const pNameValue = structuredDataSource['p_name[de]'] || structuredDataSource['P Name[de]'] || structuredDataSource['p_name'] || 'NICHT GEFUNDEN';
-    console.log(`🔍 p_name[de] Wert: ${typeof pNameValue === 'string' ? pNameValue.substring(0, 100) : 'kein String'}`);
     
     const directTechSpecs = extractTechSpecs1to1(
       productData.extractedText || '',
@@ -73,13 +71,11 @@ async function generateProductCopyModular(
       categoryConfig
     );
     
-    console.log(`🔍 directTechSpecs nach Extraktion: ${JSON.stringify(directTechSpecs)}`);
     
     // NUR 1:1 extrahierte Specs verwenden - KEINE AI-Fallbacks für technische Daten!
     // AI darf technische Werte nicht erfinden (z.B. falsche Kapazität)
     const mergedTechSpecs = directTechSpecs;
 
-    console.log(`📊 Tech Specs: ${Object.keys(mergedTechSpecs).length} Felder (nur 1:1 aus CSV, AI-Specs ignoriert)`);
 
     return {
       tagline: result.tagline, // Neue Tagline für h2
@@ -643,7 +639,6 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
         ];
         for (const pattern of batterieVerboten) {
           if (pattern.test(vorteil)) {
-            console.log(`🚫 Vorteil gefiltert (nicht passend für Batterie): "${vorteil}"`);
             return false;
           }
         }
@@ -663,14 +658,12 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       ];
       for (const pattern of einsatzbereichePatterns) {
         if (pattern.test(vorteil)) {
-          console.log(`🚫 Vorteil gefiltert (ist Einsatzbereich): "${vorteil}"`);
           return false;
         }
       }
       
       for (const pattern of verbotenePatterns) {
         if (pattern.test(vorteil)) {
-          console.log(`🚫 Vorteil gefiltert (technische Daten): "${vorteil}"`);
           return false;
         }
       }
@@ -762,7 +755,6 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       structuredDataSource,
       categoryConfig
     );
-    console.log(`📊 Tech Specs (monolithic): ${Object.keys(directTechSpecs).length} Felder (nur 1:1 aus CSV)`);
 
     return {
       tagline: tagline,
