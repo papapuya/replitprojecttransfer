@@ -686,9 +686,8 @@ export default function CSVBulkDescription() {
     // Wh-Angaben entfernen (z.B. "37 Wh", "– 37 Wh")
     cleaned = cleaned.replace(/\s*–?\s*\d+\s*Wh\b/gi, '');
     
-    // Falsche mAh-Angaben entfernen (z.B. "37mAh", "37 mAh" - unrealistisch kleine Werte)
-    // Entferne mAh-Werte unter 100 (unrealistisch für Akkus)
-    cleaned = cleaned.replace(/\s*–?\s*\d{1,2}\s*mAh\b/gi, '');
+    // HINWEIS: Kleine mAh-Werte (z.B. 15-80 mAh) sind bei CMOS-Batterien korrekt
+    // Keine automatische Filterung - CSV-Daten sind valide
     
     // Wenn Volt-Wert vorhanden, am Ende hinzufügen
     if (voltValue && voltValue.trim()) {
@@ -707,16 +706,13 @@ export default function CSVBulkDescription() {
     return cleaned;
   };
 
-  // Bereinigt die Produktbeschreibung: Falsche mAh/Wh-Werte entfernen
+  // Bereinigt die Produktbeschreibung
   const cleanDescription = (html: string): string => {
     if (!html) return '';
     let cleaned = html;
     
-    // Falsche mAh-Angaben entfernen (unter 100 mAh = unrealistisch)
-    cleaned = cleaned.replace(/\b\d{1,2}\s*mAh\b/gi, '');
-    
-    // Falsche Wh-Angaben entfernen (z.B. "37 Wh" ohne echte Daten)
-    cleaned = cleaned.replace(/\b\d{1,2}\s*Wh\b/gi, '');
+    // HINWEIS: Kleine mAh/Wh-Werte (z.B. 15-80 mAh) sind bei CMOS-Batterien korrekt
+    // Backend liefert validierte Daten - keine automatische Filterung
     
     // Doppelte Leerzeichen bereinigen
     cleaned = cleaned.replace(/\s+/g, ' ');
