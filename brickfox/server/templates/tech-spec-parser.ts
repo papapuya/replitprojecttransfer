@@ -780,7 +780,10 @@ export function extractTechSpecs1to1(
   
   // 1. KAPAZITÄT aus Produktname extrahieren (falls nicht vorhanden ODER leer)
   const currentKapazitaet = specs['Kapazität']?.trim();
+  console.log(`📊 Kapazität-Check: Aktueller Wert = "${currentKapazitaet || '(leer)'}"`);
+  
   if ((!currentKapazitaet || currentKapazitaet === '' || currentKapazitaet === '-') && structuredData) {
+    console.log(`🔍 Kapazität ist leer, suche in ${fieldsToCheck.length} Produktname-Feldern...`);
     for (const field of fieldsToCheck) {
       // Pattern: "50 mAh", "1821mAh", "1.821 mAh", auch nach Komma: ", 50 mAh"
       const mahMatch = field.match(/(\d+[.,]?\d*)\s*mAh/i);
@@ -793,10 +796,14 @@ export function extractTechSpecs1to1(
         }
         mahValue = mahValue.replace(',', '');
         specs['Kapazität'] = `${mahValue} mAh`;
-        console.log(`🔋 Kapazität aus Produktname: ${specs['Kapazität']} (aus: "${field.substring(0, 80)}")`);
+        console.log(`🔋 Kapazität aus Produktname extrahiert: ${specs['Kapazität']} (aus: "${field.substring(0, 80)}")`);
         break;
+      } else {
+        console.log(`⏭️ Kein mAh-Pattern in: "${field.substring(0, 60)}..."`);
       }
     }
+  } else {
+    console.log(`✅ Kapazität bereits vorhanden: "${currentKapazitaet}"`);
   }
   
   // 2. FARBE aus Produktname extrahieren - NUR deutsche Farben (englische gehören zu Modellnamen wie "Hero7 Black")
