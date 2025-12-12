@@ -442,9 +442,13 @@ EINSATZBEREICHE = WO/WOFÜR wird das Produkt verwendet?
   Die kompakte Bauweise ermöglicht Ihnen einen schnellen Akkuwechsel auch unterwegs. 
   So verpassen Sie keinen wichtigen Moment mehr."
   
-  ❌ VERBOTEN:
-  - Call-to-Actions wie "Bestellen Sie jetzt", "Jetzt kaufen"
-  - Technische Daten (mAh, Volt) – gehören in die Tabelle!
+  ❌ STRENG VERBOTEN IN EINSATZBEREICHE:
+  - KEINE Modellnamen (iPhone, GoPro, SJ4000, etc.) – stehen bereits in Kompatibilität!
+  - KEINE Gerätenamen oder Produktnummern
+  - KEINE technischen Daten (mAh, Volt, Kapazität)
+  - KEINE Call-to-Actions ("Bestellen Sie jetzt", "Jetzt kaufen")
+  
+  ✅ Stattdessen: Allgemeine Anwendungsszenarien beschreiben (Outdoor, Reisen, Fotografie, etc.)
 
 ⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
 Bei BATTERIEN (CR2032, AA, AAA): "passend zu", "geeignet für", "ersetzt" - NICHT "kompatibel"!
