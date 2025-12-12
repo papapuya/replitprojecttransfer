@@ -1707,6 +1707,17 @@ export default function CSVBulkDescription() {
                   >
                     Zurücksetzen
                   </Button>
+                  <Input
+                    value={productFilter}
+                    onChange={(e) => setProductFilter(e.target.value)}
+                    placeholder="Filter..."
+                    className="w-48 h-8 text-sm"
+                  />
+                  {productFilter && (
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {filteredProducts.length} von {bulkProducts.length}
+                    </span>
+                  )}
                 </div>
               </div>
 
