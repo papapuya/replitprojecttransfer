@@ -457,11 +457,15 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       console.log(`⚡ BrickFox Spannung: ${value} → ${correctedVoltage}`);
     }
     
-    // Kapazität: NICHT aus CSV-Attribut extrahieren - wird IMMER aus Produktname geholt
-    // Das CSV-Feld p_attributes[akku_mah][de] enthält oft nur Zahlen ohne Einheit
-    // Der Produktname enthält den korrekten Wert wie "7.2V, 80 mAh"
-    if (keyLower.includes('akku_mah') || keyLower.includes('capacity')) {
-      console.log(`⏭️ CSV-Kapazität übersprungen (wird aus Produktname extrahiert): ${value}`);
+    // Kapazität: p_attributes[akku_mah][de] - einfach Zahl + "mAh" anhängen
+    if (keyLower.includes('akku_mah')) {
+      // Extrahiere nur die Zahl(en) und formatiere
+      const numMatch = valTrimmed.match(/^(\d+)/);
+      if (numMatch) {
+        const capacityValue = `${numMatch[1]} mAh`;
+        specs['Kapazität'] = capacityValue;
+        console.log(`🔋 CSV-Kapazität: ${valTrimmed} → ${capacityValue}`);
+      }
     }
     
     // Akkutyp/Chemie: p_attributes[akku_chemie][de]
