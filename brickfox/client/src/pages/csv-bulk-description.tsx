@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft, XCircle, Languages, RefreshCw } from "lucide-react";
+import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft, XCircle, Languages, RefreshCw, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -75,6 +75,7 @@ export default function CSVBulkDescription() {
   const [file, setFile] = useState<File | null>(null);
   const [bulkProducts, setBulkProducts] = useState<BulkProduct[]>([]);
   const [rawData, setRawData] = useState<RawCSVRow[]>([]);
+  const [previewFilter, setPreviewFilter] = useState<string>('');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
@@ -1364,9 +1365,28 @@ export default function CSVBulkDescription() {
 
             {/* CSV Rohdaten Vorschau mit KI-Feldern */}
             <Card className="p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">
-                CSV Vorschau ({rawData.length} Zeilen) + KI-Felder {processing && '🔄'}
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">
+                  CSV Vorschau ({rawData.length} Zeilen) + KI-Felder {processing && '🔄'}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={previewFilter}
+                    onChange={(e) => setPreviewFilter(e.target.value)}
+                    placeholder="Filter..."
+                    className="w-48 h-8 text-sm"
+                  />
+                  {previewFilter && (
+                    <span className="text-xs text-muted-foreground">
+                      {rawData.filter(row => 
+                        Object.values(row).some(v => 
+                          String(v).toLowerCase().includes(previewFilter.toLowerCase())
+                        )
+                      ).length} gefunden
+                    </span>
+                  )}
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-xs">
                   <thead>
@@ -1399,23 +1419,67 @@ export default function CSVBulkDescription() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rawData.slice(0, 15).map((row, index) => {
-                      const generatedProduct = bulkProducts.find(p => p.id === index + 1);
+                    {(() => {
+                      const filteredRawData = previewFilter 
+                        ? rawData.filter(row => 
+                            Object.values(row).some(v => 
+                              String(v).toLowerCase().includes(previewFilter.toLowerCase())
+                            )
+                          )
+                        : rawData;
                       
-                      return (
-                        <tr
-                          key={index}
-                          className={index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
-                        >
+                      return filteredRawData.slice(0, 15).map((row, filteredIndex) => {
+                        const originalIndex = rawData.indexOf(row);
+                        const generatedProduct = bulkProducts.find(p => p.id === originalIndex + 1);
+                      
+                        return (
+                          <tr
+                            key={filteredIndex}
+                            className={filteredIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
+                          >
                           {/* CSV Daten */}
-                          {Object.values(row).map((value, cellIndex) => (
-                            <td
-                              key={cellIndex}
-                              className="px-2 py-1 text-foreground border border-border"
-                            >
-                              <span className="line-clamp-2">{value || '-'}</span>
-                            </td>
-                          ))}
+                          {Object.entries(row).map(([header, value], cellIndex) => {
+                            const isDescriptionCol = header.toLowerCase().includes('p_description');
+                            const htmlContent = String(value || '');
+                            
+                            return (
+                              <td
+                                key={cellIndex}
+                                className="px-2 py-1 text-foreground border border-border"
+                              >
+                                {isDescriptionCol && htmlContent.length > 10 ? (
+                                  <div className="flex items-center gap-1">
+                                    <span className="line-clamp-2 flex-1 text-xs">{htmlContent.substring(0, 60)}...</span>
+                                    <div className="flex gap-0.5 shrink-0">
+                                      <button
+                                        onClick={() => {
+                                          setHtmlPreviewContent(htmlContent);
+                                          setHtmlPreviewProductName(row['p_name[de]'] || row['produktname'] || 'Produkt');
+                                          setShowHtmlPreview(true);
+                                        }}
+                                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+                                        title="HTML Vorschau"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(htmlContent);
+                                          toast({ title: "Kopiert", description: "HTML in Zwischenablage" });
+                                        }}
+                                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+                                        title="HTML kopieren"
+                                      >
+                                        <Copy className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="line-clamp-2">{value || '-'}</span>
+                                )}
+                              </td>
+                            );
+                          })}
                           {/* KI-Spalten */}
                           <td className="px-2 py-1 border border-border bg-green-500/10 text-foreground">
                             {generatedProduct ? (
@@ -1451,10 +1515,11 @@ export default function CSVBulkDescription() {
                             ) : (
                               <span className="text-muted-foreground italic text-xs">wird generiert...</span>
                             )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
