@@ -457,6 +457,19 @@ EINSATZBEREICHE = WO/WOFÜR wird das Produkt verwendet?
   - KEINE Gerätenamen oder Produktnummern
   - KEINE technischen Daten (mAh, Volt, Kapazität)
   - KEINE Call-to-Actions ("Bestellen Sie jetzt", "Jetzt kaufen")
+  - NIEMALS "Fachmann", "Werkstatt", "Fachbetrieb" erwähnen – klingt abschreckend!
+  - NIEMALS "Reparatur" bei einfachen Ersatzteilen (Kabel, Flexkabel, Sensoren) – es ist nur ein Austausch!
+  
+  ⚠️ SPEZIALREGEL FÜR KABEL/FLEXKABEL/ERSATZTEILE:
+  Bei Produkten wie Flexkabel, Ladekabel, Dock-Connector, Sensoren, Lautsprecher, Kamera-Module:
+  - NICHT: "Lassen Sie das Teil vom Fachmann einbauen" → zu übertrieben
+  - NICHT: "Für die Reparatur Ihres Geräts" → es ist nur ein Austausch
+  - STATTDESSEN: Fokus auf den NUTZEN nach dem Austausch
+  
+  ✅ GUTES BEISPIEL für Flexkabel/Ersatzteile:
+  "Nach dem Austausch funktioniert Ihr Gerät wieder wie am ersten Tag.
+  Ob Musik hören, Laden oder Telefonieren – alle Funktionen stehen Ihnen wieder zur Verfügung.
+  Mit etwas Geschick und dem richtigen Werkzeug ist der Einbau gut machbar."
   
   ✅ Stattdessen: Allgemeine Anwendungsszenarien beschreiben (Outdoor, Reisen, Fotografie, etc.)
 
