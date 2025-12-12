@@ -78,8 +78,6 @@ export default function CSVBulkDescription() {
   const [previewFilter, setPreviewFilter] = useState<string>('');
   const [showPreviewColumnSelector, setShowPreviewColumnSelector] = useState(false);
   const [visibleKiColumns, setVisibleKiColumns] = useState<string[]>(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'seo_beschreibung', 'keywords']);
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
@@ -1278,49 +1276,19 @@ export default function CSVBulkDescription() {
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </Button>
-                  <Button
-                    variant={showFilterPanel ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setShowFilterPanel(!showFilterPanel)}
-                  >
-                    <Filter className="w-4 h-4 mr-2" />
-                    Filter {activeFilters.length > 0 && `(${activeFilters.length})`}
-                  </Button>
                   <Input
                     value={previewFilter}
                     onChange={(e) => setPreviewFilter(e.target.value)}
-                    placeholder="Suche..."
+                    placeholder="Filter..."
                     className="w-48 h-8 text-sm"
                   />
-                  {(previewFilter || activeFilters.length > 0) && (
+                  {previewFilter && (
                     <span className="text-xs text-muted-foreground">
-                      {rawData.filter(row => {
-                        // Text-Filter
-                        const matchesText = !previewFilter || Object.values(row).some(v => 
+                      {rawData.filter(row => 
+                        Object.values(row).some(v => 
                           String(v).toLowerCase().includes(previewFilter.toLowerCase())
-                        );
-                        // Checkbox-Filter
-                        const matchesFilters = activeFilters.length === 0 || activeFilters.every(f => {
-                          if (f === 'ohne_nl_desc') {
-                            const nlDescKey = Object.keys(row).find(k => k.includes('p_description[nl]'));
-                            return !nlDescKey || !row[nlDescKey] || String(row[nlDescKey]).length < 10;
-                          }
-                          if (f === 'ohne_nl_name') {
-                            const nlNameKey = Object.keys(row).find(k => k.includes('p_name[nl]'));
-                            return !nlNameKey || !row[nlNameKey] || String(row[nlNameKey]).length < 3;
-                          }
-                          if (f === 'mit_desc') {
-                            const descKey = Object.keys(row).find(k => k.includes('p_description[de]'));
-                            return descKey && row[descKey] && String(row[descKey]).length > 50;
-                          }
-                          if (f === 'ohne_desc') {
-                            const descKey = Object.keys(row).find(k => k.includes('p_description[de]'));
-                            return !descKey || !row[descKey] || String(row[descKey]).length < 50;
-                          }
-                          return true;
-                        });
-                        return matchesText && matchesFilters;
-                      }).length} gefunden
+                        )
+                      ).length} gefunden
                     </span>
                   )}
                 </div>
@@ -1427,18 +1395,22 @@ export default function CSVBulkDescription() {
                   </thead>
                   <tbody>
                     {(() => {
-                      return rawData.map((row, rowIndex) => {
-                        const generatedProduct = bulkProducts.find(p => p.id === rowIndex + 1);
-                        const matchesFilter = previewFilter 
-                          ? Object.values(row).some(v => 
+                      const filteredRawData = previewFilter 
+                        ? rawData.filter(row => 
+                            Object.values(row).some(v => 
                               String(v).toLowerCase().includes(previewFilter.toLowerCase())
                             )
-                          : false;
+                          )
+                        : rawData;
+                      
+                      return filteredRawData.map((row, filteredIndex) => {
+                        const originalIndex = rawData.indexOf(row);
+                        const generatedProduct = bulkProducts.find(p => p.id === originalIndex + 1);
                       
                         return (
                           <tr
-                            key={rowIndex}
-                            className={`${rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'} ${previewFilter && matchesFilter ? 'ring-2 ring-primary ring-inset bg-primary/10' : ''} ${previewFilter && !matchesFilter ? 'opacity-40' : ''}`}
+                            key={filteredIndex}
+                            className={filteredIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
                           >
                           {/* CSV Daten - nur p_id, p_name[de/nl], p_description[de/nl] */}
                           {['p_id', 'p_name[de]', 'p_name[nl]', 'p_description[de]', 'p_description[nl]']
