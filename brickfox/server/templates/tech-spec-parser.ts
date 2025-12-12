@@ -457,19 +457,11 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       console.log(`⚡ BrickFox Spannung: ${value} → ${correctedVoltage}`);
     }
     
-    // Kapazität: p_attributes[akku_mah][de] oder ähnlich
-    if (keyLower.includes('akku_mah') || keyLower.includes('capacity') || 
-        (keyLower.includes('kapazit') && !specs['Kapazität'])) {
-      let capacityValue = valTrimmed;
-      if (!value.toLowerCase().includes('wh') && !value.toLowerCase().includes('mah')) {
-        capacityValue = `${capacityValue} mAh`;
-      } else if (value.toLowerCase().includes('mah')) {
-        capacityValue = value;
-      }
-      if (!value.toLowerCase().includes('wh')) {
-        specs['Kapazität'] = capacityValue;
-        console.log(`🔋 BrickFox Kapazität: ${value} → ${capacityValue}`);
-      }
+    // Kapazität: NICHT aus CSV-Attribut extrahieren - wird IMMER aus Produktname geholt
+    // Das CSV-Feld p_attributes[akku_mah][de] enthält oft nur Zahlen ohne Einheit
+    // Der Produktname enthält den korrekten Wert wie "7.2V, 80 mAh"
+    if (keyLower.includes('akku_mah') || keyLower.includes('capacity')) {
+      console.log(`⏭️ CSV-Kapazität übersprungen (wird aus Produktname extrahiert): ${value}`);
     }
     
     // Akkutyp/Chemie: p_attributes[akku_chemie][de]
@@ -755,17 +747,36 @@ export function extractTechSpecs1to1(
   // Suche Produktname in allen möglichen Feldvarianten
   const fieldsToCheck: string[] = [];
   if (structuredData) {
-    // Durchsuche ALLE Felder nach p_name Pattern
+    // PRIORITÄT 1: Exaktes p_name[de] Feld (mit Klammern im Key)
+    for (const [key, value] of Object.entries(structuredData)) {
+      if (typeof value === 'string' && value.trim()) {
+        // Exakte Matches für p_name[de] (verschiedene Schreibweisen)
+        if (key === 'p_name[de]' || key === 'P Name[de]' || key === 'P_name[de]') {
+          fieldsToCheck.unshift(value);
+          console.log(`🎯 Produktname-Feld gefunden: "${key}" = "${value.substring(0, 60)}..."`);
+        }
+      }
+    }
+    
+    // PRIORITÄT 2: Andere Produktname-Felder
     for (const [key, value] of Object.entries(structuredData)) {
       if (typeof value === 'string' && value.trim()) {
         const keyLower = key.toLowerCase();
-        // Produktname-Felder (höchste Priorität)
-        if (keyLower.includes('p_name') || keyLower.includes('produktname') || 
-            keyLower.includes('productname') || keyLower === 'name' || keyLower === 'bezeichnung') {
-          fieldsToCheck.unshift(value); // Am Anfang einfügen
+        // Produktname-Felder (aber nicht wenn schon hinzugefügt)
+        if ((keyLower.includes('p_name') || keyLower.includes('produktname') || 
+            keyLower.includes('productname') || keyLower === 'name' || keyLower === 'bezeichnung') &&
+            !fieldsToCheck.includes(value)) {
+          fieldsToCheck.push(value);
         }
-        // Beschreibungs-Felder (niedrigere Priorität)
-        else if (keyLower.includes('p_description') || keyLower.includes('beschreibung')) {
+      }
+    }
+    
+    // PRIORITÄT 3: Beschreibungs-Felder (nur als Fallback)
+    for (const [key, value] of Object.entries(structuredData)) {
+      if (typeof value === 'string' && value.trim()) {
+        const keyLower = key.toLowerCase();
+        if ((keyLower.includes('p_description') || keyLower.includes('beschreibung')) &&
+            !fieldsToCheck.includes(value)) {
           fieldsToCheck.push(value);
         }
       }
