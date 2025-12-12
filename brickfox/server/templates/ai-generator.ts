@@ -411,7 +411,7 @@ NICHT in die Vorteile, NICHT in den Fließtext!
 
 - technicalSpecs: Bei Akkus UND Batterien (produktTyp="akku"). Leeres Objekt {} bei Werkzeug/Elektronik.
   WICHTIG: Nur Felder mit ECHTEN Werten aus der CSV eintragen! KEINE leeren Felder wie "Kapazität": "" generieren!
-- packageContents: PFLICHT. Mindestens das Produkt selbst
+- packageContents: PFLICHT. NUR das Hauptprodukt selbst, z.B. ["1x Akku"] oder ["1x Ladegerät"] oder ["1x Werkzeug-Set"]. KEINE Kompatibilitätsinfos, KEINE Geräteliste!
 - zeigeTabelle: true NUR bei Akkus, sonst false
 
 ═══════════════════════════════════════════════════════════════
