@@ -1161,6 +1161,105 @@ export default function CSVBulkDescription() {
                     <Settings2 className="w-4 h-4 mr-2" />
                     Spalten
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      // DeepL Übersetzung für rawData
+                      const descKey = Object.keys(rawData[0] || {}).find(k => k.toLowerCase().includes('p_description[de]'));
+                      const nameKey = Object.keys(rawData[0] || {}).find(k => k.toLowerCase().includes('p_name[de]'));
+                      if (!descKey) {
+                        toast({ title: "Fehler", description: "Keine p_description[de] Spalte gefunden", variant: "destructive" });
+                        return;
+                      }
+                      
+                      setIsTranslating(true);
+                      let translated = 0;
+                      
+                      for (let i = 0; i < rawData.length; i++) {
+                        const row = rawData[i];
+                        const nlDescKey = descKey.replace('[de]', '[nl]');
+                        const nlNameKey = nameKey?.replace('[de]', '[nl]');
+                        
+                        // Nur übersetzen wenn noch keine NL-Version vorhanden
+                        if (row[nlDescKey] && String(row[nlDescKey]).length > 10) continue;
+                        
+                        try {
+                          const response = await fetch('/api/translate-product', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              produktName: nameKey ? row[nameKey] : '',
+                              produktBeschreibung: row[descKey]
+                            })
+                          });
+                          
+                          if (response.ok) {
+                            const result = await response.json();
+                            setRawData(prev => {
+                              const updated = [...prev];
+                              updated[i] = { 
+                                ...updated[i], 
+                                [nlDescKey]: result.produktBeschreibungNL || '',
+                                ...(nlNameKey ? { [nlNameKey]: result.produktNameNL || '' } : {})
+                              };
+                              return updated;
+                            });
+                            translated++;
+                          }
+                        } catch (err) {
+                          console.error('Übersetzungsfehler:', err);
+                        }
+                      }
+                      
+                      setIsTranslating(false);
+                      toast({ title: "Übersetzung abgeschlossen", description: `${translated} Beschreibungen übersetzt` });
+                    }}
+                    disabled={isTranslating}
+                  >
+                    {isTranslating ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Übersetze...
+                      </>
+                    ) : (
+                      <>
+                        <Languages className="w-4 h-4 mr-2" />
+                        NL
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      // CSV Export für rawData
+                      if (rawData.length === 0) return;
+                      
+                      const headers = Object.keys(rawData[0]);
+                      const csvContent = [
+                        headers.join(';'),
+                        ...rawData.map(row => 
+                          headers.map(h => {
+                            const val = String(row[h] || '');
+                            return `"${val.replace(/"/g, '""')}"`;
+                          }).join(';')
+                        )
+                      ].join('\n');
+                      
+                      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${file?.name?.replace('.csv', '') || 'export'}_bearbeitet.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      
+                      toast({ title: "Export erfolgreich", description: `${rawData.length} Zeilen exportiert` });
+                    }}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
                   <Input
                     value={previewFilter}
                     onChange={(e) => setPreviewFilter(e.target.value)}
