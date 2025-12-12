@@ -1548,8 +1548,8 @@ export default function CSVBulkDescription() {
                   : [];
                 
                 return (
-                  <div className="mt-6 p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
-                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-primary">
                       <Sparkles className="w-4 h-4" />
                       Bestehende Beschreibungen anpassen
                     </h4>
@@ -1567,7 +1567,7 @@ export default function CSVBulkDescription() {
                             value={regeneratePrompt}
                             onChange={(e) => setRegeneratePrompt(e.target.value)}
                             placeholder="z.B. 'Ändere den Einsatzbereich: Fokussiere auf den Nutzen nach dem Austausch'"
-                            className="w-full min-h-[60px] p-3 text-sm border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            className="w-full min-h-[60px] p-3 text-sm border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                           />
                         </div>
                         <Button
@@ -1623,7 +1623,7 @@ export default function CSVBulkDescription() {
                           }}
                           disabled={isRegenerating || !regeneratePrompt.trim()}
                           size="sm"
-                          className="w-full bg-amber-600 hover:bg-amber-700"
+                          className="w-full"
                         >
                           {isRegenerating ? (
                             <>
@@ -1641,7 +1641,7 @@ export default function CSVBulkDescription() {
                         {isRegenerating && regenerateProgress.total > 0 && (
                           <div className="w-full bg-muted rounded-full h-2">
                             <div 
-                              className="bg-amber-500 h-2 rounded-full transition-all duration-300" 
+                              className="bg-primary h-2 rounded-full transition-all duration-300" 
                               style={{ width: `${(regenerateProgress.current / regenerateProgress.total) * 100}%` }}
                             />
                           </div>
@@ -1650,7 +1650,7 @@ export default function CSVBulkDescription() {
                     )}
                     
                     {!previewFilter && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                      <p className="text-xs text-primary">
                         Gib oben einen Filter ein (z.B. "Flexkabel"), um Produkte zur Anpassung auszuwählen.
                       </p>
                     )}
