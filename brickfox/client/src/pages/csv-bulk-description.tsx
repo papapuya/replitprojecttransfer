@@ -1331,15 +1331,20 @@ export default function CSVBulkDescription() {
                 <table className="w-full border-collapse text-xs">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-muted">
-                      {/* CSV Spalten - ohne [nl] Spalten */}
-                      {Object.keys(rawData[0] || {}).filter(h => !h.includes('[nl]')).map((header) => (
-                        <th
-                          key={header}
-                          className="px-2 py-1 text-left font-semibold text-foreground border border-border whitespace-nowrap bg-muted"
-                        >
-                          {header}
-                        </th>
-                      ))}
+                      {/* CSV Spalten - nur p_id, p_name[de/nl], p_description[de/nl] */}
+                      {['p_id', 'p_name[de]', 'p_name[nl]', 'p_description[de]', 'p_description[nl]']
+                        .filter(col => Object.keys(rawData[0] || {}).some(k => k.toLowerCase() === col.toLowerCase() || k.includes(col)))
+                        .map((header) => {
+                          const actualKey = Object.keys(rawData[0] || {}).find(k => k.toLowerCase() === header.toLowerCase() || k.includes(header)) || header;
+                          return (
+                            <th
+                              key={actualKey}
+                              className="px-2 py-1 text-left font-semibold text-foreground border border-border whitespace-nowrap bg-muted"
+                            >
+                              {actualKey}
+                            </th>
+                          );
+                        })}
                       {/* KI-generierte Spalten - nur sichtbare */}
                       {visibleKiColumns.includes('produktname_neu') && (
                         <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
@@ -1387,49 +1392,53 @@ export default function CSVBulkDescription() {
                             key={filteredIndex}
                             className={filteredIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
                           >
-                          {/* CSV Daten - ohne [nl] Spalten */}
-                          {Object.entries(row).filter(([header]) => !header.includes('[nl]')).map(([header, value], cellIndex) => {
-                            const isDescriptionCol = header.toLowerCase().includes('p_description');
-                            const htmlContent = String(value || '');
-                            
-                            return (
-                              <td
-                                key={cellIndex}
-                                className="px-2 py-1 text-foreground border border-border"
-                              >
-                                {isDescriptionCol && htmlContent.length > 10 ? (
-                                  <div className="flex items-center gap-1">
-                                    <span className="line-clamp-2 flex-1 text-xs">{htmlContent.substring(0, 60)}...</span>
-                                    <div className="flex gap-0.5 shrink-0">
-                                      <button
-                                        onClick={() => {
-                                          setHtmlPreviewContent(htmlContent);
-                                          setHtmlPreviewProductName(row['p_name[de]'] || row['produktname'] || 'Produkt');
-                                          setShowHtmlPreview(true);
-                                        }}
-                                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
-                                        title="HTML Vorschau"
-                                      >
-                                        <Eye className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          navigator.clipboard.writeText(htmlContent);
-                                          toast({ title: "Kopiert", description: "HTML in Zwischenablage" });
-                                        }}
-                                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
-                                        title="HTML kopieren"
-                                      >
-                                        <Copy className="w-3 h-3" />
-                                      </button>
+                          {/* CSV Daten - nur p_id, p_name[de/nl], p_description[de/nl] */}
+                          {['p_id', 'p_name[de]', 'p_name[nl]', 'p_description[de]', 'p_description[nl]']
+                            .map(col => {
+                              const actualKey = Object.keys(row).find(k => k.toLowerCase() === col.toLowerCase() || k.includes(col));
+                              if (!actualKey) return null;
+                              const value = row[actualKey];
+                              const isDescriptionCol = actualKey.toLowerCase().includes('p_description');
+                              const htmlContent = String(value || '');
+                              
+                              return (
+                                <td
+                                  key={actualKey}
+                                  className="px-2 py-1 text-foreground border border-border"
+                                >
+                                  {isDescriptionCol && htmlContent.length > 10 ? (
+                                    <div className="flex items-center gap-1">
+                                      <span className="line-clamp-2 flex-1 text-xs">{htmlContent.substring(0, 60)}...</span>
+                                      <div className="flex gap-0.5 shrink-0">
+                                        <button
+                                          onClick={() => {
+                                            setHtmlPreviewContent(htmlContent);
+                                            setHtmlPreviewProductName(row['p_name[de]'] || row['produktname'] || 'Produkt');
+                                            setShowHtmlPreview(true);
+                                          }}
+                                          className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+                                          title="HTML Vorschau"
+                                        >
+                                          <Eye className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(htmlContent);
+                                            toast({ title: "Kopiert", description: "HTML in Zwischenablage" });
+                                          }}
+                                          className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+                                          title="HTML kopieren"
+                                        >
+                                          <Copy className="w-3 h-3" />
+                                        </button>
+                                      </div>
                                     </div>
-                                  </div>
-                                ) : (
-                                  <span className="line-clamp-2">{value || '-'}</span>
-                                )}
-                              </td>
-                            );
-                          })}
+                                  ) : (
+                                    <span className="line-clamp-2">{value || '-'}</span>
+                                  )}
+                                </td>
+                              );
+                            }).filter(Boolean)}
                           {/* KI-Spalten - nur sichtbare */}
                           {visibleKiColumns.includes('produktname_neu') && (
                             <td className="px-2 py-1 border border-border bg-green-500/10 text-foreground">
