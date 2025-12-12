@@ -379,28 +379,36 @@ WEITERE JSON-FELDER:
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
-- uspBullets: 2-4 PRODUKTSPEZIFISCHE Vorteile (max 50 Zeichen, OHNE Modelle, mAh, Volt!).
-  
-  ⚠️ KRITISCH: NUR Vorteile nennen, die WIRKLICH auf DIESES Produkt zutreffen!
-  Leite Vorteile aus den CSV-DATEN ab - nicht aus generischen Phrasen!
-  
-  BEISPIELE für produktspezifische Vorteile (nicht generisch!):
-  - Lithium-Knopfzelle CR2032 → "Ideal für Uhren und Fernbedienungen", "Bis zu 10 Jahre lagerfähig"
-  - Laptop-Akku → "Schnelle Wiederherstellung der Mobilität", "Passgenau für Ihr Gerät"
-  - Werkzeug-Set 45-teilig → "Alles für die Haushaltsreparatur", "Ordentlich im Koffer verstaut"
-  - Handy-Akku → "Volle Power für Ihr Smartphone", "Einfacher Akkutausch möglich"
-  
-  ❌ ZU GENERISCH (VERBOTEN):
-  "Zuverlässige Stromversorgung", "Lange Lebensdauer", "Hohe Qualität", "Geprüfte Qualität"
-  → Diese Phrasen passen auf JEDES Produkt und sagen nichts Konkretes!
+═══════════════════════════════════════════════════════════════
+WICHTIG: UNTERSCHIED VORTEILE vs. EINSATZBEREICHE
+═══════════════════════════════════════════════════════════════
+
+VORTEILE (uspBullets) = Was KANN das Produkt? Produkteigenschaften!
+  ✅ "Bis zu 10 Jahre lagerfähig"
+  ✅ "Auslaufsicher und temperaturbeständig"  
+  ✅ "Konstante Spannungsabgabe"
+  ✅ "Einfacher Akkutausch möglich"
+  ❌ NIEMALS: "Ideal für Uhren" → Das ist ein EINSATZBEREICH!
+
+EINSATZBEREICHE = WO/WOFÜR wird das Produkt verwendet?
+  ✅ "Ideal für Uhren, Fernbedienungen und medizinische Geräte."
+  ✅ "Passend für Laptops und Notebooks verschiedener Hersteller."
+  ❌ NIEMALS: "Lange Haltbarkeit" → Das ist ein VORTEIL!
+
+- uspBullets: 2-4 PRODUKTSPEZIFISCHE Vorteile (max 50 Zeichen).
+  NUR Produkteigenschaften, KEINE Einsatzbereiche!
   
   ❌ VERBOTEN in uspBullets:
+  - "Ideal für...", "Passend für...", "Geeignet für..." → gehört in einsatzbereiche!
   - "Schutzschaltung" (nur wenn explizit in CSV!)
-  - "Einfache Installation" (bei Batterien sinnlos!)
   - Modellnummern, mAh, Ah, Volt, Gerätenamen
-  - Generische Phrasen ohne Produktbezug
+  - Generische Phrasen: "Hohe Qualität", "Lange Lebensdauer"
   
-  ✅ Lieber WENIGER aber PASSENDE Vorteile (2-3 gute statt 5 generische)!
+  ✅ Lieber 2 gute Vorteile als 4 generische!
+
+- einsatzbereiche: 1-2 Sätze zu konkreten Anwendungsgebieten.
+  NUR wo/wofür das Produkt verwendet wird!
+  Beispiel: "Ideal für Uhren, Fernbedienungen und Taschenrechner."
 
 ⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
 Bei BATTERIEN (CR2032, AA, AAA): "passend zu", "geeignet für", "ersetzt" - NICHT "kompatibel"!
@@ -601,6 +609,25 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
         }
       }
       
+      // Einsatzbereiche gehören NICHT in Vorteile - diese filtern
+      const einsatzbereichePatterns = [
+        /^Ideal für/i,
+        /^Passend für/i,
+        /^Geeignet für/i,
+        /^Perfekt für/i,
+        /für Uhren/i,
+        /für Fernbedienungen/i,
+        /für Taschenrechner/i,
+        /für Laptops/i,
+        /für Notebooks/i,
+      ];
+      for (const pattern of einsatzbereichePatterns) {
+        if (pattern.test(vorteil)) {
+          console.log(`🚫 Vorteil gefiltert (ist Einsatzbereich): "${vorteil}"`);
+          return false;
+        }
+      }
+      
       for (const pattern of verbotenePatterns) {
         if (pattern.test(vorteil)) {
           console.log(`🚫 Vorteil gefiltert (technische Daten): "${vorteil}"`);
@@ -678,6 +705,7 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     
     const kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
     const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
+    const einsatzbereiche = parsedContent.einsatzbereiche || '';
     const apnSatz = parsedContent.apnSatz || '';
     const fazit = parsedContent.fazit || '';
     const lieferumfang = parsedContent.lieferumfang || parsedContent.packageContents || [];
@@ -714,6 +742,7 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       zeigeTabelle: zeigeTabelle,
       produktTyp: produktTyp as 'akku' | 'elektronik' | 'werkzeug',
       produktTitel: produktTitel,
+      einsatzbereiche: einsatzbereiche,
     };
 
   } catch (error) {

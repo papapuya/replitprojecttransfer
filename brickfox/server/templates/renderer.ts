@@ -582,6 +582,7 @@ function renderMediaMarktLayout(data: {
   categoryId?: string;
   zeigeTabelle?: boolean;
   produktTyp?: 'akku' | 'elektronik' | 'werkzeug';
+  einsatzbereiche?: string;
 }): string {
   const e = encodeHtmlEntities;
   
@@ -721,6 +722,14 @@ ${werkzeuguebersichtHtml}`;
 <p>
 ${vorteileHtml}
 </p>`;
+  }
+
+  // Einsatzbereiche als Fließtext nach den Vorteilen
+  const einsatzbereicheText = data.einsatzbereiche ? e(data.einsatzbereiche).trim() : '';
+  if (einsatzbereicheText) {
+    html += `
+<h2>Einsatzbereiche</h2>
+<p>${einsatzbereicheText}</p>`;
   }
 
   if (techTableHtml) {
