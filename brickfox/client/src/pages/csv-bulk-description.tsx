@@ -100,6 +100,7 @@ export default function CSVBulkDescription() {
   const [productFilter, setProductFilter] = useState<string>('');
   const [regeneratePrompt, setRegeneratePrompt] = useState<string>('');
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [regenerateProgress, setRegenerateProgress] = useState({ current: 0, total: 0 });
   
   // Abbruch-Referenz für die AI-Generierung
   const abortRef = useRef(false);
@@ -866,7 +867,9 @@ export default function CSVBulkDescription() {
     }
 
     setIsRegenerating(true);
+    setRegenerateProgress({ current: 0, total: filteredProducts.length });
     let updated = 0;
+    let processed = 0;
 
     try {
       for (const product of filteredProducts) {
@@ -908,6 +911,9 @@ export default function CSVBulkDescription() {
         } catch (err) {
           console.error(`Fehler bei Produkt ${product.id}:`, err);
         }
+        
+        processed++;
+        setRegenerateProgress({ current: processed, total: filteredProducts.length });
       }
 
       toast({
@@ -922,6 +928,7 @@ export default function CSVBulkDescription() {
       });
     } finally {
       setIsRegenerating(false);
+      setRegenerateProgress({ current: 0, total: 0 });
     }
   };
 
@@ -1609,6 +1616,20 @@ export default function CSVBulkDescription() {
                           className="w-full min-h-[80px] p-3 text-sm border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
+                      {isRegenerating && regenerateProgress.total > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Fortschritt</span>
+                            <span className="font-medium">{regenerateProgress.current} / {regenerateProgress.total}</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2.5">
+                            <div 
+                              className="bg-primary h-2.5 rounded-full transition-all duration-300" 
+                              style={{ width: `${(regenerateProgress.current / regenerateProgress.total) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                       <Button
                         onClick={handleRegenerateFiltered}
                         disabled={isRegenerating || !regeneratePrompt.trim()}
@@ -1618,7 +1639,7 @@ export default function CSVBulkDescription() {
                         {isRegenerating ? (
                           <>
                             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                            Regeneriere {filteredProducts.length} Produkte...
+                            Regeneriere... ({regenerateProgress.current}/{regenerateProgress.total})
                           </>
                         ) : (
                           <>
