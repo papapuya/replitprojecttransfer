@@ -76,6 +76,8 @@ export default function CSVBulkDescription() {
   const [bulkProducts, setBulkProducts] = useState<BulkProduct[]>([]);
   const [rawData, setRawData] = useState<RawCSVRow[]>([]);
   const [previewFilter, setPreviewFilter] = useState<string>('');
+  const [previewVisibleColumns, setPreviewVisibleColumns] = useState<string[]>([]);
+  const [showPreviewColumnSelector, setShowPreviewColumnSelector] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
@@ -248,6 +250,11 @@ export default function CSVBulkDescription() {
       setRawData(parseResult.data);
       setParseWarnings(parseResult.warnings);
       setSuccessMessage(`${parseResult.data.length} Zeilen erfolgreich eingelesen`);
+      
+      // Alle Spalten standardmäßig sichtbar machen
+      if (parseResult.data.length > 0) {
+        setPreviewVisibleColumns(Object.keys(parseResult.data[0]));
+      }
       setProcessing(false);
 
       // AI-Generierung wird NICHT automatisch gestartet - User muss Button klicken
@@ -1145,7 +1152,15 @@ export default function CSVBulkDescription() {
                 <h3 className="text-lg font-semibold text-foreground">
                   CSV Vorschau ({rawData.length} Zeilen) + KI-Felder {processing && '🔄'}
                 </h3>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPreviewColumnSelector(!showPreviewColumnSelector)}
+                  >
+                    <Settings2 className="w-4 h-4 mr-2" />
+                    Spalten
+                  </Button>
                   <Input
                     value={previewFilter}
                     onChange={(e) => setPreviewFilter(e.target.value)}
@@ -1163,15 +1178,64 @@ export default function CSVBulkDescription() {
                   )}
                 </div>
               </div>
-              <div className="overflow-x-auto">
+
+              {/* Spaltenkonfigurator */}
+              {showPreviewColumnSelector && rawData.length > 0 && (
+                <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold">Sichtbare Spalten auswählen</h4>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPreviewVisibleColumns(Object.keys(rawData[0] || {}))}
+                      >
+                        Alle
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPreviewVisibleColumns([])}
+                      >
+                        Keine
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {Object.keys(rawData[0] || {}).map(col => (
+                      <div key={col} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`preview-col-${col}`}
+                          checked={previewVisibleColumns.includes(col)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setPreviewVisibleColumns(prev => [...prev, col]);
+                            } else {
+                              setPreviewVisibleColumns(prev => prev.filter(c => c !== col));
+                            }
+                          }}
+                        />
+                        <Label
+                          htmlFor={`preview-col-${col}`}
+                          className="text-xs cursor-pointer truncate"
+                          title={col}
+                        >
+                          {col}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg">
                 <table className="w-full border-collapse text-xs">
-                  <thead>
+                  <thead className="sticky top-0 z-10">
                     <tr className="bg-muted">
-                      {/* CSV Spalten */}
-                      {Object.keys(rawData[0] || {}).map((header) => (
+                      {/* CSV Spalten - nur sichtbare */}
+                      {Object.keys(rawData[0] || {}).filter(header => previewVisibleColumns.includes(header)).map((header) => (
                         <th
                           key={header}
-                          className="px-2 py-1 text-left font-semibold text-foreground border border-border whitespace-nowrap"
+                          className="px-2 py-1 text-left font-semibold text-foreground border border-border whitespace-nowrap bg-muted"
                         >
                           {header}
                         </th>
@@ -1204,7 +1268,7 @@ export default function CSVBulkDescription() {
                           )
                         : rawData;
                       
-                      return filteredRawData.slice(0, 15).map((row, filteredIndex) => {
+                      return filteredRawData.map((row, filteredIndex) => {
                         const originalIndex = rawData.indexOf(row);
                         const generatedProduct = bulkProducts.find(p => p.id === originalIndex + 1);
                       
@@ -1213,8 +1277,8 @@ export default function CSVBulkDescription() {
                             key={filteredIndex}
                             className={filteredIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
                           >
-                          {/* CSV Daten */}
-                          {Object.entries(row).map(([header, value], cellIndex) => {
+                          {/* CSV Daten - nur sichtbare Spalten */}
+                          {Object.entries(row).filter(([header]) => previewVisibleColumns.includes(header)).map(([header, value], cellIndex) => {
                             const isDescriptionCol = header.toLowerCase().includes('p_description');
                             const htmlContent = String(value || '');
                             
@@ -1299,11 +1363,6 @@ export default function CSVBulkDescription() {
                   </tbody>
                 </table>
               </div>
-              {rawData.length > 15 && (
-                <p className="text-sm text-muted-foreground mt-4 text-center">
-                  Zeige erste 15 von {rawData.length} Zeilen
-                </p>
-              )}
 
               {/* Anpassungsfunktion für bereits generierte CSVs */}
               {(() => {
