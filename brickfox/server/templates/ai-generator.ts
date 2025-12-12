@@ -383,7 +383,7 @@ WEITERE JSON-FELDER:
   WICHTIG: Wähle Vorteile passend zur Produktkategorie!
   
   Bei AKKUS/BATTERIEN (produktTyp="akku"):
-  "Zuverlässige Stromversorgung", "Lange Lebensdauer", "Sichere Schutzschaltung", "Hohe Kapazität", "Schnelles Aufladen"
+  "Zuverlässige Stromversorgung", "Lange Lebensdauer", "Hohe Kapazität", "Schnelles Aufladen", "Geprüfte Qualität"
   
   Bei HÜLLEN/CASES/SCHUTZFOLIEN (Schutzzubehör):
   "Optimaler Displayschutz", "Perfekte Passform", "Kratzfeste Oberfläche", "Schlankes Design", "Einfache Montage"
@@ -576,6 +576,7 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
         /Galaxy\s+[SA]\d+/i,        // Samsung Galaxy Modelle
         /Presario\s+[A-Z]?\d+/i,    // Compaq Presario Modelle
         /ECR\d+|EA-\d+/i,           // Batterie-Codes
+        /Schutzschaltung/i,         // Schutzschaltung nur wenn explizit in CSV
       ];
       
       for (const pattern of verbotenePatterns) {
@@ -597,7 +598,7 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
         "Zuverlässige Stromversorgung",
         "Lange Lebensdauer",
         "Einfache Installation",
-        "Sichere Schutzschaltung",
+        "Hohe Kapazität",
         "Geprüfte Qualität"
       ];
     } else if (produktTyp === 'werkzeug') {

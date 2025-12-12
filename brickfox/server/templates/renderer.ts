@@ -631,11 +631,12 @@ function renderMediaMarktLayout(data: {
         return false;
       }
       
-      // Entferne Zeilen die Teilenummer/APN, Kompatibilität oder Modelle enthalten
+      // Entferne Zeilen die Teilenummer/APN, Kompatibilität, Modelle oder Schutzschaltung enthalten
       return !labelLower.includes('teilenummer') && 
              !labelLower.includes('apn') &&
              !labelLower.includes('kompatibil') &&
              !labelLower.includes('modell') &&
+             !labelLower.includes('schutzschaltung') &&
              labelLower !== 'part number';
     });
     allSpecs.push(...filteredSpecs);
