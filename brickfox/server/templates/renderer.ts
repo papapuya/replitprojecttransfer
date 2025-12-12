@@ -608,7 +608,7 @@ function renderMediaMarktLayout(data: {
   
   // Kompatibilität als Fließtext unter die Tabelle (nicht in Tabelle!)
   const kompatibilitaetHtml = (data.kompatibleModelle && data.kompatibleModelle.length > 0)
-    ? `<p style="margin-top: 1em;"><strong>Kompatibilit&auml;t:</strong> Passend f&uuml;r ${data.kompatibleModelle.slice(0, 10).join(', ')}${data.kompatibleModelle.length > 10 ? ' und weitere Modelle' : ''}.</p>`
+    ? `<p style="margin-top: 1em; margin-bottom: 32px;"><strong>Kompatibilit&auml;t:</strong> Passend f&uuml;r ${data.kompatibleModelle.slice(0, 10).join(', ')}${data.kompatibleModelle.length > 10 ? ' und weitere Modelle' : ''}.</p>`
     : '';
   
   // Technische Specs hinzufügen (bei Akkus) - filtere doppelte Teilenummer/APN Einträge und leere Werte
@@ -731,7 +731,7 @@ ${vorteileHtml}
   if (einsatzbereicheText) {
     html += `
 <h2 style="margin-top: 1.5em;">Einsatzbereiche</h2>
-<p>${einsatzbereicheText}</p>`;
+<p style="margin-bottom: 32px;">${einsatzbereicheText}</p>`;
   }
 
   if (techTableHtml) {
