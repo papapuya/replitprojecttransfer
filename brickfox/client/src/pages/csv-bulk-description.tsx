@@ -793,8 +793,8 @@ export default function CSVBulkDescription() {
         ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
       ].join('\n');
 
-      const BOM = '\uFEFF';
-      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+      // UTF-8 ohne BOM (für Brickfox-Import)
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
