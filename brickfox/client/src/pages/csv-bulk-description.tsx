@@ -793,8 +793,11 @@ export default function CSVBulkDescription() {
         ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
       ].join('\n');
 
-      // UTF-8 ohne BOM (für Brickfox-Import)
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      // UTF-8 ohne BOM - PIM-Systeme müssen UTF-8 unterstützen
+      // TextEncoder erzeugt valides UTF-8
+      const encoder = new TextEncoder();
+      const utf8Bytes = encoder.encode(csvContent);
+      const blob = new Blob([utf8Bytes], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
