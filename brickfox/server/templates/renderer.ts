@@ -736,7 +736,6 @@ ${vorteileHtml}
 
   if (techTableHtml) {
     html += `
-<br />
 ${techTableHtml}`;
   }
 
