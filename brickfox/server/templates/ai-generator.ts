@@ -395,10 +395,11 @@ WICHTIG: UNTERSCHIED VORTEILE vs. EINSATZBEREICHE
 ═══════════════════════════════════════════════════════════════
 
 VORTEILE (uspBullets) = Was KANN das Produkt? Produkteigenschaften!
-  ✅ "Bis zu 10 Jahre lagerfähig"
-  ✅ "Auslaufsicher und temperaturbeständig"  
-  ✅ "Konstante Spannungsabgabe"
-  ✅ "Einfacher Akkutausch möglich"
+  ✅ "Geringe Selbstentladung – auch nach Monaten noch einsatzbereit"
+  ✅ "Auslaufsicher und temperaturbeständig von -20°C bis +60°C"  
+  ✅ "Stabile Spannungsabgabe bis zur vollständigen Entladung"
+  ✅ "Werkzeugloser Akkutausch in wenigen Sekunden"
+  ✅ "Integrierte Überladungs- und Tiefentladeschutz-Elektronik"
   ❌ NIEMALS: "Ideal für Uhren" → Das ist ein EINSATZBEREICH!
 
 EINSATZBEREICHE = WO/WOFÜR wird das Produkt verwendet?
@@ -406,26 +407,39 @@ EINSATZBEREICHE = WO/WOFÜR wird das Produkt verwendet?
   ✅ "Passend für Laptops und Notebooks verschiedener Hersteller."
   ❌ NIEMALS: "Lange Haltbarkeit" → Das ist ein VORTEIL!
 
-- uspBullets: 2-4 PRODUKTSPEZIFISCHE Vorteile (max 50 Zeichen).
-  NUR Produkteigenschaften, KEINE Einsatzbereiche!
+- uspBullets: 3-4 SPEZIFISCHE Vorteile (50-80 Zeichen pro Vorteil).
+  Vorteile müssen KONKRET und AUSSAGEKRÄFTIG sein – keine generischen Phrasen!
+  
+  ⚠️ GUTE VS. SCHLECHTE VORTEILE:
+  ❌ SCHLECHT (zu kurz/generisch):
+  - "Zuverlässige Stromversorgung" → zu vage
+  - "Lange Lebensdauer" → nichtssagend
+  - "Einfache Installation" → zu allgemein
+  - "Hohe Qualität" → Floskel ohne Inhalt
+  
+  ✅ GUT (spezifisch und informativ):
+  - "Geringe Selbstentladung – bleibt auch nach Monaten einsatzbereit"
+  - "Konstante Spannung bis zur vollständigen Entladung"
+  - "Passgenauer Einbau ohne Nachbearbeitung"
+  - "Werkseitig geprüft und einzeln getestet"
+  - "Optimierte Zellchemie für maximale Ladezyklen"
   
   ⚠️ BESTEHENDE BULLETPOINTS VERBESSERN:
   Wenn im Feld "existingBullets" bestehende Vorteile vorhanden sind:
-  - Übernimm die INHALTLICHE Aussage, aber FORMULIERE BESSER
-  - Kürze auf max 50 Zeichen wenn nötig
+  - Übernimm die INHALTLICHE Aussage, aber FORMULIERE SPEZIFISCHER
+  - Erweitere auf 50-80 Zeichen mit konkreten Details
   - Entferne technische Daten (mAh, Volt, Modelle)
-  - Mache aus langen Sätzen kurze, prägnante Aussagen
   
   Wenn KEINE bestehenden Bullets vorhanden sind:
-  - Generiere 2-4 neue, produktspezifische Vorteile
+  - Generiere 3-4 neue, produktspezifische Vorteile
   
   ❌ VERBOTEN in uspBullets:
   - "Ideal für...", "Passend für...", "Geeignet für..." → gehört in einsatzbereiche!
   - "Schutzschaltung" (nur wenn explizit in CSV!)
   - Modellnummern, mAh, Ah, Volt, Gerätenamen
-  - Generische Phrasen: "Hohe Qualität", "Lange Lebensdauer"
+  - Generische Phrasen: "Hohe Qualität", "Lange Lebensdauer", "Zuverlässig", "Einfache Installation"
   
-  ✅ Lieber 2 gute Vorteile als 4 generische!
+  ✅ Lieber 3 spezifische Vorteile als 5 generische!
 
 - einsatzbereiche: 3-4 Sätze zu konkreten Anwendungsgebieten.
   STIL: Direkte Ansprache mit "Sie", verkaufsfördernd aber OHNE Call-to-Action!
@@ -670,66 +684,58 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       return true;
     });
     
-    // Produkttypspezifische Fallback-Vorteile (max 30 Zeichen)
-    // Wähle Fallbacks basierend auf Produktname für bessere Relevanz
+    // Produkttypspezifische Fallback-Vorteile (50-80 Zeichen, spezifisch)
     const produktNameLower = (productData.name || '').toLowerCase();
     
     let fallbackVorteile: string[];
     if (produktTyp === 'akku') {
       fallbackVorteile = [
-        "Zuverlässige Stromversorgung",
-        "Lange Lebensdauer",
-        "Hohe Kapazität",
-        "Konstante Spannung",
-        "Geprüfte Qualität"
+        "Geringe Selbstentladung – bleibt auch nach Monaten einsatzbereit",
+        "Konstante Spannungsabgabe bis zur vollständigen Entladung",
+        "Werkseitig geprüft und einzeln auf Kapazität getestet",
+        "Optimierte Zellchemie für maximale Ladezyklen"
       ];
     } else if (produktTyp === 'werkzeug') {
       fallbackVorteile = [
-        "Robuste Qualität",
-        "Ergonomisches Design",
-        "Langlebige Materialien",
-        "Präzise Verarbeitung",
-        "Vielseitig einsetzbar"
+        "Gehärteter Stahl für dauerhaft präzise Ergebnisse",
+        "Ergonomische Griffe für ermüdungsfreies Arbeiten",
+        "Korrosionsbeständige Oberfläche für lange Haltbarkeit",
+        "Übersichtliche Sortierung im stabilen Aufbewahrungskoffer"
       ];
     } else if (/case|hülle|cover|schutzhülle|backcase|bumper/i.test(produktNameLower)) {
       fallbackVorteile = [
-        "Perfekte Passform",
-        "Optimaler Schutz",
-        "Schlankes Design",
-        "Einfache Montage",
-        "Hochwertige Verarbeitung"
+        "Millimetergenaue Passform für alle Anschlüsse und Tasten",
+        "Stoßabsorbierende Materialien schützen bei Stürzen",
+        "Schlankes Design ohne Auftragen in der Tasche",
+        "Rutschfeste Oberfläche für sicheren Halt"
       ];
     } else if (/folie|displayschutz|screen.*protector/i.test(produktNameLower)) {
       fallbackVorteile = [
-        "Optimaler Displayschutz",
-        "Kratzfeste Oberfläche",
-        "Blasenfreie Montage",
-        "Hohe Transparenz",
-        "Einfache Anbringung"
+        "9H Härtegrad schützt zuverlässig vor Kratzern",
+        "Selbstklebende Schicht für blasenfreie Montage",
+        "Kristallklare Transparenz ohne Farbverfälschung",
+        "Oleophobe Beschichtung reduziert Fingerabdrücke"
       ];
     } else if (/kabel|cable|adapter|ladegerät|charger/i.test(produktNameLower)) {
       fallbackVorteile = [
-        "Schnelle Datenübertragung",
-        "Robustes Kabel",
-        "Sichere Verbindung",
-        "Universell einsetzbar",
-        "Kompaktes Design"
+        "Verstärkte Knickschutzhülsen an den Steckern",
+        "Abgeschirmtes Kabel für störungsfreie Übertragung",
+        "Vergoldete Kontakte für optimale Leitfähigkeit",
+        "Flexibles Material verhindert Kabelbruch"
       ];
     } else if (/tasche|halterung|ständer|halter|stand/i.test(produktNameLower)) {
       fallbackVorteile = [
-        "Sichere Aufbewahrung",
-        "Praktische Handhabung",
-        "Robustes Material",
-        "Platzsparend",
-        "Schneller Zugriff"
+        "Weiche Innenpolsterung schützt vor Kratzern",
+        "Stabile Konstruktion für sicheren Stand",
+        "Schnellverschluss für direkten Zugriff",
+        "Kompaktes Faltmaß für einfachen Transport"
       ];
     } else {
       fallbackVorteile = [
-        "Hochwertige Verarbeitung",
-        "Perfekte Passform",
-        "Optimaler Schutz",
-        "Einfache Handhabung",
-        "Geprüfte Qualität"
+        "Sorgfältig ausgewählte Materialien für lange Nutzungsdauer",
+        "Passgenau gefertigt ohne Nachbearbeitung",
+        "Jedes Produkt einzeln auf Funktion geprüft",
+        "Durchdachtes Design für einfache Handhabung"
       ];
     }
     
