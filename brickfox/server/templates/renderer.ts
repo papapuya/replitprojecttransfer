@@ -730,12 +730,13 @@ ${vorteileHtml}
   const einsatzbereicheText = data.einsatzbereiche ? e(data.einsatzbereiche).trim() : '';
   if (einsatzbereicheText) {
     html += `
-<h2>Einsatzbereiche</h2>
+<h2 style="margin-top: 1.5em;">Einsatzbereiche</h2>
 <p>${einsatzbereicheText}</p>`;
   }
 
   if (techTableHtml) {
     html += `
+<br />
 ${techTableHtml}`;
   }
 
