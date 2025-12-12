@@ -389,6 +389,11 @@ function buildTechnicalSpecsTable(
   fields: TechnicalField[]
 ): Array<{label: string, value: string}> {
   const result: Array<{label: string, value: string}> = [];
+  
+  // DEBUG: Prüfe ob Kapazität in specs ankommt
+  console.log(`🔍 buildTechnicalSpecsTable: specs enthält ${Object.keys(specs).length} Felder`);
+  console.log(`🔍 buildTechnicalSpecsTable: Kapazität = "${specs['Kapazität'] || 'NICHT VORHANDEN'}"`);
+  console.log(`🔍 buildTechnicalSpecsTable: Alle Schlüssel: ${Object.keys(specs).join(', ')}`);
 
   for (const [label, value] of Object.entries(specs)) {
     if (isExcludedMetadataField(label)) {
