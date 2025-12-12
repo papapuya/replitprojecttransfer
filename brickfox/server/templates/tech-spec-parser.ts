@@ -708,21 +708,36 @@ export function extractTechSpecs1to1(
     structuredData?.['P Name'],
     structuredData?.['p_name'],
     structuredData?.produktname,
+    structuredData?.productName,  // Hinzugefügt: camelCase
+    structuredData?.productname,  // Hinzugefügt: lowercase
     structuredData?.name,
     structuredData?.['P Description[de]'],
     structuredData?.['p_description[de]'],
     structuredData?.beschreibung,
   ].filter(v => v && typeof v === 'string');
   
-  // 1. KAPAZITÄT aus Produktname extrahieren (falls nicht vorhanden)
-  if (!specs['Kapazität'] && structuredData) {
+  // Debug: Zeige welche Felder gefunden wurden
+  if (fieldsToCheck.length > 0) {
+    console.log(`📋 Produktname-Felder für Extraktion: ${fieldsToCheck.length} gefunden`);
+    console.log(`📋 Erstes Feld: "${fieldsToCheck[0]?.substring(0, 80)}..."`);
+  }
+  
+  // 1. KAPAZITÄT aus Produktname extrahieren (falls nicht vorhanden ODER leer)
+  const currentKapazitaet = specs['Kapazität']?.trim();
+  if ((!currentKapazitaet || currentKapazitaet === '' || currentKapazitaet === '-') && structuredData) {
     for (const field of fieldsToCheck) {
-      // Pattern: "1821 mAh", "1821mAh", "1.821 mAh", "15mAh"
+      // Pattern: "50 mAh", "1821mAh", "1.821 mAh", auch nach Komma: ", 50 mAh"
       const mahMatch = field.match(/(\d+[.,]?\d*)\s*mAh/i);
       if (mahMatch) {
-        const mahValue = mahMatch[1].replace('.', '').replace(',', '');
+        // Bereinige den Wert - entferne Tausenderpunkte, behalte Dezimalkomma
+        let mahValue = mahMatch[1];
+        // Wenn es ein Punkt ist und danach 3+ Ziffern kommen, ist es ein Tausenderpunkt
+        if (mahValue.includes('.') && mahValue.split('.')[1]?.length >= 3) {
+          mahValue = mahValue.replace('.', '');
+        }
+        mahValue = mahValue.replace(',', '');
         specs['Kapazität'] = `${mahValue} mAh`;
-        console.log(`🔋 Kapazität aus Produktname: ${specs['Kapazität']}`);
+        console.log(`🔋 Kapazität aus Produktname: ${specs['Kapazität']} (aus: "${field.substring(0, 80)}")`);
         break;
       }
     }
