@@ -379,25 +379,24 @@ WEITERE JSON-FELDER:
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten
 - apnSatz: NUR bei Apple-Akkus mit APNs. SEO-Satz nach Kompatibilität. Leer "" wenn keine APNs.
 - werkzeuguebersicht: NUR bei Werkzeug-Sets. Liste der enthaltenen Werkzeuge
-- uspBullets: Max 5 Vorteile (max 30 Zeichen! OHNE Modelle, mAh, Volt!).
-  WICHTIG: Wähle Vorteile passend zur Produktkategorie!
+- uspBullets: 2-4 PRODUKTSPEZIFISCHE Vorteile (max 30 Zeichen! OHNE Modelle, mAh, Volt!).
   
-  Bei AKKUS/BATTERIEN (produktTyp="akku"):
-  "Zuverlässige Stromversorgung", "Lange Lebensdauer", "Hohe Kapazität", "Schnelles Aufladen", "Geprüfte Qualität"
+  ⚠️ KRITISCH: NUR Vorteile nennen, die WIRKLICH auf DIESES Produkt zutreffen!
+  Leite Vorteile aus den CSV-DATEN ab - nicht aus generischen Phrasen!
   
-  Bei HÜLLEN/CASES/SCHUTZFOLIEN (Schutzzubehör):
-  "Optimaler Displayschutz", "Perfekte Passform", "Kratzfeste Oberfläche", "Schlankes Design", "Einfache Montage"
+  BEISPIELE für produktspezifische Vorteile:
+  - Lithium-Batterie → "Lange Haltbarkeit", "Temperaturbeständig"
+  - Knopfzelle für Uhren → "Präzise Zeitmessung", "Auslaufsicher"
+  - Akku mit hoher Kapazität → "Lange Laufzeit", "Weniger Ladezyklen"
+  - Werkzeug-Set → "Vielseitig einsetzbar", "Komplett ausgestattet"
   
-  Bei KABELN/ADAPTERN/LADEGERÄTEN:
-  "Schnelle Datenübertragung", "Robustes Kabel", "Sichere Verbindung", "Universell einsetzbar", "Kompaktes Design"
+  ❌ VERBOTEN in uspBullets:
+  - "Schutzschaltung" (nur wenn explizit in CSV!)
+  - "Einfache Installation" (bei Batterien sinnlos!)
+  - Modellnummern, mAh, Ah, Volt, Gerätenamen
+  - Generische Phrasen ohne Produktbezug
   
-  Bei TASCHEN/HALTERUNGEN:
-  "Sichere Aufbewahrung", "Praktische Handhabung", "Robustes Material", "Platzsparend", "Schneller Zugriff"
-  
-  Bei WERKZEUG-SETS (produktTyp="werkzeug"):
-  "Robuste Qualität", "Ergonomische Griffe", "Präzise Verarbeitung", "Vielseitig einsetzbar", "Langlebige Materialien"
-  
-  VERBOTEN: Modellnummern, mAh, Ah, Volt, Gerätenamen!
+  ✅ Lieber WENIGER aber PASSENDE Vorteile (2-3 gute statt 5 generische)!
 
 ⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
 Bei BATTERIEN (CR2032, AA, AAA): "passend zu", "geeignet für", "ersetzt" - NICHT "kompatibel"!
