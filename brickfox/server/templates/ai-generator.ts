@@ -670,9 +670,8 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       ];
     }
     
-    const vorteile = filteredVorteile.length >= 3 
-      ? filteredVorteile.slice(0, 5)
-      : [...filteredVorteile, ...fallbackVorteile].slice(0, 5);
+    // Dynamische Anzahl Vorteile: Keine künstliche Auffüllung, max. 4
+    const vorteile = filteredVorteile.slice(0, 4);
     
     const kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
     const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
