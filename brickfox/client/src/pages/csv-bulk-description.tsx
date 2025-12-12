@@ -733,7 +733,7 @@ export default function CSVBulkDescription() {
     setIsDragging(false);
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     try {
       const selectedColumns = exportColumns.filter(col => col.enabled);
       
@@ -766,37 +766,11 @@ export default function CSVBulkDescription() {
 
       const BOM = '\uFEFF';
       const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const defaultFileName = `produktbeschreibungen_${new Date().toISOString().split('T')[0]}.csv`;
-
-      if ('showSaveFilePicker' in window) {
-        try {
-          const handle = await (window as any).showSaveFilePicker({
-            suggestedName: defaultFileName,
-            types: [{
-              description: 'CSV-Datei',
-              accept: { 'text/csv': ['.csv'] }
-            }]
-          });
-          const writable = await handle.createWritable();
-          await writable.write(BOM + csvContent);
-          await writable.close();
-          
-          toast({
-            title: "Export erfolgreich",
-            description: `${productsWithDescription.length} Zeilen gespeichert`,
-          });
-          return;
-        } catch (pickerError: any) {
-          if (pickerError.name === 'AbortError') {
-            return;
-          }
-        }
-      }
-
       const url = URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
       link.href = url;
-      link.download = defaultFileName;
+      link.download = `produktbeschreibungen_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
