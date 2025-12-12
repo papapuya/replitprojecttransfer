@@ -631,10 +631,11 @@ function renderMediaMarktLayout(data: {
         return false;
       }
       
-      // Entferne Zeilen die Teilenummer/APN oder Kompatibilität enthalten
+      // Entferne Zeilen die Teilenummer/APN, Kompatibilität oder Modelle enthalten
       return !labelLower.includes('teilenummer') && 
              !labelLower.includes('apn') &&
              !labelLower.includes('kompatibil') &&
+             !labelLower.includes('modell') &&
              labelLower !== 'part number';
     });
     allSpecs.push(...filteredSpecs);
