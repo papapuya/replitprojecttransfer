@@ -1331,8 +1331,8 @@ export default function CSVBulkDescription() {
                 <table className="w-full border-collapse text-xs">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-muted">
-                      {/* CSV Spalten - alle anzeigen */}
-                      {Object.keys(rawData[0] || {}).map((header) => (
+                      {/* CSV Spalten - ohne [nl] Spalten */}
+                      {Object.keys(rawData[0] || {}).filter(h => !h.includes('[nl]')).map((header) => (
                         <th
                           key={header}
                           className="px-2 py-1 text-left font-semibold text-foreground border border-border whitespace-nowrap bg-muted"
@@ -1387,8 +1387,8 @@ export default function CSVBulkDescription() {
                             key={filteredIndex}
                             className={filteredIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
                           >
-                          {/* CSV Daten - alle Spalten */}
-                          {Object.entries(row).map(([header, value], cellIndex) => {
+                          {/* CSV Daten - ohne [nl] Spalten */}
+                          {Object.entries(row).filter(([header]) => !header.includes('[nl]')).map(([header, value], cellIndex) => {
                             const isDescriptionCol = header.toLowerCase().includes('p_description');
                             const htmlContent = String(value || '');
                             
