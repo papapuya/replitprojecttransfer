@@ -110,6 +110,7 @@ export default function CSVBulkDescription() {
   const [exportColumns, setExportColumns] = useState<ExportColumn[]>([
     { key: 'p_id', label: 'p_id', enabled: true },
     { key: 'v_id', label: 'v_id', enabled: true },
+    { key: 'p_item_number', label: 'p_item_number', enabled: false },
     { key: 'produktname', label: 'p_name_original[de]', enabled: false },
     { key: 'produktname_neu', label: 'p_name[de]', enabled: true },
     { key: 'produktbeschreibung', label: 'p_description_text[de]', enabled: false },
