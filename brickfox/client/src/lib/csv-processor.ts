@@ -69,20 +69,7 @@ async function readFileWithEncoding(file: File): Promise<string> {
     }
   }
   
-  // Remove surrounding quotes from each line if present
-  // This fixes files where each line is wrapped in quotes
-  const lines = text.split('\n');
-  const cleanedLines = lines.map(line => {
-    line = line.trim();
-    // Remove quotes if line starts and ends with them
-    if (line.startsWith('"') && line.endsWith('"')) {
-      return line.slice(1, -1);
-    }
-    return line;
-  });
-  
-  const cleanedText = cleanedLines.join('\n');
-  return cleanedText;
+  return text;
 }
 
 /**
@@ -195,9 +182,6 @@ export async function parseCSV(file: File): Promise<CSVParseResult> {
     const delimiter = detectDelimiter(text);
     
     console.log(`[CSV] Using delimiter: "${delimiter === '\t' ? 'TAB' : delimiter}"`);
-    
-    // Sanitize quotes before parsing to prevent "unterminated quoted field" errors
-    text = sanitizeCSVQuotes(text, delimiter);
     
     // Use PapaParse to parse the CSV with multiline support
     const parseConfig: Papa.ParseConfig = {
