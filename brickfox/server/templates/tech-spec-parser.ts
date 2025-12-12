@@ -696,32 +696,72 @@ export function extractTechSpecs1to1(
     }
   }
   
-  // SPEZIAL: Extrahiere mAh aus Produktname/Beschreibung falls noch nicht vorhanden
+  // ═══════════════════════════════════════════════════════════════
+  // REGEL: Fehlende Werte aus Produktname extrahieren
+  // Kapazität, Farbe, Akku-Chemie aus Produktname holen wenn nicht in CSV
+  // ═══════════════════════════════════════════════════════════════
+  
+  const fieldsToCheck = [
+    structuredData?.['P Name[de]'],
+    structuredData?.['P_name[de]'],
+    structuredData?.['p_name[de]'],
+    structuredData?.['P Name'],
+    structuredData?.['p_name'],
+    structuredData?.produktname,
+    structuredData?.name,
+    structuredData?.['P Description[de]'],
+    structuredData?.['p_description[de]'],
+    structuredData?.beschreibung,
+  ].filter(v => v && typeof v === 'string');
+  
+  // 1. KAPAZITÄT aus Produktname extrahieren (falls nicht vorhanden)
   if (!specs['Kapazität'] && structuredData) {
-    // Suche in p_name und p_description nach mAh-Werten
-    const fieldsToCheck = [
-      structuredData['P Name[de]'],
-      structuredData['P_name[de]'],
-      structuredData['p_name[de]'],
-      structuredData['P Name'],
-      structuredData['p_name'],
-      structuredData['P Description[de]'],
-      structuredData['p_description[de]'],
-      structuredData['P Short Intro[de]'],
-      structuredData['p_short_intro[de]'],
-      structuredData.produktname,
-      structuredData.name,
-      structuredData.beschreibung,
-      structuredData.description,
-    ].filter(v => v && typeof v === 'string');
-    
     for (const field of fieldsToCheck) {
-      // Pattern: "1821 mAh", "1821mAh", "1.821 mAh"
+      // Pattern: "1821 mAh", "1821mAh", "1.821 mAh", "15mAh"
       const mahMatch = field.match(/(\d+[.,]?\d*)\s*mAh/i);
       if (mahMatch) {
         const mahValue = mahMatch[1].replace('.', '').replace(',', '');
         specs['Kapazität'] = `${mahValue} mAh`;
-        console.log(`🔋 mAh aus CSV-Feld extrahiert: ${specs['Kapazität']}`);
+        console.log(`🔋 Kapazität aus Produktname: ${specs['Kapazität']}`);
+        break;
+      }
+    }
+  }
+  
+  // 2. FARBE aus Produktname extrahieren (falls nicht vorhanden)
+  if (!specs['Farbe'] && structuredData) {
+    const farbenPattern = /\b(Schwarz|Weiß|Weiss|Rot|Blau|Grün|Gelb|Orange|Lila|Violett|Rosa|Pink|Grau|Silber|Gold|Bronze|Braun|Beige|Türkis|Black|White|Red|Blue|Green|Yellow|Silver|Grey|Gray)\b/i;
+    for (const field of fieldsToCheck) {
+      const farbeMatch = field.match(farbenPattern);
+      if (farbeMatch) {
+        // Erste Buchstabe groß
+        const farbe = farbeMatch[1].charAt(0).toUpperCase() + farbeMatch[1].slice(1).toLowerCase();
+        specs['Farbe'] = farbe;
+        console.log(`🎨 Farbe aus Produktname: ${specs['Farbe']}`);
+        break;
+      }
+    }
+  }
+  
+  // 3. AKKU-CHEMIE aus Produktname extrahieren (falls nicht vorhanden)
+  if (!specs['Akkutyp'] && structuredData) {
+    const chemiePattern = /\b(Li-Ion|Li-Polymer|Li-Po|LiPo|LiFePO4|NiMH|NiCd|Ni-MH|Ni-Cd|Lithium-Ion|Lithium-Polymer|Alkaline|Zink-Kohle|Zink-Luft)\b/i;
+    for (const field of fieldsToCheck) {
+      const chemieMatch = field.match(chemiePattern);
+      if (chemieMatch) {
+        // Normalisiere Chemie-Namen
+        let chemie = chemieMatch[1];
+        if (chemie.toLowerCase() === 'li-polymer' || chemie.toLowerCase() === 'li-po' || chemie.toLowerCase() === 'lipo') {
+          chemie = 'Li-Polymer';
+        } else if (chemie.toLowerCase() === 'li-ion' || chemie.toLowerCase() === 'lithium-ion') {
+          chemie = 'Li-Ion';
+        } else if (chemie.toLowerCase() === 'nimh' || chemie.toLowerCase() === 'ni-mh') {
+          chemie = 'NiMH';
+        } else if (chemie.toLowerCase() === 'nicd' || chemie.toLowerCase() === 'ni-cd') {
+          chemie = 'NiCd';
+        }
+        specs['Akkutyp'] = chemie;
+        console.log(`⚡ Akku-Chemie aus Produktname: ${specs['Akkutyp']}`);
         break;
       }
     }
