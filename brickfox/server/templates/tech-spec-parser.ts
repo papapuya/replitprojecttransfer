@@ -465,6 +465,7 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
         const capacityValue = `${numMatch[1]} mAh`;
         specs['Kapazität'] = capacityValue;
         console.log(`🔋 CSV-Kapazität: ${valTrimmed} → ${capacityValue}`);
+        console.log(`🔋 specs['Kapazität'] jetzt: "${specs['Kapazität']}"`);
       }
     }
     
