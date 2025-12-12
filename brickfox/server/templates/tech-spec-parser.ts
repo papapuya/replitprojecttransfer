@@ -40,45 +40,51 @@ function convertToMm(value: string): string {
 }
 
 /**
- * Übersetzt englische Farben ins Deutsche
- * REGEL: Farben IMMER auf Deutsch anzeigen
+ * Prüft ob eine Farbe auf DEUTSCH angegeben ist
+ * REGEL: Nur deutsche Farben übernehmen - englische Farben wie "Black" gehören oft zu Modellnamen (z.B. "Hero7 Black")
+ * Gibt die normalisierte deutsche Farbe zurück oder null wenn keine gültige deutsche Farbe
  */
-function translateColorToGerman(color: string): string {
-  const colorMap: Record<string, string> = {
-    'black': 'Schwarz',
-    'white': 'Weiß',
-    'red': 'Rot',
-    'blue': 'Blau',
-    'green': 'Grün',
-    'yellow': 'Gelb',
+function getGermanColorOnly(color: string): string | null {
+  // NUR deutsche Farben sind gültig
+  const germanColors: Record<string, string> = {
+    'schwarz': 'Schwarz',
+    'weiß': 'Weiß',
+    'weiss': 'Weiß',
+    'rot': 'Rot',
+    'blau': 'Blau',
+    'grün': 'Grün',
+    'gruen': 'Grün',
+    'gelb': 'Gelb',
     'orange': 'Orange',
-    'purple': 'Lila',
-    'violet': 'Violett',
-    'pink': 'Rosa',
-    'grey': 'Grau',
-    'gray': 'Grau',
-    'silver': 'Silber',
+    'lila': 'Lila',
+    'violett': 'Violett',
+    'rosa': 'Rosa',
+    'pink': 'Pink',
+    'grau': 'Grau',
+    'silber': 'Silber',
     'gold': 'Gold',
     'bronze': 'Bronze',
-    'brown': 'Braun',
+    'braun': 'Braun',
     'beige': 'Beige',
-    'turquoise': 'Türkis',
+    'türkis': 'Türkis',
+    'tuerkis': 'Türkis',
     'cyan': 'Cyan',
     'magenta': 'Magenta',
-    'navy': 'Dunkelblau',
-    'olive': 'Oliv',
+    'dunkelblau': 'Dunkelblau',
+    'hellblau': 'Hellblau',
+    'oliv': 'Oliv',
     'transparent': 'Transparent',
-    'clear': 'Transparent',
   };
   
   const lowerColor = color.trim().toLowerCase();
-  if (colorMap[lowerColor]) {
-    console.log(`🌈 Farbe übersetzt: ${color} → ${colorMap[lowerColor]}`);
-    return colorMap[lowerColor];
+  if (germanColors[lowerColor]) {
+    console.log(`🎨 Deutsche Farbe erkannt: ${color} → ${germanColors[lowerColor]}`);
+    return germanColors[lowerColor];
   }
   
-  // Erste Buchstabe groß, falls noch nicht
-  return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
+  // Englische Farben wie "black", "white" werden IGNORIERT - gehören oft zu Modellnamen
+  console.log(`⏭️ Farbe ignoriert (nicht deutsch): ${color}`);
+  return null;
 }
 
 export interface ParsedTechSpecs {
@@ -517,10 +523,13 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       console.log(`⭕ BrickFox Durchmesser: ${value} → ${specs['Durchmesser']}`);
     }
     
-    // Farbe - IMMER auf Deutsch
+    // Farbe - NUR wenn auf Deutsch angegeben (englische Farben gehören oft zu Modellnamen)
     if ((keyLower.includes('farbe') || keyLower.includes('color') || keyLower.includes('colour')) && !specs['Farbe']) {
-      specs['Farbe'] = translateColorToGerman(valTrimmed);
-      console.log(`🎨 BrickFox Farbe: ${value} → ${specs['Farbe']}`);
+      const germanColor = getGermanColorOnly(valTrimmed);
+      if (germanColor) {
+        specs['Farbe'] = germanColor;
+        console.log(`🎨 BrickFox Farbe: ${value} → ${specs['Farbe']}`);
+      }
     }
     
     // Material
@@ -790,16 +799,19 @@ export function extractTechSpecs1to1(
     }
   }
   
-  // 2. FARBE aus Produktname extrahieren (falls nicht vorhanden) - IMMER auf Deutsch
+  // 2. FARBE aus Produktname extrahieren - NUR deutsche Farben (englische gehören zu Modellnamen wie "Hero7 Black")
   if (!specs['Farbe'] && structuredData) {
-    const farbenPattern = /\b(Schwarz|Weiß|Weiss|Rot|Blau|Grün|Gelb|Orange|Lila|Violett|Rosa|Pink|Grau|Silber|Gold|Bronze|Braun|Beige|Türkis|Black|White|Red|Blue|Green|Yellow|Silver|Grey|Gray)\b/i;
+    // NUR deutsche Farben suchen - englische wie "Black", "White" werden ignoriert
+    const deutscheFarbenPattern = /\b(Schwarz|Weiß|Weiss|Rot|Blau|Grün|Gruen|Gelb|Orange|Lila|Violett|Rosa|Pink|Grau|Silber|Gold|Bronze|Braun|Beige|Türkis|Tuerkis)\b/i;
     for (const field of fieldsToCheck) {
-      const farbeMatch = field.match(farbenPattern);
+      const farbeMatch = field.match(deutscheFarbenPattern);
       if (farbeMatch) {
-        // IMMER ins Deutsche übersetzen
-        specs['Farbe'] = translateColorToGerman(farbeMatch[1]);
-        console.log(`🎨 Farbe aus Produktname: ${farbeMatch[1]} → ${specs['Farbe']}`);
-        break;
+        const germanColor = getGermanColorOnly(farbeMatch[1]);
+        if (germanColor) {
+          specs['Farbe'] = germanColor;
+          console.log(`🎨 Deutsche Farbe aus Produktname: ${farbeMatch[1]} → ${specs['Farbe']}`);
+          break;
+        }
       }
     }
   }
