@@ -1395,22 +1395,18 @@ export default function CSVBulkDescription() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const filteredRawData = previewFilter 
-                        ? rawData.filter(row => 
-                            Object.values(row).some(v => 
+                      return rawData.map((row, rowIndex) => {
+                        const generatedProduct = bulkProducts.find(p => p.id === rowIndex + 1);
+                        const matchesFilter = previewFilter 
+                          ? Object.values(row).some(v => 
                               String(v).toLowerCase().includes(previewFilter.toLowerCase())
                             )
-                          )
-                        : rawData;
-                      
-                      return filteredRawData.map((row, filteredIndex) => {
-                        const originalIndex = rawData.indexOf(row);
-                        const generatedProduct = bulkProducts.find(p => p.id === originalIndex + 1);
+                          : false;
                       
                         return (
                           <tr
-                            key={filteredIndex}
-                            className={filteredIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
+                            key={rowIndex}
+                            className={`${rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/30'} ${previewFilter && matchesFilter ? 'ring-2 ring-primary ring-inset bg-primary/10' : ''} ${previewFilter && !matchesFilter ? 'opacity-40' : ''}`}
                           >
                           {/* CSV Daten - nur p_id, p_name[de/nl], p_description[de/nl] */}
                           {['p_id', 'p_name[de]', 'p_name[nl]', 'p_description[de]', 'p_description[nl]']
