@@ -507,6 +507,31 @@ export default function CSVBulkDescription() {
 
           productData.productName = produktname;
 
+          // Bestehende Bulletpoints aus CSV extrahieren (falls vorhanden)
+          const existingBullets: string[] = [];
+          // Suche nach p_bullet1, p_bullet2, etc. oder ähnlichen Feldern
+          for (let bulletNum = 1; bulletNum <= 10; bulletNum++) {
+            const bullet = row[`p_bullet${bulletNum}`] || row[`p_usp${bulletNum}`] || 
+                          row[`bullet${bulletNum}`] || row[`usp${bulletNum}`] ||
+                          productData[`p_bullet${bulletNum}`] || productData[`bullet${bulletNum}`];
+            if (bullet && bullet.trim()) {
+              existingBullets.push(bullet.trim());
+            }
+          }
+          // Auch "vorteile" oder "features" als einzelnes Feld (kommasepariert)
+          const vorteileFeld = row['vorteile'] || row['features'] || row['p_features'] || 
+                              productData['vorteile'] || productData['features'] || '';
+          if (vorteileFeld) {
+            const splitBullets = vorteileFeld.split(/[,;|]/).map((b: string) => b.trim()).filter((b: string) => b.length > 3);
+            existingBullets.push(...splitBullets);
+          }
+          
+          // Füge existierende Bullets zu productData hinzu
+          if (existingBullets.length > 0) {
+            productData.existingBullets = existingBullets.join('|');
+            console.log(`📋 ${existingBullets.length} bestehende Bulletpoints gefunden für: ${produktname}`);
+          }
+
           // Use local admin token (ignore Supabase for local dev)
           const token = 'local-admin-token-pimpilot-dev';
           
@@ -521,7 +546,10 @@ export default function CSVBulkDescription() {
                 extractedText: JSON.stringify(productData),
                 structuredData: productData  // Pass parsed CSV data for dynamic tech table
               }],
-              customAttributes: { exactProductName: produktname },
+              customAttributes: { 
+                exactProductName: produktname,
+                existingBullets: existingBullets.length > 0 ? existingBullets : undefined
+              },
             }),
           });
 

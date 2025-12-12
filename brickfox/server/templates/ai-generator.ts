@@ -413,6 +413,16 @@ EINSATZBEREICHE = WO/WOFÜR wird das Produkt verwendet?
 - uspBullets: 2-4 PRODUKTSPEZIFISCHE Vorteile (max 50 Zeichen).
   NUR Produkteigenschaften, KEINE Einsatzbereiche!
   
+  ⚠️ BESTEHENDE BULLETPOINTS VERBESSERN:
+  Wenn im Feld "existingBullets" bestehende Vorteile vorhanden sind:
+  - Übernimm die INHALTLICHE Aussage, aber FORMULIERE BESSER
+  - Kürze auf max 50 Zeichen wenn nötig
+  - Entferne technische Daten (mAh, Volt, Modelle)
+  - Mache aus langen Sätzen kurze, prägnante Aussagen
+  
+  Wenn KEINE bestehenden Bullets vorhanden sind:
+  - Generiere 2-4 neue, produktspezifische Vorteile
+  
   ❌ VERBOTEN in uspBullets:
   - "Ideal für...", "Passend für...", "Geeignet für..." → gehört in einsatzbereiche!
   - "Schutzschaltung" (nur wenn explizit in CSV!)
