@@ -348,7 +348,8 @@ AUSGABEFORMAT (JSON)
   "kompatibilitaet": ["Modell 1", "Modell 2"],
   "apnSatz": "Dieser Akku ersetzt die Apple-Teilenummern (APN) 616-0579, 616-0580.",
   "werkzeuguebersicht": ["Werkzeug 1", "Werkzeug 2"],
-  "uspBullets": ["Vorteil 1", "Vorteil 2", "Vorteil 3", "Vorteil 4", "Vorteil 5"],
+  "uspBullets": ["Produkteigenschaft 1", "Produkteigenschaft 2"],
+  "einsatzbereiche": "1-2 Sätze wo/wofür das Produkt verwendet wird. Beispiel: Ideal für Uhren, Fernbedienungen und Taschenrechner.",
   "technicalSpecs": {"Feldname": "Wert mit Einheit"},
   "packageContents": ["Artikel 1", "Artikel 2"],
   "zeigeTabelle": true/false
