@@ -618,6 +618,12 @@ function renderMediaMarktLayout(data: {
   
   // Technische Specs hinzufügen (bei Akkus) - filtere doppelte Teilenummer/APN Einträge und leere Werte
   if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
+    // DEBUG: Zeige was in data.technicalSpecs ankommt
+    console.log(`🔍 renderMediaMarktLayout: data.technicalSpecs hat ${data.technicalSpecs.length} Einträge`);
+    data.technicalSpecs.forEach((spec, i) => {
+      console.log(`   [${i}] "${spec.label}" = "${spec.value}"`);
+    });
+    
     // Sammle bereits verwendete Labels zur Deduplizierung
     const existingLabels = new Set(allSpecs.map(s => s.label.toLowerCase()));
     
