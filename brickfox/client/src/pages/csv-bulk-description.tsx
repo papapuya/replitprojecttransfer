@@ -1528,6 +1528,135 @@ export default function CSVBulkDescription() {
                   Zeige erste 15 von {rawData.length} Zeilen
                 </p>
               )}
+
+              {/* Anpassungsfunktion für bereits generierte CSVs */}
+              {(() => {
+                const hasExistingDescriptions = rawData.some(row => 
+                  Object.entries(row).some(([key, value]) => 
+                    key.toLowerCase().includes('p_description') && String(value || '').length > 50
+                  )
+                );
+                
+                if (!hasExistingDescriptions) return null;
+                
+                const filteredForAdjust = previewFilter 
+                  ? rawData.filter(row => 
+                      Object.values(row).some(v => 
+                        String(v).toLowerCase().includes(previewFilter.toLowerCase())
+                      )
+                    )
+                  : [];
+                
+                return (
+                  <div className="mt-6 p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
+                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                      <Sparkles className="w-4 h-4" />
+                      Bestehende Beschreibungen anpassen
+                    </h4>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Diese CSV enthält bereits generierte Beschreibungen. Nutze den Filter oben, um Produkte auszuwählen und gezielt anzupassen.
+                    </p>
+                    
+                    {previewFilter && filteredForAdjust.length > 0 && (
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs text-muted-foreground mb-1 block">
+                            Was soll bei den {filteredForAdjust.length} gefilterten Produkten geändert werden?
+                          </Label>
+                          <textarea
+                            value={regeneratePrompt}
+                            onChange={(e) => setRegeneratePrompt(e.target.value)}
+                            placeholder="z.B. 'Ändere den Einsatzbereich: Fokussiere auf den Nutzen nach dem Austausch'"
+                            className="w-full min-h-[60px] p-3 text-sm border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <Button
+                          onClick={async () => {
+                            if (!regeneratePrompt.trim()) return;
+                            setIsRegenerating(true);
+                            setRegenerateProgress({ current: 0, total: filteredForAdjust.length });
+                            
+                            let processed = 0;
+                            for (const row of filteredForAdjust) {
+                              const descKey = Object.keys(row).find(k => k.toLowerCase().includes('p_description'));
+                              const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('p_name'));
+                              if (!descKey) continue;
+                              
+                              try {
+                                const token = localStorage.getItem('authToken') || 'local-admin-token-pimpilot-dev';
+                                const response = await fetch('/api/adjust-description', {
+                                  method: 'POST',
+                                  headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                  },
+                                  body: JSON.stringify({
+                                    produktname: nameKey ? row[nameKey] : '',
+                                    produktnameNeu: nameKey ? row[nameKey] : '',
+                                    existingDescription: row[descKey],
+                                    adjustmentPrompt: regeneratePrompt.trim()
+                                  })
+                                });
+                                
+                                if (response.ok) {
+                                  const result = await response.json();
+                                  const rowIndex = rawData.indexOf(row);
+                                  if (rowIndex >= 0) {
+                                    setRawData(prev => {
+                                      const updated = [...prev];
+                                      updated[rowIndex] = { ...updated[rowIndex], [descKey]: result.description || row[descKey] };
+                                      return updated;
+                                    });
+                                  }
+                                }
+                              } catch (err) {
+                                console.error('Fehler bei Anpassung:', err);
+                              }
+                              
+                              processed++;
+                              setRegenerateProgress({ current: processed, total: filteredForAdjust.length });
+                            }
+                            
+                            setIsRegenerating(false);
+                            setRegenerateProgress({ current: 0, total: 0 });
+                            toast({ title: "Anpassung abgeschlossen", description: `${processed} Beschreibungen aktualisiert` });
+                          }}
+                          disabled={isRegenerating || !regeneratePrompt.trim()}
+                          size="sm"
+                          className="w-full bg-amber-600 hover:bg-amber-700"
+                        >
+                          {isRegenerating ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                              Passe an... ({regenerateProgress.current}/{regenerateProgress.total})
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              {filteredForAdjust.length} Beschreibungen anpassen
+                            </>
+                          )}
+                        </Button>
+                        
+                        {isRegenerating && regenerateProgress.total > 0 && (
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div 
+                              className="bg-amber-500 h-2 rounded-full transition-all duration-300" 
+                              style={{ width: `${(regenerateProgress.current / regenerateProgress.total) * 100}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {!previewFilter && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Gib oben einen Filter ein (z.B. "Flexkabel"), um Produkte zur Anpassung auszuwählen.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </Card>
           </div>
         )}
