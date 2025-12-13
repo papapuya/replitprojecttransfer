@@ -5,6 +5,74 @@
 
 import { ProductCategoryConfig } from './category-config';
 
+// Alternative Bezeichnungen für gängige Batterietypen
+const BATTERY_ALTERNATIVES: Record<string, string[]> = {
+  'CR2032': ['DL2032', 'ECR2032', 'EA-2032C', 'BR2032', 'KCR2032', 'L14'],
+  'CR2025': ['DL2025', 'ECR2025', 'BR2025', 'KCR2025'],
+  'CR2016': ['DL2016', 'ECR2016', 'BR2016', 'KCR2016'],
+  'CR1632': ['DL1632', 'ECR1632', 'BR1632', 'KCR1632'],
+  'CR1620': ['DL1620', 'ECR1620', 'BR1620'],
+  'CR1616': ['DL1616', 'ECR1616', 'BR1616'],
+  'CR1220': ['DL1220', 'ECR1220', 'BR1220'],
+  'CR123A': ['DL123A', 'EL123A', 'K123LA', 'CR17345'],
+  'CR2': ['DL-CR2', 'DLCR2', 'EL1CR2', 'KCR2'],
+  'LR44': ['A76', 'AG13', 'G13', 'PX76A', 'V13GA', 'L1154'],
+  'SR44': ['357', '303', 'V357', 'SR44W', 'SR44SW'],
+  'LR41': ['AG3', 'G3', 'LR736', 'V384'],
+  'LR43': ['AG12', 'G12', 'V12GA', '186'],
+  'LR1130': ['AG10', 'G10', 'LR54', '189'],
+  '9V': ['6LR61', '6F22', 'PP3', 'MN1604'],
+  'AA': ['LR6', 'MN1500', 'Mignon', 'AM3'],
+  'AAA': ['LR03', 'MN2400', 'Micro', 'AM4'],
+  'C': ['LR14', 'MN1400', 'Baby', 'AM2'],
+  'D': ['LR20', 'MN1300', 'Mono', 'AM1'],
+};
+
+/**
+ * Extrahiert Batterietyp und alternative Bezeichnungen aus dem Produktnamen
+ */
+function extractBatteryTypeInfo(productName: string): { type: string; alternatives: string[] } | null {
+  const nameUpper = productName.toUpperCase();
+  
+  for (const [type, alts] of Object.entries(BATTERY_ALTERNATIVES)) {
+    // Prüfe ob der Batterietyp im Namen vorkommt
+    if (nameUpper.includes(type)) {
+      return { type, alternatives: alts };
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Prüft ob ein Produkt eine Batterie/Knopfzelle ist (keine wiederaufladbaren Akkus)
+ */
+function isBattery(productName: string): boolean {
+  const nameLower = productName.toLowerCase();
+  
+  // Batterien/Knopfzellen - NICHT wiederaufladbar
+  const batteryPatterns = [
+    /\bcr\d{4}\b/i,           // CR2032, CR2025, etc.
+    /\bcr123a?\b/i,           // CR123, CR123A
+    /\bcr2\b/i,               // CR2
+    /\blr\d+\b/i,             // LR44, LR41, etc.
+    /\bsr\d+\b/i,             // SR44, SR626, etc.
+    /\bag\d+\b/i,             // AG13, AG10, etc.
+    /\bknopfzelle\b/i,        // Knopfzelle
+    /\blithium.?batter/i,     // Lithium-Batterie
+    /\balkaline\b/i,          // Alkaline
+    /\bmignon\b/i,            // Mignon (AA)
+    /\bmicro\b/i,             // Micro (AAA)
+  ];
+  
+  // Ausschluss: Wiederaufladbare Akkus
+  const isRechargeable = /\b(akku|akkupack|wiederaufladbar|rechargeable|li-ion|li-polymer|nimh|nicd)\b/i.test(nameLower);
+  
+  if (isRechargeable) return false;
+  
+  return batteryPatterns.some(pattern => pattern.test(nameLower));
+}
+
 /**
  * Konvertiert Maße in mm (von cm oder m)
  * KONSERVATIV: Nur explizite einfache Werte konvertieren, alles andere unverändert lassen
@@ -865,6 +933,30 @@ export function extractTechSpecs1to1(
   
   if (Object.keys(specs).length === 0) {
     console.log('⚠️ No tech specs found in data');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════
+  // SPEZIALFALL BATTERIEN: "Typ/Bezeichnung" + "Alternative Bezeichnungen"
+  // Bei Batterien/Knopfzellen NICHT "Kompatibilität" anzeigen!
+  // ═══════════════════════════════════════════════════════════════
+  const productName = structuredData?.['p_name[de]'] || 
+                     structuredData?.['P Name[de]'] || 
+                     structuredData?.produktname || 
+                     structuredData?.name || '';
+  
+  if (isBattery(productName)) {
+    console.log(`🔋 Batterie erkannt: ${productName}`);
+    
+    // Entferne "Kompatibilität" - passt nicht zu Batterien
+    delete specs['Kompatibilität'];
+    
+    // Extrahiere Batterietyp und alternative Bezeichnungen
+    const batteryInfo = extractBatteryTypeInfo(productName);
+    if (batteryInfo) {
+      specs['Typ / Bezeichnung'] = batteryInfo.type;
+      specs['Alternative Bezeichnungen'] = batteryInfo.alternatives.join(', ');
+      console.log(`🔋 Typ: ${batteryInfo.type}, Alternativen: ${batteryInfo.alternatives.join(', ')}`);
+    }
   }
   
   return specs;
