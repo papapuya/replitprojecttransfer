@@ -145,10 +145,17 @@ export class PromptOrchestrator {
     packageContents?: string;
     productHighlights: string[];
   }> {
-    const results = await this.executeMultiple(
-      ['narrative', 'usp-generation', 'tech-extraction', 'safety-warnings', 'package-contents'],
-      context
-    );
+    // REGEL: USP-Generierung NUR wenn bestehende Beschreibung vorhanden ist (>50 Zeichen)
+    const hasExistingDescription = context.existingDescription && context.existingDescription.trim().length > 50;
+    
+    // Subprompts ohne USP-Generierung wenn keine Beschreibung vorhanden
+    const subpromptsToRun: SubpromptName[] = hasExistingDescription
+      ? ['narrative', 'usp-generation', 'tech-extraction', 'safety-warnings', 'package-contents']
+      : ['narrative', 'tech-extraction', 'safety-warnings', 'package-contents'];
+    
+    console.log(`📋 USP-Generierung: ${hasExistingDescription ? 'AKTIV (bestehende Beschreibung vorhanden)' : 'ÜBERSPRUNGEN (keine Beschreibung)'}`);
+    
+    const results = await this.executeMultiple(subpromptsToRun, context);
 
     const tagline = results['narrative']?.success 
       ? results['narrative'].data.tagline || ''

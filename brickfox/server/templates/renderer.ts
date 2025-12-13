@@ -580,9 +580,9 @@ function renderMediaMarktLayout(data: {
   // Dynamische technische Tabelle (ohne Kompatibilität - die kommt als Fließtext darunter)
   const allSpecs: Array<{label: string, value: string}> = [];
   
-  // Prüfe ob es eine Batterie/Knopfzelle ist (CR2032, LR44, etc.)
+  // Prüfe ob es eine Batterie/Knopfzelle ist (CR2032, LR44, V76PX, etc.)
   const productNameLower = data.productName.toLowerCase();
-  const isBatteryProduct = /\b(cr\d{4}|cr123a?|cr2|lr\d+|sr\d+|ag\d+|knopfzelle)\b/i.test(productNameLower) && 
+  const isBatteryProduct = /\b(cr\d{4}|cr123a?|cr2|lr\d+|sr\d+|ag\d+|v\d+px|knopfzelle|fotobatterie|lithium.?batterie?)\b/i.test(productNameLower) && 
                            !/\b(akku|akkupack|wiederaufladbar|rechargeable|li-ion|li-polymer|nimh|nicd)\b/i.test(productNameLower);
   
   // Batterie-Alternativen Map
@@ -601,6 +601,10 @@ function renderMediaMarktLayout(data: {
     'LR41': ['AG3', 'G3', 'LR736'],
     'LR43': ['AG12', 'G12', 'V12GA'],
     'LR1130': ['AG10', 'G10', 'LR54'],
+    'V76PX': ['SR44', 'S76', '357', '303'],
+    'V13GA': ['LR44', 'A76', 'AG13'],
+    'V357': ['SR44W', 'SR44', '303'],
+    '4SR44': ['PX28', '4G13', 'A544'],
     '9V': ['6LR61', '6F22', 'PP3'],
     'AA': ['LR6', 'MN1500', 'Mignon'],
     'AAA': ['LR03', 'MN2400', 'Micro'],
