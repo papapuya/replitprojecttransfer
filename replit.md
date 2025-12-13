@@ -61,6 +61,10 @@ The system uses a modular prompt architecture with specialized modules:
 - **Andere Produkte (Akkus, Kabel, etc.)**: Kompatibilität direkt mit Modellen:
   - `Kompatibilität: Modell1, Modell2, Modell3` (ohne "Passend für")
 
+**Vorteile-Regeln**:
+- Vorteile ("Ihre Vorteile") werden NUR angezeigt wenn p_description[de] vorhanden ist (>50 Zeichen)
+- Keine generischen Template-USPs mehr - nur echte extrahierte Vorteile aus der Beschreibung
+
 ## External Dependencies
 
 ### AI Services

@@ -94,12 +94,15 @@ async function generateProductCopyModular(
     const mergedTechSpecs = directTechSpecs;
 
 
+    // USPs nur zurückgeben wenn bestehende Beschreibung vorhanden war
+    // REGEL: Keine generischen Template-USPs mehr - nur echte extrahierte Vorteile
+    const hasExistingDescription = existingDescription && existingDescription.trim().length > 50;
+    const realUsps = hasExistingDescription ? processed.uspBullets.slice(0, 5) : [];
+    
     return {
       tagline: result.tagline, // Neue Tagline für h2
       narrative: processed.narrative,
-      uspBullets: processed.uspBullets.length >= 5 
-        ? processed.uspBullets.slice(0, 5)
-        : [...processed.uspBullets, ...categoryConfig.uspTemplates].slice(0, 5),
+      uspBullets: realUsps, // Nur echte USPs, keine Template-Fallbacks
       technicalSpecs: mergedTechSpecs,
       safetyNotice: result.safetyNotice || categoryConfig.safetyNotice,
       packageContents: result.packageContents,
@@ -769,8 +772,16 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       ];
     }
     
-    // Dynamische Anzahl Vorteile: Keine künstliche Auffüllung, max. 4
-    const vorteile = filteredVorteile.slice(0, 4);
+    // REGEL: Vorteile nur anzeigen wenn bestehende Beschreibung vorhanden ist
+    // Prüfe ob p_description[de] existiert und Inhalte hat
+    const existingDescriptionMono = productData?.existingDescription || 
+                                    productData?.structuredData?.['p_description[de]'] ||
+                                    productData?.structuredData?.['P Description[de]'] ||
+                                    productData?.structuredData?.beschreibung || '';
+    const hasExistingDescriptionMono = existingDescriptionMono && existingDescriptionMono.trim().length > 50;
+    
+    // Nur echte Vorteile wenn bestehende Beschreibung vorhanden, sonst leer
+    const vorteile = hasExistingDescriptionMono ? filteredVorteile.slice(0, 4) : [];
     
     const kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
     const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
@@ -822,9 +833,9 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
 function getFallbackCopy(categoryConfig: ProductCategoryConfig): ProductCopyPayload {
   return {
     narrative: 'Hochwertiges Produkt für professionelle Anwendungen. Zeichnet sich durch zuverlässige Leistung und langlebige Qualität aus.',
-    uspBullets: categoryConfig.uspTemplates.slice(0, 5),
+    uspBullets: [], // REGEL: Keine generischen Vorteile ohne echte Beschreibung
     technicalSpecs: {},
     packageContents: 'Produkt wie beschrieben',
-    productHighlights: categoryConfig.productHighlights.slice(0, 5),
+    productHighlights: [],
   };
 }
