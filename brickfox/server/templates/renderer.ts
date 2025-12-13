@@ -662,7 +662,9 @@ function renderMediaMarktLayout(data: {
   
   const validKompatibleModelle = filterValidCompatibility(data.kompatibleModelle || []);
   
-  const kompatibilitaetHtml = (!isBatteryProduct && validKompatibleModelle.length > 0)
+  // REGEL: Kompatibilität nur anzeigen wenn mindestens 2 Modelle vorhanden sind
+  // Bei nur 1 Modell ist es nicht informativ genug
+  const kompatibilitaetHtml = (!isBatteryProduct && validKompatibleModelle.length >= 2)
     ? `<p style="margin-top: 1em; margin-bottom: 32px;"><strong>Kompatibilit&auml;t:</strong> ${validKompatibleModelle.slice(0, 10).join(', ')}${validKompatibleModelle.length > 10 ? ' und weitere Modelle' : ''}</p>`
     : '';
   
