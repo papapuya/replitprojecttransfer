@@ -78,15 +78,33 @@ WICHTIG für Highlights:
 - Fokus auf Qualitätsmerkmale und Schutzfunktionen
 - Produktspezifisch, nicht generisch`,
 
-  userPrompt: (context: PromptContext) => `Produktdaten:
+  userPrompt: (context: PromptContext) => {
+    const existingDesc = context.existingDescription;
+    const hasExisting = existingDesc && existingDesc.trim().length > 20;
+    
+    return `Produktdaten:
 ${JSON.stringify(context.productData, null, 2)}
+
+${hasExisting ? `
+⚠️ WICHTIG: Es gibt bereits eine BESTEHENDE PRODUKTBESCHREIBUNG aus der CSV:
+---
+${existingDesc}
+---
+
+NUTZE diese bestehende Beschreibung als INFORMATIONSQUELLE:
+- Extrahiere die KORREKTEN technischen Daten (Kapazität, Spannung, Maße, etc.)
+- Übernimm FAKTEN aus der bestehenden Beschreibung
+- Formatiere und optimiere den Text für bessere Lesbarkeit
+- ERFINDE KEINE neuen technischen Daten - nutze nur das, was in der bestehenden Beschreibung steht!
+` : ''}
 
 Schreibe jetzt eine PRODUKTSPEZIFISCHE Beschreibung als JSON.
 
 WICHTIG:
-- Nutze konkrete Werte (Modell, Kapazität, Format)
+- Nutze konkrete Werte (Modell, Kapazität, Format) ${hasExisting ? 'aus der bestehenden Beschreibung' : ''}
 - Erkläre, WOFÜR dieses spezielle Produkt verwendet wird
 - Vermeide generische Phrasen ohne Kontext
 - Zeige den konkreten Kundennutzen auf
-- NIEMALS den Produktnamen am Anfang des Narrative wiederholen - starte direkt mit den Eigenschaften!`
+- NIEMALS den Produktnamen am Anfang des Narrative wiederholen - starte direkt mit den Eigenschaften!`;
+  }
 };

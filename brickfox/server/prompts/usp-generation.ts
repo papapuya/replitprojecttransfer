@@ -130,8 +130,25 @@ OUTPUT-FORMAT (JSON):
   ]
 }`,
 
-  userPrompt: (context: PromptContext) => `Produktdaten:
+  userPrompt: (context: PromptContext) => {
+    const existingDesc = context.existingDescription;
+    const hasExisting = existingDesc && existingDesc.trim().length > 20;
+    
+    return `Produktdaten:
 ${JSON.stringify(context.productData, null, 2)}
 
-Erstelle jetzt 5 TECHNISCH SINNVOLLE Vorteile als JSON. Keine generischen Phrasen!`
+${hasExisting ? `
+⚠️ WICHTIG: BESTEHENDE PRODUKTBESCHREIBUNG als Informationsquelle:
+---
+${existingDesc}
+---
+
+NUTZE diese Beschreibung um ECHTE technische Vorteile zu extrahieren!
+- Schutzfunktionen (BMS, Überladeschutz, etc.)
+- Technische Eigenschaften (Spannung, Kapazität, Material)
+- Qualitätsmerkmale aus der Beschreibung
+` : ''}
+
+Erstelle jetzt 5 TECHNISCH SINNVOLLE Vorteile als JSON. Keine generischen Phrasen!`;
+  }
 };
