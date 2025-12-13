@@ -774,11 +774,22 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     
     // REGEL: Vorteile nur anzeigen wenn bestehende Beschreibung vorhanden ist
     // Prüfe ob p_description[de] existiert und Inhalte hat
+    // Suche nach allen möglichen Keys für die Beschreibung
+    const structuredDataCheck = productData?.structuredData || {};
+    const descriptionKeys = Object.keys(structuredDataCheck).filter(k => 
+      k.toLowerCase().includes('description') || k.toLowerCase().includes('beschreibung')
+    );
+    console.log(`🔍 [USP-CHECK] Description keys found: ${descriptionKeys.join(', ') || 'KEINE'}`);
+    
     const existingDescriptionMono = productData?.existingDescription || 
-                                    productData?.structuredData?.['p_description[de]'] ||
-                                    productData?.structuredData?.['P Description[de]'] ||
-                                    productData?.structuredData?.beschreibung || '';
+                                    structuredDataCheck['p_description[de]'] ||
+                                    structuredDataCheck['P Description[de]'] ||
+                                    structuredDataCheck['p_description'] ||
+                                    structuredDataCheck['beschreibung'] || '';
     const hasExistingDescriptionMono = existingDescriptionMono && existingDescriptionMono.trim().length > 50;
+    
+    console.log(`📋 [USP-CHECK] Bestehende Beschreibung: ${hasExistingDescriptionMono ? 'JA (' + existingDescriptionMono.length + ' Zeichen)' : 'NEIN'}`);
+    console.log(`📋 [USP-CHECK] Vorteile werden: ${hasExistingDescriptionMono ? 'ANGEZEIGT' : 'ÜBERSPRUNGEN'}`);
     
     // Nur echte Vorteile wenn bestehende Beschreibung vorhanden, sonst leer
     const vorteile = hasExistingDescriptionMono ? filteredVorteile.slice(0, 4) : [];
