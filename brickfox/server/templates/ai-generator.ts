@@ -50,9 +50,15 @@ async function generateProductCopyModular(
     const result = await orchestrator.generateFullProductCopy(context);
 
     // POST-PROCESSING: Validiere und bereinige AI-Output
+    // Produktname für kategorie-spezifische USP-Ersetzung extrahieren
+    const productName = productData?.productName || productData?.produktname || 
+                        productData?.structuredData?.['p_name[de]'] || 
+                        productData?.structuredData?.produktname || '';
+    
     const processed = processProductCopy({
       narrative: result.narrative,
       uspBullets: result.uspBullets,
+      productName: productName,
     });
 
     if (processed.validationIssues.length > 0) {
