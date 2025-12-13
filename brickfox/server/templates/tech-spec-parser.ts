@@ -950,12 +950,51 @@ export function extractTechSpecs1to1(
     // Entferne "Kompatibilität" - passt nicht zu Batterien
     delete specs['Kompatibilität'];
     
-    // Extrahiere Batterietyp und alternative Bezeichnungen
+    // Extrahiere Batterietyp aus Produktname
     const batteryInfo = extractBatteryTypeInfo(productName);
     if (batteryInfo) {
       specs['Typ / Bezeichnung'] = batteryInfo.type;
-      specs['Alternative Bezeichnungen'] = batteryInfo.alternatives.join(', ');
-      console.log(`🔋 Typ: ${batteryInfo.type}, Alternativen: ${batteryInfo.alternatives.join(', ')}`);
+      
+      // DYNAMISCH: Alternative Bezeichnungen aus p_description[de] extrahieren
+      const description = structuredData?.['p_description[de]'] || 
+                         structuredData?.['P Description[de]'] || 
+                         structuredData?.beschreibung || '';
+      
+      // Pattern: Suche nach alternativen Bezeichnungen im Text
+      // z.B. "DL2032, ECR2032, EA-2032C" oder "ersetzt DL2032, ECR2032"
+      const altPattern = new RegExp(
+        `(?:ersetzt|alternativ|auch|entspricht|compatible|kompatibel|passend)[:\\s]+([A-Z]{1,3}[\\-]?\\d{2,5}[A-Z]?(?:[,\\s]+[A-Z]{1,3}[\\-]?\\d{2,5}[A-Z]?)*)`,
+        'i'
+      );
+      const altMatch = description.match(altPattern);
+      
+      // Oder direkt Codes suchen die dem Haupttyp ähneln
+      const typeBase = batteryInfo.type.replace(/\d+.*/, ''); // z.B. "CR" aus "CR2032"
+      const similarCodesPattern = new RegExp(
+        `\\b([A-Z]{1,3}[\\-]?${batteryInfo.type.replace(/[A-Z]+/, '\\d+')}[A-Z]?)\\b`,
+        'gi'
+      );
+      
+      let dynamicAlternatives: string[] = [];
+      
+      if (altMatch) {
+        // Gefundene Alternativen aus dem Text
+        dynamicAlternatives = altMatch[1]
+          .split(/[,\s]+/)
+          .map(s => s.trim().toUpperCase())
+          .filter(s => s.length >= 3 && s !== batteryInfo.type);
+        console.log(`🔋 Dynamische Alternativen aus Beschreibung: ${dynamicAlternatives.join(', ')}`);
+      }
+      
+      // Fallback: Statische Alternativen nur wenn keine dynamischen gefunden
+      if (dynamicAlternatives.length === 0) {
+        dynamicAlternatives = batteryInfo.alternatives;
+        console.log(`🔋 Fallback auf statische Alternativen: ${dynamicAlternatives.join(', ')}`);
+      }
+      
+      if (dynamicAlternatives.length > 0) {
+        specs['Alternative Bezeichnungen'] = dynamicAlternatives.join(', ');
+      }
     }
   }
   
