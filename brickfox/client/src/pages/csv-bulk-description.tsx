@@ -389,6 +389,10 @@ export default function CSVBulkDescription() {
           // Use local admin token (ignore Supabase for local dev)
           const token = 'local-admin-token-pimpilot-dev';
           
+          // Bestehende Beschreibung aus CSV als Basis für AI
+          const existingDescription = row['p_description[de]'] || row['P Description[de]'] || 
+                                      row['p_description'] || row['beschreibung'] || '';
+          
           const response = await fetch('/api/generate-description', {
             method: 'POST',
             headers: { 
@@ -402,7 +406,8 @@ export default function CSVBulkDescription() {
               }],
               customAttributes: { 
                 exactProductName: produktname,
-                existingBullets: existingBullets.length > 0 ? existingBullets : undefined
+                existingBullets: existingBullets.length > 0 ? existingBullets : undefined,
+                existingDescription: existingDescription // Bestehende Beschreibung als Basis
               },
             }),
           });

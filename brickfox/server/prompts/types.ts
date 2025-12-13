@@ -4,6 +4,7 @@ export interface PromptContext {
   productData: any;
   availableFields?: string[];
   uspTemplates?: string[];
+  existingDescription?: string; // Bestehende Beschreibung aus CSV als Basis
 }
 
 export interface SubpromptResult {

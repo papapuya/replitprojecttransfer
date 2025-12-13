@@ -36,6 +36,12 @@ async function generateProductCopyModular(
     model, // Pass model to orchestrator
   });
 
+  // Extrahiere bestehende Beschreibung aus productData oder structuredData
+  const existingDescription = productData?.existingDescription || 
+                             productData?.structuredData?.['p_description[de]'] ||
+                             productData?.structuredData?.['P Description[de]'] ||
+                             productData?.structuredData?.beschreibung || '';
+  
   const context: PromptContext = {
     categoryName: categoryConfig.name,
     categoryDescription: categoryConfig.description,
@@ -44,7 +50,12 @@ async function generateProductCopyModular(
       `${f.label}${f.unit ? ` (${f.unit})` : ''}`
     ),
     uspTemplates: categoryConfig.uspTemplates,
+    existingDescription: existingDescription, // Bestehende Beschreibung als Basis
   };
+  
+  if (existingDescription && existingDescription.length > 20) {
+    console.log(`📋 Bestehende Beschreibung gefunden (${existingDescription.length} Zeichen)`);
+  }
 
   try {
     const result = await orchestrator.generateFullProductCopy(context);
