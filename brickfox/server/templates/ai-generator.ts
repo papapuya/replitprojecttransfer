@@ -173,13 +173,11 @@ EINSATZBEREICHE (Version A - beginne mit "Geeignet für..."):
 - Beispiel: "Geeignet für Uhren, Fernbedienungen und Taschenrechner."
 - NICHT mit "Ideal" beginnen!
 
-VORTEILE (Max 30 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
-- "Zuverlässige Stromversorgung"
-- "Lange Lebensdauer"
-- "Einfache Installation"
-- "Sichere Schutzschaltung"
-- "Geprüfte Qualität"
-VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
+VORTEILE (uspBullets):
+⚠️ KEINE generischen Vorteile generieren!
+⚠️ Vorteile NUR aus der BESTEHENDEN BESCHREIBUNG extrahieren (siehe userPrompt)!
+⚠️ Wenn keine bestehende Beschreibung → uspBullets: []
+VERBOTEN: "Zuverlässige Stromversorgung", "Lange Lebensdauer", "Einfache Installation"!`;
 
     case 'nutzen':
       return `STIL: NUTZENORIENTIERT & ALLTAGSNAH (Version B)
@@ -195,13 +193,11 @@ EINSATZBEREICHE (Version B - beginne mit "Ideal für..."):
 - Beginne mit "Ideal für..." oder "Perfekt für..."
 - Beispiel: "Ideal für Uhren, Fernbedienungen und Taschenrechner."
 
-VORTEILE (Max 30 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
-- "Zuverlässige Stromversorgung"
-- "Lange Lebensdauer"
-- "Einfache Installation"
-- "Sichere Schutzschaltung"
-- "Geprüfte Qualität"
-VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
+VORTEILE (uspBullets):
+⚠️ KEINE generischen Vorteile generieren!
+⚠️ Vorteile NUR aus der BESTEHENDEN BESCHREIBUNG extrahieren (siehe userPrompt)!
+⚠️ Wenn keine bestehende Beschreibung → uspBullets: []
+VERBOTEN: "Zuverlässige Stromversorgung", "Lange Lebensdauer", "Einfache Installation"!`;
 
     case 'premium':
       return `STIL: PREMIUM & BERATEND (Version C)
@@ -218,13 +214,11 @@ EINSATZBEREICHE (Version C - beginne mit "Findet Verwendung..."):
 - Beispiel: "Findet Verwendung in Uhren, Fernbedienungen und medizinischen Geräten."
 - NICHT mit "Ideal" oder "Geeignet" beginnen!
 
-VORTEILE (Max 30 Zeichen pro Vorteil, KEINE Modelle/mAh/Volt):
-- "Zuverlässige Stromversorgung"
-- "Lange Lebensdauer"
-- "Einfache Installation"
-- "Sichere Schutzschaltung"
-- "Geprüfte Qualität"
-VERBOTEN: Modellnummern, mAh, Ah, Volt in Vorteilen!`;
+VORTEILE (uspBullets):
+⚠️ KEINE generischen Vorteile generieren!
+⚠️ Vorteile NUR aus der BESTEHENDEN BESCHREIBUNG extrahieren (siehe userPrompt)!
+⚠️ Wenn keine bestehende Beschreibung → uspBullets: []
+VERBOTEN: "Zuverlässige Stromversorgung", "Lange Lebensdauer", "Einfache Installation"!`;
   }
 }
 
@@ -281,6 +275,17 @@ KATEGORIE: ELEKTRONIK / ZUBEHÖR (Typ B)
   // Zufälligen Textstil wählen für Variation
   const styleVariant = getRandomStyleVariant();
   console.log(`🎨 Textstil: ${styleVariant.toUpperCase()}`);
+
+  // WICHTIG: Bestehende Beschreibung VOR dem AI-Call extrahieren
+  const structuredDataSource = productData?.structuredData || {};
+  const existingDescriptionForPrompt = productData?.existingDescription || 
+                                        structuredDataSource['p_description[de]'] ||
+                                        structuredDataSource['P Description[de]'] ||
+                                        structuredDataSource['p_description'] ||
+                                        structuredDataSource['beschreibung'] || '';
+  const hasExistingDesc = existingDescriptionForPrompt && existingDescriptionForPrompt.trim().length > 50;
+  
+  console.log(`📋 [PROMPT] Bestehende Beschreibung für AI: ${hasExistingDesc ? 'JA (' + existingDescriptionForPrompt.length + ' Zeichen)' : 'NEIN'}`);
 
   const systemPrompt = `Du bist ein deterministischer PIM- & SEO-Textgenerator für akkushop.de.
 
@@ -589,11 +594,50 @@ TECHNISCHE DATEN (technicalSpecs):
 - Feld "APN / ersetzt" mit ALLEN APNs kommagetrennt
 - Beispiel: {"APN / ersetzt": "616-00351, 616-00352, 616-00346"}`;
 
+  // USP-Anweisung basierend auf bestehender Beschreibung
+  const uspInstructions = hasExistingDesc 
+    ? `
+═══════════════════════════════════════════════════════════════
+⚠️ KRITISCH: BESTEHENDE PRODUKTBESCHREIBUNG NUTZEN FÜR VORTEILE
+═══════════════════════════════════════════════════════════════
+Die folgende bestehende Beschreibung enthält ECHTE Produktinformationen.
+EXTRAHIERE daraus 3-4 SPEZIFISCHE Vorteile!
+
+BESTEHENDE BESCHREIBUNG:
+---
+${existingDescriptionForPrompt}
+---
+
+DEINE AUFGABE für uspBullets:
+1. Lies die bestehende Beschreibung sorgfältig
+2. Finde KONKRETE Eigenschaften: Schutzfunktionen, Technologie, Material, Qualitätsmerkmale
+3. Formuliere diese als 50-80 Zeichen lange Vorteile
+4. KEINE generischen Phrasen wie "Zuverlässige Stromversorgung" oder "Lange Lebensdauer"!
+
+BEISPIEL-EXTRAKTION:
+Wenn Beschreibung sagt "auslaufsicher, lange Lagerfähigkeit, temperaturbeständig":
+→ uspBullets: [
+  "Auslaufsichere Lithium-Technologie für sichere Lagerung",
+  "Lange Lagerfähigkeit – auch nach Jahren noch einsatzbereit",
+  "Temperaturbeständig von -20°C bis +60°C"
+]
+`
+    : `
+═══════════════════════════════════════════════════════════════
+⚠️ KEINE BESTEHENDE BESCHREIBUNG VORHANDEN
+═══════════════════════════════════════════════════════════════
+Es gibt keine bestehende Produktbeschreibung zum Extrahieren.
+Setze uspBullets auf ein LEERES Array: "uspBullets": []
+GENERIERE KEINE generischen Vorteile!
+`;
+
   const userPrompt = `Produktdaten:
 ${JSON.stringify(productData, null, 2)}
 
 Kategorie: ${categoryConfig.name}
 Textstil: ${styleVariant.toUpperCase()} (verwende diesen Stil für ALLE Texte!)
+
+${uspInstructions}
 
 Erstelle jetzt das JSON-Objekt mit Produkttexten basierend auf diesen Daten.
 Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrieben.`;
