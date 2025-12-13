@@ -55,6 +55,12 @@ The system uses a modular prompt architecture with specialized modules:
 - Benefits marked with ✅ checkmarks
 - Technical tables only for battery products
 
+**Kompatibilität/Typ Regeln**:
+- **Batterien/Knopfzellen (CR2032, LR44, etc.)**: Kein Kompatibilitätsfeld, stattdessen:
+  - `Typ: CR2032 (entspricht DL2032, ECR2032, EA-2032C)`
+- **Andere Produkte (Akkus, Kabel, etc.)**: Kompatibilität direkt mit Modellen:
+  - `Kompatibilität: Modell1, Modell2, Modell3` (ohne "Passend für")
+
 ## External Dependencies
 
 ### AI Services

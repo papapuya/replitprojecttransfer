@@ -580,9 +580,48 @@ function renderMediaMarktLayout(data: {
   // Dynamische technische Tabelle (ohne Kompatibilität - die kommt als Fließtext darunter)
   const allSpecs: Array<{label: string, value: string}> = [];
   
+  // Prüfe ob es eine Batterie/Knopfzelle ist (CR2032, LR44, etc.)
+  const productNameLower = data.productName.toLowerCase();
+  const isBatteryProduct = /\b(cr\d{4}|cr123a?|cr2|lr\d+|sr\d+|ag\d+|knopfzelle)\b/i.test(productNameLower) && 
+                           !/\b(akku|akkupack|wiederaufladbar|rechargeable|li-ion|li-polymer|nimh|nicd)\b/i.test(productNameLower);
+  
+  // Batterie-Alternativen Map
+  const batteryAlternatives: Record<string, string[]> = {
+    'CR2032': ['DL2032', 'ECR2032', 'EA-2032C'],
+    'CR2025': ['DL2025', 'ECR2025', 'BR2025'],
+    'CR2016': ['DL2016', 'ECR2016', 'BR2016'],
+    'CR1632': ['DL1632', 'ECR1632', 'BR1632'],
+    'CR1620': ['DL1620', 'ECR1620', 'BR1620'],
+    'CR1616': ['DL1616', 'ECR1616', 'BR1616'],
+    'CR1220': ['DL1220', 'ECR1220', 'BR1220'],
+    'CR123A': ['DL123A', 'EL123A', 'K123LA'],
+    'CR2': ['DL-CR2', 'DLCR2', 'EL1CR2'],
+    'LR44': ['A76', 'AG13', 'G13', 'V13GA'],
+    'SR44': ['357', '303', 'V357'],
+    'LR41': ['AG3', 'G3', 'LR736'],
+    'LR43': ['AG12', 'G12', 'V12GA'],
+    'LR1130': ['AG10', 'G10', 'LR54'],
+    '9V': ['6LR61', '6F22', 'PP3'],
+    'AA': ['LR6', 'MN1500', 'Mignon'],
+    'AAA': ['LR03', 'MN2400', 'Micro'],
+  };
+  
+  // Extrahiere Batterietyp aus Produktname
+  let batteryTypeHtml = '';
+  if (isBatteryProduct) {
+    const productNameUpper = data.productName.toUpperCase();
+    for (const [type, alts] of Object.entries(batteryAlternatives)) {
+      if (productNameUpper.includes(type)) {
+        batteryTypeHtml = `<p style="margin-top: 1em; margin-bottom: 32px;"><strong>Typ:</strong> ${type} (entspricht ${alts.join(', ')})</p>`;
+        break;
+      }
+    }
+  }
+  
   // Kompatibilität als Fließtext unter die Tabelle (nicht in Tabelle!)
-  const kompatibilitaetHtml = (data.kompatibleModelle && data.kompatibleModelle.length > 0)
-    ? `<p style="margin-top: 1em; margin-bottom: 32px;"><strong>Kompatibilit&auml;t:</strong> Passend f&uuml;r ${data.kompatibleModelle.slice(0, 10).join(', ')}${data.kompatibleModelle.length > 10 ? ' und weitere Modelle' : ''}.</p>`
+  // REGEL: Bei Batterien KEIN Kompatibilitätsfeld, bei anderen direkt mit Modellen beginnen
+  const kompatibilitaetHtml = (!isBatteryProduct && data.kompatibleModelle && data.kompatibleModelle.length > 0)
+    ? `<p style="margin-top: 1em; margin-bottom: 32px;"><strong>Kompatibilit&auml;t:</strong> ${data.kompatibleModelle.slice(0, 10).join(', ')}${data.kompatibleModelle.length > 10 ? ' und weitere Modelle' : ''}</p>`
     : '';
   
   // Technische Specs hinzufügen (bei Akkus)
@@ -701,10 +740,16 @@ ${vorteileHtml}
 ${techTableHtml}`;
   }
 
-  // Kompatibilität als Fließtext unter die Tabelle
+  // Kompatibilität als Fließtext unter die Tabelle (für Nicht-Batterien)
   if (kompatibilitaetHtml) {
     html += `
 ${kompatibilitaetHtml}`;
+  }
+  
+  // Typ mit alternativen Bezeichnungen für Batterien/Knopfzellen
+  if (batteryTypeHtml) {
+    html += `
+${batteryTypeHtml}`;
   }
 
   // Lieferumfang immer zum Schluss - mit mehr Abstand zur Tabelle
