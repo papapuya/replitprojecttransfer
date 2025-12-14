@@ -518,57 +518,85 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
 }
 
 /**
- * Gruppiert Modelle nach Produktfamilie für kompaktere Ausgabe
- * "HP ProLiant ML350, HP ProLiant ML370, HP ProLiant ML570" → "HP ProLiant ML350, ML370, ML570"
+ * Gruppiert Modelle nach Marke+Serie für kompaktere Ausgabe
+ * "DELL: XPS: M1720, DELL: XPS: M1730" → "DELL XPS: M1720, M1730"
+ * "HP ProLiant ML350, HP ProLiant ML370" → "HP ProLiant ML350, ML370"
  */
 function groupByProductFamily(models: string[]): string[] {
   if (models.length === 0) return [];
   
-  // Bekannte Produktfamilien-Prefixe
-  const familyPatterns = [
-    { pattern: /^HP ProLiant\s+/i, family: 'HP ProLiant' },
-    { pattern: /^HP Smart Array\s+/i, family: 'HP Smart Array' },
-    { pattern: /^HP StorageWorks\s+/i, family: 'HP StorageWorks' },
-    { pattern: /^HP MSA\s+/i, family: 'HP MSA' },
-    { pattern: /^HP NAS\s+/i, family: 'HP NAS' },
-  ];
-  
-  // Gruppiere nach Familie
+  // Gruppiere nach Marke+Serie (dynamisch erkannt)
   const groups: Map<string, string[]> = new Map();
-  const ungrouped: string[] = [];
   
   for (const model of models) {
+    // Pattern 1: "MARKE: SERIE: MODELL" (z.B. "DELL: XPS: M1720")
+    const colonMatch = model.match(/^([A-Z][A-Z\-\s]*?):\s*([A-Z][A-Z0-9\-\s]*?):\s*(.+)$/i);
+    if (colonMatch) {
+      const brand = colonMatch[1].trim();
+      const series = colonMatch[2].trim();
+      const modelNum = colonMatch[3].trim();
+      const familyKey = `${brand} ${series}`;
+      
+      if (!groups.has(familyKey)) {
+        groups.set(familyKey, []);
+      }
+      groups.get(familyKey)!.push(modelNum);
+      continue;
+    }
+    
+    // Pattern 2: "MARKE SERIE MODELL" (z.B. "HP ProLiant ML350")
+    // Bekannte Serien erkennen
+    const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'ThinkCentre'];
     let matched = false;
-    for (const { pattern, family } of familyPatterns) {
-      if (pattern.test(model)) {
-        // Extrahiere Modellnummer (Teil nach dem Prefix)
-        const modelNumber = model.replace(pattern, '').trim();
-        if (!groups.has(family)) {
-          groups.set(family, []);
+    
+    for (const series of knownSeries) {
+      const seriesPattern = new RegExp(`^([A-Z][A-Z\\-\\s]*?)\\s+(${series})\\s+(.+)$`, 'i');
+      const seriesMatch = model.match(seriesPattern);
+      if (seriesMatch) {
+        const brand = seriesMatch[1].trim();
+        const seriesName = seriesMatch[2].trim();
+        const modelNum = seriesMatch[3].trim();
+        const familyKey = `${brand} ${seriesName}`;
+        
+        if (!groups.has(familyKey)) {
+          groups.set(familyKey, []);
         }
-        groups.get(family)!.push(modelNumber);
+        groups.get(familyKey)!.push(modelNum);
         matched = true;
         break;
       }
     }
+    
     if (!matched) {
-      ungrouped.push(model);
+      // Kein Pattern erkannt - als eigenständiges Modell behalten
+      if (!groups.has('_ungrouped_')) {
+        groups.set('_ungrouped_', []);
+      }
+      groups.get('_ungrouped_')!.push(model);
     }
   }
   
   // Baue gruppierte Ausgabe
   const result: string[] = [];
   
-  for (const [family, modelNumbers] of groups) {
-    // Sortiere Modellnummern
-    modelNumbers.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
-    // Format: "HP ProLiant ML350, ML370, ML570"
-    result.push(`${family} ${modelNumbers.join(', ')}`);
-  }
+  groups.forEach((modelNumbers: string[], family: string) => {
+    if (family === '_ungrouped_') return; // Später hinzufügen
+    
+    // Sortiere und dedupliziere Modellnummern
+    const uniqueModels = Array.from(new Set(modelNumbers));
+    uniqueModels.sort((a: string, b: string) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+    
+    // Format: "DELL XPS: M1720, M1730, M2010"
+    result.push(`${family}: ${uniqueModels.join(', ')}`);
+  });
   
   // Füge nicht-gruppierte Modelle hinzu
-  ungrouped.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
-  result.push(...ungrouped);
+  const ungrouped = groups.get('_ungrouped_') || [];
+  if (ungrouped.length > 0) {
+    const uniqueUngrouped = Array.from(new Set(ungrouped));
+    uniqueUngrouped.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+    result.push(...uniqueUngrouped);
+  }
   
   // Sortiere Ergebnis
   result.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
