@@ -996,7 +996,7 @@ function renderMediaMarktLayout(data: {
   }
   
   // Finale Filterung: leere und ungültige Werte entfernen
-  const finalSpecs = allSpecs.filter(spec => {
+  const filteredSpecs = allSpecs.filter(spec => {
     const val = (spec.value || '').trim();
     const valLower = val.toLowerCase();
     
@@ -1009,6 +1009,23 @@ function renderMediaMarktLayout(data: {
     }
     
     return true;
+  });
+  
+  // Sortierung: Feste Reihenfolge für technische Daten
+  const sortOrder: Record<string, number> = {
+    'spannung': 1,
+    'kapazität': 2,
+    'länge': 3,
+    'breite': 4,
+    'höhe': 5,
+    'gewicht': 6,
+    // Weitere Felder kommen danach in ursprünglicher Reihenfolge
+  };
+  
+  const finalSpecs = filteredSpecs.sort((a, b) => {
+    const aOrder = sortOrder[a.label.toLowerCase()] || 100;
+    const bOrder = sortOrder[b.label.toLowerCase()] || 100;
+    return aOrder - bOrder;
   });
   
   // Tabelle mit dynamischer Spaltenbreite: erste Spalte passt sich an längsten Label an
