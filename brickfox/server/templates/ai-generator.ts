@@ -971,12 +971,30 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     if (achtungHinweis) {
       console.log(`⚠️ ACHTUNG-Hinweis wird weitergegeben: ${achtungHinweis}`);
     }
+    
+    // Technische Daten für ALLE Produkttypen extrahieren (V, mAh, Wh, Farbe, Akkutyp)
+    // Bei Akkus: Vollständige Tabelle, bei anderen: nur vorhandene CSV-Werte
+    const relevantTechSpecs: Record<string, string> = {};
+    const techFieldsToExtract = ['spannung', 'kapazität', 'akkutyp', 'farbe', 'chemie', 'v_nominal', 'akku_v', 'akku_mah', 'achtung'];
+    
+    for (const [key, value] of Object.entries(extractedTechSpecs)) {
+      const keyLower = key.toLowerCase();
+      // Prüfe ob es ein relevantes technisches Feld ist
+      if (techFieldsToExtract.some(f => keyLower.includes(f)) || 
+          /\b(v|mah|wh|volt)\b/i.test(keyLower)) {
+        relevantTechSpecs[key] = value;
+      }
+    }
+    
+    // Bei Akkus alle Specs, bei anderen nur die relevanten
+    const finalTechSpecs = produktTyp === 'akku' ? extractedTechSpecs : relevantTechSpecs;
+    console.log(`📊 Technische Specs für ${produktTyp}: ${Object.keys(finalTechSpecs).length} Felder`);
 
     return {
       tagline: tagline,
       narrative: beschreibung,
       uspBullets: Array.isArray(vorteile) ? vorteile : [],
-      technicalSpecs: produktTyp === 'akku' ? extractedTechSpecs : { 'Achtung': achtungHinweis },
+      technicalSpecs: finalTechSpecs,
       safetyNotice: '',
       packageContents: lieferumfangString,
       productHighlights: [],
