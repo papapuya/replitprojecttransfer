@@ -639,22 +639,56 @@ function addBrandToModel(model: string, fallbackBrand: string | null): string {
 }
 
 /**
- * Rendert die Kompatibilitäts-Sektion mit Marken vor Modellnummern
+ * Entfernt die Marke aus einem Modellnamen (für Deduplizierung)
+ */
+function removeBrandFromModel(model: string, brand: string): string {
+  if (!brand) return model;
+  
+  // Entferne Marke am Anfang (mit optionalem Leerzeichen)
+  const patterns = [
+    new RegExp(`^${brand}\\s+`, 'i'),
+    new RegExp(`^${brand}\\s*Avent\\s+`, 'i'), // Philips Avent → Avent entfernen
+  ];
+  
+  let cleaned = model;
+  for (const pattern of patterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  
+  return cleaned.trim();
+}
+
+/**
+ * Rendert die Kompatibilitäts-Sektion mit Marke NUR EINMAL am Anfang
+ * Format: "Philips SCD486/84-R, SBC-EB4870 A1507, SBC-EB4880 A1507"
  */
 function renderKompatibilitaet(models: string[], e: (s: string) => string, productName?: string): string {
   if (!models || models.length === 0) {
     return '';
   }
   
-  // Extrahiere Fallback-Marke aus Produktname
-  const fallbackBrand = productName ? extractBrandFromProductName(productName) : null;
+  // Extrahiere Marke aus Produktname
+  const brand = productName ? extractBrandFromProductName(productName) : null;
   
-  // Füge Marke zu Modellen hinzu
-  const modelsWithBrand = models.map(model => addBrandToModel(model, fallbackBrand));
+  if (brand) {
+    // Entferne Marke aus allen Modellen (falls vorhanden)
+    const modelsWithoutBrand = models.map(model => removeBrandFromModel(model, brand));
+    
+    // Erstes Modell MIT Marke, Rest OHNE
+    const formattedModels = modelsWithoutBrand.map((model, index) => {
+      if (index === 0) {
+        // Erstes Modell: Marke + Modell
+        return `${brand} ${model}`;
+      }
+      return model;
+    });
+    
+    const modelsInline = formattedModels.map(model => e(model)).join(', ');
+    return `<p><strong>Kompatibilit&auml;t:</strong> ${modelsInline}</p>`;
+  }
   
-  // Kompaktes Inline-Format mit Kommas
-  const modelsInline = modelsWithBrand.map(model => e(model)).join(', ');
-  
+  // Kein Brand gefunden - einfach alle Modelle auflisten
+  const modelsInline = models.map(model => e(model)).join(', ');
   return `<p><strong>Kompatibilit&auml;t:</strong> ${modelsInline}</p>`;
 }
 
@@ -903,46 +937,10 @@ ${werkzeugItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 </ul>`
     : '';
 
-  // Lieferumfang mit Marke und Produkttyp aus dem Produktnamen
-  const extractedBrand = extractBrandFromProductName(data.productName || '');
-  const produktTypLabel = produktTyp === 'akku' ? 'Akku' : 
-                          produktTyp === 'werkzeug' ? 'Werkzeug-Set' : 'Produkt';
-  
+  // Lieferumfang einfach ohne Marke (z.B. "1x Akku", "2x Smartphonehalterung")
   const packageItems = data.packageContents
     .split(/\n/)
-    .map(item => {
-      let cleaned = item.trim();
-      if (!cleaned) return '';
-      
-      // Wenn das Item generisch ist (z.B. "1x Akku"), füge Marke hinzu
-      const genericPatterns = [
-        /^1x\s+Akku$/i,
-        /^1x\s+Ladeger[äa]t$/i,
-        /^1x\s+Batterie$/i,
-        /^1x\s+Werkzeug-?Set$/i,
-        /^1x\s+Kabel$/i,
-        /^1x\s+Netzteil$/i,
-        /^Akku$/i,
-        /^Ladeger[äa]t$/i,
-        /^Batterie$/i,
-      ];
-      
-      const isGeneric = genericPatterns.some(p => p.test(cleaned));
-      
-      if (isGeneric && extractedBrand) {
-        // Füge Marke zum generischen Lieferumfang hinzu
-        if (/^1x\s+/i.test(cleaned)) {
-          // Hat bereits "1x " Prefix
-          cleaned = cleaned.replace(/^(1x\s+)(\w+)/i, `$1$2 ${extractedBrand}`);
-        } else {
-          // Füge "1x " und Marke hinzu
-          cleaned = `1x ${cleaned} ${extractedBrand}`;
-        }
-        console.log(`📦 Lieferumfang mit Marke: ${cleaned}`);
-      }
-      
-      return cleaned;
-    })
+    .map(item => item.trim())
     .filter(item => item.length > 0);
   
   const lieferumfangHtml = packageItems.length > 0
