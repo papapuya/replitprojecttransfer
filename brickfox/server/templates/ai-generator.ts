@@ -562,7 +562,14 @@ EINSATZBEREICHE = WO/WOFÜR wird das Produkt verwendet?
   
   ✅ Lieber 3 spezifische Vorteile als 5 generische!
 
-- einsatzbereiche: 3-4 Sätze zu konkreten Anwendungsgebieten.
+- einsatzbereiche: 3-4 Sätze zu konkreten Anwendungsgebieten. KANN LEER SEIN!
+  ⚠️ WICHTIG: Wenn die CSV-Daten WENIG INFORMATIONEN enthalten (nur Produktname, keine Beschreibung, keine Anwendungsbeispiele), 
+  dann LASSE EINSATZBEREICHE LEER: "" - es ist BESSER kein Einsatzbereich als ein generischer/wiederholender!
+  
+  ⚠️ KEINE WIEDERHOLUNGEN: Der Einsatzbereich darf NICHT die gleichen Aussagen wie die Anwendung (anwendung) enthalten!
+  - Wenn du in "anwendung" schreibst "sorgt für zuverlässige Energie", darfst du das NICHT in einsatzbereiche wiederholen.
+  - Wenn du keine NEUEN, EINZIGARTIGEN Inhalte für Einsatzbereiche hast → LEER LASSEN: ""
+  
   STIL: Direkte Ansprache mit "Sie", verkaufsfördernd aber OHNE Call-to-Action!
   Beschreibe WO und WOFÜR das Produkt verwendet wird.
   Hebe den Nutzen für den Kunden hervor.
