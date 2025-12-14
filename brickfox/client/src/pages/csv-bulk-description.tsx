@@ -463,7 +463,7 @@ export default function CSVBulkDescription() {
             v_id: v_id,
             p_item_number: artikelnummer,
             produktname: produktname,
-            produktname_neu: produktname, // Original-Produktname übernehmen (kein SEO-Name mehr)
+            produktname_neu: limitModelsInName(produktname), // Modelle auf max. 2 begrenzen
             produktname_csv_original: rawProduktname, // Vollständiger Original-Name aus CSV
             produktbeschreibung: cleanDescription(plainText),
             produktbeschreibung_html: cleanDescription(payload.description || ''),
@@ -530,7 +530,47 @@ export default function CSVBulkDescription() {
     return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   };
 
-  // Bereinigt den SEO-Produktnamen: EMCOM entfernen, Wh/mAh entfernen, APN entfernen, Volt hinzufügen
+  // Begrenzt Modellnummern im Produktnamen auf maximal 2
+  const limitModelsInName = (text: string): string => {
+    if (!text) return text;
+    
+    // Pattern für Modellnummern: Alphanumerische Codes mit Buchstaben+Zahlen
+    // z.B. MBP33S, SCD620, V120, SC701, iPhone4
+    const modelPattern = /\b([A-Za-z]+\s*\d+[A-Za-z0-9\-\/]*|\d+[A-Za-z]+[A-Za-z0-9\-\/]*|[A-Z]{1,3}\d{3,}[A-Za-z0-9\-\/]*)\b/g;
+    
+    const matches: { match: string; index: number; length: number }[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = modelPattern.exec(text)) !== null) {
+      const value = match[1];
+      // Filtere technische Werte heraus (Volt, mAh, etc.)
+      if (!/^\d+\s*(V|Volt|mAh|Ah|W|Wh|mm|cm|m|g|kg)$/i.test(value)) {
+        matches.push({ match: match[0], index: match.index, length: match[0].length });
+      }
+    }
+    
+    // Wenn 2 oder weniger Modelle, nichts ändern
+    if (matches.length <= 2) return text;
+    
+    // Schneide nach dem 2. Modell ab
+    const secondModelEnd = matches[1].index + matches[1].length;
+    let result = text.substring(0, secondModelEnd);
+    
+    // Behalte technische Attribute am Ende (nach "–" oder "wie")
+    const rest = text.substring(secondModelEnd);
+    const dashMatch = rest.match(/[,\s]*(–|wie\s)/);
+    if (dashMatch && dashMatch.index !== undefined) {
+      const afterDash = rest.substring(dashMatch.index).replace(/^[,\s]+/, '');
+      result = result.replace(/[,\s]+$/, '') + ' ' + afterDash;
+    }
+    
+    // Bereinige Kommas und Leerzeichen am Ende
+    result = result.replace(/[,;\s]+$/, '').replace(/\s+/g, ' ').trim();
+    
+    console.log(`✂️ SEO-Modelle begrenzt: "${text.substring(0, 50)}..." → "${result.substring(0, 50)}..."`);
+    return result;
+  };
+
+  // Bereinigt den SEO-Produktnamen: EMCOM entfernen, Wh/mAh entfernen, APN entfernen, Volt hinzufügen, Modelle begrenzen
   const cleanSeoProductName = (name: string, voltValue?: string): string => {
     if (!name) return '';
     let cleaned = name;
@@ -557,6 +597,9 @@ export default function CSVBulkDescription() {
     
     // HINWEIS: Kleine mAh-Werte (z.B. 15-80 mAh) sind bei CMOS-Batterien korrekt
     // Keine automatische Filterung - CSV-Daten sind valide
+    
+    // Modellnummern auf maximal 2 begrenzen
+    cleaned = limitModelsInName(cleaned);
     
     // Wenn Volt-Wert vorhanden, am Ende hinzufügen
     if (voltValue && voltValue.trim()) {
