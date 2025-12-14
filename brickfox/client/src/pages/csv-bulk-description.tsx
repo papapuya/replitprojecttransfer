@@ -665,9 +665,8 @@ export default function CSVBulkDescription() {
         ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
       ].join('\n');
 
-      // UTF-8 mit BOM für korrekte Umlaut-Erkennung in Brickfox/Shopware
-      // \uFEFF ist das UTF-8 Byte Order Mark
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+      // UTF-8 ohne BOM für Brickfox
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
