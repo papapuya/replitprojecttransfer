@@ -525,6 +525,15 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       specs['Akkutyp'] = valTrimmed;
     }
     
+    // Energieinhalt (Wh): v_attributes[akku_wh][de]
+    if (keyLower.includes('akku_wh') || (keyLower.includes('energie') && keyLower.includes('wh'))) {
+      let whVal = valTrimmed;
+      if (!/\bwh\b/i.test(whVal)) {
+        whVal = `${whVal} Wh`;
+      }
+      specs['Energieinhalt'] = whVal;
+    }
+    
     // ═══════════════════════════════════════════════════════════════
     // DYNAMISCHE ERWEITERUNG: Maße, Gewicht, Farbe, technische Daten
     // ═══════════════════════════════════════════════════════════════
