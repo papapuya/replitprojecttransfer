@@ -219,10 +219,15 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 
 REGELN FÜR JSON-FELDER:
 - produktTitel: PFLICHT. Schema: [Marke] [Produktart] – [Volt], [mAh]. Marke IMMER am Anfang! Bei Akkus: Volt vor mAh! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen! KEINE Modelle im Titel!
-- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). NUR allgemeiner Nutzen! KEINE technischen Daten (mAh, Volt, Modelle) - die gehören NUR in die Tabelle! KEINE Wiederholungen!
-- kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten. Diese Daten erscheinen NUR in der Tabelle!
-- vorteile: Max 5, müssen aus Daten ableitbar sein. KEINE mAh, Ah, Volt-Werte, KEINE Modellnummern! Nur allgemeine Nutzen wie "Lange Laufzeit", "Einfache Installation"
-- technischeDaten: NUR bei Akkus/Ladegeräten/etc. HIER gehören alle technischen Details: mAh, Volt, Modelle, APN, Gewicht, Maße
+- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). 
+  🚫 ABSOLUT VERBOTEN im anwendung-Text:
+  - Keine Zahlen mit Einheiten (12 V, 3500 mAh, 18 Ah, 80 Wh)
+  - Keine Phrasen wie "Mit einer Kapazität/Spannung/Nennspannung von..."
+  - Keine technischen Spezifikationen jeglicher Art
+  ✅ ERLAUBT: Nur allgemeine Nutzen-Aussagen wie "zuverlässige Energie", "lange Betriebszeit"
+- kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten.
+- vorteile: Max 5, KEINE Zahlen/Einheiten! Nur allgemeine Nutzen wie "Lange Laufzeit"
+- technischeDaten: HIER gehören ALLE technischen Details: mAh, Volt, Modelle, APN, Gewicht, Maße
 - lieferumfang: PFLICHT. Mindestens "1x [Produktname]"
 - zeigeTabelle: true/false - ob technische Datentabelle angezeigt werden soll
 
