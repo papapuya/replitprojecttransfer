@@ -631,6 +631,7 @@ export default function CSVBulkDescription() {
     try {
       const selectedColumns = exportColumns.filter(col => col.enabled);
       
+      // Produkte filtern: Nur mit gültiger Beschreibung UND Produktname
       const productsWithDescription = bulkProducts.filter(p => 
         p.produktbeschreibung_html && p.produktbeschreibung_html.trim().length > 0
       );
@@ -647,7 +648,13 @@ export default function CSVBulkDescription() {
       const headers = selectedColumns.map(col => col.label);
       const rows = productsWithDescription.map(product => {
         return selectedColumns.map(col => {
-          const value = product[col.key as keyof BulkProduct];
+          let value = product[col.key as keyof BulkProduct];
+          
+          // Fallback: Wenn produktname_neu leer ist, Original-Produktname verwenden
+          if (col.key === 'produktname_neu' && (!value || String(value).trim() === '')) {
+            value = product.produktname || product.produktname_csv_original || '';
+          }
+          
           const strValue = typeof value === 'string' ? value : String(value);
           return decodeHtmlEntities(strValue);
         });
