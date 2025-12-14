@@ -522,17 +522,138 @@ function groupModelsByCategory(models: string[]): Record<string, string[]> {
 }
 
 /**
- * Rendert die Kompatibilitäts-Sektion mit intelligenter Gruppierung
- * - ≤ 8 Modelle: einfache Liste
- * - > 8 Modelle: gruppierte h3 + ul Blöcke (Ultra-Safe, ohne Inline-Styles)
+ * Bekannte Marken für Modellnummern-Prefix
  */
-function renderKompatibilitaet(models: string[], e: (s: string) => string): string {
+const KNOWN_BRANDS: [RegExp, string][] = [
+  [/^iphone/i, 'Apple iPhone'],
+  [/^ipad/i, 'Apple iPad'],
+  [/^ipod/i, 'Apple iPod'],
+  [/^watch/i, 'Apple Watch'],
+  [/^macbook/i, 'Apple MacBook'],
+  [/^imac/i, 'Apple iMac'],
+  [/^airpod/i, 'Apple AirPods'],
+  [/^galaxy/i, 'Samsung Galaxy'],
+  [/^pixel/i, 'Google Pixel'],
+  [/^mate\s?\d/i, 'Huawei Mate'],
+  [/^p\s?\d{2}/i, 'Huawei P'],
+  [/^xperia/i, 'Sony Xperia'],
+  [/^redmi/i, 'Xiaomi Redmi'],
+  [/^mi\s?\d/i, 'Xiaomi Mi'],
+  [/^moto\s/i, 'Motorola'],
+  [/^lumia/i, 'Nokia Lumia'],
+  [/^avent/i, 'Philips Avent'],
+  [/^sonicare/i, 'Philips Sonicare'],
+  [/^sdc\d/i, 'Philips Avent'],
+  [/^bc-eb/i, 'Philips'],
+  [/^gopro/i, 'GoPro'],
+  [/^hero\d/i, 'GoPro Hero'],
+  [/^sj\d{4}/i, 'SJCAM'],
+  [/^m\d{2}b/i, 'Graco'],
+];
+
+/**
+ * Extrahiert die Marke aus dem Produktnamen für Kompatibilität
+ */
+function extractBrandFromProductName(productName: string): string | null {
+  const brandPatterns: [RegExp, string][] = [
+    [/\bphilips\b/i, 'Philips'],
+    [/\bgraco\b/i, 'Graco'],
+    [/\bsamsung\b/i, 'Samsung'],
+    [/\bapple\b/i, 'Apple'],
+    [/\bhuawei\b/i, 'Huawei'],
+    [/\bsony\b/i, 'Sony'],
+    [/\blg\b/i, 'LG'],
+    [/\bnokia\b/i, 'Nokia'],
+    [/\bmotorola\b/i, 'Motorola'],
+    [/\bxiaomi\b/i, 'Xiaomi'],
+    [/\bgoogle\b/i, 'Google'],
+    [/\bgopro\b/i, 'GoPro'],
+    [/\bsjcam\b/i, 'SJCAM'],
+    [/\bbraun\b/i, 'Braun'],
+    [/\bbosch\b/i, 'Bosch'],
+    [/\bmakita\b/i, 'Makita'],
+    [/\bdewalt\b/i, 'DeWalt'],
+    [/\bmilwaukee\b/i, 'Milwaukee'],
+    [/\bhitachi\b/i, 'Hitachi'],
+    [/\bpanasonic\b/i, 'Panasonic'],
+    [/\bcanon\b/i, 'Canon'],
+    [/\bnikon\b/i, 'Nikon'],
+    [/\bfuji/i, 'Fujifilm'],
+    [/\bolympus\b/i, 'Olympus'],
+    [/\bdji\b/i, 'DJI'],
+    [/\bparrot\b/i, 'Parrot'],
+    [/\bdyson\b/i, 'Dyson'],
+    [/\bsiemens\b/i, 'Siemens'],
+    [/\bmiele\b/i, 'Miele'],
+    [/\bvorwerk\b/i, 'Vorwerk'],
+    [/\birobot\b/i, 'iRobot'],
+    [/\broomba\b/i, 'iRobot Roomba'],
+    [/\bgarmin\b/i, 'Garmin'],
+    [/\bfitbit\b/i, 'Fitbit'],
+  ];
+  
+  for (const [pattern, brand] of brandPatterns) {
+    if (pattern.test(productName)) {
+      return brand;
+    }
+  }
+  return null;
+}
+
+/**
+ * Prüft ob ein Modell bereits eine Marke enthält
+ */
+function modelHasBrand(model: string): boolean {
+  const brandPatterns = [
+    /^(apple|samsung|huawei|sony|lg|nokia|motorola|xiaomi|google|gopro|sjcam|philips|graco|braun|bosch|makita|dewalt|milwaukee|hitachi|panasonic|canon|nikon|fuji|olympus|dji|parrot|dyson|siemens|miele|vorwerk|irobot|garmin|fitbit)\b/i,
+    /^(iphone|ipad|ipod|watch|macbook|imac|airpod|galaxy|pixel|mate|xperia|redmi|lumia|avent|sonicare|hero|roomba)\b/i,
+  ];
+  
+  return brandPatterns.some(pattern => pattern.test(model.trim()));
+}
+
+/**
+ * Fügt Marke vor Modellnummer hinzu wenn nötig
+ */
+function addBrandToModel(model: string, fallbackBrand: string | null): string {
+  const trimmed = model.trim();
+  
+  // Bereits eine Marke vorhanden
+  if (modelHasBrand(trimmed)) {
+    return trimmed;
+  }
+  
+  // Prüfe bekannte Modell-Patterns
+  for (const [pattern, brand] of KNOWN_BRANDS) {
+    if (pattern.test(trimmed)) {
+      return `${brand} ${trimmed}`;
+    }
+  }
+  
+  // Fallback: Marke aus Produktname verwenden
+  if (fallbackBrand) {
+    return `${fallbackBrand} ${trimmed}`;
+  }
+  
+  return trimmed;
+}
+
+/**
+ * Rendert die Kompatibilitäts-Sektion mit Marken vor Modellnummern
+ */
+function renderKompatibilitaet(models: string[], e: (s: string) => string, productName?: string): string {
   if (!models || models.length === 0) {
     return '';
   }
   
+  // Extrahiere Fallback-Marke aus Produktname
+  const fallbackBrand = productName ? extractBrandFromProductName(productName) : null;
+  
+  // Füge Marke zu Modellen hinzu
+  const modelsWithBrand = models.map(model => addBrandToModel(model, fallbackBrand));
+  
   // Kompaktes Inline-Format mit Kommas
-  const modelsInline = models.map(model => e(model)).join(', ');
+  const modelsInline = modelsWithBrand.map(model => e(model)).join(', ');
   
   return `<p><strong>Kompatibilit&auml;t:</strong> ${modelsInline}</p>`;
 }
@@ -688,10 +809,11 @@ function renderMediaMarktLayout(data: {
   
   const validKompatibleModelle = filterValidCompatibility(data.kompatibleModelle || []);
   
-  // REGEL: Kompatibilität 1:1 aus CSV übernehmen - ALLE Modelle anzeigen
-  // Auch bei nur 1 Modell anzeigen (z.B. "iPhone 4")
+  // REGEL: Kompatibilität mit Marke vor Modellnummern
+  // Die Marke wird aus dem Produktnamen extrahiert falls nicht bereits vorhanden
   let kompatibilitaetHtml = (validKompatibleModelle.length >= 1)
-    ? `<p style="margin-top: 1em; margin-bottom: 16px;"><strong>Kompatibilit&auml;t:</strong> ${validKompatibleModelle.join(', ')}</p>`
+    ? renderKompatibilitaet(validKompatibleModelle, e, data.productName)
+        .replace('<p>', '<p style="margin-top: 1em; margin-bottom: 16px;">')
     : '';
   
   // ACHTUNG-Hinweise fett unter Kompatibilität anzeigen
@@ -781,9 +903,46 @@ ${werkzeugItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 </ul>`
     : '';
 
+  // Lieferumfang mit Marke und Produkttyp aus dem Produktnamen
+  const extractedBrand = extractBrandFromProductName(data.productName || '');
+  const produktTypLabel = produktTyp === 'akku' ? 'Akku' : 
+                          produktTyp === 'werkzeug' ? 'Werkzeug-Set' : 'Produkt';
+  
   const packageItems = data.packageContents
     .split(/\n/)
-    .map(item => item.trim())
+    .map(item => {
+      let cleaned = item.trim();
+      if (!cleaned) return '';
+      
+      // Wenn das Item generisch ist (z.B. "1x Akku"), füge Marke hinzu
+      const genericPatterns = [
+        /^1x\s+Akku$/i,
+        /^1x\s+Ladeger[äa]t$/i,
+        /^1x\s+Batterie$/i,
+        /^1x\s+Werkzeug-?Set$/i,
+        /^1x\s+Kabel$/i,
+        /^1x\s+Netzteil$/i,
+        /^Akku$/i,
+        /^Ladeger[äa]t$/i,
+        /^Batterie$/i,
+      ];
+      
+      const isGeneric = genericPatterns.some(p => p.test(cleaned));
+      
+      if (isGeneric && extractedBrand) {
+        // Füge Marke zum generischen Lieferumfang hinzu
+        if (/^1x\s+/i.test(cleaned)) {
+          // Hat bereits "1x " Prefix
+          cleaned = cleaned.replace(/^(1x\s+)(\w+)/i, `$1$2 ${extractedBrand}`);
+        } else {
+          // Füge "1x " und Marke hinzu
+          cleaned = `1x ${cleaned} ${extractedBrand}`;
+        }
+        console.log(`📦 Lieferumfang mit Marke: ${cleaned}`);
+      }
+      
+      return cleaned;
+    })
     .filter(item => item.length > 0);
   
   const lieferumfangHtml = packageItems.length > 0
