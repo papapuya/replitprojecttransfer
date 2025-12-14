@@ -60,6 +60,11 @@ interface BulkProduct {
   hersteller?: string;
   preis?: string;
   gewicht?: string;
+  akku_mah?: string;
+  akku_v?: string;
+  akku_wh?: string;
+  akku_ch?: string;
+  farbe?: string;
   kategorie?: string;
 }
 
@@ -473,6 +478,11 @@ export default function CSVBulkDescription() {
             seo_beschreibung: seoDesc,
             seo_keywords: payload.seoKeywords || '',
             kurzbeschreibung: shortDesc.substring(0, 300),
+            akku_mah: row['p_attributes[akku_mah][de]'] || '',
+            akku_v: row['p_attributes[akku_v][de]'] || '',
+            akku_wh: row['p_attributes[akku_wh][de]'] || '',
+            akku_ch: row['p_attributes[akku_ch][de]'] || '',
+            farbe: row['p_attributes[farbe][de]'] || '',
           } satisfies BulkProduct;
         })
       );

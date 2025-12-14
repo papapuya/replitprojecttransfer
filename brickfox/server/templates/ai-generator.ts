@@ -283,9 +283,40 @@ KATEGORIE: ELEKTRONIK / ZUBEHÖR (Typ B)
                                         structuredDataSource['P Description[de]'] ||
                                         structuredDataSource['p_description'] ||
                                         structuredDataSource['beschreibung'] || '';
-  const hasExistingDesc = existingDescriptionForPrompt && existingDescriptionForPrompt.trim().length > 50;
   
-  console.log(`📋 [PROMPT] Bestehende Beschreibung für AI: ${hasExistingDesc ? 'JA (' + existingDescriptionForPrompt.length + ' Zeichen)' : 'NEIN'}`);
+  // REGEL: Prüfe ob echte Vorteile extrahiert werden können
+  // Nur wenn Beschreibung ECHTE Produktinfos enthält (nicht nur Produktname wiederholt)
+  const productNameForCheck = productData?.productName || productData?.produktname || 
+                              structuredDataSource['p_name[de]'] || '';
+  
+  const hasRealContent = (desc: string, name: string): boolean => {
+    if (!desc || desc.trim().length < 50) return false;
+    
+    // Prüfe ob die Beschreibung mehr als nur den Produktnamen enthält
+    const descLower = desc.toLowerCase().trim();
+    const nameLower = name.toLowerCase().trim();
+    
+    // Entferne Produktname aus Beschreibung und prüfe was übrig bleibt
+    const withoutName = descLower.replace(new RegExp(nameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim();
+    
+    // Muss mindestens 30 Zeichen echter Inhalt übrig bleiben
+    if (withoutName.length < 30) return false;
+    
+    // Prüfe auf nützliche Schlüsselwörter für Vorteile
+    const usefulKeywords = [
+      'schutz', 'sicher', 'langlebig', 'qualität', 'hochwertig', 'zuverlässig',
+      'temperatur', 'memory', 'selbstentladung', 'kapazität', 'leistung',
+      'auslauf', 'überlad', 'tiefentlad', 'kurzschluss', 'bms', 'lithium',
+      'li-ion', 'li-polymer', 'nimh', 'original', 'ersetzt', 'passend'
+    ];
+    
+    const hasUsefulContent = usefulKeywords.some(kw => descLower.includes(kw));
+    return hasUsefulContent;
+  };
+  
+  const hasExistingDesc = hasRealContent(existingDescriptionForPrompt, productNameForCheck);
+  
+  console.log(`📋 [PROMPT] Bestehende Beschreibung für AI: ${hasExistingDesc ? 'JA (echte Vorteile extrahierbar)' : 'NEIN (keine echten Vorteile)'}`);
 
   const systemPrompt = `Du bist ein deterministischer PIM- & SEO-Textgenerator für akkushop.de.
 
