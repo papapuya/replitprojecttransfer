@@ -738,15 +738,14 @@ function renderMediaMarktLayout(data: {
     allSpecs.push(...filteredSpecs);
   }
   
-  // Teilenummer (APN) als letzte Zeile IN der Tabelle (nur einmal!)
+  // Teilenummer (APN) wird UNTER der Tabelle angezeigt, nicht IN der Tabelle
+  let teilenummerHtml = '';
   if (data.apnSatz && data.apnSatz.trim()) {
     // Extrahiere die APN-Nummern aus dem Satz
     const apnMatch = data.apnSatz.match(/(\d{3}-\d{4}[\d\s,\-]*)/);
     if (apnMatch) {
-      allSpecs.push({
-        label: 'Teilenummer (APN)',
-        value: apnMatch[0].replace(/,\s*/g, ', ').trim()
-      });
+      const apnValue = apnMatch[0].replace(/,\s*/g, ', ').trim();
+      teilenummerHtml = `<p style="margin-top: 1em;"><strong>Teilenummer (APN):</strong> ${e(apnValue)}</p>`;
     }
   }
   
@@ -855,6 +854,11 @@ ${vorteileHtml}
   if (techTableHtml) {
     html += `
 ${techTableHtml}`;
+  }
+
+  // Teilenummer (APN) direkt unter die Technische Daten Tabelle
+  if (teilenummerHtml) {
+    html += teilenummerHtml;
   }
 
   // Kompatibilität als Fließtext unter die Tabelle (für Nicht-Batterien)
