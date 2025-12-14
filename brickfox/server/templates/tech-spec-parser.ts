@@ -1292,19 +1292,26 @@ export function extractTechSpecs1to1(
   }
   
   // ═══════════════════════════════════════════════════════════════
-  // REGEL: Farbe nur anzeigen wenn mind. 2 weitere technische Daten
+  // REGEL: Farbe nur anzeigen wenn mind. 2 weitere ECHTE technische Daten
   // Farbe allein oder mit nur 1 anderen Spec → Farbe entfernen
+  // Meta-Felder wie P Id, P Name, P Brand zählen NICHT als technische Daten
   // ═══════════════════════════════════════════════════════════════
   if (specs['Farbe']) {
-    // Zähle andere technische Daten (ohne Farbe, Kompatibilität, Achtung, APN)
-    const excludeFromCount = ['Farbe', 'Kompatibilität', 'Nicht kompatibel mit', 'Achtung', 'APN', 'Alternative Bezeichnungen'];
-    const otherSpecsCount = Object.keys(specs).filter(key => !excludeFromCount.includes(key)).length;
+    // NUR diese Felder zählen als echte technische Daten:
+    const realTechFields = [
+      'Spannung', 'Kapazität', 'Akkutyp', 'Energieinhalt', 'Gewicht',
+      'Länge', 'Breite', 'Höhe', 'Durchmesser', 'Material',
+      'Kabellänge', 'Anschluss', 'Ladezeit', 'Max. Ladeleistung',
+      'Wasserschutz', 'Zertifizierung', 'Typ / Bezeichnung', 'Modelle'
+    ];
     
-    if (otherSpecsCount < 2) {
-      console.log(`🎨 Farbe entfernt: nur ${otherSpecsCount} andere technische Daten (mind. 2 nötig)`);
+    const otherRealSpecsCount = Object.keys(specs).filter(key => realTechFields.includes(key)).length;
+    
+    if (otherRealSpecsCount < 2) {
+      console.log(`🎨 Farbe entfernt: nur ${otherRealSpecsCount} echte technische Daten (mind. 2 nötig)`);
       delete specs['Farbe'];
     } else {
-      console.log(`🎨 Farbe beibehalten: ${otherSpecsCount} andere technische Daten vorhanden`);
+      console.log(`🎨 Farbe beibehalten: ${otherRealSpecsCount} echte technische Daten vorhanden`);
     }
   }
   
