@@ -918,32 +918,70 @@ function renderMediaMarktLayout(data: {
   }
   
   // Technische Specs hinzufügen - für ALLE Produkttypen (wenn Daten vorhanden)
+  // WICHTIG: Duplikate werden gefiltert, Einheiten werden hinzugefügt
   if (data.technicalSpecs && data.technicalSpecs.length > 0) {
     const existingLabels = new Set(allSpecs.map(s => s.label.toLowerCase()));
     
-    const filteredSpecs = data.technicalSpecs.filter(spec => {
+    // Einheiten-Map für technische Daten
+    const unitMap: Record<string, string> = {
+      'gewicht': 'g',
+      'länge': 'mm',
+      'breite': 'mm',
+      'höhe': 'mm',
+      'durchmesser': 'mm',
+      'spannung': 'V',
+      'kapazität': 'mAh',
+      'kabellänge': 'm',
+      'ladezeit': 'h',
+      'reichweite': 'm',
+      'lichtleistung': 'Lumen',
+      'lichtstärke': 'cd',
+      'stoßfestigkeit': 'm',
+      'max. ladeleistung': 'W',
+      'betriebstemperatur': '°C',
+    };
+    
+    for (const spec of data.technicalSpecs) {
       const labelLower = spec.label.toLowerCase();
       const valueTrimmed = (spec.value || '').replace(/[\s\u00A0\u200B\uFEFF]/g, '').trim();
       
       // Leere Werte filtern
       if (!valueTrimmed || valueTrimmed === '' || valueTrimmed === '-' || valueTrimmed === '0' ||
           valueTrimmed === '&nbsp;' || valueTrimmed.length === 0) {
-        return false;
+        continue;
       }
       
-      // Duplikate filtern
-      if (existingLabels.has(labelLower)) return false;
+      // Duplikate filtern - WICHTIG: Set wird aktualisiert
+      if (existingLabels.has(labelLower)) {
+        console.log(`🔄 Duplikat übersprungen: ${spec.label}`);
+        continue;
+      }
       
       // Bestimmte Felder ausschließen
-      return !labelLower.includes('teilenummer') && 
-             !labelLower.includes('apn') &&
-             !labelLower.includes('kompatibil') &&
-             !labelLower.includes('modell') &&
-             !labelLower.includes('schutzschaltung') &&
-             !labelLower.includes('achtung') &&
-             labelLower !== 'part number';
-    });
-    allSpecs.push(...filteredSpecs);
+      if (labelLower.includes('teilenummer') || 
+          labelLower.includes('apn') ||
+          labelLower.includes('kompatibil') ||
+          labelLower.includes('modell') ||
+          labelLower.includes('schutzschaltung') ||
+          labelLower.includes('achtung') ||
+          labelLower === 'part number') {
+        continue;
+      }
+      
+      // Einheit hinzufügen wenn noch nicht vorhanden
+      let finalValue = spec.value;
+      const unit = unitMap[labelLower];
+      if (unit && !spec.value.includes(unit)) {
+        // Nur Einheit hinzufügen wenn Wert numerisch ist
+        const numericPart = spec.value.replace(/[^\d.,]/g, '');
+        if (numericPart && numericPart.length > 0) {
+          finalValue = `${spec.value} ${unit}`;
+        }
+      }
+      
+      allSpecs.push({ label: spec.label, value: finalValue });
+      existingLabels.add(labelLower); // Set aktualisieren!
+    }
   }
   
   // Teilenummer (APN) wird UNTER der Tabelle angezeigt, nicht IN der Tabelle
