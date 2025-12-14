@@ -480,6 +480,8 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       ];
       
       console.log(`🔍 [COMPAT] Prüfe ${lines.length} Zeilen aus Beschreibung`);
+      // Debug: Zeige erste 5 Zeilen
+      lines.slice(0, 10).forEach((l, i) => console.log(`   Zeile ${i}: "${l.trim().substring(0, 80)}..."`));
       
       for (const line of lines) {
         const trimmed = line.trim();
@@ -493,6 +495,7 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
             const cleanModel = trimmed.replace(/[,;]$/, '').trim();
             if (cleanModel.length > 5) {
               allModels.push(cleanModel);
+              console.log(`   ✅ Gefunden: ${cleanModel}`);
             }
             break;
           }
