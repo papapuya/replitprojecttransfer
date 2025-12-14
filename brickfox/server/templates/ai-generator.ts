@@ -933,7 +933,26 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       console.log(`📋 [USP-CHECK] Nur 1 Vorteil gefunden - "Ihre Vorteile" wird komplett weggelassen`);
     }
     
-    const kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
+    // PRIORITÄT: Extrahierte Kompatibilität aus CSV-Beschreibung > AI-generierte Kompatibilität
+    // Die directTechSpecs enthalten die aus p_description[de] extrahierten Modelle
+    const structuredDataSource = productData.structuredData || productData;
+    const extractedTechSpecs = extractTechSpecs1to1(
+      productData.extractedText || '',
+      structuredDataSource,
+      categoryConfig
+    );
+    
+    // Nutze extrahierte Kompatibilität aus CSV (falls vorhanden)
+    let kompatibleModelle: string[] = [];
+    if (extractedTechSpecs['Kompatibilität'] && extractedTechSpecs['Kompatibilität'].length > 0) {
+      // Kompatibilität ist ein String mit komma-getrennten Modellen
+      kompatibleModelle = extractedTechSpecs['Kompatibilität'].split(', ').map((m: string) => m.trim()).filter((m: string) => m.length > 0);
+      console.log(`📋 [COMPAT] Verwende ${kompatibleModelle.length} Modelle aus CSV-Beschreibung`);
+    } else {
+      // Fallback: AI-generierte Kompatibilität
+      kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
+      console.log(`📋 [COMPAT] Verwende AI-generierte Kompatibilität: ${kompatibleModelle.length} Modelle`);
+    }
     const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
     const einsatzbereiche = parsedContent.einsatzbereiche || '';
     const apnSatz = parsedContent.apnSatz || '';
@@ -945,19 +964,13 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     const zeigeTabelle = produktTyp === 'akku' ? (parsedContent.zeigeTabelle !== false) : false;
 
     // NUR 1:1 extrahierte Specs verwenden - KEINE AI-Fallbacks für technische Daten!
-    // AI darf technische Werte nicht erfinden
-    const structuredDataSource = productData.structuredData || productData;
-    const directTechSpecs = extractTechSpecs1to1(
-      productData.extractedText || '',
-      structuredDataSource,
-      categoryConfig
-    );
+    // AI darf technische Werte nicht erfinden (nutze bereits oben extrahierte extractedTechSpecs)
 
     return {
       tagline: tagline,
       narrative: beschreibung,
       uspBullets: Array.isArray(vorteile) ? vorteile : [],
-      technicalSpecs: produktTyp === 'akku' ? directTechSpecs : {},
+      technicalSpecs: produktTyp === 'akku' ? extractedTechSpecs : {},
       safetyNotice: '',
       packageContents: lieferumfangString,
       productHighlights: [],
