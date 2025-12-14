@@ -46,6 +46,12 @@ STIL:
 - "perfekte Wahl für"
 - "hochwertiges Produkt"
 
+🚫 KRITISCH - TECHNISCHE DATEN NICHT ERFINDEN:
+- Nenne Kapazität (mAh), Spannung (V), Energie (Wh) NUR wenn sie in den Produktdaten stehen!
+- Wenn keine technischen Daten vorhanden sind, beschreibe nur Funktion und Verwendungszweck
+- NIEMALS Werte wie "273 mAh" erfinden wenn keine Kapazität angegeben ist
+- Bei fehlenden Daten: Fokussiere auf Anwendung und Kompatibilität statt auf technische Werte
+
 OUTPUT-FORMAT (JSON):
 {
   "tagline": "Kurze, prägnante Überschrift in max. 8-10 Wörtern (z.B. 'Kompakte 20-Watt-Power für unterwegs – zuverlässig & schnell')",
