@@ -78,57 +78,46 @@ function removeEmcomBrand(text: string): string {
 function limitModelsInTitle(text: string): string {
   if (!text) return text;
   
-  // Pattern für Modellnummern: Wörter mit Buchstaben+Zahlen oder Zahlen+Buchstaben
-  // z.B. iPhone4, 4S, A1234, SCD486, X220, T440s
-  const modelPattern = /\b([A-Za-z]+\s*\d+[A-Za-z0-9\-\/]*|\d+[A-Za-z]+[A-Za-z0-9\-\/]*|[A-Z]{1,3}\d{3,}[A-Za-z0-9\-\/]*)\b/g;
+  // Finde "für" Position - Modelle kommen danach
+  const fuerMatch = text.match(/\b(für|for)\s+/i);
+  if (!fuerMatch || fuerMatch.index === undefined) return text;
   
-  let matches: RegExpExecArray[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = modelPattern.exec(text)) !== null) {
-    // Filtere technische Werte heraus (Volt, mAh, etc.)
-    const value = match[1];
-    if (!/^\d+\s*(V|Volt|mAh|Ah|W|Wh|mm|cm|m|g|kg)$/i.test(value)) {
-      matches.push(match);
+  const prefix = text.substring(0, fuerMatch.index + fuerMatch[0].length);
+  const afterFuer = text.substring(fuerMatch.index + fuerMatch[0].length);
+  
+  // Teile bei Kommas auf
+  const parts = afterFuer.split(/,\s*/);
+  
+  // Finde wo "wie" oder "–" beginnt (technische Daten)
+  let wieIndex = -1;
+  for (let i = 0; i < parts.length; i++) {
+    if (/^(wie|–)\s*/i.test(parts[i].trim())) {
+      wieIndex = i;
+      break;
     }
   }
   
-  // Wenn mehr als 2 Modelle gefunden, schneide nach dem 2. ab
-  if (matches.length > 2) {
-    const secondModelEnd = matches[1].index + matches[1][0].length;
-    
-    // Finde das nächste Komma oder Trennzeichen nach dem 2. Modell
-    let cutPosition = secondModelEnd;
-    const afterSecond = text.substring(secondModelEnd);
-    
-    // Behalte eventuelle Attribute nach dem 2. Modell (z.B. "– 3,7 Volt, 1821 mAh")
-    const dashMatch = afterSecond.match(/^[,\s]*–/);
-    if (dashMatch) {
-      // Behalte alles ab dem Gedankenstrich
-      cutPosition = secondModelEnd + (afterSecond.indexOf('–'));
-    } else {
-      // Schneide bei Komma/Semikolon ab
-      const nextSeparator = afterSecond.match(/^[,;\s]+/);
-      if (nextSeparator) {
-        cutPosition = secondModelEnd;
-      }
-    }
-    
-    let result = text.substring(0, cutPosition).trim();
-    
-    // Füge Rest nach Gedankenstrich hinzu wenn vorhanden
-    const dashIndex = text.indexOf('–', cutPosition);
-    if (dashIndex !== -1) {
-      result = result.replace(/[,\s]+$/, '') + ' ' + text.substring(dashIndex);
-    }
-    
-    // Bereinige Kommas am Ende
-    result = result.replace(/[,\s]+–/, ' –').replace(/,\s*$/, '').trim();
-    
-    console.log(`✂️ Modelle begrenzt: "${text.substring(0, 60)}..." → "${result.substring(0, 60)}..."`);
-    return result;
+  // Modell-Teile sind vor "wie"/"–", technische Teile sind danach
+  const modelParts = wieIndex >= 0 ? parts.slice(0, wieIndex) : parts;
+  const techParts = wieIndex >= 0 ? parts.slice(wieIndex) : [];
+  
+  // Wenn 2 oder weniger Modell-Teile, nichts ändern
+  if (modelParts.length <= 2) return text;
+  
+  // Nur erste 2 Modell-Teile behalten
+  const limitedModels = modelParts.slice(0, 2);
+  
+  // Zusammenbauen: Prefix + 2 Modelle + technische Teile
+  let result = prefix + limitedModels.join(', ');
+  if (techParts.length > 0) {
+    result += ', ' + techParts.join(', ');
   }
   
-  return text;
+  // Bereinigen
+  result = result.replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim();
+  
+  console.log(`✂️ Modelle begrenzt: "${text.substring(0, 60)}..." → "${result.substring(0, 60)}..."`);
+  return result;
 }
 
 /**
