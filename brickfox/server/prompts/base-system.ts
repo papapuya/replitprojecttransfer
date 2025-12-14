@@ -11,7 +11,6 @@ VERBOTEN:
 ❌ Erfundene Daten oder Annahmen
 ❌ Template-Anweisungen im Output ("VERWENDE...", "FÜGE EIN...")
 ❌ Markdown-Formatierung (\`\`\`json, **, etc.)
-❌ Technische Daten als USPs ("3,6 V Spannung")
 ❌ UI-Anweisungen oder Barrierefreiheits-Hinweise
 
 ERLAUBT:

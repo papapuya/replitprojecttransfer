@@ -18,67 +18,35 @@ DEINE AUFGABE:
 Schreibe eine professionelle, produktspezifische Beschreibung in GENAU 4-5 Sätzen.
 
 INHALT (produktspezifisch):
-1. Was ist das Produkt KONKRET? Nenne Modell/Format
+1. Was ist das Produkt KONKRET? Nenne Modell/Format und technische Daten
 2. WOFÜR wird es verwendet? (konkrete Anwendungen)
-3. Welche VORTEILE hat es? (Nutzen beschreiben, KEINE technischen Zahlen!)
+3. Welche VORTEILE hat es?
 4. Für wen ist ES geeignet? (spezifische Zielgruppe)
-
-BEISPIEL:
-
-❌ SCHLECHT (mit technischen Werten):
-"Dieser Akku bietet 950 mAh Kapazität und 3,7V Spannung. Mit 12 V Leistung..."
-
-✅ GUT (ohne technische Werte, nur Nutzen):
-"Dieser wiederaufladbare Li-Ion-Akku im kompakten 16340 Format eignet sich ideal für LED-Taschenlampen, Fotokameras und Sicherheitstechnik. Er bietet lange Betriebszeiten und gewährleistet eine stabile Leistung in allen Anwendungen. Der integrierte Schutz vor Überladung sorgt für zusätzliche Sicherheit."
 
 STIL:
 - Nenne das Produktmodell/Format
-- Nenne spezifische Anwendungen
-- Erkläre den NUTZEN (nicht technische Zahlen)
+- Nenne spezifische Anwendungen und technische Daten
 - WICHTIG: Der Produktname wird als H1 separat angezeigt - NIEMALS im Narrative wiederholen!
 - NIEMALS mit dem Produktnamen beginnen (z.B. "Der Varta CR2032..." ist VERBOTEN)
 - Starte direkt mit den Eigenschaften/Vorteilen
 - GENAU 4-5 Sätze (nicht mehr, nicht weniger!)
 
-❌ VERBOTENE PHRASEN (nicht verwenden!):
-- "steht für Qualität, Zuverlässigkeit und Langlebigkeit"
-- "ideal für den täglichen Einsatz"
-- "perfekte Wahl für"
-- "hochwertiges Produkt"
-
-🚫🚫🚫 ABSOLUT VERBOTEN - KEINE TECHNISCHEN WERTE IM TEXT 🚫🚫🚫
-- NIEMALS Kapazität nennen (mAh, Ah)
-- NIEMALS Spannung nennen (V, Volt)
-- NIEMALS Energie nennen (Wh)
-- NIEMALS Maße nennen (mm, cm)
-- NIEMALS Gewicht nennen (g, kg)
-- Technische Daten gehören NUR in die TABELLE!
-
-VERBOTEN: "mit 12 V", "3500 mAh", "80 Ah", "Spannung von", "Kapazität von"
-ERLAUBT: "zuverlässige Energieversorgung", "lange Betriebszeiten", "stabile Leistung"
-
 OUTPUT-FORMAT (JSON):
 {
-  "tagline": "Kurze Überschrift in max. 8-10 Wörtern OHNE technische Werte",
-  "narrative": "Die produktspezifische Beschreibung in 4-5 Sätzen OHNE technische Werte.",
+  "tagline": "Kurze Überschrift in max. 8-10 Wörtern",
+  "narrative": "Die produktspezifische Beschreibung in 4-5 Sätzen.",
   "productHighlights": [
-    "Highlight 1 (OHNE Zahlen)",
-    "Highlight 2 (OHNE Zahlen)", 
-    "Highlight 3 (OHNE Zahlen)",
-    "Highlight 4 (OHNE Zahlen)"
+    "Highlight 1",
+    "Highlight 2", 
+    "Highlight 3",
+    "Highlight 4"
   ]
 }
 
 TAGLINE-REGELN:
 - Max. 8-10 Wörter
-- KEINE technischen Werte (keine V, mAh, Ah, Wh, mm, g)
 - Nennt EINEN Hauptvorteil des Produkts
-- Kein Punkt am Ende
-
-WICHTIG für Highlights:
-- KEINE Zahlen, KEINE Einheiten
-- Fokus auf Qualitätsmerkmale und Schutzfunktionen
-- Produktspezifisch, nicht generisch`,
+- Kein Punkt am Ende`,
 
   userPrompt: (context: PromptContext) => {
     const existingDesc = context.existingDescription;
@@ -92,16 +60,15 @@ Es gibt eine bestehende Produktbeschreibung als Referenz:
 ---
 ${existingDesc}
 ---
-Nutze diese als Informationsquelle für Anwendungsgebiete und Kompatibilität.
-IGNORIERE alle technischen Werte (Spannung, Kapazität, etc.) - diese gehören NUR in die Tabelle!
+Nutze diese als Informationsquelle.
 ` : ''}
 
 Schreibe jetzt eine PRODUKTSPEZIFISCHE Beschreibung als JSON.
 
 WICHTIG:
-- KEINE technischen Werte im Text (keine V, mAh, Ah, Wh, mm, g)!
 - Erkläre, WOFÜR dieses Produkt verwendet wird
 - Beschreibe den NUTZEN für den Kunden
+- Nenne technische Daten wie Spannung und Kapazität
 - NIEMALS den Produktnamen am Anfang wiederholen`;
   }
 };
