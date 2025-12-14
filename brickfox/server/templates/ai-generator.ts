@@ -97,8 +97,9 @@ async function generateProductCopyModular(
     // USPs nur zurückgeben wenn bestehende Beschreibung vorhanden war
     // REGEL: Keine generischen Template-USPs mehr - nur echte extrahierte Vorteile
     // REGEL: Mindestens 2 Vorteile müssen vorhanden sein, sonst komplett weglassen
+    // REGEL: ALLE Vorteile aus CSV übernehmen (nicht begrenzen)
     const hasExistingDescription = existingDescription && existingDescription.trim().length > 50;
-    const tempUsps = hasExistingDescription ? processed.uspBullets.slice(0, 5) : [];
+    const tempUsps = hasExistingDescription ? processed.uspBullets : [];
     const realUsps = tempUsps.length >= 2 ? tempUsps : [];
     
     return {
@@ -662,8 +663,6 @@ FORMAT-REGEL für Vorteile:
 
 ⚠️ KRITISCH: KEINE VORTEILE ERFINDEN!
 Du darfst NUR Vorteile nennen die EXPLIZIT in den CSV-Daten stehen!
-- Wenn "Ni-MH" in den Daten steht → "Ni-MH Technologie – sorgt für konstante Leistung"
-- Wenn "Li-Ion" in den Daten steht → "Li-Ion Technologie – hohe Energiedichte"
 - Wenn NICHTS über Temperatur in den Daten steht → KEIN Vorteil über Temperatur!
 
 VERBOTEN zu erfinden:
@@ -671,17 +670,12 @@ VERBOTEN zu erfinden:
 ❌ "Geringe Selbstentladung" (wenn nicht in CSV!)
 ❌ "Auslaufsicher" (wenn nicht in CSV!)
 
-BEISPIEL wenn CSV "Ni-MH" enthält:
-→ uspBullets: [
-  "Ni-MH Technologie – sorgt für konstante Leistung über lange Zeit"
-]
+⚠️ WICHTIG: Akkutyp (Li-Ion, Ni-MH, etc.) gehört NICHT zu Vorteilen!
+→ Akkutyp wird separat in den TECHNISCHEN DATEN angezeigt
+→ Nenne KEINE Vorteile wie "Li-Ion Technologie" - das steht bereits in der Tabelle!
 
-Lieber 1-2 ECHTE Vorteile als 4 erfundene!
-
-${akkuChemie ? `
-⚠️ TECHNOLOGIE AUS CSV ERKANNT: "${akkuChemie}"
-→ Nutze diese Info für einen Vorteil wie: "${akkuChemie} Technologie – [passender Nutzen]"
-` : ''}
+ÜBERNEHME ALLE echten Vorteile aus der CSV (keine Begrenzung auf 2-3)!
+Lieber ALLE echte Vorteile als zu wenige!
 `
     : `
 ═══════════════════════════════════════════════════════════════
@@ -898,7 +892,8 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     
     // Nur echte Vorteile wenn bestehende Beschreibung vorhanden, sonst leer
     // REGEL: Mindestens 2 Vorteile müssen vorhanden sein, sonst komplett weglassen
-    const tempVorteile = hasExistingDescriptionMono ? filteredVorteile.slice(0, 4) : [];
+    // REGEL: ALLE Vorteile aus CSV übernehmen (keine Begrenzung)
+    const tempVorteile = hasExistingDescriptionMono ? filteredVorteile : [];
     const vorteile = tempVorteile.length >= 2 ? tempVorteile : [];
     
     if (tempVorteile.length === 1) {
