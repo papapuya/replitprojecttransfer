@@ -214,7 +214,7 @@ export function renderProductHtml(options: RenderOptions): string {
   const fazit = cleanMarkdown(copy.fazit || '');
   const produktTyp = copy.produktTyp || 'elektronik';
   const zeigeTabelle = copy.zeigeTabelle === true;
-  const einsatzbereiche = cleanMarkdown(copy.einsatzbereiche || '');
+  const einsatzbereiche = removeSizeSpecs(cleanMarkdown(copy.einsatzbereiche || ''));
   const achtungHinweis = cleanMarkdown(copy.achtungHinweis || '');
   
   // Extrahiere APN aus dem Produktnamen für den Fließtext unter der Tabelle
