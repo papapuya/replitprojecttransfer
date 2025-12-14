@@ -455,9 +455,18 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
     if (description && typeof description === 'string' && description.length > 10) {
       const allModels: string[] = [];
       
-      // Normalisiere: HTML-Tags in Zeilenumbrüche umwandeln
-      let normalized = description.replace(/<br\s*\/?>/gi, '\n');
+      // Normalisiere: HTML-Tags in Zeilenumbrüche umwandeln (ERWEITERT)
+      let normalized = description;
+      // Alle <br> Varianten, <li>, <p>, <div> werden zu Zeilenumbrüchen
+      normalized = normalized.replace(/<br\s*\/?>/gi, '\n');
+      normalized = normalized.replace(/<\/?(li|p|div|tr)[^>]*>/gi, '\n');
+      // Alle anderen HTML-Tags entfernen
       normalized = normalized.replace(/<[^>]+>/g, ' ');
+      // HTML-Entities dekodieren
+      normalized = normalized.replace(/&nbsp;/gi, ' ');
+      normalized = normalized.replace(/&amp;/gi, '&');
+      // Mehrfache Leerzeichen zu einem
+      normalized = normalized.replace(/[ \t]+/g, ' ');
       
       // PATTERN: Jede Zeile die mit bekannter Marke beginnt ist ein kompatibles Modell
       // z.B. "COMPAQ SMART ARRAY 5302", "HEWLETT PACKARD ProLiant ML350"
@@ -469,6 +478,8 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
         'GOPRO', 'DJI', 'CANON', 'NIKON', 'OLYMPUS', 'FUJIFILM', 'KODAK', 'PENTAX',
         'GARMIN', 'TOMTOM', 'MEDION', 'BRAUN', 'ORAL-B', 'REMINGTON', 'GRUNDIG'
       ];
+      
+      console.log(`🔍 [COMPAT] Prüfe ${lines.length} Zeilen aus Beschreibung`);
       
       for (const line of lines) {
         const trimmed = line.trim();
@@ -484,6 +495,23 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
               allModels.push(cleanModel);
             }
             break;
+          }
+        }
+      }
+      
+      // ERWEITERT: Wenn wenige Modelle gefunden - auch innerhalb von Zeilen suchen
+      // z.B. "COMPAQ Model1 COMPAQ Model2" in einer Zeile
+      if (allModels.length < 5) {
+        console.log(`🔍 [COMPAT] Nur ${allModels.length} gefunden, suche inline...`);
+        for (const brand of knownBrands) {
+          // Pattern: "BRAND MODELLNAME" (mind. 3 Zeichen nach Marke)
+          const brandPattern = new RegExp(`\\b(${brand}\\s+[A-Z0-9][A-Z0-9\\-\\s/]{2,}?)(?=\\s+(?:${knownBrands.join('|')})|$|\\s{2,}|,)`, 'gi');
+          let match;
+          while ((match = brandPattern.exec(normalized)) !== null) {
+            const fullModel = match[1].trim().replace(/[,;]$/, '').trim();
+            if (fullModel.length > 5 && !allModels.includes(fullModel)) {
+              allModels.push(fullModel);
+            }
           }
         }
       }
