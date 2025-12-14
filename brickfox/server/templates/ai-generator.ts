@@ -791,27 +791,8 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     const produktTitel = parsedContent.produktTitel || '';
     const einleitung = parsedContent.einleitung || '';
     
-    // POST-PROCESSOR: Entferne technische Daten (mAh, Ah, Volt) aus Fließtext
-    const cleanTechDataFromText = (text: string): string => {
-      if (!text) return text;
-      let cleaned = text;
-      // Entferne Volt-Angaben
-      cleaned = cleaned.replace(/\b\d+[.,]?\d*\s*V(olt)?\b/gi, '');
-      // Entferne mAh-Angaben
-      cleaned = cleaned.replace(/\b\d+\s*mAh\b/gi, '');
-      // Entferne Ah-Angaben
-      cleaned = cleaned.replace(/\b\d+[.,]?\d*\s*Ah\b/gi, '');
-      // Entferne Wh-Angaben
-      cleaned = cleaned.replace(/\b\d+[.,]?\d*\s*Wh\b/gi, '');
-      // Doppelte Leerzeichen bereinigen
-      cleaned = cleaned.replace(/\s+/g, ' ').trim();
-      // Doppelte Kommas/Punkte bereinigen
-      cleaned = cleaned.replace(/,\s*,/g, ',').replace(/\.\s*\./g, '.');
-      return cleaned;
-    };
-    
-    const anwendung = cleanTechDataFromText(parsedContent.anwendung || '');
-    const beschreibung = cleanTechDataFromText(parsedContent.narrative || parsedContent.beschreibung || '');
+    const anwendung = parsedContent.anwendung || '';
+    const beschreibung = parsedContent.narrative || parsedContent.beschreibung || '';
     const tagline = parsedContent.tagline || '';
     
     const rawVorteile = (parsedContent.vorteile || parsedContent.uspBullets || []).map((v: string) => {
