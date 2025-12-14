@@ -37,6 +37,7 @@ import Account from "@/pages/account";
 import NotFound from "@/pages/not-found";
 import FieldMappingDemo from "@/pages/field-mapping-demo";
 import WeightGenerator from "@/pages/weight-generator";
+import PromptAssistant from "@/pages/prompt-assistant";
 
 function Router() {
   return (
@@ -138,6 +139,11 @@ function Router() {
       <Route path="/weight-generator">
         <ProtectedRoute>
           <WeightGenerator />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/prompt-assistant">
+        <ProtectedRoute>
+          <PromptAssistant />
         </ProtectedRoute>
       </Route>
       

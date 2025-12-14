@@ -1,4 +1,4 @@
-import { Home, FileSpreadsheet, Globe, FolderOpen, Settings, Zap, Building2, User, CreditCard, LayoutDashboard, Crown, GitCompare, LogOut, ShoppingCart, Upload, Scale } from "lucide-react";
+import { Home, FileSpreadsheet, Globe, FolderOpen, Settings, Zap, Building2, User, CreditCard, LayoutDashboard, Crown, GitCompare, LogOut, ShoppingCart, Upload, Scale, Bot } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +69,11 @@ const menuItems = [
     title: "Gewichte-Generator",
     url: "/weight-generator",
     icon: Scale,
+  },
+  {
+    title: "Prompt-Assistent",
+    url: "/prompt-assistant",
+    icon: Bot,
   },
   {
     title: "Mein Account",
