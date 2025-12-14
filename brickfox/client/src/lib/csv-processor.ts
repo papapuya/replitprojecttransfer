@@ -35,6 +35,67 @@ function parseCSVLine(line: string, delimiter: string): string[] {
 }
 
 /**
+ * Fix broken UTF-8 encoding (double-encoded or misinterpreted characters)
+ * Common patterns: "Ã¼" → "ü", "Ã¤" → "ä", "Ã¶" → "ö", etc.
+ */
+function fixBrokenUtf8(text: string): string {
+  // Map of broken UTF-8 patterns to correct characters (using Unicode escape sequences)
+  const brokenPatterns: [string, string][] = [
+    ['\u00c3\u00bc', '\u00fc'], // Ã¼ → ü
+    ['\u00c3\u00a4', '\u00e4'], // Ã¤ → ä
+    ['\u00c3\u00b6', '\u00f6'], // Ã¶ → ö
+    ['\u00c3\u009f', '\u00df'], // Ã → ß
+    ['\u00c3\u009c', '\u00dc'], // Ã → Ü
+    ['\u00c3\u0084', '\u00c4'], // Ã → Ä
+    ['\u00c3\u0096', '\u00d6'], // Ã → Ö
+    ['\u00c3\u00a9', '\u00e9'], // Ã© → é
+    ['\u00c3\u00a8', '\u00e8'], // Ã¨ → è
+    ['\u00c3\u00aa', '\u00ea'], // Ãª → ê
+    ['\u00c3\u00ab', '\u00eb'], // Ã« → ë
+    ['\u00c3\u00a0', '\u00e0'], // Ã  → à
+    ['\u00c3\u00a1', '\u00e1'], // Ã¡ → á
+    ['\u00c3\u00a2', '\u00e2'], // Ã¢ → â
+    ['\u00c3\u00a3', '\u00e3'], // Ã£ → ã
+    ['\u00c3\u00ac', '\u00ec'], // Ã¬ → ì
+    ['\u00c3\u00ad', '\u00ed'], // Ã­ → í
+    ['\u00c3\u00ae', '\u00ee'], // Ã® → î
+    ['\u00c3\u00af', '\u00ef'], // Ã¯ → ï
+    ['\u00c3\u00b2', '\u00f2'], // Ã² → ò
+    ['\u00c3\u00b3', '\u00f3'], // Ã³ → ó
+    ['\u00c3\u00b4', '\u00f4'], // Ã´ → ô
+    ['\u00c3\u00b5', '\u00f5'], // Ãµ → õ
+    ['\u00c3\u00b9', '\u00f9'], // Ã¹ → ù
+    ['\u00c3\u00ba', '\u00fa'], // Ãº → ú
+    ['\u00c3\u00bb', '\u00fb'], // Ã» → û
+    ['\u00c3\u00b1', '\u00f1'], // Ã± → ñ
+    ['\u00c3\u00a7', '\u00e7'], // Ã§ → ç
+    ['\u00c2\u00b0', '\u00b0'], // Â° → °
+    ['\u00c2\u00b2', '\u00b2'], // Â² → ²
+    ['\u00c2\u00b3', '\u00b3'], // Â³ → ³
+    ['\u00c2\u00ab', '\u00ab'], // Â« → «
+    ['\u00c2\u00bb', '\u00bb'], // Â» → »
+    ['\u00c2\u00a9', '\u00a9'], // Â© → ©
+    ['\u00c2\u00ae', '\u00ae'], // Â® → ®
+  ];
+  
+  let fixed = text;
+  let wasFixed = false;
+  
+  for (const [broken, correct] of brokenPatterns) {
+    if (fixed.includes(broken)) {
+      fixed = fixed.split(broken).join(correct);
+      wasFixed = true;
+    }
+  }
+  
+  if (wasFixed) {
+    console.log('[CSV] Fixed broken UTF-8 encoding');
+  }
+  
+  return fixed;
+}
+
+/**
  * Try to read file with different encodings using TextDecoder
  */
 async function readFileWithEncoding(file: File): Promise<string> {
@@ -68,6 +129,9 @@ async function readFileWithEncoding(file: File): Promise<string> {
       console.log('[CSV] Detected ISO-8859-1 encoding (UTF-8 failed)');
     }
   }
+  
+  // Fix broken UTF-8 patterns (double-encoded characters)
+  text = fixBrokenUtf8(text);
   
   return text;
 }
