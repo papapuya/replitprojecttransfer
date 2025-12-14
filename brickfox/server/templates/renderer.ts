@@ -238,6 +238,50 @@ function removeApnFromText(text: string): string {
   return cleaned;
 }
 
+/**
+ * Entfernt technische Werte (mAh, Ah, V, Volt, Wh) aus dem Fließtext
+ * Diese gehören NUR in die technische Tabelle
+ */
+function removeTechnicalValuesFromText(text: string): string {
+  if (!text) return text;
+  
+  let cleaned = text;
+  
+  // Entferne Phrasen mit technischen Werten
+  const patterns = [
+    // "Mit einer Kapazität von 3500 mAh" oder unvollständig "Mit einer Kapazität von er bietet"
+    /mit einer Kapazität von[^.]*\./gi,
+    /mit einer Kapazität[^.]*bietet[^.]*\./gi,
+    // "Spannung von 12 V" oder unvollständig
+    /Spannung von[^.]*\./gi,
+    /einer Spannung von[^.]*\./gi,
+    // "12 Volt Geräten" / "6 Volt Systemen"
+    /\d+\s*Volt\s*(Geräten?|Systemen?|Anwendungen?)/gi,
+    // Einzelne technische Werte im Text
+    /\b\d+[\.,]?\d*\s*(mAh|Ah)\b/gi,
+    /\b\d+[\.,]?\d*\s*Wh\b/gi,
+    // "12 V" aber nicht "12 Volt" (das wird separat behandelt)
+    /\b\d+[\.,]?\d*\s*V\b(?!\s*olt)/gi,
+  ];
+  
+  for (const pattern of patterns) {
+    if (pattern.test(cleaned)) {
+      console.log(`🔧 Technischer Wert aus Fließtext entfernt: ${cleaned.match(pattern)?.[0]}`);
+      cleaned = cleaned.replace(pattern, '');
+    }
+  }
+  
+  // Bereinigen: doppelte Leerzeichen, doppelte Punkte, führende Kommas
+  cleaned = cleaned
+    .replace(/\s+/g, ' ')
+    .replace(/\.\s*\./g, '.')
+    .replace(/,\s*,/g, ',')
+    .replace(/\s*,\s*\./g, '.')
+    .trim();
+  
+  return cleaned;
+}
+
 export function renderProductHtml(options: RenderOptions): string {
   const { productName, categoryConfig, copy, layoutStyle = 'mediamarkt', technicalDataTable, safetyWarnings, pdfManualUrl } = options;
   
@@ -257,16 +301,16 @@ export function renderProductHtml(options: RenderOptions): string {
       .filter(usp => usp && usp.trim().length > 0)
   ).slice(0, 5);
 
-  const einleitung = removeSizeSpecs(removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.einleitung || ''))));
-  const anwendung = removeSizeSpecs(removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.anwendung || ''))));
-  const beschreibung = removeSizeSpecs(removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.beschreibung || ''))));
+  const einleitung = removeTechnicalValuesFromText(removeSizeSpecs(removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.einleitung || '')))));
+  const anwendung = removeTechnicalValuesFromText(removeSizeSpecs(removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.anwendung || '')))));
+  const beschreibung = removeTechnicalValuesFromText(removeSizeSpecs(removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.beschreibung || '')))));
   const tagline = removeSizeSpecs(cleanMarkdown(copy.tagline || ''));
   const kompatibleModelle = (copy.kompatibleModelle || []).map(m => removeSizeSpecs(cleanMarkdown(m)));
   const werkzeuguebersicht = (copy.werkzeuguebersicht || []).map(w => cleanMarkdown(w));
   const fazit = cleanMarkdown(copy.fazit || '');
   const produktTyp = copy.produktTyp || 'elektronik';
   const zeigeTabelle = copy.zeigeTabelle === true;
-  const einsatzbereiche = removeSizeSpecs(cleanMarkdown(copy.einsatzbereiche || ''));
+  const einsatzbereiche = removeTechnicalValuesFromText(removeSizeSpecs(cleanMarkdown(copy.einsatzbereiche || '')));
   const achtungHinweis = cleanMarkdown(copy.achtungHinweis || '');
   
   // Extrahiere APN aus dem Produktnamen für den Fließtext unter der Tabelle
