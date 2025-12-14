@@ -78,12 +78,15 @@ function removeEmcomBrand(text: string): string {
 function removeSizeSpecs(text: string): string {
   if (!text) return text;
   
-  // Größenangaben entfernen: 38mm, 42mm, 44mm, 45mm, 49mm etc.
-  let cleaned = text.replace(/\s*\d{2,3}\s*mm\b/gi, '');
-  // Auch mit Bindestrich: "38-mm" oder "38 mm"
-  cleaned = cleaned.replace(/\s*\d{2,3}\s*-\s*mm\b/gi, '');
+  let cleaned = text;
+  // Größenangaben entfernen: "38mm", "38 mm", "38-mm" (mit optionalem Leerzeichen davor)
+  cleaned = cleaned.replace(/\s+\d{2,3}\s*-?\s*mm\b/gi, '');
+  // Auch am Wortanfang: "38mm" ohne Leerzeichen davor (z.B. nach Bindestrich)
+  cleaned = cleaned.replace(/\b\d{2,3}\s*-?\s*mm\b/gi, '');
   // Doppelte Leerzeichen bereinigen
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  console.log(`🔧 removeSizeSpecs: "${text.substring(0, 50)}..." → "${cleaned.substring(0, 50)}..."`);
   
   return cleaned;
 }
