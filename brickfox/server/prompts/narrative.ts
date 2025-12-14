@@ -46,11 +46,13 @@ STIL:
 - "perfekte Wahl für"
 - "hochwertiges Produkt"
 
-🚫 KRITISCH - TECHNISCHE DATEN NICHT ERFINDEN:
-- Nenne Kapazität (mAh), Spannung (V), Energie (Wh) NUR wenn sie in den Produktdaten stehen!
-- Wenn keine technischen Daten vorhanden sind, beschreibe nur Funktion und Verwendungszweck
-- NIEMALS Werte wie "273 mAh" erfinden wenn keine Kapazität angegeben ist
-- Bei fehlenden Daten: Fokussiere auf Anwendung und Kompatibilität statt auf technische Werte
+🚫 KRITISCH - KEINE TECHNISCHEN WERTE IM TEXT:
+- NIEMALS Kapazität (mAh), Spannung (V), Energie (Wh) im Fließtext nennen!
+- Technische Daten gehören NUR in die Tabelle, NICHT in die Einleitung
+- Beschreibe stattdessen: Funktion, Verwendungszweck, Anwendungsgebiete, Kompatibilität
+- Fokussiere auf den NUTZEN für den Kunden, nicht auf technische Zahlen
+- VERBOTEN: "mit 12 V Spannung", "3500 mAh Kapazität", "80 Ah Leistung"
+- ERLAUBT: "zuverlässige Energieversorgung", "lange Betriebszeiten", "stabile Leistung"
 
 OUTPUT-FORMAT (JSON):
 {
