@@ -72,6 +72,23 @@ function removeEmcomBrand(text: string): string {
 }
 
 /**
+ * Entfernt Größenangaben wie "38mm", "42mm", "44mm" aus Text
+ * Diese gehören NICHT in Produktnamen, Fließtext oder Kompatibilität
+ */
+function removeSizeSpecs(text: string): string {
+  if (!text) return text;
+  
+  // Größenangaben entfernen: 38mm, 42mm, 44mm, 45mm, 49mm etc.
+  let cleaned = text.replace(/\s*\d{2,3}\s*mm\b/gi, '');
+  // Auch mit Bindestrich: "38-mm" oder "38 mm"
+  cleaned = cleaned.replace(/\s*\d{2,3}\s*-\s*mm\b/gi, '');
+  // Doppelte Leerzeichen bereinigen
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
+/**
  * Prüft ob ein Vorteil/Bullet eine Farbe enthält (Farbe gehört NUR in Tabelle)
  */
 function isFarbeBullet(text: string): boolean {
@@ -188,11 +205,11 @@ export function renderProductHtml(options: RenderOptions): string {
       .filter(usp => usp && usp.trim().length > 0)
   ).slice(0, 5);
 
-  const einleitung = removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.einleitung || '')));
-  const anwendung = removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.anwendung || '')));
-  const beschreibung = removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.beschreibung || '')));
-  const tagline = cleanMarkdown(copy.tagline || '');
-  const kompatibleModelle = (copy.kompatibleModelle || []).map(m => cleanMarkdown(m));
+  const einleitung = removeSizeSpecs(removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.einleitung || ''))));
+  const anwendung = removeSizeSpecs(removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.anwendung || ''))));
+  const beschreibung = removeSizeSpecs(removeApnFromText(removeEmcomBrand(cleanMarkdown(copy.beschreibung || ''))));
+  const tagline = removeSizeSpecs(cleanMarkdown(copy.tagline || ''));
+  const kompatibleModelle = (copy.kompatibleModelle || []).map(m => removeSizeSpecs(cleanMarkdown(m)));
   const werkzeuguebersicht = (copy.werkzeuguebersicht || []).map(w => cleanMarkdown(w));
   const fazit = cleanMarkdown(copy.fazit || '');
   const produktTyp = copy.produktTyp || 'elektronik';
@@ -211,6 +228,9 @@ export function renderProductHtml(options: RenderOptions): string {
   
   // EMCOM aus Produkttitel entfernen (Eigenmarke soll nicht erscheinen)
   produktTitel = removeEmcomBrand(produktTitel);
+  
+  // Größenangaben entfernen (38mm, 42mm etc. gehören nicht in Produktnamen)
+  produktTitel = removeSizeSpecs(produktTitel);
   
   // Entferne falsche Wh-Angaben aus dem Titel (nur wenn es keine echte Wh-Kapazität ist)
   produktTitel = produktTitel.replace(/\s*–?\s*\d+\s*Wh\b/gi, '').trim();
