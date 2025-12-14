@@ -664,9 +664,16 @@ function renderMediaMarktLayout(data: {
   
   // REGEL: Kompatibilität 1:1 aus CSV übernehmen - ALLE Modelle anzeigen
   // Keine Begrenzung auf 10 Modelle - vollständige Liste ausgeben
-  const kompatibilitaetHtml = (validKompatibleModelle.length >= 2)
-    ? `<p style="margin-top: 1em; margin-bottom: 32px;"><strong>Kompatibilit&auml;t:</strong> ${validKompatibleModelle.join(', ')}</p>`
+  let kompatibilitaetHtml = (validKompatibleModelle.length >= 2)
+    ? `<p style="margin-top: 1em; margin-bottom: 16px;"><strong>Kompatibilit&auml;t:</strong> ${validKompatibleModelle.join(', ')}</p>`
     : '';
+  
+  // ACHTUNG-Hinweise fett unter Kompatibilität anzeigen
+  const achtungHinweis = data.technicalSpecs?.find(s => s.label === 'Achtung')?.value || '';
+  if (achtungHinweis) {
+    kompatibilitaetHtml += `<p style="margin-top: 0; margin-bottom: 32px;"><strong>Achtung: ${encodeHtmlEntities(achtungHinweis)}</strong></p>`;
+    console.log(`⚠️ ACHTUNG-Hinweis in HTML eingefügt: ${achtungHinweis}`);
+  }
   
   // Technische Specs hinzufügen (bei Akkus)
   if (produktTyp === 'akku' && data.zeigeTabelle !== false) {

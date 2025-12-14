@@ -664,6 +664,24 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       // Mehrfache Leerzeichen zu einem
       normalized = normalized.replace(/[ \t]+/g, ' ');
       
+      // ═══════════════════════════════════════════════════════════════
+      // ACHTUNG-HINWEISE EXTRAKTION: Separate fett unter Kompatibilität
+      // z.B. "ACHTUNG: Artikel ist nur passend für iPhone 4 - nicht für iPhone 4S!"
+      // ═══════════════════════════════════════════════════════════════
+      const achtungHinweise: string[] = [];
+      const achtungPattern = /ACHTUNG[:\s]+([^\n]+)/gi;
+      let achtungMatch;
+      while ((achtungMatch = achtungPattern.exec(normalized)) !== null) {
+        const hinweis = achtungMatch[1].trim();
+        if (hinweis.length > 5) {
+          achtungHinweise.push(hinweis);
+          console.log(`⚠️ ACHTUNG-Hinweis gefunden: ${hinweis}`);
+        }
+      }
+      if (achtungHinweise.length > 0) {
+        specs['Achtung'] = achtungHinweise.join(' | ');
+      }
+      
       // PATTERN: Jede Zeile die mit bekannter Marke beginnt ist ein kompatibles Modell
       // z.B. "COMPAQ SMART ARRAY 5302", "HEWLETT PACKARD ProLiant ML350"
       const lines = normalized.split(/\r?\n/);
