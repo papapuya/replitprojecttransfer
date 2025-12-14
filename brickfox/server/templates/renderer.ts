@@ -198,6 +198,7 @@ export function renderProductHtml(options: RenderOptions): string {
   const produktTyp = copy.produktTyp || 'elektronik';
   const zeigeTabelle = copy.zeigeTabelle === true;
   const einsatzbereiche = cleanMarkdown(copy.einsatzbereiche || '');
+  const achtungHinweis = cleanMarkdown(copy.achtungHinweis || '');
   
   // Extrahiere APN aus dem Produktnamen für den Fließtext unter der Tabelle
   const extractedApn = extractApnFromText(productName);
@@ -250,6 +251,7 @@ export function renderProductHtml(options: RenderOptions): string {
     zeigeTabelle,
     produktTyp,
     einsatzbereiche,
+    achtungHinweis,
   });
 }
 
@@ -559,6 +561,7 @@ function renderMediaMarktLayout(data: {
   zeigeTabelle?: boolean;
   produktTyp?: 'akku' | 'elektronik' | 'werkzeug';
   einsatzbereiche?: string;
+  achtungHinweis?: string;
 }): string {
   const e = encodeHtmlEntities;
   
@@ -669,16 +672,18 @@ function renderMediaMarktLayout(data: {
     : '';
   
   // ACHTUNG-Hinweise fett unter Kompatibilität anzeigen
-  // Suche in Array (find) ODER in Object (direkter Zugriff)
-  let achtungHinweis = '';
-  if (Array.isArray(data.technicalSpecs)) {
-    achtungHinweis = data.technicalSpecs?.find(s => s.label === 'Achtung')?.value || '';
-  } else if (data.technicalSpecs && typeof data.technicalSpecs === 'object') {
-    achtungHinweis = (data.technicalSpecs as Record<string, string>)['Achtung'] || '';
+  // Priorität: 1. Direkt übergebenes Feld, 2. technicalSpecs Array, 3. technicalSpecs Object
+  let achtungText = data.achtungHinweis || '';
+  if (!achtungText) {
+    if (Array.isArray(data.technicalSpecs)) {
+      achtungText = data.technicalSpecs?.find(s => s.label === 'Achtung')?.value || '';
+    } else if (data.technicalSpecs && typeof data.technicalSpecs === 'object') {
+      achtungText = (data.technicalSpecs as Record<string, string>)['Achtung'] || '';
+    }
   }
-  if (achtungHinweis) {
-    kompatibilitaetHtml += `<p style="margin-top: 0; margin-bottom: 32px;"><strong>Achtung: ${encodeHtmlEntities(achtungHinweis)}</strong></p>`;
-    console.log(`⚠️ ACHTUNG-Hinweis in HTML eingefügt: ${achtungHinweis}`);
+  if (achtungText) {
+    kompatibilitaetHtml += `<p style="margin-top: 0; margin-bottom: 32px;"><strong>Achtung: ${encodeHtmlEntities(achtungText)}</strong></p>`;
+    console.log(`⚠️ ACHTUNG-Hinweis in HTML eingefügt: ${achtungText}`);
   }
   
   // Technische Specs hinzufügen (bei Akkus)
