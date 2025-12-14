@@ -410,6 +410,110 @@ export function extractTechSpecsFromStructured(
 }
 
 /**
+ * Normalisiert und bereinigt Kompatibilitäts-Modelle nach spezifischen Regeln:
+ * 1. Hersteller normalisieren: COMPAQ, HEWLETT-PACKARD → HP
+ * 2. Produktfamilien vereinheitlichen: SMART ARRAY → HP Smart Array, ProLiant → HP ProLiant
+ * 3. Modelle bereinigen: CPU-Takte, Speicherangaben, IDs entfernen
+ * 4. Duplikate zusammenführen
+ * 5. Ausschlüsse: HP Smart Array 5302, 5304 → "Nicht kompatibel mit"
+ */
+function normalizeCompatibilityModels(rawModels: string[]): { compatible: string[]; incompatible: string[] } {
+  const compatible: string[] = [];
+  const incompatible: string[] = [];
+  
+  // Feste Ausschlüsse (NIEMALS als kompatibel)
+  const exclusionPatterns = [
+    /smart\s*array\s*5302/i,
+    /smart\s*array\s*5304/i,
+  ];
+  
+  for (const rawModel of rawModels) {
+    let model = rawModel.trim();
+    if (!model || model.length < 3) continue;
+    
+    // ═══════════════════════════════════════════════════════════════
+    // SCHRITT 1: Hersteller normalisieren → HP
+    // ═══════════════════════════════════════════════════════════════
+    model = model.replace(/^COMPAQ\s+/i, 'HP ');
+    model = model.replace(/^HEWLETT[\s-]*PACKARD\s+/i, 'HP ');
+    model = model.replace(/^HP\s+HP\s+/i, 'HP '); // Doppelte HP entfernen
+    
+    // ═══════════════════════════════════════════════════════════════
+    // SCHRITT 2: Produktfamilien vereinheitlichen
+    // ═══════════════════════════════════════════════════════════════
+    // SMART ARRAY ohne HP-Prefix → HP Smart Array
+    if (/^SMART\s+ARRAY/i.test(model)) {
+      model = model.replace(/^SMART\s+ARRAY/i, 'HP Smart Array');
+    }
+    // HP SMART ARRAY → HP Smart Array (Konsistente Groß-/Kleinschreibung)
+    model = model.replace(/HP\s+SMART\s+ARRAY/gi, 'HP Smart Array');
+    
+    // ProLiant → HP ProLiant
+    if (/^ProLiant/i.test(model)) {
+      model = 'HP ' + model;
+    }
+    model = model.replace(/HP\s+PROLIANT/gi, 'HP ProLiant');
+    model = model.replace(/HP\s+Proliant/gi, 'HP ProLiant');
+    
+    // StorageWorks / MSA → HP StorageWorks MSA
+    // Bare "MSA 2040" → "HP StorageWorks MSA 2040"
+    if (/^MSA\s/i.test(model)) {
+      model = 'HP StorageWorks ' + model;
+    }
+    // "StorageWorks MSA 2040" → "HP StorageWorks MSA 2040"
+    if (/^StorageWorks/i.test(model)) {
+      model = 'HP ' + model;
+    }
+    // Normalize case: HP STORAGEWORKS → HP StorageWorks
+    model = model.replace(/HP\s+STORAGEWORKS/gi, 'HP StorageWorks');
+    // Fix double prefix: HP StorageWorks StorageWorks → HP StorageWorks
+    model = model.replace(/HP\s+StorageWorks\s+StorageWorks/gi, 'HP StorageWorks');
+    
+    // ═══════════════════════════════════════════════════════════════
+    // SCHRITT 3: Modelle bereinigen - Unwichtige Details entfernen
+    // ═══════════════════════════════════════════════════════════════
+    // CPU-Takte entfernen (1.3GHz, 1.5Ghz, 2.0 GHz)
+    model = model.replace(/\s*\d+[.,]?\d*\s*GHz/gi, '');
+    // Speicherangaben entfernen (2GB, 4GB, 8GB, 512MB)
+    model = model.replace(/\s*\d+\s*(GB|MB|TB)/gi, '');
+    // Seriennummern/Bundle-Namen entfernen (oft in Klammern)
+    model = model.replace(/\s*\([^)]*\)/g, '');
+    // Interne IDs entfernen (z.B. "G1", "G2", "Gen8", etc. am Ende NICHT entfernen - wichtig!)
+    // Nur lange alphanumerische IDs am Ende entfernen
+    model = model.replace(/\s+[A-Z]{2,}\d{5,}$/i, '');
+    // Mehrfache Leerzeichen zu einem
+    model = model.replace(/\s+/g, ' ').trim();
+    
+    if (!model || model.length < 5) continue;
+    
+    // ═══════════════════════════════════════════════════════════════
+    // SCHRITT 5: Prüfe auf Ausschlüsse
+    // ═══════════════════════════════════════════════════════════════
+    const isExcluded = exclusionPatterns.some(pattern => pattern.test(model));
+    
+    if (isExcluded) {
+      incompatible.push(model);
+    } else {
+      compatible.push(model);
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════════
+  // SCHRITT 4: Duplikate entfernen und sortieren
+  // ═══════════════════════════════════════════════════════════════
+  const uniqueCompatible = Array.from(new Set(compatible));
+  const uniqueIncompatible = Array.from(new Set(incompatible));
+  
+  // Alphabetisch sortieren
+  uniqueCompatible.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  uniqueIncompatible.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  
+  console.log(`🔧 Normalisierung: ${rawModels.length} → ${uniqueCompatible.length} kompatibel, ${uniqueIncompatible.length} Ausschlüsse`);
+  
+  return { compatible: uniqueCompatible, incompatible: uniqueIncompatible };
+}
+
+/**
  * Extrahiert BrickFox-spezifische Attribute aus CSV-Daten
  * z.B. p_attributes[akku_v][de] -> Spannung, p_attributes[akku_mah][de] -> Kapazität
  * Erweitert um: Maße, Gewicht, Farbe und alle technischen Daten
@@ -448,6 +552,7 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
   // ═══════════════════════════════════════════════════════════════
   // KOMPATIBILITÄT EXTRAKTION: ALLE Geräte aus Produktbeschreibung
   // Erfasst: "Marke Modell" Zeilen, "Marke: Modell" und Modellcodes
+  // Mit Normalisierung: COMPAQ/HEWLETT-PACKARD → HP, Bereinigung, Ausschlüsse
   // ═══════════════════════════════════════════════════════════════
   const descriptionFields = ['p_description[de]', 'beschreibung', 'description', 'produktbeschreibung'];
   for (const field of descriptionFields) {
@@ -480,11 +585,6 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       ];
       
       console.log(`🔍 [COMPAT] Prüfe ${lines.length} Zeilen aus Beschreibung`);
-      // Debug: Zeige Zeilen die mit Marke beginnen könnten
-      lines.slice(0, 20).forEach((l, i) => {
-        const t = l.trim();
-        if (t.length > 5) console.log(`   Zeile ${i}: "${t.substring(0, 100)}"`);
-      });
       
       for (const line of lines) {
         const trimmed = line.trim();
@@ -495,7 +595,6 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
         for (const brand of knownBrands) {
           if (upperLine.startsWith(brand + ' ') || upperLine.startsWith(brand + ':')) {
             // Ganze Zeile als Modell aufnehmen (bereinigt)
-            // Format: "MARKE: SERIE: MODELL" oder "MARKE MODELL"
             const cleanModel = trimmed.replace(/[,;]$/, '').trim();
             if (cleanModel.length > 5) {
               allModels.push(cleanModel);
@@ -508,11 +607,9 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       console.log(`   🔍 Nach Zeilen-Scan: ${allModels.length} Modelle gefunden`);
       
       // ERWEITERT: Wenn wenige Modelle gefunden - auch innerhalb von Zeilen suchen
-      // z.B. "COMPAQ Model1 COMPAQ Model2" in einer Zeile
       if (allModels.length < 5) {
         console.log(`🔍 [COMPAT] Nur ${allModels.length} gefunden, suche inline...`);
         for (const brand of knownBrands) {
-          // Pattern: "BRAND MODELLNAME" (mind. 3 Zeichen nach Marke)
           const brandPattern = new RegExp(`\\b(${brand}\\s+[A-Z0-9][A-Z0-9\\-\\s/]{2,}?)(?=\\s+(?:${knownBrands.join('|')})|$|\\s{2,}|,)`, 'gi');
           let match;
           while ((match = brandPattern.exec(normalized)) !== null) {
@@ -539,11 +636,20 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       }
       
       if (allModels.length > 0) {
-        const uniqueModels = Array.from(new Set(allModels));
-        // SORTIERE alle Modelle alphabetisch
-        uniqueModels.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
-        specs['Kompatibilität'] = uniqueModels.join(', ');
-        console.log(`📋 Kompatibilität: ${uniqueModels.length} Modelle extrahiert`);
+        // ═══════════════════════════════════════════════════════════════
+        // NORMALISIERUNG & BEREINIGUNG der extrahierten Modelle
+        // ═══════════════════════════════════════════════════════════════
+        const { compatible, incompatible } = normalizeCompatibilityModels(allModels);
+        
+        if (compatible.length > 0) {
+          specs['Kompatibilität'] = compatible.join(', ');
+          console.log(`📋 Kompatibilität: ${compatible.length} Modelle (normalisiert)`);
+        }
+        
+        if (incompatible.length > 0) {
+          specs['Nicht kompatibel mit'] = incompatible.join(', ');
+          console.log(`⛔ Nicht kompatibel: ${incompatible.length} Modelle (Ausschlüsse)`);
+        }
         break;
       }
     }
@@ -1039,8 +1145,8 @@ export function extractTechSpecs1to1(
         // Gefundene Alternativen aus dem Text
         dynamicAlternatives = altMatch[1]
           .split(/[,\s]+/)
-          .map(s => s.trim().toUpperCase())
-          .filter(s => s.length >= 3 && s !== batteryInfo.type);
+          .map((s: string) => s.trim().toUpperCase())
+          .filter((s: string) => s.length >= 3 && s !== batteryInfo.type);
         console.log(`🔋 Dynamische Alternativen aus Beschreibung: ${dynamicAlternatives.join(', ')}`);
       }
       
