@@ -662,10 +662,10 @@ function renderMediaMarktLayout(data: {
   
   const validKompatibleModelle = filterValidCompatibility(data.kompatibleModelle || []);
   
-  // REGEL: Kompatibilität nur anzeigen wenn mindestens 2 Modelle vorhanden sind
-  // Bei nur 1 Modell ist es nicht informativ genug
-  const kompatibilitaetHtml = (!isBatteryProduct && validKompatibleModelle.length >= 2)
-    ? `<p style="margin-top: 1em; margin-bottom: 32px;"><strong>Kompatibilit&auml;t:</strong> ${validKompatibleModelle.slice(0, 10).join(', ')}${validKompatibleModelle.length > 10 ? ' und weitere Modelle' : ''}</p>`
+  // REGEL: Kompatibilität 1:1 aus CSV übernehmen - ALLE Modelle anzeigen
+  // Keine Begrenzung auf 10 Modelle - vollständige Liste ausgeben
+  const kompatibilitaetHtml = (validKompatibleModelle.length >= 2)
+    ? `<p style="margin-top: 1em; margin-bottom: 32px;"><strong>Kompatibilit&auml;t:</strong> ${validKompatibleModelle.join(', ')}</p>`
     : '';
   
   // Technische Specs hinzufügen (bei Akkus)
