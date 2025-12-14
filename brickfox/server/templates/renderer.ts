@@ -785,8 +785,39 @@ ${vorteileHtml}
   }
 
   // Einsatzbereiche als Fließtext nach den Vorteilen
+  // REGEL: Nur anzeigen wenn genügend einzigartige Inhalte UND keine Wiederholung zur Anwendung
   const einsatzbereicheText = data.einsatzbereiche ? e(data.einsatzbereiche).trim() : '';
-  if (einsatzbereicheText) {
+  const shouldShowEinsatzbereiche = (() => {
+    if (!einsatzbereicheText || einsatzbereicheText.length < 50) {
+      console.log(`⏭️ Einsatzbereiche übersprungen: zu kurz (${einsatzbereicheText.length} Zeichen)`);
+      return false;
+    }
+    
+    // Prüfe auf Wiederholung zur Anwendung/Einleitung
+    const anwendungLower = anwendung.toLowerCase().replace(/[^\w\s]/g, '');
+    const einsatzLower = einsatzbereicheText.toLowerCase().replace(/[^\w\s]/g, '');
+    
+    // Extrahiere Schlüsselwörter (Wörter > 4 Zeichen)
+    const anwendungWords = new Set(anwendungLower.split(/\s+/).filter(w => w.length > 4));
+    const einsatzWords = einsatzLower.split(/\s+/).filter(w => w.length > 4);
+    
+    // Zähle überlappende Wörter
+    let overlap = 0;
+    for (const word of einsatzWords) {
+      if (anwendungWords.has(word)) overlap++;
+    }
+    
+    // Wenn >60% der Wörter bereits in Anwendung vorkommen = Wiederholung
+    const overlapRatio = einsatzWords.length > 0 ? overlap / einsatzWords.length : 0;
+    if (overlapRatio > 0.6) {
+      console.log(`⏭️ Einsatzbereiche übersprungen: ${Math.round(overlapRatio * 100)}% Überlappung mit Anwendung`);
+      return false;
+    }
+    
+    return true;
+  })();
+  
+  if (shouldShowEinsatzbereiche) {
     html += `
 <h2 style="margin-top: 1.5em;">Einsatzbereiche</h2>
 <p style="margin-bottom: 32px;">${einsatzbereicheText}</p>`;
