@@ -1291,6 +1291,23 @@ export function extractTechSpecs1to1(
     }
   }
   
+  // ═══════════════════════════════════════════════════════════════
+  // REGEL: Farbe nur anzeigen wenn mind. 2 weitere technische Daten
+  // Farbe allein oder mit nur 1 anderen Spec → Farbe entfernen
+  // ═══════════════════════════════════════════════════════════════
+  if (specs['Farbe']) {
+    // Zähle andere technische Daten (ohne Farbe, Kompatibilität, Achtung, APN)
+    const excludeFromCount = ['Farbe', 'Kompatibilität', 'Nicht kompatibel mit', 'Achtung', 'APN', 'Alternative Bezeichnungen'];
+    const otherSpecsCount = Object.keys(specs).filter(key => !excludeFromCount.includes(key)).length;
+    
+    if (otherSpecsCount < 2) {
+      console.log(`🎨 Farbe entfernt: nur ${otherSpecsCount} andere technische Daten (mind. 2 nötig)`);
+      delete specs['Farbe'];
+    } else {
+      console.log(`🎨 Farbe beibehalten: ${otherSpecsCount} andere technische Daten vorhanden`);
+    }
+  }
+  
   return specs;
 }
 
