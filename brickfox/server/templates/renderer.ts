@@ -686,8 +686,8 @@ function renderMediaMarktLayout(data: {
     console.log(`⚠️ ACHTUNG-Hinweis in HTML eingefügt: ${achtungText}`);
   }
   
-  // Technische Specs hinzufügen (bei Akkus)
-  if (produktTyp === 'akku' && data.zeigeTabelle !== false) {
+  // Technische Specs hinzufügen - für ALLE Produkttypen (wenn Daten vorhanden)
+  if (data.technicalSpecs && data.technicalSpecs.length > 0) {
     const existingLabels = new Set(allSpecs.map(s => s.label.toLowerCase()));
     
     const filteredSpecs = data.technicalSpecs.filter(spec => {
@@ -709,6 +709,7 @@ function renderMediaMarktLayout(data: {
              !labelLower.includes('kompatibil') &&
              !labelLower.includes('modell') &&
              !labelLower.includes('schutzschaltung') &&
+             !labelLower.includes('achtung') &&
              labelLower !== 'part number';
     });
     allSpecs.push(...filteredSpecs);
