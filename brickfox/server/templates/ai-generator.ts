@@ -614,12 +614,17 @@ DEINE AUFGABE für uspBullets:
 3. Formuliere diese als 50-80 Zeichen lange Vorteile
 4. KEINE generischen Phrasen wie "Zuverlässige Stromversorgung" oder "Lange Lebensdauer"!
 
-BEISPIEL-EXTRAKTION:
-Wenn Beschreibung sagt "auslaufsicher, lange Lagerfähigkeit, temperaturbeständig":
+FORMAT-REGEL für Vorteile:
+- Maximale Länge: ca. 60 Zeichen pro Vorteil
+- Struktur: [Eigenschaft] – [Nutzen/Erklärung]
+- Gedankenstrich (–) als Trenner zwischen Eigenschaft und Nutzen
+
+BEISPIEL-FORMAT (so sollen alle Vorteile aussehen):
 → uspBullets: [
-  "Auslaufsichere Lithium-Technologie für sichere Lagerung",
-  "Lange Lagerfähigkeit – auch nach Jahren noch einsatzbereit",
-  "Temperaturbeständig von -20°C bis +60°C"
+  "Ohne Memory-Effekt – volle Kapazität auch nach vielen Ladezyklen",
+  "Auslaufsichere Konstruktion – sichere Lagerung über Jahre",
+  "Geringe Selbstentladung – auch nach Monaten einsatzbereit",
+  "Temperaturbeständig – funktioniert von -20°C bis +60°C"
 ]
 `
     : `
