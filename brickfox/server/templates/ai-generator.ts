@@ -316,7 +316,15 @@ KATEGORIE: ELEKTRONIK / ZUBEHÖR (Typ B)
   
   const hasExistingDesc = hasRealContent(existingDescriptionForPrompt, productNameForCheck);
   
+  // Extrahiere technische Attribute für Vorteile
+  const akkuChemie = structuredDataSource['p_attributes[akku_ch][de]'] || 
+                     structuredDataSource['akku_ch'] || 
+                     structuredDataSource['Chemie'] || '';
+  const akkuMah = structuredDataSource['p_attributes[akku_mah][de]'] || '';
+  const akkuV = structuredDataSource['p_attributes[akku_v][de]'] || '';
+  
   console.log(`📋 [PROMPT] Bestehende Beschreibung für AI: ${hasExistingDesc ? 'JA (echte Vorteile extrahierbar)' : 'NEIN (keine echten Vorteile)'}`);
+  console.log(`📋 [PROMPT] Akku-Chemie aus CSV: ${akkuChemie || 'NICHT VORHANDEN'}`);
 
   const systemPrompt = `Du bist ein deterministischer PIM- & SEO-Textgenerator für akkushop.de.
 
@@ -650,13 +658,28 @@ FORMAT-REGEL für Vorteile:
 - Struktur: [Eigenschaft] – [Nutzen/Erklärung]
 - Gedankenstrich (–) als Trenner zwischen Eigenschaft und Nutzen
 
-BEISPIEL-FORMAT (so sollen alle Vorteile aussehen):
+⚠️ KRITISCH: KEINE VORTEILE ERFINDEN!
+Du darfst NUR Vorteile nennen die EXPLIZIT in den CSV-Daten stehen!
+- Wenn "Ni-MH" in den Daten steht → "Ni-MH Technologie – sorgt für konstante Leistung"
+- Wenn "Li-Ion" in den Daten steht → "Li-Ion Technologie – hohe Energiedichte"
+- Wenn NICHTS über Temperatur in den Daten steht → KEIN Vorteil über Temperatur!
+
+VERBOTEN zu erfinden:
+❌ "Temperaturbeständig" (wenn nicht in CSV!)
+❌ "Geringe Selbstentladung" (wenn nicht in CSV!)
+❌ "Auslaufsicher" (wenn nicht in CSV!)
+
+BEISPIEL wenn CSV "Ni-MH" enthält:
 → uspBullets: [
-  "Ohne Memory-Effekt – volle Kapazität auch nach vielen Ladezyklen",
-  "Auslaufsichere Konstruktion – sichere Lagerung über Jahre",
-  "Geringe Selbstentladung – auch nach Monaten einsatzbereit",
-  "Temperaturbeständig – funktioniert von -20°C bis +60°C"
+  "Ni-MH Technologie – sorgt für konstante Leistung über lange Zeit"
 ]
+
+Lieber 1-2 ECHTE Vorteile als 4 erfundene!
+
+${akkuChemie ? `
+⚠️ TECHNOLOGIE AUS CSV ERKANNT: "${akkuChemie}"
+→ Nutze diese Info für einen Vorteil wie: "${akkuChemie} Technologie – [passender Nutzen]"
+` : ''}
 `
     : `
 ═══════════════════════════════════════════════════════════════
