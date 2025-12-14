@@ -36,6 +36,11 @@ interface BulkProduct {
   mediamarktname_v2: string;
   seo_beschreibung: string;
   kurzbeschreibung: string;
+  akku_mah?: string;
+  akku_ch?: string;
+  farbe?: string;
+  akku_wh?: string;
+  akku_v?: string;
 }
 
 interface BulkDescriptionTableProps {
@@ -129,6 +134,21 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                 </TableHead>
                 <TableHead className="min-w-[350px]">
                   Kurzbeschreibung
+                </TableHead>
+                <TableHead className="min-w-[100px]">
+                  mAh
+                </TableHead>
+                <TableHead className="min-w-[100px]">
+                  Volt
+                </TableHead>
+                <TableHead className="min-w-[100px]">
+                  Wh
+                </TableHead>
+                <TableHead className="min-w-[100px]">
+                  Chemie
+                </TableHead>
+                <TableHead className="min-w-[100px]">
+                  Farbe
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -361,6 +381,21 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                       className="text-sm resize-none min-h-[80px] font-sans bulk-description-textarea"
                       data-testid={`input-kurz-${product.id}`}
                     />
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-mono">{product.akku_mah || '-'}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-mono">{product.akku_v || '-'}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-mono">{product.akku_wh || '-'}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-mono">{product.akku_ch || '-'}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-mono">{product.farbe || '-'}</span>
                   </TableCell>
                 </TableRow>
               ))}
