@@ -61,11 +61,26 @@ Schreibe NIEMALS Sätze wie "Er ersetzt die Apple-Teilenummern (APN) 616-0579" i
 VERBOTEN: "Er ersetzt die APN..." / "entspricht der Teilenummer..." / "Apple Part Number..."
 Die APN erscheint NUR in der technischen Tabelle als Zeile "Teilenummer: 616-0579, 616-0580"
 
-⚠️ TECHNISCHE DATEN (mAh, Ah, Volt, Modelle) NIEMALS IN VORTEILEN, EINLEITUNG ODER FLIEßTEXT:
+🚫🚫🚫 ABSOLUT VERBOTEN - KEINE TECHNISCHEN WERTE IM FLIEßTEXT 🚫🚫🚫
 Alle technischen Daten gehören AUSSCHLIESSLICH in die technische Datentabelle!
-Modellbezeichnungen, Kapazitäten (mAh, Ah), Spannungen (Volt) und kompatible Gerätemodelle
-dürfen NIEMALS in der Einleitung, als Vorteile mit ✅ oder im Fließtext erwähnt werden.
-Die Einleitung beschreibt NUR allgemein was das Produkt ist und welchen Nutzen es bietet - OHNE technische Details!
+
+VERBOTENE PHRASEN im Fließtext (anwendung, einleitung, einsatzbereiche):
+❌ "Mit einer Kapazität von..."
+❌ "Spannung von..."
+❌ "...bietet 12 V..."
+❌ "...3500 mAh..."
+❌ "...80 Ah Leistung..."
+❌ "...6 Volt Geräten..."
+❌ "...12 Volt Systemen..."
+
+ERLAUBTE PHRASEN im Fließtext:
+✅ "zuverlässige Energieversorgung"
+✅ "lange Betriebszeiten"
+✅ "stabile Leistung"
+✅ "einfache Installation"
+
+NIEMALS unvollständige Sätze wie "Mit einer Kapazität von er bietet..." schreiben!
+Wenn du einen Wert nicht kennst, lass den ganzen Satz weg!
 
 ⚠️ WIEDERHOLUNGEN STRIKT VERMEIDEN:
 Jede Information darf nur EINMAL in der gesamten Produktbeschreibung vorkommen!
