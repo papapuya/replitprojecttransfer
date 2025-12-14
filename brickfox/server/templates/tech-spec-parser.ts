@@ -446,55 +446,68 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
   }
   
   // ═══════════════════════════════════════════════════════════════
-  // KOMPATIBILITÄT EXTRAKTION: Geräte aus Produktbeschreibung
-  // Format: "Marke: Modell1, Modell2" oder einfach Modellcodes
+  // KOMPATIBILITÄT EXTRAKTION: ALLE Geräte aus Produktbeschreibung
+  // Erfasst: "Marke Modell" Zeilen, "Marke: Modell" und Modellcodes
   // ═══════════════════════════════════════════════════════════════
   const descriptionFields = ['p_description[de]', 'beschreibung', 'description', 'produktbeschreibung'];
   for (const field of descriptionFields) {
     const description = structuredData[field];
     if (description && typeof description === 'string' && description.length > 10) {
-      // Suche nach Modellcodes im Format "Marke: Modell" oder reine Modellcodes
       const allModels: string[] = [];
       
-      // Pattern 1: "Marke: Modell1, Modell2" (z.B. "Midland: XTC-300, XTC-350")
-      // Nur Modellcodes mit mindestens 3 Zeichen und Bindestrich oder Zahlen
-      const brandModelPattern = /([A-Za-z][A-Za-z\s]*?):\s*([A-Z0-9][A-Z0-9\-]{2,}(?:,\s*[A-Z0-9][A-Z0-9\-]{2,})*)/gi;
-      let brandMatch;
-      while ((brandMatch = brandModelPattern.exec(description)) !== null) {
-        const brand = brandMatch[1].trim();
-        const models = brandMatch[2].trim();
-        // Ignoriere technische Labels, CSS-Properties und kurze Wörter
-        const technicalLabels = [
-          'spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'länge', 'breite', 'höhe', 'chemie', 
-          'voltage', 'capacity', 'weight', 'color', 'font', 'style', 'border', 'margin', 'padding',
-          'width', 'height', 'background', 'display', 'text', 'size', 'family'
-        ];
-        // Ignoriere wenn Marke ein CSS-Property ist oder zu kurz
-        if (!technicalLabels.includes(brand.toLowerCase()) && brand.length > 2) {
-          // Ignoriere CSS-Werte wie "bold", "normal", "italic"
-          const cssValues = ['bold', 'normal', 'italic', 'none', 'block', 'inline', 'flex', 'grid', 'auto'];
-          if (!cssValues.includes(models.toLowerCase())) {
-            allModels.push(`${brand}: ${models}`);
+      // Normalisiere: HTML-Tags in Zeilenumbrüche umwandeln
+      let normalized = description.replace(/<br\s*\/?>/gi, '\n');
+      normalized = normalized.replace(/<[^>]+>/g, ' ');
+      
+      // PATTERN: Jede Zeile die mit bekannter Marke beginnt ist ein kompatibles Modell
+      // z.B. "COMPAQ SMART ARRAY 5302", "HEWLETT PACKARD ProLiant ML350"
+      const lines = normalized.split(/\r?\n/);
+      const knownBrands = [
+        'COMPAQ', 'HEWLETT PACKARD', 'HP', 'DELL', 'IBM', 'LENOVO', 'ASUS', 'ACER', 'APPLE',
+        'SAMSUNG', 'SONY', 'TOSHIBA', 'FUJITSU', 'PANASONIC', 'LG', 'PHILIPS', 'SIEMENS',
+        'BOSCH', 'MAKITA', 'DEWALT', 'MILWAUKEE', 'FESTOOL', 'METABO', 'HITACHI', 'RYOBI',
+        'GOPRO', 'DJI', 'CANON', 'NIKON', 'OLYMPUS', 'FUJIFILM', 'KODAK', 'PENTAX',
+        'GARMIN', 'TOMTOM', 'MEDION', 'BRAUN', 'ORAL-B', 'REMINGTON', 'GRUNDIG'
+      ];
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.length < 5) continue;
+        
+        // Prüfe ob Zeile mit bekannter Marke beginnt
+        const upperLine = trimmed.toUpperCase();
+        for (const brand of knownBrands) {
+          if (upperLine.startsWith(brand + ' ') || upperLine.startsWith(brand + ':')) {
+            // Ganze Zeile als Modell aufnehmen (bereinigt)
+            const cleanModel = trimmed.replace(/[,;]$/, '').trim();
+            if (cleanModel.length > 5) {
+              allModels.push(cleanModel);
+            }
+            break;
           }
         }
       }
       
-      // Pattern 2: Eigenständige Modellcodes (z.B. "AHDBT-001", "HDDV2100")
-      // Nur wenn keine Marken-Modell-Paare gefunden wurden
+      // Fallback: Pattern für "Marke: Modell1, Modell2"
       if (allModels.length === 0) {
-        const standaloneModels = description.match(/\b[A-Z]{2,}[\-]?[A-Z0-9]{2,}[\-]?[A-Z0-9]*\b/g);
-        if (standaloneModels) {
-          // Filtere technische Begriffe heraus
-          const filtered = standaloneModels.filter(m => 
-            !['LI-ION', 'LI-POLYMER', 'NIMH', 'NICD', 'USB-C', 'MICRO-USB'].includes(m.toUpperCase())
-          );
-          allModels.push(...filtered);
+        const brandModelPattern = /([A-Za-z][A-Za-z\s]*?):\s*([A-Z0-9][A-Z0-9\-\s]{2,})/gi;
+        let brandMatch;
+        while ((brandMatch = brandModelPattern.exec(normalized)) !== null) {
+          const brand = brandMatch[1].trim();
+          const model = brandMatch[2].trim();
+          const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity'];
+          if (!technicalLabels.includes(brand.toLowerCase()) && brand.length > 2) {
+            allModels.push(`${brand}: ${model}`);
+          }
         }
       }
       
       if (allModels.length > 0) {
         const uniqueModels = Array.from(new Set(allModels));
+        // SORTIERE alle Modelle alphabetisch
+        uniqueModels.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
         specs['Kompatibilität'] = uniqueModels.join(', ');
+        console.log(`📋 Kompatibilität: ${uniqueModels.length} Modelle extrahiert`);
         break;
       }
     }
