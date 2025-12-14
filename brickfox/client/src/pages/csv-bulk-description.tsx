@@ -534,39 +534,45 @@ export default function CSVBulkDescription() {
   const limitModelsInName = (text: string): string => {
     if (!text) return text;
     
-    // Pattern für Modellnummern: Alphanumerische Codes mit Buchstaben+Zahlen
-    // z.B. MBP33S, SCD620, V120, SC701, iPhone4
-    const modelPattern = /\b([A-Za-z]+\s*\d+[A-Za-z0-9\-\/]*|\d+[A-Za-z]+[A-Za-z0-9\-\/]*|[A-Z]{1,3}\d{3,}[A-Za-z0-9\-\/]*)\b/g;
+    // Finde "für" Position - Modelle kommen danach
+    const fuerMatch = text.match(/\b(für|for)\s+/i);
+    if (!fuerMatch || fuerMatch.index === undefined) return text;
     
-    const matches: { match: string; index: number; length: number }[] = [];
-    let match: RegExpExecArray | null;
-    while ((match = modelPattern.exec(text)) !== null) {
-      const value = match[1];
-      // Filtere technische Werte heraus (Volt, mAh, etc.)
-      if (!/^\d+\s*(V|Volt|mAh|Ah|W|Wh|mm|cm|m|g|kg)$/i.test(value)) {
-        matches.push({ match: match[0], index: match.index, length: match[0].length });
+    const prefix = text.substring(0, fuerMatch.index + fuerMatch[0].length);
+    const afterFuer = text.substring(fuerMatch.index + fuerMatch[0].length);
+    
+    // Teile bei Kommas auf
+    const parts = afterFuer.split(/,\s*/);
+    
+    // Finde wo "wie" oder "–" beginnt (technische Daten)
+    let wieIndex = -1;
+    for (let i = 0; i < parts.length; i++) {
+      if (/^(wie|–)\s*/i.test(parts[i].trim())) {
+        wieIndex = i;
+        break;
       }
     }
     
-    // Wenn 2 oder weniger Modelle, nichts ändern
-    if (matches.length <= 2) return text;
+    // Modell-Teile sind vor "wie"/"–", technische Teile sind danach
+    const modelParts = wieIndex >= 0 ? parts.slice(0, wieIndex) : parts;
+    const techParts = wieIndex >= 0 ? parts.slice(wieIndex) : [];
     
-    // Schneide nach dem 2. Modell ab
-    const secondModelEnd = matches[1].index + matches[1].length;
-    let result = text.substring(0, secondModelEnd);
+    // Wenn 2 oder weniger Modell-Teile, nichts ändern
+    if (modelParts.length <= 2) return text;
     
-    // Behalte technische Attribute am Ende (nach "–" oder "wie")
-    const rest = text.substring(secondModelEnd);
-    const dashMatch = rest.match(/[,\s]*(–|wie\s)/);
-    if (dashMatch && dashMatch.index !== undefined) {
-      const afterDash = rest.substring(dashMatch.index).replace(/^[,\s]+/, '');
-      result = result.replace(/[,\s]+$/, '') + ' ' + afterDash;
+    // Nur erste 2 Modell-Teile behalten
+    const limitedModels = modelParts.slice(0, 2);
+    
+    // Zusammenbauen: Prefix + 2 Modelle + technische Teile
+    let result = prefix + limitedModels.join(', ');
+    if (techParts.length > 0) {
+      result += ', ' + techParts.join(', ');
     }
     
-    // Bereinige Kommas und Leerzeichen am Ende
-    result = result.replace(/[,;\s]+$/, '').replace(/\s+/g, ' ').trim();
+    // Bereinigen
+    result = result.replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim();
     
-    console.log(`✂️ SEO-Modelle begrenzt: "${text.substring(0, 50)}..." → "${result.substring(0, 50)}..."`);
+    console.log(`✂️ SEO-Modelle begrenzt: "${text.substring(0, 60)}..." → "${result.substring(0, 60)}..."`);
     return result;
   };
 
