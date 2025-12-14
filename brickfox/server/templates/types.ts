@@ -17,6 +17,7 @@ export interface ProductCopyPayload {
   produktTyp?: 'akku' | 'elektronik' | 'werkzeug';
   produktTitel?: string;
   einsatzbereiche?: string;
+  achtungHinweis?: string;
 }
 
 export interface GenerateDescriptionInput {

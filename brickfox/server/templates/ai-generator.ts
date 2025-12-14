@@ -965,12 +965,18 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
 
     // NUR 1:1 extrahierte Specs verwenden - KEINE AI-Fallbacks für technische Daten!
     // AI darf technische Werte nicht erfinden (nutze bereits oben extrahierte extractedTechSpecs)
+    
+    // ACHTUNG-Hinweis für ALLE Produkttypen extrahieren (nicht nur Akkus)
+    const achtungHinweis = extractedTechSpecs['Achtung'] || '';
+    if (achtungHinweis) {
+      console.log(`⚠️ ACHTUNG-Hinweis wird weitergegeben: ${achtungHinweis}`);
+    }
 
     return {
       tagline: tagline,
       narrative: beschreibung,
       uspBullets: Array.isArray(vorteile) ? vorteile : [],
-      technicalSpecs: produktTyp === 'akku' ? extractedTechSpecs : {},
+      technicalSpecs: produktTyp === 'akku' ? extractedTechSpecs : { 'Achtung': achtungHinweis },
       safetyNotice: '',
       packageContents: lieferumfangString,
       productHighlights: [],
@@ -985,6 +991,7 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       produktTyp: produktTyp as 'akku' | 'elektronik' | 'werkzeug',
       produktTitel: produktTitel,
       einsatzbereiche: einsatzbereiche,
+      achtungHinweis: achtungHinweis,
     };
 
   } catch (error) {

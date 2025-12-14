@@ -739,21 +739,17 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
           }
           
           // Pattern: "Marke: Modell" (ohne dritte Kategorie)
+          // z.B. "Apple: iPhone 8 Plus" → "iPhone 8 Plus"
           const doubleColonMatch = trimmed.match(/^([^:]+):\s*([^:]+)$/);
           if (doubleColonMatch) {
             const marke = doubleColonMatch[1].trim();
             const modell = doubleColonMatch[2].trim();
             
-            // Technische Labels ausschließen
-            const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity', 'apple', 'iphone', 'samsung', 'huawei'];
+            // NUR technische Labels ausschließen - NICHT Marken wie Apple, Samsung!
+            const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity', 'lieferumfang', 'hinweis', 'achtung'];
             if (!technicalLabels.includes(marke.toLowerCase()) && modell.length > 3) {
-              // Bei "iPhone: iPhone X" → nur "iPhone X" nehmen
-              if (modell.toLowerCase().startsWith(marke.toLowerCase())) {
-                allModels.push(modell);
-              } else {
-                allModels.push(modell);
-              }
-              console.log(`   📱 Modell extrahiert: "${modell}"`);
+              allModels.push(modell);
+              console.log(`   📱 Modell extrahiert: "${modell}" (Marke: ${marke})`);
             }
             continue;
           }
