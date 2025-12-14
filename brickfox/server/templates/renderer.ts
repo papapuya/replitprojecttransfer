@@ -72,6 +72,66 @@ function removeEmcomBrand(text: string): string {
 }
 
 /**
+ * Begrenzt die Anzahl der Modellnummern im Produktnamen auf maximal 2
+ * Beispiel: "Akku für iPhone 4, iPhone 4S, iPhone 5, iPhone 5S" → "Akku für iPhone 4, iPhone 4S"
+ */
+function limitModelsInTitle(text: string): string {
+  if (!text) return text;
+  
+  // Pattern für Modellnummern: Wörter mit Buchstaben+Zahlen oder Zahlen+Buchstaben
+  // z.B. iPhone4, 4S, A1234, SCD486, X220, T440s
+  const modelPattern = /\b([A-Za-z]+\s*\d+[A-Za-z0-9\-\/]*|\d+[A-Za-z]+[A-Za-z0-9\-\/]*|[A-Z]{1,3}\d{3,}[A-Za-z0-9\-\/]*)\b/g;
+  
+  let matches: RegExpExecArray[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = modelPattern.exec(text)) !== null) {
+    // Filtere technische Werte heraus (Volt, mAh, etc.)
+    const value = match[1];
+    if (!/^\d+\s*(V|Volt|mAh|Ah|W|Wh|mm|cm|m|g|kg)$/i.test(value)) {
+      matches.push(match);
+    }
+  }
+  
+  // Wenn mehr als 2 Modelle gefunden, schneide nach dem 2. ab
+  if (matches.length > 2) {
+    const secondModelEnd = matches[1].index + matches[1][0].length;
+    
+    // Finde das nächste Komma oder Trennzeichen nach dem 2. Modell
+    let cutPosition = secondModelEnd;
+    const afterSecond = text.substring(secondModelEnd);
+    
+    // Behalte eventuelle Attribute nach dem 2. Modell (z.B. "– 3,7 Volt, 1821 mAh")
+    const dashMatch = afterSecond.match(/^[,\s]*–/);
+    if (dashMatch) {
+      // Behalte alles ab dem Gedankenstrich
+      cutPosition = secondModelEnd + (afterSecond.indexOf('–'));
+    } else {
+      // Schneide bei Komma/Semikolon ab
+      const nextSeparator = afterSecond.match(/^[,;\s]+/);
+      if (nextSeparator) {
+        cutPosition = secondModelEnd;
+      }
+    }
+    
+    let result = text.substring(0, cutPosition).trim();
+    
+    // Füge Rest nach Gedankenstrich hinzu wenn vorhanden
+    const dashIndex = text.indexOf('–', cutPosition);
+    if (dashIndex !== -1) {
+      result = result.replace(/[,\s]+$/, '') + ' ' + text.substring(dashIndex);
+    }
+    
+    // Bereinige Kommas am Ende
+    result = result.replace(/[,\s]+–/, ' –').replace(/,\s*$/, '').trim();
+    
+    console.log(`✂️ Modelle begrenzt: "${text.substring(0, 60)}..." → "${result.substring(0, 60)}..."`);
+    return result;
+  }
+  
+  return text;
+}
+
+/**
  * Entfernt Größenangaben wie "38mm", "42mm", "44mm" aus Text
  * Diese gehören NICHT in Produktnamen, Fließtext oder Kompatibilität
  */
@@ -250,6 +310,9 @@ export function renderProductHtml(options: RenderOptions): string {
   
   // "V" durch "Volt" ersetzen im Produktnamen (z.B. "3,7 V" -> "3,7 Volt")
   produktTitel = produktTitel.replace(/(\d+[,.]?\d*)\s*V\b/g, '$1 Volt');
+  
+  // Begrenze Modellnummern auf maximal 2 (sonst wird Titel zu lang)
+  produktTitel = limitModelsInTitle(produktTitel);
   
   // Entferne doppelte Leerzeichen und – am Ende
   produktTitel = produktTitel.replace(/\s+/g, ' ').replace(/\s*–\s*$/, '').trim();
