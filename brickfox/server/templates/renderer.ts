@@ -1044,9 +1044,9 @@ ${vorteileHtml}
       if (anwendungWords.has(word)) overlap++;
     }
     
-    // Wenn >30% der Wörter bereits in Anwendung vorkommen = Wiederholung (verschärft von 40%)
+    // Wenn >20% der Wörter bereits in Anwendung vorkommen = Wiederholung (verschärft von 30%)
     const overlapRatio = einsatzWords.length > 0 ? overlap / einsatzWords.length : 0;
-    if (overlapRatio > 0.3) {
+    if (overlapRatio > 0.2) {
       console.log(`⏭️ Einsatzbereiche übersprungen: ${Math.round(overlapRatio * 100)}% Überlappung mit Anwendung`);
       return false;
     }
