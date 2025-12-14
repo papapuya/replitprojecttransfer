@@ -422,9 +422,10 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
   const incompatible: string[] = [];
   
   // Feste Ausschlüsse (NIEMALS als kompatibel)
+  // Matcht "5302" und "5304" in jeder Form (z.B. "Smart Array 5302 Controller")
   const exclusionPatterns = [
-    /smart\s*array\s*5302/i,
-    /smart\s*array\s*5304/i,
+    /\b5302\b/i,
+    /\b5304\b/i,
   ];
   
   for (const rawModel of rawModels) {
@@ -504,13 +505,75 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
   const uniqueCompatible = Array.from(new Set(compatible));
   const uniqueIncompatible = Array.from(new Set(incompatible));
   
-  // Alphabetisch sortieren
-  uniqueCompatible.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
-  uniqueIncompatible.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  // ═══════════════════════════════════════════════════════════════
+  // SCHRITT 6: Intelligente Gruppierung nach Produktfamilie
+  // "HP ProLiant ML350, HP ProLiant ML370" → "HP ProLiant ML350, ML370"
+  // ═══════════════════════════════════════════════════════════════
+  const groupedCompatible = groupByProductFamily(uniqueCompatible);
+  const groupedIncompatible = groupByProductFamily(uniqueIncompatible);
   
-  console.log(`🔧 Normalisierung: ${rawModels.length} → ${uniqueCompatible.length} kompatibel, ${uniqueIncompatible.length} Ausschlüsse`);
+  console.log(`🔧 Normalisierung: ${rawModels.length} → ${groupedCompatible.length} kompatibel, ${groupedIncompatible.length} Ausschlüsse`);
   
-  return { compatible: uniqueCompatible, incompatible: uniqueIncompatible };
+  return { compatible: groupedCompatible, incompatible: groupedIncompatible };
+}
+
+/**
+ * Gruppiert Modelle nach Produktfamilie für kompaktere Ausgabe
+ * "HP ProLiant ML350, HP ProLiant ML370, HP ProLiant ML570" → "HP ProLiant ML350, ML370, ML570"
+ */
+function groupByProductFamily(models: string[]): string[] {
+  if (models.length === 0) return [];
+  
+  // Bekannte Produktfamilien-Prefixe
+  const familyPatterns = [
+    { pattern: /^HP ProLiant\s+/i, family: 'HP ProLiant' },
+    { pattern: /^HP Smart Array\s+/i, family: 'HP Smart Array' },
+    { pattern: /^HP StorageWorks\s+/i, family: 'HP StorageWorks' },
+    { pattern: /^HP MSA\s+/i, family: 'HP MSA' },
+    { pattern: /^HP NAS\s+/i, family: 'HP NAS' },
+  ];
+  
+  // Gruppiere nach Familie
+  const groups: Map<string, string[]> = new Map();
+  const ungrouped: string[] = [];
+  
+  for (const model of models) {
+    let matched = false;
+    for (const { pattern, family } of familyPatterns) {
+      if (pattern.test(model)) {
+        // Extrahiere Modellnummer (Teil nach dem Prefix)
+        const modelNumber = model.replace(pattern, '').trim();
+        if (!groups.has(family)) {
+          groups.set(family, []);
+        }
+        groups.get(family)!.push(modelNumber);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      ungrouped.push(model);
+    }
+  }
+  
+  // Baue gruppierte Ausgabe
+  const result: string[] = [];
+  
+  for (const [family, modelNumbers] of groups) {
+    // Sortiere Modellnummern
+    modelNumbers.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+    // Format: "HP ProLiant ML350, ML370, ML570"
+    result.push(`${family} ${modelNumbers.join(', ')}`);
+  }
+  
+  // Füge nicht-gruppierte Modelle hinzu
+  ungrouped.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  result.push(...ungrouped);
+  
+  // Sortiere Ergebnis
+  result.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  
+  return result;
 }
 
 /**
