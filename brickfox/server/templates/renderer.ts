@@ -669,7 +669,13 @@ function renderMediaMarktLayout(data: {
     : '';
   
   // ACHTUNG-Hinweise fett unter Kompatibilität anzeigen
-  const achtungHinweis = data.technicalSpecs?.find(s => s.label === 'Achtung')?.value || '';
+  // Suche in Array (find) ODER in Object (direkter Zugriff)
+  let achtungHinweis = '';
+  if (Array.isArray(data.technicalSpecs)) {
+    achtungHinweis = data.technicalSpecs?.find(s => s.label === 'Achtung')?.value || '';
+  } else if (data.technicalSpecs && typeof data.technicalSpecs === 'object') {
+    achtungHinweis = (data.technicalSpecs as Record<string, string>)['Achtung'] || '';
+  }
   if (achtungHinweis) {
     kompatibilitaetHtml += `<p style="margin-top: 0; margin-bottom: 32px;"><strong>Achtung: ${encodeHtmlEntities(achtungHinweis)}</strong></p>`;
     console.log(`⚠️ ACHTUNG-Hinweis in HTML eingefügt: ${achtungHinweis}`);
