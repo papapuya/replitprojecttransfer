@@ -96,8 +96,10 @@ async function generateProductCopyModular(
 
     // USPs nur zurückgeben wenn bestehende Beschreibung vorhanden war
     // REGEL: Keine generischen Template-USPs mehr - nur echte extrahierte Vorteile
+    // REGEL: Mindestens 2 Vorteile müssen vorhanden sein, sonst komplett weglassen
     const hasExistingDescription = existingDescription && existingDescription.trim().length > 50;
-    const realUsps = hasExistingDescription ? processed.uspBullets.slice(0, 5) : [];
+    const tempUsps = hasExistingDescription ? processed.uspBullets.slice(0, 5) : [];
+    const realUsps = tempUsps.length >= 2 ? tempUsps : [];
     
     return {
       tagline: result.tagline, // Neue Tagline für h2
@@ -895,7 +897,13 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     console.log(`📋 [USP-CHECK] Vorteile werden: ${hasExistingDescriptionMono ? 'ANGEZEIGT' : 'ÜBERSPRUNGEN'}`);
     
     // Nur echte Vorteile wenn bestehende Beschreibung vorhanden, sonst leer
-    const vorteile = hasExistingDescriptionMono ? filteredVorteile.slice(0, 4) : [];
+    // REGEL: Mindestens 2 Vorteile müssen vorhanden sein, sonst komplett weglassen
+    const tempVorteile = hasExistingDescriptionMono ? filteredVorteile.slice(0, 4) : [];
+    const vorteile = tempVorteile.length >= 2 ? tempVorteile : [];
+    
+    if (tempVorteile.length === 1) {
+      console.log(`📋 [USP-CHECK] Nur 1 Vorteil gefunden - "Ihre Vorteile" wird komplett weggelassen`);
+    }
     
     const kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
     const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
