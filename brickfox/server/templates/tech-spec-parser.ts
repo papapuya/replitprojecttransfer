@@ -520,8 +520,8 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       }
     }
     
-    // Akkutyp/Chemie: p_attributes[akku_chemie][de]
-    if (keyLower.includes('chemie') || keyLower.includes('chemistry') || keyLower.includes('akku_typ')) {
+    // Akkutyp/Chemie: p_attributes[akku_ch][de] oder p_attributes[akku_chemie][de]
+    if (keyLower.includes('akku_ch') || keyLower.includes('chemie') || keyLower.includes('chemistry') || keyLower.includes('akku_typ')) {
       specs['Akkutyp'] = valTrimmed;
     }
     
