@@ -18,23 +18,23 @@ DEINE AUFGABE:
 Schreibe eine professionelle, produktspezifische Beschreibung in GENAU 4-5 Sätzen.
 
 INHALT (produktspezifisch):
-1. Was ist das Produkt KONKRET? Nenne Modell/Format (z.B. "Der RCR123A...")
-2. Welche SPEZIFISCHEN Vorteile hat es? (nutze echte Werte: 950mAh, PCB, etc.)
-3. WOFÜR wird es verwendet? (konkrete Anwendungen: Taschenlampen, Kameras)
+1. Was ist das Produkt KONKRET? Nenne Modell/Format
+2. WOFÜR wird es verwendet? (konkrete Anwendungen)
+3. Welche VORTEILE hat es? (Nutzen beschreiben, KEINE technischen Zahlen!)
 4. Für wen ist ES geeignet? (spezifische Zielgruppe)
 
 BEISPIEL:
 
-❌ SCHLECHT (generisch):
-"Dieser Akku ist ein hochwertiger und zuverlässiger Energiespeicher. Er bietet langanhaltende Leistung und ist ideal für professionelle Anwendungen."
+❌ SCHLECHT (mit technischen Werten):
+"Dieser Akku bietet 950 mAh Kapazität und 3,7V Spannung. Mit 12 V Leistung..."
 
-✅ GUT (produktspezifisch, ohne Produktname am Anfang!):
-"Dieser wiederaufladbare Li-Ion-Akku im kompakten 16340 Format eignet sich ideal für LED-Taschenlampen, Fotokameras und Sicherheitstechnik. Mit 950 mAh Kapazität bietet er lange Betriebszeiten. Die konstante Spannung von 3,6V-3,7V gewährleistet eine stabile Leistung in allen Anwendungen."
+✅ GUT (ohne technische Werte, nur Nutzen):
+"Dieser wiederaufladbare Li-Ion-Akku im kompakten 16340 Format eignet sich ideal für LED-Taschenlampen, Fotokameras und Sicherheitstechnik. Er bietet lange Betriebszeiten und gewährleistet eine stabile Leistung in allen Anwendungen. Der integrierte Schutz vor Überladung sorgt für zusätzliche Sicherheit."
 
 STIL:
-- Nutze konkrete Produktdaten (Modell, Kapazität, Format)
+- Nenne das Produktmodell/Format
 - Nenne spezifische Anwendungen
-- Erkläre echte Vorteile (nicht "hochwertig", "zuverlässig")
+- Erkläre den NUTZEN (nicht technische Zahlen)
 - WICHTIG: Der Produktname wird als H1 separat angezeigt - NIEMALS im Narrative wiederholen!
 - NIEMALS mit dem Produktnamen beginnen (z.B. "Der Varta CR2032..." ist VERBOTEN)
 - Starte direkt mit den Eigenschaften/Vorteilen
@@ -46,43 +46,37 @@ STIL:
 - "perfekte Wahl für"
 - "hochwertiges Produkt"
 
-🚫 KRITISCH - KEINE TECHNISCHEN WERTE IM TEXT:
-- NIEMALS Kapazität (mAh), Spannung (V), Energie (Wh) im Fließtext nennen!
-- Technische Daten gehören NUR in die Tabelle, NICHT in die Einleitung
-- Beschreibe stattdessen: Funktion, Verwendungszweck, Anwendungsgebiete, Kompatibilität
-- Fokussiere auf den NUTZEN für den Kunden, nicht auf technische Zahlen
-- VERBOTEN: "mit 12 V Spannung", "3500 mAh Kapazität", "80 Ah Leistung"
-- ERLAUBT: "zuverlässige Energieversorgung", "lange Betriebszeiten", "stabile Leistung"
+🚫🚫🚫 ABSOLUT VERBOTEN - KEINE TECHNISCHEN WERTE IM TEXT 🚫🚫🚫
+- NIEMALS Kapazität nennen (mAh, Ah)
+- NIEMALS Spannung nennen (V, Volt)
+- NIEMALS Energie nennen (Wh)
+- NIEMALS Maße nennen (mm, cm)
+- NIEMALS Gewicht nennen (g, kg)
+- Technische Daten gehören NUR in die TABELLE!
+
+VERBOTEN: "mit 12 V", "3500 mAh", "80 Ah", "Spannung von", "Kapazität von"
+ERLAUBT: "zuverlässige Energieversorgung", "lange Betriebszeiten", "stabile Leistung"
 
 OUTPUT-FORMAT (JSON):
 {
-  "tagline": "Kurze, prägnante Überschrift in max. 8-10 Wörtern (z.B. 'Kompakte 20-Watt-Power für unterwegs – zuverlässig & schnell')",
-  "narrative": "Die produktspezifische Beschreibung in 4-5 Sätzen.",
+  "tagline": "Kurze Überschrift in max. 8-10 Wörtern OHNE technische Werte",
+  "narrative": "Die produktspezifische Beschreibung in 4-5 Sätzen OHNE technische Werte.",
   "productHighlights": [
-    "Produktspezifisches Highlight 1",
-    "Produktspezifisches Highlight 2", 
-    "Produktspezifisches Highlight 3",
-    "Produktspezifisches Highlight 4"
+    "Highlight 1 (OHNE Zahlen)",
+    "Highlight 2 (OHNE Zahlen)", 
+    "Highlight 3 (OHNE Zahlen)",
+    "Highlight 4 (OHNE Zahlen)"
   ]
 }
 
 TAGLINE-REGELN:
 - Max. 8-10 Wörter
+- KEINE technischen Werte (keine V, mAh, Ah, Wh, mm, g)
 - Nennt EINEN Hauptvorteil des Produkts
-- Kann mit Gedankenstrich getrennt sein (z.B. "Kraftvolle Leistung – langanhaltend & sicher")
 - Kein Punkt am Ende
-- Konkret und produktspezifisch (nicht generisch)
-
-ZUSÄTZLICH: Erstelle 4 produktspezifische Highlights (ähnlich wie USPs, aber kürzer):
-
-STIL-BEISPIELE für Akku-Highlights:
-- "Hochwertige Lithium-Ionen-Zelle für konstante Leistung"
-- "Mehrfachschutz vor Überladung, Kurzschluss und Tiefentladung"
-- "Geringe Selbstentladung – ideal für Langzeitlagerung"
 
 WICHTIG für Highlights:
-- Basierend auf echten Produktdaten
-- Kürzer als USPs (max. 8-10 Wörter)
+- KEINE Zahlen, KEINE Einheiten
 - Fokus auf Qualitätsmerkmale und Schutzfunktionen
 - Produktspezifisch, nicht generisch`,
 
@@ -94,25 +88,20 @@ WICHTIG für Highlights:
 ${JSON.stringify(context.productData, null, 2)}
 
 ${hasExisting ? `
-⚠️ WICHTIG: Es gibt bereits eine BESTEHENDE PRODUKTBESCHREIBUNG aus der CSV:
+Es gibt eine bestehende Produktbeschreibung als Referenz:
 ---
 ${existingDesc}
 ---
-
-NUTZE diese bestehende Beschreibung als INFORMATIONSQUELLE:
-- Extrahiere die KORREKTEN technischen Daten (Kapazität, Spannung, Maße, etc.)
-- Übernimm FAKTEN aus der bestehenden Beschreibung
-- Formatiere und optimiere den Text für bessere Lesbarkeit
-- ERFINDE KEINE neuen technischen Daten - nutze nur das, was in der bestehenden Beschreibung steht!
+Nutze diese als Informationsquelle für Anwendungsgebiete und Kompatibilität.
+IGNORIERE alle technischen Werte (Spannung, Kapazität, etc.) - diese gehören NUR in die Tabelle!
 ` : ''}
 
 Schreibe jetzt eine PRODUKTSPEZIFISCHE Beschreibung als JSON.
 
 WICHTIG:
-- Nutze konkrete Werte (Modell, Kapazität, Format) ${hasExisting ? 'aus der bestehenden Beschreibung' : ''}
-- Erkläre, WOFÜR dieses spezielle Produkt verwendet wird
-- Vermeide generische Phrasen ohne Kontext
-- Zeige den konkreten Kundennutzen auf
-- NIEMALS den Produktnamen am Anfang des Narrative wiederholen - starte direkt mit den Eigenschaften!`;
+- KEINE technischen Werte im Text (keine V, mAh, Ah, Wh, mm, g)!
+- Erkläre, WOFÜR dieses Produkt verwendet wird
+- Beschreibe den NUTZEN für den Kunden
+- NIEMALS den Produktnamen am Anfang wiederholen`;
   }
 };
