@@ -64,6 +64,13 @@ The system uses a modular prompt architecture with specialized modules:
 **Vorteile-Regeln**:
 - Vorteile ("Ihre Vorteile") werden NUR angezeigt wenn p_description[de] vorhanden ist (>50 Zeichen)
 - Keine generischen Template-USPs mehr - nur echte extrahierte Vorteile aus der Beschreibung
+- Mindestens 2 echte Vorteile erforderlich, sonst "Ihre Vorteile" komplett weglassen
+
+### Prompt-Assistent
+- **Chat-Interface**: Separate Seite (`/prompt-assistant`) für strategische Fragen zur Prompt-Optimierung
+- **Kontextbezogene Hilfe**: "Warum wurde so generiert?"-Buttons im Bulk-Editor neben jeder HTML-Beschreibung
+- **API-Endpoints**: `/api/prompt-assistant/chat` für Chat, `/api/prompt-assistant/explain` für kontextbezogene Erklärungen
+- **System-Prompt**: Enthält komplettes PIMPilot-Regelwerk (Titel-Schema, HTML-Struktur, Vorteile-Regeln, etc.)
 
 ## External Dependencies
 
