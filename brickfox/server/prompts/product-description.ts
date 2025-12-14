@@ -61,49 +61,12 @@ Schreibe NIEMALS Sätze wie "Er ersetzt die Apple-Teilenummern (APN) 616-0579" i
 VERBOTEN: "Er ersetzt die APN..." / "entspricht der Teilenummer..." / "Apple Part Number..."
 Die APN erscheint NUR in der technischen Tabelle als Zeile "Teilenummer: 616-0579, 616-0580"
 
-🚫🚫🚫 ABSOLUT VERBOTEN - KEINE TECHNISCHEN WERTE IM FLIEßTEXT 🚫🚫🚫
-Alle technischen Daten gehören AUSSCHLIESSLICH in die technische Datentabelle!
-
-VERBOTENE PHRASEN im Fließtext (anwendung, einleitung, einsatzbereiche):
-❌ "Mit einer Kapazität von..."
-❌ "Spannung von..."
-❌ "...bietet 12 V..."
-❌ "...3500 mAh..."
-❌ "...80 Ah Leistung..."
-❌ "...6 Volt Geräten..."
-❌ "...12 Volt Systemen..."
-
-ERLAUBTE PHRASEN im Fließtext:
-✅ "zuverlässige Energieversorgung"
-✅ "lange Betriebszeiten"
-✅ "stabile Leistung"
-✅ "einfache Installation"
-
-NIEMALS unvollständige Sätze wie "Mit einer Kapazität von er bietet..." schreiben!
-Wenn du einen Wert nicht kennst, lass den ganzen Satz weg!
 
 ⚠️ WIEDERHOLUNGEN STRIKT VERMEIDEN:
 Jede Information darf nur EINMAL in der gesamten Produktbeschreibung vorkommen!
-- Wenn die Kompatibilität in der Tabelle steht, NICHT nochmal im Text erwähnen
-- Wenn Volt/mAh in der Tabelle steht, NICHT nochmal im Fließtext
 - Keine doppelten Phrasen oder Formulierungen
 - Jeder Satz muss neue Information bieten
 
-VERBOTEN in Vorteilen:
-❌ ✅ Passgenau für CR2032, DL2032, ECR2032
-❌ ✅ Mit 1821 mAh Kapazität
-❌ ✅ 3,82 Volt Spannung
-❌ ✅ Kompatibel mit iPhone 12, iPhone 13, iPhone 14
-❌ ✅ 2100 mAh für lange Laufzeit
-
-ERLAUBT in Vorteilen (nur allgemeine Nutzen):
-✅ Lange Laufzeit
-✅ Schnelle Ladezeiten
-✅ Zuverlässige Stromversorgung
-✅ Einfache Installation
-✅ Hochwertige Li-Ion Technologie
-
-Die konkreten Werte und Modelle erscheinen NUR in der technischen Tabelle!
 
 ⚠️ BATTERIEN vs. AKKUS - WORTWAHL:
 Bei BATTERIEN (Einwegbatterien wie CR2032, AA, AAA):
@@ -219,14 +182,9 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 
 REGELN FÜR JSON-FELDER:
 - produktTitel: PFLICHT. Schema: [Marke] [Produktart] – [Volt], [mAh]. Marke IMMER am Anfang! Bei Akkus: Volt vor mAh! AUSNAHME: Bei EMCOM-Produkten Marke komplett weglassen! KEINE Modelle im Titel!
-- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). 
-  🚫 ABSOLUT VERBOTEN im anwendung-Text:
-  - Keine Zahlen mit Einheiten (12 V, 3500 mAh, 18 Ah, 80 Wh)
-  - Keine Phrasen wie "Mit einer Kapazität/Spannung/Nennspannung von..."
-  - Keine technischen Spezifikationen jeglicher Art
-  ✅ ERLAUBT: Nur allgemeine Nutzen-Aussagen wie "zuverlässige Energie", "lange Betriebszeit"
+- anwendung: PFLICHT. EIN kompakter Absatz (3-4 Sätze). Beschreibt was das Produkt ist und wofür es verwendet wird.
 - kompatibilitaet: NUR wenn echte Modelle vorhanden. Leeres Array [] wenn keine Daten.
-- vorteile: Max 5, KEINE Zahlen/Einheiten! Nur allgemeine Nutzen wie "Lange Laufzeit"
+- vorteile: Max 5, allgemeine Produktnutzen
 - technischeDaten: HIER gehören ALLE technischen Details: mAh, Volt, Modelle, APN, Gewicht, Maße
 - lieferumfang: PFLICHT. Mindestens "1x [Produktname]"
 - zeigeTabelle: true/false - ob technische Datentabelle angezeigt werden soll
