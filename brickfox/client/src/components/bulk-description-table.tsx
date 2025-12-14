@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Eye, Copy, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Copy, Check, HelpCircle } from "lucide-react";
+import { ExplanationPopover } from "@/components/explanation-popover";
 import {
   Tooltip,
   TooltipContent,
@@ -238,6 +239,19 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                               <Copy className="w-4 h-4" />
                             )}
                           </Button>
+                        )}
+                        {product.produktbeschreibung_html && (
+                          <ExplanationPopover
+                            productData={{
+                              produktname: product.produktname,
+                              produktname_neu: product.produktname_neu,
+                              produktbeschreibung_html: product.produktbeschreibung_html,
+                              akku_mah: product.akku_mah,
+                              akku_v: product.akku_v,
+                              akku_ch: product.akku_ch
+                            }}
+                            generatedContent={product.produktbeschreibung_html}
+                          />
                         )}
                       </div>
                     </div>
