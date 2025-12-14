@@ -42,6 +42,39 @@ async function generateProductCopyModular(
                              productData?.structuredData?.['P Description[de]'] ||
                              productData?.structuredData?.beschreibung || '';
   
+  // NEUE REGEL: Extrahiere NUR den "Weitere Informationen:" Abschnitt für Vorteile
+  // Identische Logik wie im Monolith-Pfad für Konsistenz
+  const extractWeitereInfoModular = (desc: string): string[] => {
+    if (!desc) return [];
+    // 1. HTML-Tags in Zeilenumbrüche umwandeln
+    let normalized = desc.replace(/<br\s*\/?>/gi, '\n');
+    normalized = normalized.replace(/<li[^>]*>/gi, '\n- ');
+    normalized = normalized.replace(/<\/li>/gi, '');
+    normalized = normalized.replace(/<[^>]+>/g, '');
+    // Mehrfache Zeilenumbrüche auf einzelne reduzieren
+    normalized = normalized.replace(/(\r?\n){2,}/g, '\n');
+    // 2. Suche nach "Weitere Informationen:" - extrahiere alles danach
+    const match = normalized.match(/weitere\s*informationen\s*:?\s*([\s\S]*)/i);
+    if (!match) return [];
+    const weitereInfo = match[1];
+    // 3. NUR echte Bulletpoints
+    const bullets: string[] = [];
+    const lines = weitereInfo.split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Abbrechen bei neuer Überschrift
+      if (trimmed.match(/^[A-ZÄÖÜ].*:$/)) break;
+      if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
+        const bullet = trimmed.replace(/^[-•]\s*/, '').trim();
+        if (bullet.length >= 1) bullets.push(bullet);  // Nur komplett leere Bullets filtern
+      }
+    }
+    return bullets;
+  };
+  
+  const weitereInfoVorteileModular = extractWeitereInfoModular(existingDescription);
+  console.log(`📋 [MODULAR] "Weitere Informationen" gefunden: ${weitereInfoVorteileModular.length} Bulletpoints`);
+  
   const context: PromptContext = {
     categoryName: categoryConfig.name,
     categoryDescription: categoryConfig.description,
@@ -50,11 +83,11 @@ async function generateProductCopyModular(
       `${f.label}${f.unit ? ` (${f.unit})` : ''}`
     ),
     uspTemplates: categoryConfig.uspTemplates,
-    existingDescription: existingDescription, // Bestehende Beschreibung als Basis
+    existingDescription: weitereInfoVorteileModular.length >= 2 ? weitereInfoVorteileModular.join('\n') : '', // Nur "Weitere Informationen" übergeben
   };
   
-  if (existingDescription && existingDescription.length > 20) {
-    console.log(`📋 Bestehende Beschreibung gefunden (${existingDescription.length} Zeichen)`);
+  if (weitereInfoVorteileModular.length >= 2) {
+    console.log(`📋 Vorteile aus "Weitere Informationen" für AI übergeben`);
   }
 
   try {
@@ -94,12 +127,11 @@ async function generateProductCopyModular(
     const mergedTechSpecs = directTechSpecs;
 
 
-    // USPs nur zurückgeben wenn bestehende Beschreibung vorhanden war
+    // USPs nur zurückgeben wenn "Weitere Informationen" gefunden wurde
     // REGEL: Keine generischen Template-USPs mehr - nur echte extrahierte Vorteile
-    // REGEL: Mindestens 2 Vorteile müssen vorhanden sein, sonst komplett weglassen
-    // REGEL: ALLE Vorteile aus CSV übernehmen (nicht begrenzen)
-    const hasExistingDescription = existingDescription && existingDescription.trim().length > 50;
-    const tempUsps = hasExistingDescription ? processed.uspBullets : [];
+    // REGEL: Mindestens 2 Vorteile aus "Weitere Informationen" nötig, sonst komplett weglassen
+    const hasWeitereInfo = weitereInfoVorteileModular.length >= 2;
+    const tempUsps = hasWeitereInfo ? processed.uspBullets : [];
     const realUsps = tempUsps.length >= 2 ? tempUsps : [];
     
     return {
@@ -292,32 +324,53 @@ KATEGORIE: ELEKTRONIK / ZUBEHÖR (Typ B)
   const productNameForCheck = productData?.productName || productData?.produktname || 
                               structuredDataSource['p_name[de]'] || '';
   
-  const hasRealContent = (desc: string, name: string): boolean => {
-    if (!desc || desc.trim().length < 50) return false;
+  // NEUE REGEL: Extrahiere NUR den "Weitere Informationen:" Abschnitt
+  // Gemeinsame Hilfsfunktion für beide Pfade (Monolith + Modular)
+  const extractWeitereInformationen = (desc: string): string[] => {
+    if (!desc) return [];
     
-    // Prüfe ob die Beschreibung mehr als nur den Produktnamen enthält
-    const descLower = desc.toLowerCase().trim();
-    const nameLower = name.toLowerCase().trim();
+    // 1. HTML-Tags in Zeilenumbrüche umwandeln (<br>, <br/>, <br />)
+    let normalized = desc.replace(/<br\s*\/?>/gi, '\n');
+    // Auch <li> Tags als Bulletpoint-Marker behandeln
+    normalized = normalized.replace(/<li[^>]*>/gi, '\n- ');
+    normalized = normalized.replace(/<\/li>/gi, '');
+    // Sonstige HTML-Tags entfernen
+    normalized = normalized.replace(/<[^>]+>/g, '');
+    // Mehrfache Zeilenumbrüche auf einzelne reduzieren (damit <br><br> nicht als Stop gilt)
+    normalized = normalized.replace(/(\r?\n){2,}/g, '\n');
     
-    // Entferne Produktname aus Beschreibung und prüfe was übrig bleibt
-    const withoutName = descLower.replace(new RegExp(nameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim();
+    // 2. Suche nach "Weitere Informationen:" (case-insensitive)
+    // Extrahiere alles danach bis zu einer neuen Überschrift oder Dokumentende
+    const match = normalized.match(/weitere\s*informationen\s*:?\s*([\s\S]*)/i);
+    if (!match) return [];
     
-    // Muss mindestens 30 Zeichen echter Inhalt übrig bleiben
-    if (withoutName.length < 30) return false;
+    const weitereInfo = match[1];
     
-    // Prüfe auf nützliche Schlüsselwörter für Vorteile
-    const usefulKeywords = [
-      'schutz', 'sicher', 'langlebig', 'qualität', 'hochwertig', 'zuverlässig',
-      'temperatur', 'memory', 'selbstentladung', 'kapazität', 'leistung',
-      'auslauf', 'überlad', 'tiefentlad', 'kurzschluss', 'bms', 'lithium',
-      'li-ion', 'li-polymer', 'nimh', 'original', 'ersetzt', 'passend'
-    ];
+    // 3. STRIKT: NUR echte Bulletpoints akzeptieren (- oder • am Zeilenanfang)
+    const bullets: string[] = [];
+    const lines = weitereInfo.split(/\r?\n/);
     
-    const hasUsefulContent = usefulKeywords.some(kw => descLower.includes(kw));
-    return hasUsefulContent;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Abbrechen bei neuer Überschrift (Zeile endet mit :)
+      if (trimmed.match(/^[A-ZÄÖÜ].*:$/)) break;
+      // NUR Zeilen die explizit mit - oder • beginnen
+      if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
+        const bullet = trimmed.replace(/^[-•]\s*/, '').trim();
+        if (bullet.length >= 1) {  // Nur komplett leere Bullets filtern
+          bullets.push(bullet);
+        }
+      }
+    }
+    
+    return bullets;
   };
   
-  const hasExistingDesc = hasRealContent(existingDescriptionForPrompt, productNameForCheck);
+  // Extrahiere Vorteile aus "Weitere Informationen"
+  const weitereInfoVorteile = extractWeitereInformationen(existingDescriptionForPrompt);
+  const hasExistingDesc = weitereInfoVorteile.length >= 2; // Mindestens 2 Vorteile nötig
+  
+  console.log(`📋 [VORTEILE] "Weitere Informationen" gefunden: ${weitereInfoVorteile.length} Bulletpoints`);
   
   // Extrahiere technische Attribute für Vorteile
   const akkuChemie = structuredDataSource['p_attributes[akku_ch][de]'] || 
@@ -636,52 +689,32 @@ TECHNISCHE DATEN (technicalSpecs):
 - Feld "APN / ersetzt" mit ALLEN APNs kommagetrennt
 - Beispiel: {"APN / ersetzt": "616-00351, 616-00352, 616-00346"}`;
 
-  // USP-Anweisung basierend auf bestehender Beschreibung
+  // USP-Anweisung basierend auf "Weitere Informationen" Abschnitt
   const uspInstructions = hasExistingDesc 
     ? `
 ═══════════════════════════════════════════════════════════════
-⚠️ KRITISCH: BESTEHENDE PRODUKTBESCHREIBUNG NUTZEN FÜR VORTEILE
+⚠️ KRITISCH: VORTEILE AUS "WEITERE INFORMATIONEN" ÜBERNEHMEN
 ═══════════════════════════════════════════════════════════════
-Die folgende bestehende Beschreibung enthält ECHTE Produktinformationen.
-EXTRAHIERE daraus 3-4 SPEZIFISCHE Vorteile!
+Die folgenden Vorteile wurden aus dem "Weitere Informationen" Abschnitt extrahiert.
+ÜBERNEHME diese 1:1 als uspBullets! Du darfst sie leicht kürzen/umformulieren.
 
-BESTEHENDE BESCHREIBUNG:
----
-${existingDescriptionForPrompt}
----
+EXTRAHIERTE VORTEILE:
+${weitereInfoVorteile.map((v, i) => `${i + 1}. ${v}`).join('\n')}
 
 DEINE AUFGABE für uspBullets:
-1. Lies die bestehende Beschreibung sorgfältig
-2. Finde KONKRETE Eigenschaften: Schutzfunktionen, Technologie, Material, Qualitätsmerkmale
-3. Formuliere diese als 50-80 Zeichen lange Vorteile
-4. KEINE generischen Phrasen wie "Zuverlässige Stromversorgung" oder "Lange Lebensdauer"!
-
-FORMAT-REGEL für Vorteile:
-- Maximale Länge: ca. 60 Zeichen pro Vorteil
-- Struktur: [Eigenschaft] – [Nutzen/Erklärung]
-- Gedankenstrich (–) als Trenner zwischen Eigenschaft und Nutzen
-
-⚠️ KRITISCH: KEINE VORTEILE ERFINDEN!
-Du darfst NUR Vorteile nennen die EXPLIZIT in den CSV-Daten stehen!
-- Wenn NICHTS über Temperatur in den Daten steht → KEIN Vorteil über Temperatur!
-
-VERBOTEN zu erfinden:
-❌ "Temperaturbeständig" (wenn nicht in CSV!)
-❌ "Geringe Selbstentladung" (wenn nicht in CSV!)
-❌ "Auslaufsicher" (wenn nicht in CSV!)
+1. Übernehme ALLE obigen Vorteile (${weitereInfoVorteile.length} Stück)
+2. Kürze sie auf max. 60-80 Zeichen wenn nötig
+3. Format: [Eigenschaft] – [Nutzen/Erklärung] mit Gedankenstrich (–)
+4. KEINE zusätzlichen Vorteile erfinden!
 
 ⚠️ WICHTIG: Akkutyp (Li-Ion, Ni-MH, etc.) gehört NICHT zu Vorteilen!
 → Akkutyp wird separat in den TECHNISCHEN DATEN angezeigt
-→ Nenne KEINE Vorteile wie "Li-Ion Technologie" - das steht bereits in der Tabelle!
-
-ÜBERNEHME ALLE echten Vorteile aus der CSV (keine Begrenzung auf 2-3)!
-Lieber ALLE echte Vorteile als zu wenige!
 `
     : `
 ═══════════════════════════════════════════════════════════════
-⚠️ KEINE BESTEHENDE BESCHREIBUNG VORHANDEN
+⚠️ KEINE "WEITERE INFORMATIONEN" GEFUNDEN
 ═══════════════════════════════════════════════════════════════
-Es gibt keine bestehende Produktbeschreibung zum Extrahieren.
+Es wurde kein "Weitere Informationen" Abschnitt in der Beschreibung gefunden.
 Setze uspBullets auf ein LEERES Array: "uspBullets": []
 GENERIERE KEINE generischen Vorteile!
 `;
