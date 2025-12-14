@@ -472,7 +472,7 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       // z.B. "COMPAQ SMART ARRAY 5302", "HEWLETT PACKARD ProLiant ML350"
       const lines = normalized.split(/\r?\n/);
       const knownBrands = [
-        'COMPAQ', 'HEWLETT PACKARD', 'HP', 'DELL', 'IBM', 'LENOVO', 'ASUS', 'ACER', 'APPLE',
+        'COMPAQ', 'HEWLETT-PACKARD', 'HEWLETT PACKARD', 'HP', 'DELL', 'IBM', 'LENOVO', 'ASUS', 'ACER', 'APPLE',
         'SAMSUNG', 'SONY', 'TOSHIBA', 'FUJITSU', 'PANASONIC', 'LG', 'PHILIPS', 'SIEMENS',
         'BOSCH', 'MAKITA', 'DEWALT', 'MILWAUKEE', 'FESTOOL', 'METABO', 'HITACHI', 'RYOBI',
         'GOPRO', 'DJI', 'CANON', 'NIKON', 'OLYMPUS', 'FUJIFILM', 'KODAK', 'PENTAX',
