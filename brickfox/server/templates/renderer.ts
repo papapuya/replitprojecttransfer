@@ -666,8 +666,8 @@ function renderMediaMarktLayout(data: {
   const validKompatibleModelle = filterValidCompatibility(data.kompatibleModelle || []);
   
   // REGEL: Kompatibilität 1:1 aus CSV übernehmen - ALLE Modelle anzeigen
-  // Keine Begrenzung auf 10 Modelle - vollständige Liste ausgeben
-  let kompatibilitaetHtml = (validKompatibleModelle.length >= 2)
+  // Auch bei nur 1 Modell anzeigen (z.B. "iPhone 4")
+  let kompatibilitaetHtml = (validKompatibleModelle.length >= 1)
     ? `<p style="margin-top: 1em; margin-bottom: 16px;"><strong>Kompatibilit&auml;t:</strong> ${validKompatibleModelle.join(', ')}</p>`
     : '';
   
