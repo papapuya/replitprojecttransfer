@@ -97,7 +97,13 @@ export const TECH_SPEC_WHITELIST: TechSpecField[] = [
     key: 'laenge',
     label: 'Länge',
     unit: 'mm',
-    aliases: ['length', 'höhe', 'v length', 'v height', 'gesamtlänge']
+    aliases: ['length', 'v length', 'gesamtlänge']
+  },
+  {
+    key: 'hoehe',
+    label: 'Höhe',
+    unit: 'mm',
+    aliases: ['height', 'v height', 'höhe']
   },
   {
     key: 'breite',
