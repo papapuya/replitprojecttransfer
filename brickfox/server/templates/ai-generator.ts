@@ -129,10 +129,10 @@ async function generateProductCopyModular(
 
     // USPs nur zurückgeben wenn "Weitere Informationen" gefunden wurde
     // REGEL: Keine generischen Template-USPs mehr - nur echte extrahierte Vorteile
-    // REGEL: Mindestens 2 Vorteile aus "Weitere Informationen" nötig, sonst komplett weglassen
-    const hasWeitereInfo = weitereInfoVorteileModular.length >= 2;
+    // REGEL: IMMER "Weitere Informationen" übernehmen, auch bei 400+ Produkten oder nur 1 Vorteil
+    const hasWeitereInfo = weitereInfoVorteileModular.length >= 1;
     const tempUsps = hasWeitereInfo ? processed.uspBullets : [];
-    const realUsps = tempUsps.length >= 2 ? tempUsps : [];
+    const realUsps = tempUsps.length >= 1 ? tempUsps : [];
     
     return {
       tagline: result.tagline, // Neue Tagline für h2
@@ -367,8 +367,9 @@ KATEGORIE: ELEKTRONIK / ZUBEHÖR (Typ B)
   };
   
   // Extrahiere Vorteile aus "Weitere Informationen"
+  // REGEL: IMMER übernehmen, auch bei nur 1 Vorteil oder 400+ Produkten
   const weitereInfoVorteile = extractWeitereInformationen(existingDescriptionForPrompt);
-  const hasExistingDesc = weitereInfoVorteile.length >= 2; // Mindestens 2 Vorteile nötig
+  const hasExistingDesc = weitereInfoVorteile.length >= 1; // Auch nur 1 Vorteil übernehmen
   
   console.log(`📋 [VORTEILE] "Weitere Informationen" gefunden: ${weitereInfoVorteile.length} Bulletpoints`);
   
