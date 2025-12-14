@@ -480,27 +480,32 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       ];
       
       console.log(`🔍 [COMPAT] Prüfe ${lines.length} Zeilen aus Beschreibung`);
-      // Debug: Zeige erste 5 Zeilen
-      lines.slice(0, 10).forEach((l, i) => console.log(`   Zeile ${i}: "${l.trim().substring(0, 80)}..."`));
+      // Debug: Zeige Zeilen die mit Marke beginnen könnten
+      lines.slice(0, 20).forEach((l, i) => {
+        const t = l.trim();
+        if (t.length > 5) console.log(`   Zeile ${i}: "${t.substring(0, 100)}"`);
+      });
       
       for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.length < 5) continue;
         
-        // Prüfe ob Zeile mit bekannter Marke beginnt
+        // Prüfe ob Zeile mit bekannter Marke beginnt (Leerzeichen ODER Doppelpunkt)
         const upperLine = trimmed.toUpperCase();
         for (const brand of knownBrands) {
           if (upperLine.startsWith(brand + ' ') || upperLine.startsWith(brand + ':')) {
             // Ganze Zeile als Modell aufnehmen (bereinigt)
+            // Format: "MARKE: SERIE: MODELL" oder "MARKE MODELL"
             const cleanModel = trimmed.replace(/[,;]$/, '').trim();
             if (cleanModel.length > 5) {
               allModels.push(cleanModel);
-              console.log(`   ✅ Gefunden: ${cleanModel}`);
             }
             break;
           }
         }
       }
+      
+      console.log(`   🔍 Nach Zeilen-Scan: ${allModels.length} Modelle gefunden`);
       
       // ERWEITERT: Wenn wenige Modelle gefunden - auch innerhalb von Zeilen suchen
       // z.B. "COMPAQ Model1 COMPAQ Model2" in einer Zeile
