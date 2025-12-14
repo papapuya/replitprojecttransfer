@@ -403,6 +403,34 @@ GRUNDREGELN (WICHTIG)
 - Keine technischen Tabellen ohne echte technische Werte
 
 ═══════════════════════════════════════════════════════════════
+GRAMMATIK-REGELN (PFLICHT - SEHR WICHTIG!)
+═══════════════════════════════════════════════════════════════
+⚠️ JEDER SATZ MUSS GRAMMATIKALISCH VOLLSTÄNDIG SEIN!
+
+FEHLER DIE NIE PASSIEREN DÜRFEN:
+❌ "von sorgt" → FEHLT DIE MARKE! Richtig: "von [Markenname] sorgt"
+❌ "3." → UNVOLLSTÄNDIG! Muss vollständige Zahl sein: "3,7 Volt"
+❌ "mit einer Kapazität von mAh" → FEHLT DER WERT! Nur schreiben wenn Wert bekannt
+❌ Sätze ohne Subjekt oder Verb
+❌ Abgebrochene Sätze mit fehlendem Ende
+
+REGELN:
+1. IMMER prüfen: Hat der Satz Subjekt + Verb + Objekt?
+2. NIEMALS Platzhalter oder unvollständige Werte einfügen
+3. Wenn ein Wert NICHT aus den Daten bekannt ist → WEGLASSEN, nicht raten!
+4. Jeder Satz endet mit Punkt, Fragezeichen oder Ausrufezeichen
+5. Bei Marken: Entweder die echte Marke nennen ODER "Dieser Akku/Dieses Produkt" verwenden
+
+BEISPIELE:
+❌ FALSCH: "Der Akku von sorgt für zuverlässige Energie."
+✅ RICHTIG: "Der Akku sorgt für zuverlässige Energie." (ohne unbekannte Marke)
+✅ RICHTIG: "Der Akku von EMCOM sorgt für zuverlässige Energie." (mit bekannter Marke)
+
+❌ FALSCH: "Mit einer Kapazität von 3. mAh bietet der Akku..."
+✅ RICHTIG: "Der Akku bietet zuverlässige Leistung im Alltag." (Kapazität weglassen wenn unbekannt)
+✅ RICHTIG: "Mit einer Kapazität von 1821 mAh bietet der Akku..." (nur mit vollständigem Wert)
+
+═══════════════════════════════════════════════════════════════
 H1 / PRODUKTTITEL – EINHEITLICHES SCHEMA (SEO-KRITISCH)
 ═══════════════════════════════════════════════════════════════
 SCHEMA: [Marke] [Produktart] für [Gerät/Serie], [weitere Geräte] – [messbare Attribute]
