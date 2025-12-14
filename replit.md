@@ -62,9 +62,12 @@ The system uses a modular prompt architecture with specialized modules:
   - `Kompatibilität: Modell1, Modell2, Modell3` (ohne "Passend für")
 
 **Vorteile-Regeln**:
-- Vorteile ("Ihre Vorteile") werden NUR angezeigt wenn p_description[de] vorhanden ist (>50 Zeichen)
-- Keine generischen Template-USPs mehr - nur echte extrahierte Vorteile aus der Beschreibung
+- Vorteile werden NUR aus dem "Weitere Informationen:" Abschnitt in p_description[de] extrahiert
+- Nur Bulletpoints die mit "-" oder "•" beginnen werden als Vorteile erkannt
+- HTML-Tags (<br>, <li>, etc.) werden automatisch in Zeilenumbrüche konvertiert
 - Mindestens 2 echte Vorteile erforderlich, sonst "Ihre Vorteile" komplett weglassen
+- Keine generischen Template-USPs mehr - nur echte extrahierte Vorteile
+- Abbruch bei neuer Überschrift (Zeile endet mit ":")
 
 ### Prompt-Assistent
 - **Chat-Interface**: Separate Seite (`/prompt-assistant`) für strategische Fragen zur Prompt-Optimierung
