@@ -124,12 +124,13 @@ export default function CSVBulkProjectDetail() {
     const csvData = bulkProducts.map(product => {
       const row: Record<string, string> = {};
       enabledColumns.forEach(col => {
-        row[col.key] = (product as any)[col.key] || '';
+        row[col.label] = (product as any)[col.key] || '';
       });
       return row;
     });
 
     const csv = Papa.unparse(csvData, {
+      columns: enabledColumns.map(col => col.label),
       delimiter: ';',
       header: true,
     });
