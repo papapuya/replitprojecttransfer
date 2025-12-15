@@ -213,26 +213,58 @@ function sanitizeCSVQuotes(text: string, delimiter: string): string {
 }
 
 /**
- * Detect CSV delimiter by analyzing the first few lines
+ * Detect CSV delimiter by analyzing the header line
+ * Prioritizes delimiters that create valid column structure
  */
 function detectDelimiter(text: string): string {
-  const lines = text.split('\n').slice(0, 3); // Check first 3 lines
+  const lines = text.split('\n').filter(l => l.trim()).slice(0, 10);
+  if (lines.length === 0) return ';';
+  
+  const headerLine = lines[0];
   const delimiters = [';', ',', '\t', '|'];
   
   const scores = delimiters.map(delimiter => {
-    const counts = lines.map(line => (line.match(new RegExp(`\\${delimiter}`, 'g')) || []).length);
-    const avgCount = counts.reduce((a, b) => a + b, 0) / counts.length;
-    const variance = counts.every(c => c === counts[0]) ? 0 : 1; // Prefer consistent counts
-    return { delimiter, score: avgCount, variance };
+    // Count occurrences in header (outside quotes)
+    let headerCount = 0;
+    let inQuotes = false;
+    for (let i = 0; i < headerLine.length; i++) {
+      if (headerLine[i] === '"') inQuotes = !inQuotes;
+      else if (headerLine[i] === delimiter && !inQuotes) headerCount++;
+    }
+    
+    // Check if header contains typical PIM column names with this delimiter
+    const headerParts = headerLine.split(delimiter);
+    const hasPimColumns = headerParts.some(p => 
+      p.match(/p_id|p_name|p_description|p_item|p_brand|p_group|p_attributes/i)
+    );
+    
+    // Check consistency: do first few data rows have same column count?
+    let consistentRows = 0;
+    for (let i = 1; i < Math.min(5, lines.length); i++) {
+      let rowCount = 0;
+      let inQ = false;
+      for (let j = 0; j < lines[i].length; j++) {
+        if (lines[i][j] === '"') inQ = !inQ;
+        else if (lines[i][j] === delimiter && !inQ) rowCount++;
+      }
+      if (Math.abs(rowCount - headerCount) <= 2) consistentRows++;
+    }
+    
+    // Calculate score: prioritize PIM columns + consistency + reasonable count
+    let score = headerCount;
+    if (hasPimColumns) score += 100; // Strong boost for recognized PIM format
+    if (consistentRows >= 3) score += 50; // Boost for consistent structure
+    if (headerCount >= 5 && headerCount <= 50) score += 20; // Reasonable column count
+    
+    return { delimiter, score, headerCount };
   });
   
-  // Sort by score (highest count) and consistency (lowest variance)
-  scores.sort((a, b) => {
-    if (a.score !== b.score) return b.score - a.score;
-    return a.variance - b.variance;
-  });
+  // Sort by score (highest wins)
+  scores.sort((a, b) => b.score - a.score);
   
-  return scores[0].score > 0 ? scores[0].delimiter : ',';
+  console.log('[CSV] Delimiter detection:', scores.map(s => `${s.delimiter === '\t' ? 'TAB' : s.delimiter}:${s.score}`).join(', '));
+  
+  return scores[0].score > 0 ? scores[0].delimiter : ';';
 }
 
 /**
