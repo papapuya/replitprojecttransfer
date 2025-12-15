@@ -324,6 +324,8 @@ export class SupabaseStorage implements IStorage {
           userId,
           tenantId: user.tenantId,
           name: data.name,
+          sourceType: data.sourceType || null,
+          exportColumns: data.exportColumns || null,
         })
         .returning();
 
@@ -334,6 +336,8 @@ export class SupabaseStorage implements IStorage {
       return {
         id: project.id,
         name: project.name,
+        sourceType: project.sourceType || undefined,
+        exportColumns: project.exportColumns as any || undefined,
         createdAt: project.createdAt!.toISOString(),
       };
     } else {
@@ -348,6 +352,8 @@ export class SupabaseStorage implements IStorage {
           user_id: userId,
           tenant_id: user.tenantId,
           name: data.name,
+          source_type: data.sourceType || null,
+          export_columns: data.exportColumns || null,
         })
         .select()
         .single();
@@ -365,6 +371,8 @@ export class SupabaseStorage implements IStorage {
       return {
         id: project.id,
         name: project.name,
+        sourceType: project.source_type || undefined,
+        exportColumns: project.export_columns || undefined,
         createdAt: project.created_at,
       };
     }
@@ -393,6 +401,8 @@ export class SupabaseStorage implements IStorage {
       return projects.map((p: any) => ({
         id: p.id,
         name: p.name,
+        sourceType: p.sourceType || undefined,
+        exportColumns: p.exportColumns || undefined,
         createdAt: p.createdAt!.toISOString(),
       }));
     } else {
@@ -418,6 +428,8 @@ export class SupabaseStorage implements IStorage {
       return projects.map(p => ({
         id: p.id,
         name: p.name,
+        sourceType: p.source_type || undefined,
+        exportColumns: p.export_columns || undefined,
         createdAt: p.created_at,
       }));
     }
@@ -462,6 +474,8 @@ export class SupabaseStorage implements IStorage {
       return {
         id: project.id,
         name: project.name,
+        sourceType: project.sourceType || undefined,
+        exportColumns: project.exportColumns as any || undefined,
         createdAt: project.createdAt!.toISOString(),
       };
     } else {
@@ -504,6 +518,8 @@ export class SupabaseStorage implements IStorage {
       return {
         id: project.id,
         name: project.name,
+        sourceType: project.source_type || undefined,
+        exportColumns: project.export_columns || undefined,
         createdAt: project.created_at,
       };
     }
