@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, FolderOpen, Trash2, Calendar } from "lucide-react";
-import { useLocation } from "wouter";
+import { Plus, FolderOpen, Trash2, Calendar, ArrowLeft } from "lucide-react";
+import { useLocation, Link } from "wouter";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import type { Project } from "@shared/schema";
@@ -88,11 +88,18 @@ export default function Projects() {
       <div className="container mx-auto p-6 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Meine Projekte</h1>
-            <p className="text-muted-foreground mt-1">
-              Verwalten Sie Ihre Produktbeschreibungs-Projekte
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/dashboard">
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Meine Projekte</h1>
+              <p className="text-muted-foreground mt-1">
+                Verwalten Sie Ihre Produktbeschreibungs-Projekte
+              </p>
+            </div>
           </div>
           
           {projects.length > 0 && (
