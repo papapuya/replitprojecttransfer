@@ -38,6 +38,8 @@ import NotFound from "@/pages/not-found";
 import FieldMappingDemo from "@/pages/field-mapping-demo";
 import WeightGenerator from "@/pages/weight-generator";
 import PromptAssistant from "@/pages/prompt-assistant";
+import CSVBulkProjects from "@/pages/csv-bulk-projects";
+import CSVBulkProjectDetail from "@/pages/csv-bulk-project-detail";
 
 function Router() {
   return (
@@ -144,6 +146,16 @@ function Router() {
       <Route path="/prompt-assistant">
         <ProtectedRoute>
           <PromptAssistant />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/csv-bulk-projects">
+        <ProtectedRoute>
+          <CSVBulkProjects />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/csv-bulk-project/:id">
+        <ProtectedRoute>
+          <CSVBulkProjectDetail />
         </ProtectedRoute>
       </Route>
       
