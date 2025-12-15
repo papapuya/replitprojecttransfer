@@ -221,6 +221,13 @@ function detectDelimiter(text: string): string {
   if (lines.length === 0) return ';';
   
   const headerLine = lines[0];
+  
+  // Quick check: if header contains "p_id;" or "p_name[de];" → definitely semicolon
+  if (headerLine.includes('p_id;') || headerLine.includes('p_name[de];') || headerLine.includes('p_description[de];')) {
+    console.log('[CSV] Delimiter detection: Found Brickfox pattern with semicolon');
+    return ';';
+  }
+  
   const delimiters = [';', ',', '\t', '|'];
   
   const scores = delimiters.map(delimiter => {
@@ -234,9 +241,9 @@ function detectDelimiter(text: string): string {
     
     // Check if header contains typical PIM column names with this delimiter
     const headerParts = headerLine.split(delimiter);
-    const hasPimColumns = headerParts.some(p => 
-      p.match(/p_id|p_name|p_description|p_item|p_brand|p_group|p_attributes/i)
-    );
+    const pimColumnCount = headerParts.filter(p => 
+      p.match(/^p_id$|^p_name|^p_description|^p_item|^p_brand|^p_group|^p_attributes|^v_id$/i)
+    ).length;
     
     // Check consistency: do first few data rows have same column count?
     let consistentRows = 0;
@@ -250,19 +257,19 @@ function detectDelimiter(text: string): string {
       if (Math.abs(rowCount - headerCount) <= 2) consistentRows++;
     }
     
-    // Calculate score: prioritize PIM columns + consistency + reasonable count
-    let score = headerCount;
-    if (hasPimColumns) score += 100; // Strong boost for recognized PIM format
-    if (consistentRows >= 3) score += 50; // Boost for consistent structure
-    if (headerCount >= 5 && headerCount <= 50) score += 20; // Reasonable column count
+    // Calculate score: prioritize actual column count with PIM columns
+    let score = 0;
+    if (pimColumnCount >= 2) score += pimColumnCount * 50; // Strong boost for each PIM column found
+    if (headerCount >= 3) score += headerCount; // Add actual column count
+    if (consistentRows >= 2) score += 30; // Boost for consistent structure
     
-    return { delimiter, score, headerCount };
+    return { delimiter, score, headerCount, pimColumnCount };
   });
   
   // Sort by score (highest wins)
   scores.sort((a, b) => b.score - a.score);
   
-  console.log('[CSV] Delimiter detection:', scores.map(s => `${s.delimiter === '\t' ? 'TAB' : s.delimiter}:${s.score}`).join(', '));
+  console.log('[CSV] Delimiter detection:', scores.map(s => `${s.delimiter === '\t' ? 'TAB' : s.delimiter}:${s.score}(pim:${s.pimColumnCount})`).join(', '));
   
   return scores[0].score > 0 ? scores[0].delimiter : ';';
 }
