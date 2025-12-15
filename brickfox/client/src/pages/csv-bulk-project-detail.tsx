@@ -134,7 +134,7 @@ export default function CSVBulkProjectDetail() {
       header: true,
     });
 
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `${project.name || 'export'}_brickfox.csv`;
