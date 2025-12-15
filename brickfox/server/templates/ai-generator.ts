@@ -801,9 +801,22 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       return v.replace(/^>\s*/, '').trim();
     });
     
+    // Extrahiere "Nicht geeignet für..." Hinweise aus Vorteilen für Kompatibilität
+    const inkompatibilitaetsHinweise: string[] = [];
+    
     // POST-PROCESSOR: Filter Vorteile mit technischen Daten (Modelle, mAh, Ah, Volt)
     const filteredVorteile = (Array.isArray(rawVorteile) ? rawVorteile : []).filter((vorteil: string) => {
       if (typeof vorteil !== 'string') return false;
+      
+      // "Nicht geeignet für..." -> als Inkompatibilitäts-Hinweis speichern, nicht als Vorteil
+      if (/nicht\s+(geeignet|passend|kompatibel)\s+(für|mit)/i.test(vorteil)) {
+        // Extrahiere den Modellnamen
+        const match = vorteil.match(/nicht\s+(?:geeignet|passend|kompatibel)\s+(?:für|mit)\s+(.+?)(?:\s*[-–!]|$)/i);
+        if (match) {
+          inkompatibilitaetsHinweise.push(match[1].trim());
+        }
+        return false; // Nicht als Vorteil anzeigen
+      }
       
       // Patterns für verbotene technische Daten in Vorteilen
       const verbotenePatterns = [
@@ -984,7 +997,15 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     // AI darf technische Werte nicht erfinden (nutze bereits oben extrahierte extractedTechSpecs)
     
     // ACHTUNG-Hinweis für ALLE Produkttypen extrahieren (nicht nur Akkus)
-    const achtungHinweis = extractedTechSpecs['Achtung'] || '';
+    let achtungHinweis = extractedTechSpecs['Achtung'] || '';
+    
+    // Füge Inkompatibilitäts-Hinweise hinzu (aus "Nicht geeignet für..." in Vorteilen)
+    if (inkompatibilitaetsHinweise.length > 0) {
+      const inkompatHinweis = `Nicht geeignet für: ${inkompatibilitaetsHinweise.join(', ')}`;
+      achtungHinweis = achtungHinweis ? `${achtungHinweis}. ${inkompatHinweis}` : inkompatHinweis;
+      console.log(`⚠️ Inkompatibilitäts-Hinweis hinzugefügt: ${inkompatHinweis}`);
+    }
+    
     if (achtungHinweis) {
       console.log(`⚠️ ACHTUNG-Hinweis wird weitergegeben: ${achtungHinweis}`);
     }
