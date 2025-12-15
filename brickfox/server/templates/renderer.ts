@@ -1086,8 +1086,35 @@ ${vorteileHtml}
     // - Smartphone-Akkus (battery) mit Smartphone/Handy-Bezug
     // - Ladegeräte (charger)
     // - Zubehör wie Kabel, Adapter (accessory)
+    // - Fernbedienung-Akkus, Funkgerät-Akkus, Gadgets & Geschenkideen, Game-Zubehör-Akkus
     const categoryId = data.categoryId || '';
+    const categoryName = data.categoryName || '';
     const isChargerOrAccessory = categoryId === 'charger' || categoryId === 'accessory';
+    
+    // Kategorien, bei denen Einsatzbereiche nie angezeigt werden sollen
+    const skipEinsatzbereichCategories = [
+      'fernbedienung-akkus',
+      'funkgerät-akkus',
+      'funkgeraet-akkus',
+      'gadgets & geschenkideen',
+      'gadgets',
+      'geschenkideen',
+      'game-zubehör-akkus',
+      'game-zubehoer-akkus',
+    ];
+    
+    const categoryLower = categoryName.toLowerCase();
+    const categoryIdLower = categoryId.toLowerCase();
+    
+    // Prüfe ob Kategorie in der Skip-Liste ist
+    const shouldSkipByCategory = skipEinsatzbereichCategories.some(skip => 
+      categoryLower.includes(skip) || categoryIdLower.includes(skip)
+    );
+    
+    if (shouldSkipByCategory) {
+      console.log(`⏭️ Einsatzbereiche übersprungen: Kategorie "${categoryName}" ist in Skip-Liste`);
+      return false;
+    }
     
     // Prüfe ob es ein Smartphone/Handy-Produkt ist
     const productNameLower = data.productName.toLowerCase();
