@@ -323,7 +323,31 @@ export default function CSVBulkDescription() {
             productData[normalizedKey] = row[key];
           });
 
+          // Funktion zum Extrahieren des Produktnamens aus der Beschreibung
+          const extractProductNameFromDescription = (desc: string): string => {
+            if (!desc) return 'Unbekanntes Produkt';
+            // Suche nach "Das [Produktname]" am Anfang des Texts
+            const dasMatch = desc.match(/<p>Das\s+([^<]+?)\s+(bietet|ermöglicht|ist|sorgt|verfügt|garantiert|liefert|zeichnet)/i);
+            if (dasMatch && dasMatch[1].length > 5 && dasMatch[1].length < 80) {
+              return dasMatch[1].trim();
+            }
+            // Suche nach "Der/Die [Produktname]" am Anfang
+            const derDieMatch = desc.match(/<p>(?:Der|Die)\s+([^<]+?)\s+(bietet|ermöglicht|ist|sorgt|verfügt|garantiert|liefert|zeichnet)/i);
+            if (derDieMatch && derDieMatch[1].length > 5 && derDieMatch[1].length < 80) {
+              return derDieMatch[1].trim();
+            }
+            // Suche in <strong> Tags nach Produktnamen
+            const strongMatch = desc.match(/<strong>([^<]{5,60})<\/strong>/);
+            if (strongMatch) {
+              return strongMatch[1].trim();
+            }
+            return 'Unbekanntes Produkt';
+          };
+
           // Produktname aus verschiedenen möglichen Spalten lesen (inklusive BrickFox Format)
+          const existingDescription = row['p_description[de]'] || row['P Description[de]'] || 
+                                      row['p_description'] || row['beschreibung'] || '';
+          
           const rawProduktname =
             productData.produktname ||
             productData.bezeichnung ||
@@ -337,7 +361,7 @@ export default function CSVBulkDescription() {
             row['bezeichnung'] ||
             row['P Name[de]'] ||
             row['P Name de'] ||
-            'Unbekanntes Produkt';
+            extractProductNameFromDescription(existingDescription);
 
           // Bereinige abgeschnittene Produktnamen
           // z.B. "Apple Akku für iPhone 4 – ersetzt." → "Apple Ersatzakku für iPhone 4"
@@ -393,10 +417,6 @@ export default function CSVBulkDescription() {
 
           // Use local admin token (ignore Supabase for local dev)
           const token = 'local-admin-token-pimpilot-dev';
-          
-          // Bestehende Beschreibung aus CSV als Basis für AI
-          const existingDescription = row['p_description[de]'] || row['P Description[de]'] || 
-                                      row['p_description'] || row['beschreibung'] || '';
           
           const response = await fetch('/api/generate-description', {
             method: 'POST',
