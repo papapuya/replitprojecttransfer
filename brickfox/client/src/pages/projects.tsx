@@ -178,11 +178,15 @@ export default function Projects() {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
+            {projects.map((project) => {
+              const detailUrl = project.sourceType === 'csv-bulk' 
+                ? `/csv-bulk-project/${project.id}`
+                : `/project/${project.id}`;
+              return (
               <Card
                 key={project.id}
                 className="hover-elevate active-elevate-2 cursor-pointer transition-all"
-                onClick={() => setLocation(`/project/${project.id}`)}
+                onClick={() => setLocation(detailUrl)}
                 data-testid={`card-project-${project.id}`}
               >
                 <CardHeader className="space-y-0 pb-3">
@@ -210,7 +214,8 @@ export default function Projects() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
