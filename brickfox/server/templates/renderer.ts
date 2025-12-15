@@ -1079,8 +1079,31 @@ ${vorteileHtml}
 
   // Einsatzbereiche als Fließtext nach den Vorteilen
   // REGEL: Nur anzeigen wenn genügend einzigartige Inhalte UND keine Wiederholung zur Anwendung
+  // REGEL NEU: Bei Smartphone-Akkus und Ladezubehör (Kabel, Ladegeräte, Adapter) komplett weglassen
   const einsatzbereicheText = data.einsatzbereiche ? e(data.einsatzbereiche).trim() : '';
   const shouldShowEinsatzbereiche = (() => {
+    // NEUE REGEL: Bei bestimmten Kategorien nie Einsatzbereiche anzeigen
+    // - Smartphone-Akkus (battery) mit Smartphone/Handy-Bezug
+    // - Ladegeräte (charger)
+    // - Zubehör wie Kabel, Adapter (accessory)
+    const categoryId = data.categoryId || '';
+    const isChargerOrAccessory = categoryId === 'charger' || categoryId === 'accessory';
+    
+    // Prüfe ob es ein Smartphone/Handy-Produkt ist
+    const productNameLower = data.productName.toLowerCase();
+    const isSmartphoneProduct = /\b(iphone|samsung|huawei|xiaomi|sony|lg|nokia|motorola|pixel|galaxy|smartphone|handy|handyakku|apple watch)\b/i.test(productNameLower);
+    
+    // Bei Ladezubehör oder Smartphone-Akkus: keine Einsatzbereiche
+    if (isChargerOrAccessory) {
+      console.log(`⏭️ Einsatzbereiche übersprungen: Kategorie ist Ladegerät/Zubehör`);
+      return false;
+    }
+    
+    if (categoryId === 'battery' && isSmartphoneProduct) {
+      console.log(`⏭️ Einsatzbereiche übersprungen: Smartphone-Akku (Einsatzbereich offensichtlich)`);
+      return false;
+    }
+    
     if (!einsatzbereicheText || einsatzbereicheText.length < 50) {
       console.log(`⏭️ Einsatzbereiche übersprungen: zu kurz (${einsatzbereicheText.length} Zeichen)`);
       return false;
