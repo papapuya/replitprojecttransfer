@@ -4,7 +4,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FolderOpen, Trash2, Calendar, FileSpreadsheet, Package } from "lucide-react";
+import { Plus, FolderOpen, Trash2, Calendar, FileSpreadsheet, Package, ArrowLeft } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -53,14 +53,21 @@ export default function CSVBulkProjects() {
     <div className="h-full overflow-auto">
       <div className="container mx-auto p-6 max-w-7xl">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-              <FileSpreadsheet className="w-8 h-8 text-primary" />
-              CSV Bulk Projekte
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Ihre gespeicherten CSV Bulk Beschreibungs-Projekte
-            </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/csv-bulk-description">
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                <FileSpreadsheet className="w-8 h-8 text-primary" />
+                CSV Bulk Projekte
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Ihre gespeicherten CSV Bulk Beschreibungs-Projekte
+              </p>
+            </div>
           </div>
           
           <Button asChild>
