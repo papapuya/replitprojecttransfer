@@ -1,4 +1,5 @@
-import { Home, FileSpreadsheet, Globe, FolderOpen, Settings, Zap, Building2, User, CreditCard, LayoutDashboard, Crown, GitCompare, LogOut, ShoppingCart, Upload, Scale, Bot } from "lucide-react";
+import { useState } from "react";
+import { Home, FileSpreadsheet, Globe, FolderOpen, Settings, Zap, Building2, User, CreditCard, LayoutDashboard, GitCompare, LogOut, ShoppingCart, Scale, Bot, ChevronDown, ChevronRight, Store, Wrench } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -15,81 +16,57 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-const menuItems = [
+// General menu items (not shop-specific)
+const generalMenuItems = [
+  { title: "Home", url: "/", icon: Home },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+];
+
+// Shop-specific configurations - each tool has its own project page
+const shopMenus = [
   {
-    title: "Home",
-    url: "/",
-    icon: Home,
+    id: "akku500",
+    title: "Akku500",
+    icon: Store,
+    items: [
+      { title: "CSV Bulk Beschreibungen", url: "/csv-bulk-description", icon: Zap, feature: "csvBulkImport", projectsUrl: "/csv-bulk-projects" },
+      { title: "URL Webscraper", url: "/url-scraper", icon: Globe, feature: "urlScraper" },
+      { title: "PDF/CSV Auto-Scraper", url: "/pdf-auto-scraper", icon: FileSpreadsheet, feature: "urlScraper" },
+      { title: "Alle Projekte", url: "/projects", icon: FolderOpen },
+    ],
   },
   {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
+    id: "akkushop",
+    title: "Akkushop.de",
+    icon: Store,
+    items: [
+      { title: "Alle Projekte", url: "/projects", icon: FolderOpen },
+    ],
   },
-  {
-    title: "CSV Bulk Beschreibungen",
-    url: "/csv-bulk-description",
-    icon: Zap,
-  },
-  {
-    title: "Meine Projekte",
-    url: "/projects",
-    icon: FolderOpen,
-  },
-  {
-    title: "URL Webscraper",
-    url: "/url-scraper",
-    icon: Globe,
-  },
-  {
-    title: "PDF/CSV Auto-Scraper",
-    url: "/pdf-auto-scraper",
-    icon: FileSpreadsheet,
-  },
-  {
-    title: "Lieferanten-Profile",
-    url: "/suppliers",
-    icon: Building2,
-  },
-  {
-    title: "Pixi Vergleich",
-    url: "/pixi-compare",
-    icon: GitCompare,
-  },
-  {
-    title: "MediaMarkt Generator",
-    url: "/mediamarkt-generator",
-    icon: ShoppingCart,
-  },
-  {
-    title: "Gewichte-Generator",
-    url: "/weight-generator",
-    icon: Scale,
-  },
-  {
-    title: "Prompt-Assistent",
-    url: "/prompt-assistant",
-    icon: Bot,
-  },
-  {
-    title: "Mein Account",
-    url: "/account",
-    icon: User,
-  },
-  {
-    title: "Abonnement",
-    url: "/pricing",
-    icon: CreditCard,
-  },
-  {
-    title: "API Credentials",
-    url: "/credentials",
-    icon: Settings,
-  },
+];
+
+// Tools menu items (not shop-specific)
+const toolsMenuItems = [
+  { title: "Lieferanten-Profile", url: "/suppliers", icon: Building2 },
+  { title: "Pixi Vergleich", url: "/pixi-compare", icon: GitCompare, feature: "pixiIntegration" },
+  { title: "MediaMarkt Generator", url: "/mediamarkt-generator", icon: ShoppingCart },
+  { title: "Gewichte-Generator", url: "/weight-generator", icon: Scale },
+  { title: "Prompt-Assistent", url: "/prompt-assistant", icon: Bot },
+];
+
+// Account menu items
+const accountMenuItems = [
+  { title: "Mein Account", url: "/account", icon: User },
+  { title: "Abonnement", url: "/pricing", icon: CreditCard, hideForAdmin: true },
+  { title: "API Credentials", url: "/credentials", icon: Settings, hideForAdmin: true },
 ];
 
 export function AppSidebar() {
@@ -97,42 +74,31 @@ export function AppSidebar() {
   const { user } = useAuth();
   const { currentTenant } = useTenant();
   const { toast } = useToast();
+  
+  // State for open shop dropdowns
+  const [openShops, setOpenShops] = useState<Record<string, boolean>>({ akku500: true });
 
-  // Filter menu items based on tenant features
   const tenantFeatures = currentTenant?.settings?.features || {};
-  const filteredMenuItems = menuItems.filter(item => {
-    // Hide "Abonnement" and "API Credentials" for Super-Admins (they use Replit Secrets)
-    if (item.url === '/pricing' || item.url === '/credentials') {
-      return !user?.isAdmin;
-    }
-    
-    // Always show these basic items
-    if (['/', '/dashboard', '/projects', '/suppliers', '/account'].includes(item.url)) {
-      return true;
-    }
-    
-    // Show Pixi Compare only if tenant has pixiIntegration enabled
-    if (item.url === '/pixi-compare') {
-      return tenantFeatures.pixiIntegration === true;
-    }
-    
-    // Show CSV Bulk if enabled (default: true)
-    if (item.url === '/csv-bulk-description') {
-      return tenantFeatures.csvBulkImport !== false;
-    }
-    
-    // Show URL Scraper if enabled (default: true)
-    if (item.url === '/url-scraper') {
-      return tenantFeatures.urlScraper !== false;
-    }
-    
-    // Show PDF Auto-Scraper if URL Scraper is enabled (uses same feature)
-    if (item.url === '/pdf-auto-scraper') {
-      return tenantFeatures.urlScraper !== false;
-    }
-    
+
+  // Helper to check if a feature is enabled
+  const isFeatureEnabled = (feature?: string) => {
+    if (!feature) return true;
+    if (feature === "csvBulkImport") return tenantFeatures.csvBulkImport !== false;
+    if (feature === "urlScraper") return tenantFeatures.urlScraper !== false;
+    if (feature === "pixiIntegration") return tenantFeatures.pixiIntegration === true;
     return true;
-  });
+  };
+
+  // Helper to check if admin-only item should be hidden
+  const shouldHideForAdmin = (hideForAdmin?: boolean) => {
+    return hideForAdmin && user?.isAdmin;
+  };
+
+  // Filter tools based on features
+  const filteredTools = toolsMenuItems.filter(item => isFeatureEnabled(item.feature));
+
+  // Filter account items based on admin status
+  const filteredAccountItems = accountMenuItems.filter(item => !shouldHideForAdmin(item.hideForAdmin));
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -162,6 +128,10 @@ export function AppSidebar() {
     },
   });
 
+  const toggleShop = (shopId: string) => {
+    setOpenShops(prev => ({ ...prev, [shopId]: !prev[shopId] }));
+  };
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-border">
@@ -171,17 +141,116 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        {/* General Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredMenuItems.map((item) => (
+              {generalMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === item.url}
-                    data-testid={`sidebar-${item.url.replace('/', '')}`}
-                  >
+                  <SidebarMenuButton asChild isActive={location === item.url}>
+                    <Link href={item.url}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Shops with Dropdowns */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Shops</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {shopMenus.map((shop) => (
+                <Collapsible
+                  key={shop.id}
+                  open={openShops[shop.id]}
+                  onOpenChange={() => toggleShop(shop.id)}
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton className="w-full justify-between">
+                        <div className="flex items-center gap-2">
+                          <shop.icon className="w-4 h-4" />
+                          <span>{shop.title}</span>
+                        </div>
+                        {openShops[shop.id] ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {shop.items
+                          .filter(item => isFeatureEnabled(item.feature))
+                          .map((item) => (
+                            <SidebarMenuSubItem key={item.title}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={location === item.url || location === item.projectsUrl}
+                              >
+                                <Link href={item.url}>
+                                  <item.icon className="w-4 h-4" />
+                                  <span>{item.title}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                              {/* Show projects link if tool has separate projects page */}
+                              {item.projectsUrl && (
+                                <SidebarMenuSubButton
+                                  asChild
+                                  isActive={location === item.projectsUrl}
+                                  className="pl-8 text-xs text-muted-foreground"
+                                >
+                                  <Link href={item.projectsUrl}>
+                                    <FolderOpen className="w-3 h-3" />
+                                    <span>Projekte</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              )}
+                            </SidebarMenuSubItem>
+                          ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Tools */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Werkzeuge</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {filteredTools.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url}>
+                    <Link href={item.url}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Account */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Konto</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {filteredAccountItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url}>
                     <Link href={item.url}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
