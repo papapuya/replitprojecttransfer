@@ -983,6 +983,16 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
       console.log(`📋 [COMPAT] Verwende AI-generierte Kompatibilität: ${kompatibleModelle.length} Modelle`);
     }
+    
+    // Entferne generische Platzhalter wie "und weitere Modelle", "u.a.", "etc."
+    kompatibleModelle = kompatibleModelle.filter((m: string) => {
+      const lower = m.toLowerCase();
+      return !/(und\s+)?weitere\s+modelle/i.test(m) &&
+             !/^u\.?\s*a\.?$/i.test(m) &&
+             !/^etc\.?$/i.test(m) &&
+             !/^\.\.\.$/i.test(m) &&
+             !/^und\s+mehr$/i.test(m);
+    });
     const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
     const einsatzbereiche = parsedContent.einsatzbereiche || '';
     const apnSatz = parsedContent.apnSatz || '';
