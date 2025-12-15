@@ -354,6 +354,8 @@ export default function CSVBulkDescription() {
             productData.name ||
             productData['p_name_de'] ||
             productData['p_name[de]'] ||
+            row['p_name[de]'] ||
+            row['P_name[de]'] ||
             row['Produktname'] ||
             row['Bezeichnung'] ||
             row['Name'] ||
