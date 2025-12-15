@@ -106,6 +106,12 @@ export type ExportColumn = z.infer<typeof exportColumnSchema>;
 export const projectSchema = z.object({
   id: z.string(),
   name: z.string(),
+  sourceType: z.string().optional(), // 'csv-bulk', 'url-scraper', 'pdf-scraper', etc.
+  exportColumns: z.array(z.object({
+    key: z.string(),
+    label: z.string(),
+    enabled: z.boolean(),
+  })).optional(),
   createdAt: z.string(),
 });
 
@@ -240,6 +246,8 @@ export const projects = pgTable("projects", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  sourceType: text("source_type"), // 'csv-bulk', 'url-scraper', 'pdf-scraper', etc.
+  exportColumns: jsonb("export_columns"), // Export column configuration from source tool
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
