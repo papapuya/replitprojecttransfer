@@ -978,15 +978,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/bulk-save-to-project', requireAuth, requireFeature('csvBulkImport'), checkApiLimit, async (req: any, res) => {
     try {
-      const { projectName, products } = req.body;
+      const { projectName, products, sourceType, exportColumns } = req.body;
 
       if (!projectName || !Array.isArray(products) || products.length === 0) {
         return res.status(400).json({ error: 'Projektname und Produkte sind erforderlich' });
       }
 
-      console.log(`[BULK-SAVE] Saving ${products.length} products to project "${projectName}"`);
+      console.log(`[BULK-SAVE] Saving ${products.length} products to project "${projectName}" (sourceType: ${sourceType || 'unspecified'})`);
 
-      const project = await supabaseStorage.createProject(req.user.id, { name: projectName });
+      const project = await supabaseStorage.createProject(req.user.id, { 
+        name: projectName,
+        sourceType: sourceType || 'csv-bulk',
+        exportColumns: exportColumns || undefined,
+      });
 
       const savedProducts = [];
       for (const product of products) {
@@ -1057,19 +1061,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const productData = {
           projectId: project.id,
-          name: product.produktname || 'Unbekanntes Produkt',
-          articleNumber: articleNumber,
+          name: product.produktname_neu || product.produktname || 'Unbekanntes Produkt',
+          articleNumber: product.p_id || articleNumber,
           manufacturerArticleNumber: manufacturerArticleNumber,
-          htmlCode: product.produktbeschreibung || '',
+          htmlCode: product.produktbeschreibung_html || product.produktbeschreibung || '',
           previewText: product.seo_beschreibung || product.kurzbeschreibung || '',
-          exactProductName: product.mediamarktname_v1 || product.mediamarktname_v2 || product.produktname || '',
+          exactProductName: product.produktname || product.mediamarktname_v1 || '',
           extractedData: extractedData,
-          files: filesArray, // Add images to files array
+          files: filesArray,
           customAttributes: [
+            { key: 'produktname_nl', value: product.produktname_nl || '', type: 'text' },
+            { key: 'produktbeschreibung_html_nl', value: product.produktbeschreibung_html_nl || '', type: 'text' },
+            { key: 'v_id', value: product.v_id || '', type: 'text' },
+            { key: 'p_item_number', value: product.p_item_number || '', type: 'text' },
+            { key: 'produktbeschreibung_original', value: product.produktbeschreibung_original || '', type: 'text' },
             { key: 'mediamarktname_v1', value: product.mediamarktname_v1 || '', type: 'text' },
             { key: 'mediamarktname_v2', value: product.mediamarktname_v2 || '', type: 'text' },
             { key: 'seo_titel', value: product.seo_titel || '', type: 'text' },
             { key: 'seo_beschreibung', value: product.seo_beschreibung || '', type: 'text' },
+            { key: 'seo_keywords', value: product.seo_keywords || '', type: 'text' },
             { key: 'kurzbeschreibung', value: product.kurzbeschreibung || '', type: 'text' },
           ].filter(attr => attr.value),
         };

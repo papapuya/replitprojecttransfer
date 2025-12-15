@@ -963,10 +963,16 @@ export default function CSVBulkDescription() {
     setSavingProject(true);
     try {
       if (selectedProjectId === "new") {
-        // Neues Projekt erstellen
+        // Neues Projekt erstellen mit sourceType und exportColumns
+        const enabledExportColumns = exportColumns
+          .filter(col => col.enabled)
+          .map(col => ({ key: col.key, label: col.label, enabled: col.enabled }));
+        
         await apiRequest('POST', '/api/bulk-save-to-project', {
           projectName: projectName.trim(),
           products: bulkProducts,
+          sourceType: 'csv-bulk',
+          exportColumns: enabledExportColumns,
         });
         
         toast({

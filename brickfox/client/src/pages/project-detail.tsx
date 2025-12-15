@@ -139,11 +139,49 @@ export default function ProjectDetail() {
   // Memoize columns when products change to avoid infinite loops
   const dynamicColumns = useMemo(() => generateDynamicColumns(products), [products]);
 
+  // Mapping from CSV-Bulk export column keys to ProductInProject fields
+  const csvBulkToProductMapping: Record<string, string> = {
+    'p_id': 'articleNumber',
+    'produktname_neu': 'name',
+    'produktname_nl': 'custom_produktname_nl',
+    'produktbeschreibung_html': 'htmlCode',
+    'produktbeschreibung_html_nl': 'custom_produktbeschreibung_html_nl',
+    'v_id': 'custom_v_id',
+    'p_item_number': 'custom_p_item_number',
+    'produktname': 'exactProductName',
+    'produktbeschreibung': 'previewText',
+    'produktbeschreibung_original': 'custom_produktbeschreibung_original',
+    'mediamarktname_v1': 'custom_mediamarktname_v1',
+    'mediamarktname_v2': 'custom_mediamarktname_v2',
+    'seo_titel': 'custom_seo_titel',
+    'seo_beschreibung': 'custom_seo_beschreibung',
+    'seo_keywords': 'custom_seo_keywords',
+    'kurzbeschreibung': 'custom_kurzbeschreibung',
+  };
+
   // Update selectedColumns when dynamic columns change (only on mount and when products change)
+  // Use project.exportColumns if available, otherwise fall back to defaultColumns
   useEffect(() => {
     if (products.length === 0) return;
     
-    // Always sync selectedColumns with dynamicColumns to ensure all columns are available
+    // Check if project has saved exportColumns from CSV-Bulk tool
+    if (project?.exportColumns && Array.isArray(project.exportColumns) && project.exportColumns.length > 0) {
+      // Convert saved exportColumns to ExportColumn format for display
+      // Map CSV-Bulk keys to actual ProductInProject fields
+      const savedColumns: ExportColumn[] = project.exportColumns.map((col: { key: string; label: string; enabled: boolean }, idx: number) => {
+        const mappedField = csvBulkToProductMapping[col.key] || col.key;
+        return {
+          id: col.key,
+          label: col.label,
+          field: mappedField,
+          enabled: col.enabled,
+        };
+      });
+      setSelectedColumns(savedColumns);
+      return;
+    }
+    
+    // Fall back to dynamicColumns if no saved exportColumns
     setSelectedColumns(prev => {
       const updatedColumns = [...prev];
       
@@ -159,7 +197,7 @@ export default function ProjectDetail() {
         dynamicColumns.find(dynCol => dynCol.id === col.id)
       );
     });
-  }, [products.length]);
+  }, [products.length, project?.exportColumns]);
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
