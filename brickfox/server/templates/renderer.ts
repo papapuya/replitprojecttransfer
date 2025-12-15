@@ -1082,55 +1082,47 @@ ${vorteileHtml}
   // REGEL NEU: Bei Smartphone-Akkus und Ladezubehör (Kabel, Ladegeräte, Adapter) komplett weglassen
   const einsatzbereicheText = data.einsatzbereiche ? e(data.einsatzbereiche).trim() : '';
   const shouldShowEinsatzbereiche = (() => {
-    // NEUE REGEL: Bei bestimmten Kategorien nie Einsatzbereiche anzeigen
-    // - Smartphone-Akkus (battery) mit Smartphone/Handy-Bezug
-    // - Ladegeräte (charger)
-    // - Zubehör wie Kabel, Adapter (accessory)
-    // - Fernbedienung-Akkus, Funkgerät-Akkus, Gadgets & Geschenkideen, Game-Zubehör-Akkus
-    const categoryId = data.categoryId || '';
-    const categoryName = data.categoryName || '';
-    const isChargerOrAccessory = categoryId === 'charger' || categoryId === 'accessory';
-    
-    // Kategorien, bei denen Einsatzbereiche nie angezeigt werden sollen
-    const skipEinsatzbereichCategories = [
-      'fernbedienung-akkus',
-      'funkgerät-akkus',
-      'funkgeraet-akkus',
-      'gadgets & geschenkideen',
-      'gadgets',
-      'geschenkideen',
-      'game-zubehör-akkus',
-      'game-zubehoer-akkus',
+    // WHITELIST-ANSATZ: Einsatzbereiche NUR für bestimmte Produktkategorien anzeigen
+    // Alle anderen Kategorien zeigen KEINE Einsatzbereiche
+    const allowedEinsatzbereicheCategories = [
+      'taschenlampe',
+      'taschenlampen',
+      'flashlight',
+      'outdoor',
+      'outdoor-artikel',
+      'camping',
+      'camping-zubehör',
+      'camping-zubehoer',
+      'werkzeug-set',
+      'werkzeug-sets',
+      'werkzeugset',
+      'werkzeugsets',
+      'tool-set',
+      'tool-sets',
+      'led-lampe',
+      'led-lampen',
+      'led-lamp',
+      'led-lamps',
+      'led lampe',
+      'led lampen',
     ];
     
-    const categoryLower = categoryName.toLowerCase();
+    const categoryId = data.categoryId || '';
+    const productNameLower = data.productName.toLowerCase();
     const categoryIdLower = categoryId.toLowerCase();
     
-    // Prüfe ob Kategorie in der Skip-Liste ist
-    const shouldSkipByCategory = skipEinsatzbereichCategories.some(skip => 
-      categoryLower.includes(skip) || categoryIdLower.includes(skip)
+    // Prüfe ob Kategorie oder Produktname einen erlaubten Begriff enthält
+    const isAllowedCategory = allowedEinsatzbereicheCategories.some(allowed => 
+      categoryIdLower.includes(allowed) || productNameLower.includes(allowed)
     );
     
-    if (shouldSkipByCategory) {
-      console.log(`⏭️ Einsatzbereiche übersprungen: Kategorie "${categoryName}" ist in Skip-Liste`);
+    // Wenn NICHT in der Whitelist: keine Einsatzbereiche anzeigen
+    if (!isAllowedCategory) {
+      console.log(`⏭️ Einsatzbereiche übersprungen: Kategorie "${categoryId}" / Produkt "${data.productName.substring(0, 40)}..." nicht in Whitelist`);
       return false;
     }
     
-    // Prüfe ob es ein Smartphone/Handy-Produkt ist
-    const productNameLower = data.productName.toLowerCase();
-    const isSmartphoneProduct = /\b(iphone|samsung|huawei|xiaomi|sony|lg|nokia|motorola|pixel|galaxy|smartphone|handy|handyakku|apple watch)\b/i.test(productNameLower);
-    
-    // Bei Ladezubehör oder Smartphone-Akkus: keine Einsatzbereiche
-    if (isChargerOrAccessory) {
-      console.log(`⏭️ Einsatzbereiche übersprungen: Kategorie ist Ladegerät/Zubehör`);
-      return false;
-    }
-    
-    if (categoryId === 'battery' && isSmartphoneProduct) {
-      console.log(`⏭️ Einsatzbereiche übersprungen: Smartphone-Akku (Einsatzbereich offensichtlich)`);
-      return false;
-    }
-    
+    // Zusätzliche Validierung: Inhalt muss vorhanden und ausreichend lang sein
     if (!einsatzbereicheText || einsatzbereicheText.length < 50) {
       console.log(`⏭️ Einsatzbereiche übersprungen: zu kurz (${einsatzbereicheText.length} Zeichen)`);
       return false;
@@ -1150,13 +1142,14 @@ ${vorteileHtml}
       if (anwendungWords.has(word)) overlap++;
     }
     
-    // Wenn >20% der Wörter bereits in Anwendung vorkommen = Wiederholung (verschärft von 30%)
+    // Wenn >20% der Wörter bereits in Anwendung vorkommen = Wiederholung
     const overlapRatio = einsatzWords.length > 0 ? overlap / einsatzWords.length : 0;
     if (overlapRatio > 0.2) {
       console.log(`⏭️ Einsatzbereiche übersprungen: ${Math.round(overlapRatio * 100)}% Überlappung mit Anwendung`);
       return false;
     }
     
+    console.log(`✅ Einsatzbereiche angezeigt: Kategorie "${categoryId}" ist in Whitelist`);
     return true;
   })();
   
