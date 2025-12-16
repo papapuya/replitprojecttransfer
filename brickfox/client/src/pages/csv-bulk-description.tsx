@@ -1689,6 +1689,9 @@ export default function CSVBulkDescription() {
                               
                               try {
                                 const token = localStorage.getItem('authToken') || 'local-admin-token-pimpilot-dev';
+                                const rowIndex = rawData.indexOf(row);
+                                const generatedProduct = bulkProducts.find(p => p.id === rowIndex + 1);
+                                
                                 const response = await fetch('/api/adjust-description', {
                                   method: 'POST',
                                   headers: { 
@@ -1697,21 +1700,33 @@ export default function CSVBulkDescription() {
                                   },
                                   body: JSON.stringify({
                                     produktname: nameKey ? row[nameKey] : '',
-                                    produktnameNeu: nameKey ? row[nameKey] : '',
-                                    existingDescription: row[descKey],
+                                    produktnameNeu: generatedProduct?.produktname_neu || (nameKey ? row[nameKey] : ''),
+                                    existingDescription: generatedProduct?.produktbeschreibung_html || row[descKey],
                                     adjustmentPrompt: regeneratePrompt.trim()
                                   })
                                 });
                                 
                                 if (response.ok) {
                                   const result = await response.json();
-                                  const rowIndex = rawData.indexOf(row);
                                   if (rowIndex >= 0) {
                                     setRawData(prev => {
                                       const updated = [...prev];
                                       updated[rowIndex] = { ...updated[rowIndex], [descKey]: result.description || row[descKey] };
                                       return updated;
                                     });
+                                  }
+                                  if (generatedProduct) {
+                                    setBulkProducts(prev =>
+                                      prev.map(p =>
+                                        p.id === generatedProduct.id
+                                          ? { 
+                                              ...p, 
+                                              produktbeschreibung_html: result.description || p.produktbeschreibung_html,
+                                              produktbeschreibung: result.descriptionText || p.produktbeschreibung
+                                            }
+                                          : p
+                                      )
+                                    );
                                   }
                                 }
                               } catch (err) {
