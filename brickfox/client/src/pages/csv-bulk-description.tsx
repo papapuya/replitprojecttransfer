@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft, XCircle, Languages, RefreshCw, Copy } from "lucide-react";
+import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft, XCircle, Languages, RefreshCw, Copy, Search, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -81,6 +81,7 @@ export default function CSVBulkDescription() {
   const [bulkProducts, setBulkProducts] = useState<BulkProduct[]>([]);
   const [rawData, setRawData] = useState<RawCSVRow[]>([]);
   const [previewFilter, setPreviewFilter] = useState<string>('');
+  const [previewPidFilter, setPreviewPidFilter] = useState<string>('');
   const [showPreviewColumnSelector, setShowPreviewColumnSelector] = useState(false);
   const [visibleKiColumns, setVisibleKiColumns] = useState<string[]>(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'seo_beschreibung', 'keywords']);
   const [processing, setProcessing] = useState(false);
@@ -1372,19 +1373,44 @@ export default function CSVBulkDescription() {
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </Button>
-                  <Input
-                    value={previewFilter}
-                    onChange={(e) => setPreviewFilter(e.target.value)}
-                    placeholder="Filter..."
-                    className="w-48 h-8 text-sm"
-                  />
-                  {previewFilter && (
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                      <Input
+                        value={previewPidFilter}
+                        onChange={(e) => setPreviewPidFilter(e.target.value)}
+                        placeholder="p_id..."
+                        className="w-28 h-8 text-sm pl-7"
+                      />
+                    </div>
+                    <div className="relative">
+                      <Filter className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                      <Input
+                        value={previewFilter}
+                        onChange={(e) => setPreviewFilter(e.target.value)}
+                        placeholder="Suche..."
+                        className="w-40 h-8 text-sm pl-7"
+                      />
+                    </div>
+                    {(previewFilter || previewPidFilter) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setPreviewFilter(''); setPreviewPidFilter(''); }}
+                        className="h-8 px-2"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                  {(previewFilter || previewPidFilter) && (
                     <span className="text-xs text-muted-foreground">
-                      {rawData.filter(row => 
-                        Object.values(row).some(v => 
-                          String(v).toLowerCase().includes(previewFilter.toLowerCase())
-                        )
-                      ).length} gefunden
+                      {rawData.filter(row => {
+                        const pidKey = Object.keys(row).find(k => k.toLowerCase() === 'p_id') || 'p_id';
+                        const matchesPid = !previewPidFilter || String(row[pidKey] || '').toLowerCase().includes(previewPidFilter.toLowerCase());
+                        const matchesText = !previewFilter || Object.values(row).some(v => String(v).toLowerCase().includes(previewFilter.toLowerCase()));
+                        return matchesPid && matchesText;
+                      }).length} gefunden
                     </span>
                   )}
                 </div>
@@ -1443,8 +1469,8 @@ export default function CSVBulkDescription() {
                   </div>
                 </div>
               )}
-              <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg">
-                <table className="w-full border-collapse text-xs">
+              <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg scrollbar-visible" style={{ scrollbarWidth: 'auto', scrollbarColor: '#888 #f1f1f1' }}>
+                <table className="w-full border-collapse text-xs min-w-max">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-muted">
                       {/* CSV Spalten - nur p_id, p_name[de/nl], p_description[de/nl] */}
@@ -1491,13 +1517,12 @@ export default function CSVBulkDescription() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const filteredRawData = previewFilter 
-                        ? rawData.filter(row => 
-                            Object.values(row).some(v => 
-                              String(v).toLowerCase().includes(previewFilter.toLowerCase())
-                            )
-                          )
-                        : rawData;
+                      const filteredRawData = rawData.filter(row => {
+                        const pidKey = Object.keys(row).find(k => k.toLowerCase() === 'p_id') || 'p_id';
+                        const matchesPid = !previewPidFilter || String(row[pidKey] || '').toLowerCase().includes(previewPidFilter.toLowerCase());
+                        const matchesText = !previewFilter || Object.values(row).some(v => String(v).toLowerCase().includes(previewFilter.toLowerCase()));
+                        return matchesPid && matchesText;
+                      });
                       
                       return filteredRawData.map((row, filteredIndex) => {
                         const originalIndex = rawData.indexOf(row);
