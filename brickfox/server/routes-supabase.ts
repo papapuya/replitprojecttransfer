@@ -2359,28 +2359,44 @@ Gib NUR die angepasste HTML-Beschreibung zurück, ohne Erklärungen.`;
       const OpenAI = (await import('openai')).default;
       const openai = new OpenAI({ apiKey });
 
-      // Build prompt for attribute detection
-      const attributeList = attributes.map((a: string) => `- ${a}`).join('\n');
+      // Attribute nach Typ trennen
+      const yesNoAttrs = attributes.filter((a: any) => a.type === 'yesNo').map((a: any) => a.label);
+      const textAttrs = attributes.filter((a: any) => a.type === 'text').map((a: any) => a.label);
       
-      const prompt = `Analysiere die folgende Produktbeschreibung und bestimme für jedes Attribut ob es zutrifft (true) oder nicht (false).
+      // Backwards compatibility: Falls nur Strings übergeben werden (alte Aufrufe)
+      const isNewFormat = attributes.length > 0 && typeof attributes[0] === 'object';
+      const allYesNo = isNewFormat ? yesNoAttrs : attributes;
+      const allText = isNewFormat ? textAttrs : [];
+      
+      // Build prompt for attribute detection
+      let attributeSection = '';
+      if (allYesNo.length > 0) {
+        attributeSection += `\nJa/Nein Attribute (true/false):\n${allYesNo.map((a: string) => `- ${a}`).join('\n')}`;
+      }
+      if (allText.length > 0) {
+        attributeSection += `\n\nText-Attribute (extrahiere passenden Wert oder null):\n${allText.map((a: string) => `- ${a}`).join('\n')}`;
+      }
+      
+      const prompt = `Analysiere die folgende Produktbeschreibung und extrahiere Attribute.
 
 Produktart: ${productType || 'Unbekannt'}
 
 Produktbeschreibung:
 ${description}
 
-Zu prüfende Attribute:
-${attributeList}
+Zu prüfende Attribute:${attributeSection}
 
 REGELN:
 - Antworte NUR mit einem JSON-Objekt
-- Jedes Attribut als Schlüssel, Wert ist true oder false
-- Wenn ein Feature in der Beschreibung erwähnt wird → true
-- Wenn ein Feature NICHT erwähnt wird → false
-- Bei Unsicherheit → false
+- Ja/Nein Attribute: true wenn erwähnt, false wenn nicht
+- Text-Attribute:
+  - akku_produktart: Extrahiere Produkttyp (z.B. "Wetterstation", "Wecker", "Funkuhr", "Thermometer", "Wanduhr")
+  - allg_farbe_geheause: Extrahiere Gehäusefarbe (z.B. "Schwarz", "Weiß", "Silber", "Grau")
+  - Bei Text-Attributen: null zurückgeben wenn nicht in Beschreibung gefunden
+- Bei Unsicherheit: false bzw. null
 
 Beispiel Antwort:
-{"WST_Datumsanzeige": true, "WST_Weckalarm": false, "WST_Batterieanzeige": true}`;
+{"WST_Datumsanzeige": true, "WST_Weckalarm": false, "akku_produktart": "Wetterstation", "allg_farbe_geheause": "Schwarz"}`;
 
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',

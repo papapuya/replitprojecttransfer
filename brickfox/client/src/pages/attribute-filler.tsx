@@ -16,6 +16,7 @@ interface AttributeConfig {
   key: string;
   label: string;
   enabled: boolean;
+  type: 'yesNo' | 'text';
 }
 
 export default function AttributeFiller() {
@@ -90,13 +91,18 @@ export default function AttributeFiller() {
         h.startsWith('p_attributes[') && h.includes('][de]')
       );
 
+      // Text-Attribute die aus Beschreibung extrahiert werden können
+      const textAttributes = ['akku_produktart', 'allg_farbe_geheause'];
+      
       const configs: AttributeConfig[] = attributeHeaders.map(h => {
         const match = h.match(/p_attributes\[([^\]]+)\]\[de\]/);
         const label = match ? match[1] : h;
+        const isTextAttr = textAttributes.includes(label);
         return {
           key: h,
           label: label,
-          enabled: label.startsWith('WST_')
+          enabled: label.startsWith('WST_') || isTextAttr,
+          type: isTextAttr ? 'text' : 'yesNo'
         };
       });
 
@@ -182,13 +188,23 @@ export default function AttributeFiller() {
           return null;
         }
 
+        // Nur Attribute die leer sind befüllen
+        const attributesToFill = enabledAttributes.filter(a => {
+          const currentValue = row[a.key];
+          return !currentValue || currentValue.trim() === '';
+        });
+
+        if (attributesToFill.length === 0) {
+          return null; // Alle bereits befüllt
+        }
+
         try {
           const response = await fetch('/api/analyze-attributes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               description,
-              attributes: enabledAttributes.map(a => a.label),
+              attributes: attributesToFill.map(a => ({ label: a.label, type: a.type })),
               productType: row['p_attributes[akku_produktart][de]'] || '',
             }),
           });
@@ -196,7 +212,7 @@ export default function AttributeFiller() {
           if (!response.ok) throw new Error('API Fehler');
 
           const result = await response.json();
-          return { index: i + batchIdx, attributes: result.attributes };
+          return { index: i + batchIdx, attributes: result.attributes, attributesToFill };
         } catch (err) {
           console.error('Fehler bei Attribut-Analyse:', err);
           return null;
@@ -207,11 +223,16 @@ export default function AttributeFiller() {
 
       results.forEach(result => {
         if (result) {
-          const { index, attributes } = result;
-          enabledAttributes.forEach(attr => {
+          const { index, attributes, attributesToFill } = result;
+          attributesToFill.forEach((attr: AttributeConfig) => {
             const value = attributes[attr.label];
-            if (value !== undefined) {
-              updatedData[index][attr.key] = value ? 'Ja' : 'Nein';
+            if (value !== undefined && value !== null && value !== '') {
+              if (attr.type === 'yesNo') {
+                updatedData[index][attr.key] = value ? 'Ja' : 'Nein';
+              } else {
+                // Text-Attribute direkt übernehmen
+                updatedData[index][attr.key] = String(value);
+              }
             }
           });
         }
