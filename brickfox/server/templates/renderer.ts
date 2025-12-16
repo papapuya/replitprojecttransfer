@@ -712,81 +712,107 @@ function removeBrandFromModel(model: string, brand: string): string {
 }
 
 /**
- * Rendert die Kompatibilitäts-Sektion mit Marke NUR EINMAL am Anfang
- * Format: Pro Produkttyp (z.B. Akku-Bohrschrauber, Grasschere) eine neue Zeile
- * Modelle des gleichen Typs werden kommagetrennt NEBENEINANDER angezeigt
+ * Rendert die Kompatibilitäts-Sektion
+ * Format: 
+ * - Produkttyp NUR EINMAL in BOLD (z.B. "Makita Akku-Bohrschrauber")
+ * - Modellnummern kommagetrennt dahinter (z.B. "6002D, 6002DW, 6010D")
+ * - Pro Produkttyp eine neue Zeile
  */
 function renderKompatibilitaet(models: string[], e: (s: string) => string, productName?: string): string {
   if (!models || models.length === 0) {
     return '';
   }
   
-  // Extrahiere Marke aus Produktname
-  const brand = productName ? extractBrandFromProductName(productName) : null;
-  
-  // Erkennungsmuster für Produkttypen
-  const productTypePatterns = [
-    /^Akku-/i, /^Bohr/i, /^Schraub/i, /^Grasschere/i, /^Heckenschere/i, 
-    /^Staubsauger/i, /^Säge/i, /^Lampe/i, /^Stichsäge/i, /^Winkelschleifer/i,
-    /^Kantenfräse/i, /^Typ\s/i, /^LED/i, /^Kamera/i, /^Display/i,
-    /^Makita\s+Akku-/i, /^Bosch\s+/i, /^DeWalt\s+/i, /^Philips\s+/i
-  ];
-  
-  // Prüfe, ob Einträge bereits Produktgruppen sind (mit Kommas drin = mehrere Modelle)
-  const hasGroupedEntries = models.some(model => model.includes(',') && model.length > 20);
-  
-  if (hasGroupedEntries) {
-    // Einträge sind bereits gruppiert - mit <br /> trennen
-    const formattedLines = models.map(model => e(model.trim()));
-    return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilit&auml;t</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${formattedLines.join('<br />')}</p>`;
-  }
-  
-  // Einzelne Modelle - nach Produkttyp gruppieren
+  // Gruppiere nach Produkttyp: Map<ProduktTyp, Modellnummern[]>
   const groups: Map<string, string[]> = new Map();
-  let currentType = 'default';
+  
+  // Muster um Produkttyp von Modellnummer zu trennen
+  // z.B. "Makita Akku-Bohrschrauber 6002D" -> Typ: "Makita Akku-Bohrschrauber", Modell: "6002D"
+  const productTypeRegex = /^((?:[A-Za-zäöüÄÖÜß]+\s+)?(?:Akku-)?[A-Za-zäöüÄÖÜß\-]+(?:schrauber|schleifer|säge|fräse|schere|sauger|lampe|bohrhammer|bohrmaschine|maschine|werkzeug|radio|lautsprecher|strahler))\s+(.+)$/i;
+  
+  // Spezielle Muster für bekannte Produktkategorien
+  const specialPatterns = [
+    /^((?:Makita\s+)?Akku-Bohrschrauber)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Grasschere)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Heckenschere)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Staubsauger)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Stichsäge)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Winkelschleifer)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Winkelbohrmaschine)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Kantenfräse)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Typ)\s+(.+)$/i,
+    /^((?:Makita\s+)?LED\s+Akku-Lampe)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Handkreissäge)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Werkstattradio)\s+(.+)$/i,
+    /^((?:Makita\s+)?Akku-Radiolampe)\s+(.+)$/i,
+    /^(Akku-Gebläse)\s+(.+)$/i,
+  ];
   
   for (const model of models) {
     const trimmed = model.trim();
+    if (!trimmed) continue;
     
-    // Prüfe ob dies ein neuer Produkttyp ist
-    const matchedType = productTypePatterns.find(pattern => pattern.test(trimmed));
-    if (matchedType) {
-      // Extrahiere den Produkttyp-Namen (z.B. "Akku-Bohrschrauber" aus "Akku-Bohrschrauber 6002D")
-      const match = trimmed.match(/^[\w\-]+\s+[\w\-]+/i);
+    let productType = '';
+    let modelNumber = '';
+    let matched = false;
+    
+    // Versuche spezielle Muster zuerst
+    for (const pattern of specialPatterns) {
+      const match = trimmed.match(pattern);
       if (match) {
-        currentType = match[0];
-      } else {
-        currentType = trimmed.split(/\s+/)[0] || 'default';
+        productType = match[1].trim();
+        modelNumber = match[2].trim();
+        matched = true;
+        break;
       }
     }
     
-    if (!groups.has(currentType)) {
-      groups.set(currentType, []);
+    // Fallback: Allgemeines Muster
+    if (!matched) {
+      const match = trimmed.match(productTypeRegex);
+      if (match) {
+        productType = match[1].trim();
+        modelNumber = match[2].trim();
+        matched = true;
+      }
     }
-    groups.get(currentType)!.push(trimmed);
+    
+    // Wenn kein Muster passt, als eigene Zeile behandeln
+    if (!matched) {
+      // Prüfe ob es mit Marke + Wort beginnt (z.B. "MUH 260DZ")
+      const simpleMatch = trimmed.match(/^([A-Z]{2,4})\s+(.+)$/);
+      if (simpleMatch) {
+        // Kürzel wie MUH, BMR etc. - als eigene Kategorie
+        productType = simpleMatch[1];
+        modelNumber = simpleMatch[2];
+        matched = true;
+      } else {
+        // Ganzer String als eigene Zeile
+        productType = trimmed;
+        modelNumber = '';
+      }
+    }
+    
+    if (!groups.has(productType)) {
+      groups.set(productType, []);
+    }
+    if (modelNumber) {
+      groups.get(productType)!.push(modelNumber);
+    }
   }
   
-  // Wenn nur eine Gruppe oder keine Produkttypen erkannt
-  if (groups.size <= 1) {
-    // Alle Modelle inline mit Komma
-    if (brand) {
-      const modelsWithoutBrand = models.map(model => removeBrandFromModel(model.trim(), brand));
-      const formattedModels = modelsWithoutBrand.map((model, index) => {
-        if (index === 0) return `${brand} ${model}`;
-        return model;
-      });
-      const modelsInline = formattedModels.map(model => e(model)).join(', ');
-      return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilit&auml;t</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${modelsInline}</p>`;
-    }
-    const modelsInline = models.map(model => e(model.trim())).join(', ');
-    return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilit&auml;t</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${modelsInline}</p>`;
-  }
-  
-  // Mehrere Gruppen - pro Gruppe eine Zeile, Modelle kommagetrennt nebeneinander
+  // Baue die Ausgabe
   const lines: string[] = [];
-  for (const [type, typeModels] of groups) {
-    const modelsInline = typeModels.map(m => e(m)).join(', ');
-    lines.push(modelsInline);
+  
+  for (const [productType, modelNumbers] of groups) {
+    if (modelNumbers.length === 0) {
+      // Nur Produkttyp ohne Modellnummern
+      lines.push(`<strong>${e(productType)}</strong>`);
+    } else {
+      // Produkttyp in Bold + Modellnummern kommagetrennt
+      const modelsStr = modelNumbers.map(m => e(m)).join(', ');
+      lines.push(`<strong>${e(productType)}</strong> ${modelsStr}`);
+    }
   }
   
   return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilit&auml;t</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${lines.join('<br />')}</p>`;
