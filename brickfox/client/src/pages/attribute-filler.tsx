@@ -199,11 +199,15 @@ export default function AttributeFiller() {
         }
 
         try {
+          // Produktname für Farb-Erkennung
+          const productName = row['p_name[de]'] || '';
+          
           const response = await fetch('/api/analyze-attributes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               description,
+              productName,
               attributes: attributesToFill.map(a => ({ label: a.label, type: a.type })),
               productType: row['p_attributes[akku_produktart][de]'] || '',
             }),
