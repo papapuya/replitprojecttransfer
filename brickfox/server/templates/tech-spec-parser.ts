@@ -422,7 +422,6 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
   const incompatible: string[] = [];
   
   // Feste Ausschlüsse (NIEMALS als kompatibel)
-  // Matcht "5302" und "5304" in jeder Form (z.B. "Smart Array 5302 Controller")
   const exclusionPatterns = [
     /\b5302\b/i,
     /\b5304\b/i,
@@ -431,6 +430,25 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
   for (const rawModel of rawModels) {
     let model = rawModel.trim();
     if (!model || model.length < 3) continue;
+    
+    // ═══════════════════════════════════════════════════════════════
+    // TYPENCODES FILTERN: Modelle die mit "-" beginnen sind Typencodes/Artikelnummern
+    // z.B. "-SFB150", "-9000", "-7000", "-4932353638" → RAUS!
+    // ═══════════════════════════════════════════════════════════════
+    if (model.startsWith('-')) {
+      console.log(`🚫 [NORM] Typencode gefiltert: "${model}"`);
+      continue;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // NUR-ZAHLEN FILTERN: Reine Zahlenwerte sind keine echten Modellnamen
+    // z.B. "190100", "190130" → RAUS!
+    // ABER: "SF 151-A", "6093DW" bleiben (haben Buchstaben)
+    // ═══════════════════════════════════════════════════════════════
+    if (/^\d+$/.test(model)) {
+      console.log(`🚫 [NORM] Nur-Zahlen gefiltert: "${model}"`);
+      continue;
+    }
     
     // ═══════════════════════════════════════════════════════════════
     // SCHRITT 1: Hersteller normalisieren → HP
