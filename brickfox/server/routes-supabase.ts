@@ -2344,7 +2344,7 @@ Gib NUR die angepasste HTML-Beschreibung zurück, ohne Erklärungen.`;
   // Attribut-Analyse aus Produktbeschreibung (für Wetterstation-Attribute etc.)
   app.post('/api/analyze-attributes', async (req, res) => {
     try {
-      const { description, attributes, productType } = req.body;
+      const { description, productName, attributes, productType } = req.body;
 
       if (!description || !attributes || attributes.length === 0) {
         return res.status(400).json({ error: 'Beschreibung und Attribute erforderlich' });
@@ -2377,9 +2377,10 @@ Gib NUR die angepasste HTML-Beschreibung zurück, ohne Erklärungen.`;
         attributeSection += `\n\nText-Attribute (extrahiere passenden Wert oder null):\n${allText.map((a: string) => `- ${a}`).join('\n')}`;
       }
       
-      const prompt = `Analysiere die folgende Produktbeschreibung und extrahiere Attribute.
+      const prompt = `Analysiere die folgenden Produktdaten und extrahiere Attribute.
 
 Produktart: ${productType || 'Unbekannt'}
+${productName ? `Produktname: ${productName}` : ''}
 
 Produktbeschreibung:
 ${description}
@@ -2391,8 +2392,9 @@ REGELN:
 - Ja/Nein Attribute: true wenn erwähnt, false wenn nicht
 - Text-Attribute:
   - akku_produktart: Extrahiere Produkttyp (z.B. "Wetterstation", "Wecker", "Funkuhr", "Thermometer", "Wanduhr")
-  - allg_farbe_geheause: Extrahiere Gehäusefarbe (z.B. "Schwarz", "Weiß", "Silber", "Grau")
-  - Bei Text-Attributen: null zurückgeben wenn nicht in Beschreibung gefunden
+  - allg_farbe_geheause: Extrahiere Gehäusefarbe aus Produktname ODER Beschreibung (z.B. "Schwarz", "Weiß", "Silber", "Grau", "Rot", "Blau", "Grün")
+    - Prüfe zuerst den Produktnamen auf Farbangaben wie "-schwarz", "-weiß", "black", "white" etc.
+  - Bei Text-Attributen: null zurückgeben wenn nicht gefunden
 - Bei Unsicherheit: false bzw. null
 
 Beispiel Antwort:
