@@ -683,10 +683,24 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       }
       
       // ═══════════════════════════════════════════════════════════════
-      // KOMPATIBILITÄT: NUR aus "Dieser Artikel ist passend für folgende Modelle" extrahieren
-      // Format: "Marke: Modell: Produktkategorie" → nur "Modell" extrahieren
-      // z.B. "iPhone: iPhone 7 Plus: Schutzfolien" → "iPhone 7 Plus"
+      // KOMPATIBILITÄT 1:1 EXTRAKTION: Rohtext aus "Kompatibilität:" übernehmen
+      // KEINE Normalisierung - alles was nach "Kompatibilität:" kommt wird übernommen
       // ═══════════════════════════════════════════════════════════════
+      const compatMatch = normalized.match(/Kompatibilit[äa]t[:\s]+([^\n]+(?:\n[^A-Z\n][^\n]*)*)/i);
+      if (compatMatch) {
+        let rawCompat = compatMatch[1].trim();
+        // Bereinige nur Zeilenumbrüche
+        rawCompat = rawCompat.replace(/\n+/g, ', ').replace(/,\s*,/g, ',').trim();
+        rawCompat = rawCompat.replace(/,\s*$/, ''); // Trailing comma entfernen
+        
+        if (rawCompat.length > 5) {
+          specs['Kompatibilität'] = rawCompat;
+          console.log(`📋 [COMPAT] 1:1 aus CSV übernommen: ${rawCompat.length} Zeichen`);
+          break; // Fertig, keine weitere Extraktion nötig
+        }
+      }
+      
+      // FALLBACK: Alte Methode nur wenn keine direkte "Kompatibilität:" gefunden
       const lines = normalized.split(/\r?\n/);
       let inCompatSection = false;
       
