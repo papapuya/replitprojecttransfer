@@ -713,7 +713,7 @@ function removeBrandFromModel(model: string, brand: string): string {
 
 /**
  * Rendert die Kompatibilitäts-Sektion mit Marke NUR EINMAL am Anfang
- * Format: "Philips SCD486/84-R, SBC-EB4870 A1507, SBC-EB4880 A1507"
+ * Format: Pro Produkttyp (z.B. Akku-Bohrschrauber, Grasschere) eine neue Zeile
  */
 function renderKompatibilitaet(models: string[], e: (s: string) => string, productName?: string): string {
   if (!models || models.length === 0) {
@@ -722,6 +722,25 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
   
   // Extrahiere Marke aus Produktname
   const brand = productName ? extractBrandFromProductName(productName) : null;
+  
+  // Prüfe, ob die Modelle bereits nach Produkttypen gruppiert sind (z.B. "Akku-Bohrschrauber 6002D, 6002DW")
+  // Erkennungsmuster: Jeder Eintrag beginnt mit einem Produkttyp-Wort
+  const productTypePatterns = [
+    /^Akku-/i, /^Bohr/i, /^Schraub/i, /^Grasschere/i, /^Heckenschere/i, 
+    /^Staubsauger/i, /^Säge/i, /^Lampe/i, /^Stichsäge/i, /^Winkelschleifer/i,
+    /^Kantenfräse/i, /^Typ\s/i, /^LED/i, /^Kamera/i, /^Display/i,
+    /^Makita\s+Akku-/i, /^Bosch\s+/i, /^DeWalt\s+/i, /^Philips\s+/i
+  ];
+  
+  const hasProductTypeGroups = models.length > 1 && models.some(model => 
+    productTypePatterns.some(pattern => pattern.test(model.trim()))
+  );
+  
+  if (hasProductTypeGroups) {
+    // Jeder Eintrag ist bereits eine Produktgruppe - mit <br /> trennen
+    const formattedLines = models.map(model => e(model.trim()));
+    return `<p style="margin-top: 1em; margin-bottom: 16px;"><strong>Kompatibilit&auml;t:</strong><br />${formattedLines.join('<br />')}</p>`;
+  }
   
   if (brand) {
     // Entferne Marke aus allen Modellen (falls vorhanden)
