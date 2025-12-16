@@ -259,16 +259,22 @@ export default function AttributeFiller() {
   const handleDownload = () => {
     if (rawData.length === 0) return;
 
+    // Exakte Spaltenreihenfolge und -namen wie in Original-CSV
     const csvContent = [
-      headers.map(h => `"${h}"`).join(';'),
+      headers.join(';'),  // Header ohne Anführungszeichen (wie Original)
       ...rawData.map(row =>
         headers.map(h => {
           const val = String(row[h] || '').replace(/"/g, '""');
-          return `"${val}"`;
+          // Nur Anführungszeichen wenn nötig (Semikolon, Zeilenumbruch oder Anführungszeichen im Wert)
+          if (val.includes(';') || val.includes('\n') || val.includes('"')) {
+            return `"${val}"`;
+          }
+          return val;
         }).join(';')
       )
     ].join('\n');
 
+    // UTF-8 ohne BOM für Brickfox-Kompatibilität
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -279,7 +285,7 @@ export default function AttributeFiller() {
 
     toast({
       title: "Export erfolgreich",
-      description: `${rawData.length} Zeilen exportiert`,
+      description: `${rawData.length} Zeilen mit Original-Spaltennamen exportiert`,
     });
   };
 
