@@ -12,6 +12,7 @@ import * as XLSX from "xlsx";
 interface CSVData {
   headers: string[];
   rows: Record<string, string>[];
+  sheetNames?: string[];
 }
 
 interface CompareResult {
@@ -27,6 +28,10 @@ export default function CSVCompare() {
   const [supplierColumn, setSupplierColumn] = useState<string>("");
   const [result, setResult] = useState<CompareResult | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  const [supplierWorkbook, setSupplierWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [supplierSheets, setSupplierSheets] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState<string>("");
   
   const pimInputRef = useRef<HTMLInputElement>(null);
   const supplierInputRef = useRef<HTMLInputElement>(null);
@@ -105,11 +110,70 @@ export default function CSVCompare() {
   const handleSupplierUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      parseFile(file, (data) => {
-        setSupplierCSV(data);
-        const typCol = data.headers.find(h => h.toLowerCase() === 'typ');
-        if (typCol) setSupplierColumn(typCol);
-      });
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      
+      if (isExcel) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const data = ev.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          setSupplierWorkbook(workbook);
+          setSupplierSheets(workbook.SheetNames);
+          setSelectedSheet(workbook.SheetNames[0]);
+          parseExcelSheet(workbook, workbook.SheetNames[0]);
+        };
+        reader.readAsBinaryString(file);
+      } else {
+        parseFile(file, (data) => {
+          setSupplierCSV(data);
+          const typCol = data.headers.find(h => h.toLowerCase() === 'typ');
+          if (typCol) setSupplierColumn(typCol);
+        });
+      }
+    }
+  };
+  
+  const parseExcelSheet = (workbook: XLSX.WorkBook, sheetName: string) => {
+    const worksheet = workbook.Sheets[sheetName];
+    
+    const rawData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1, defval: '' });
+    
+    let headerRowIndex = 0;
+    for (let i = 0; i < Math.min(rawData.length, 30); i++) {
+      const row = rawData[i];
+      if (row.some(cell => String(cell).toLowerCase() === 'typ')) {
+        headerRowIndex = i;
+        break;
+      }
+      const nonEmptyCount = row.filter(cell => cell && String(cell).trim() !== '').length;
+      if (nonEmptyCount >= 3) {
+        headerRowIndex = i;
+      }
+    }
+    
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { 
+      defval: '',
+      range: headerRowIndex 
+    });
+    
+    if (jsonData.length > 0) {
+      const allHeaders = Object.keys(jsonData[0]);
+      const validHeaders = allHeaders.filter(h => 
+        !h.startsWith('__EMPTY') && 
+        h.trim() !== '' &&
+        jsonData.some(row => row[h] && String(row[h]).trim() !== '')
+      );
+      
+      setSupplierCSV({ headers: validHeaders.length > 0 ? validHeaders : allHeaders, rows: jsonData });
+      const typCol = validHeaders.find(h => h.toLowerCase() === 'typ');
+      if (typCol) setSupplierColumn(typCol);
+    }
+  };
+  
+  const handleSheetChange = (sheetName: string) => {
+    setSelectedSheet(sheetName);
+    if (supplierWorkbook) {
+      parseExcelSheet(supplierWorkbook, sheetName);
     }
   };
 
@@ -238,6 +302,22 @@ export default function CSVCompare() {
               <Upload className="h-4 w-4 mr-2" />
               {supplierCSV ? `${supplierCSV.rows.length} Zeilen geladen` : "Lieferanten CSV hochladen"}
             </Button>
+            
+            {supplierSheets.length > 1 && (
+              <div className="space-y-2">
+                <Label>Excel-Blatt auswählen</Label>
+                <Select value={selectedSheet} onValueChange={handleSheetChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Blatt auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supplierSheets.map(sheet => (
+                      <SelectItem key={sheet} value={sheet}>{sheet}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             {supplierCSV && (
               <div className="space-y-2">
