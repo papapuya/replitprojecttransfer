@@ -41,11 +41,37 @@ export default function CSVCompare() {
         const workbook = XLSX.read(data, { type: 'binary' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { defval: '' });
+        
+        // Erst als Array parsen um Header-Zeile zu finden
+        const rawData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1, defval: '' });
+        
+        // Finde erste Zeile mit echten Daten (nicht leer)
+        let headerRowIndex = 0;
+        for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+          const row = rawData[i];
+          const nonEmptyCount = row.filter(cell => cell && String(cell).trim() !== '').length;
+          if (nonEmptyCount >= 3) {
+            headerRowIndex = i;
+            break;
+          }
+        }
+        
+        // Parse mit korrektem Header
+        const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { 
+          defval: '',
+          range: headerRowIndex 
+        });
         
         if (jsonData.length > 0) {
-          const headers = Object.keys(jsonData[0]);
-          callback({ headers, rows: jsonData });
+          // Filtere leere Spalten raus
+          const allHeaders = Object.keys(jsonData[0]);
+          const validHeaders = allHeaders.filter(h => 
+            !h.startsWith('__EMPTY') && 
+            h.trim() !== '' &&
+            jsonData.some(row => row[h] && String(row[h]).trim() !== '')
+          );
+          
+          callback({ headers: validHeaders.length > 0 ? validHeaders : allHeaders, rows: jsonData });
         } else {
           callback({ headers: [], rows: [] });
         }
