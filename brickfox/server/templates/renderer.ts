@@ -779,17 +779,27 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
     
     // Wenn kein Muster passt, als eigene Zeile behandeln
     if (!matched) {
-      // Prüfe ob es mit Marke + Wort beginnt (z.B. "MUH 260DZ")
-      const simpleMatch = trimmed.match(/^([A-Z]{2,4})\s+(.+)$/);
-      if (simpleMatch) {
-        // Kürzel wie MUH, BMR etc. - als eigene Kategorie
-        productType = simpleMatch[1];
-        modelNumber = simpleMatch[2];
+      // Prüfe ob es ein bekanntes LED-Akku-Lampe Kürzel ist (MUH, MUM, MUS, RJ, SH, WT, ML)
+      const ledLampeKuerzel = /^(MUH|MUM|MUS|RJ|SH|WT|ML)\s+(.+)$/i;
+      const ledMatch = trimmed.match(ledLampeKuerzel);
+      if (ledMatch) {
+        // Diese Kürzel gehören alle zur LED Akku-Lampe
+        productType = 'LED Akku-Lampe';
+        modelNumber = trimmed; // Komplettes "MUH 260DZ" als Modellnummer
         matched = true;
       } else {
-        // Ganzer String als eigene Zeile
-        productType = trimmed;
-        modelNumber = '';
+        // Prüfe ob es mit anderem Kürzel beginnt (z.B. "BMR 100")
+        const simpleMatch = trimmed.match(/^([A-Z]{2,4})\s+(.+)$/);
+        if (simpleMatch) {
+          // Kürzel wie BMR etc. - als eigene Kategorie
+          productType = simpleMatch[1];
+          modelNumber = simpleMatch[2];
+          matched = true;
+        } else {
+          // Ganzer String als eigene Zeile
+          productType = trimmed;
+          modelNumber = '';
+        }
       }
     }
     
