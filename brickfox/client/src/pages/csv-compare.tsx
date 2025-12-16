@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, CheckCircle, XCircle, Search } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, XCircle, Search, Download } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
@@ -226,6 +226,17 @@ export default function CSVCompare() {
     String(item.supplier || '').toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
+  const exportMissingToCSV = () => {
+    if (!result?.missing.length) return;
+    
+    const csvContent = "Fehlt im Shop\n" + result.missing.join("\n");
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'fehlende_produkte.csv';
+    link.click();
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -351,7 +362,7 @@ export default function CSVCompare() {
 
       {result && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -374,17 +385,6 @@ export default function CSVCompare() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Nur im Shop</p>
-                    <p className="text-2xl font-bold text-blue-600">{result.inPIM.length}</p>
-                  </div>
-                  <FileSpreadsheet className="h-8 w-8 text-blue-600" />
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           <div className="flex items-center gap-4">
@@ -402,10 +402,16 @@ export default function CSVCompare() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-600">
-                  <XCircle className="h-5 w-5" />
-                  Fehlt im Shop ({filteredMissing.length})
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-red-600">
+                    <XCircle className="h-5 w-5" />
+                    Fehlt im Shop ({filteredMissing.length})
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={exportMissingToCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    CSV Export
+                  </Button>
+                </div>
                 <CardDescription>Diese Produkte vom Lieferanten fehlen noch im Shop</CardDescription>
               </CardHeader>
               <CardContent>
