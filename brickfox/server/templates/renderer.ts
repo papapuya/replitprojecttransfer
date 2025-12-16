@@ -738,7 +738,7 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
   if (hasGroupedEntries) {
     // Einträge sind bereits gruppiert - mit <br /> trennen
     const formattedLines = models.map(model => e(model.trim()));
-    return `<p style="margin-top: 1em; margin-bottom: 16px;"><strong>Kompatibilit&auml;t:</strong><br />${formattedLines.join('<br />')}</p>`;
+    return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilit&auml;t</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${formattedLines.join('<br />')}</p>`;
   }
   
   // Einzelne Modelle - nach Produkttyp gruppieren
@@ -776,10 +776,10 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
         return model;
       });
       const modelsInline = formattedModels.map(model => e(model)).join(', ');
-      return `<p><strong>Kompatibilit&auml;t:</strong> ${modelsInline}</p>`;
+      return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilit&auml;t</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${modelsInline}</p>`;
     }
     const modelsInline = models.map(model => e(model.trim())).join(', ');
-    return `<p><strong>Kompatibilit&auml;t:</strong> ${modelsInline}</p>`;
+    return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilit&auml;t</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${modelsInline}</p>`;
   }
   
   // Mehrere Gruppen - pro Gruppe eine Zeile, Modelle kommagetrennt nebeneinander
@@ -789,7 +789,7 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
     lines.push(modelsInline);
   }
   
-  return `<p style="margin-top: 1em; margin-bottom: 16px;"><strong>Kompatibilit&auml;t:</strong><br />${lines.join('<br />')}</p>`;
+  return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilit&auml;t</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${lines.join('<br />')}</p>`;
 }
 
 function cleanTechnicalTable(htmlTable: string): string {

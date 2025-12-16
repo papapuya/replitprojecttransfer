@@ -2162,6 +2162,16 @@ WICHTIGE REGELN:
 - Der Produktname darf nicht im Fließtext wiederholt werden
 - Behalte ✅ Checkmarks für Vorteile bei
 
+KOMPATIBILITÄT FORMATIERUNG:
+- "Kompatibilität" ist eine eigene Überschrift: <h2>Kompatibilität</h2>
+- Pro Produkttyp (z.B. Akku-Bohrschrauber, Grasschere) eine NEUE ZEILE
+- Modelle des gleichen Typs KOMMAGETRENNT NEBENEINANDER auf einer Zeile
+- Beispiel-Format:
+  <h2>Kompatibilität</h2>
+  <p>Makita Akku-Bohrschrauber 6002D, 6002DW, 6002DWK, 6010D, 6010DL<br />
+  Akku-Grasschere UM 1000D, UM 1200DW<br />
+  Akku-Heckenschere UH 1070DW, UH 3000D, UH 3000DW</p>
+
 Passe die Beschreibung EXAKT nach dem Benutzer-Prompt an.`;
 
       const userPrompt = `Produktname: ${produktnameNeu || produktname}
