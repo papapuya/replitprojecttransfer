@@ -1644,12 +1644,14 @@ export default function CSVBulkDescription() {
                 
                 if (!hasExistingDescriptions) return null;
                 
-                const filteredForAdjust = previewFilter 
-                  ? rawData.filter(row => 
-                      Object.values(row).some(v => 
-                        String(v).toLowerCase().includes(previewFilter.toLowerCase())
-                      )
-                    )
+                const hasAnyFilter = previewFilter || previewPidFilter;
+                const filteredForAdjust = hasAnyFilter 
+                  ? rawData.filter(row => {
+                      const pidKey = Object.keys(row).find(k => k.toLowerCase() === 'p_id') || 'p_id';
+                      const matchesPid = !previewPidFilter || String(row[pidKey] || '').toLowerCase().includes(previewPidFilter.toLowerCase());
+                      const matchesText = !previewFilter || Object.values(row).some(v => String(v).toLowerCase().includes(previewFilter.toLowerCase()));
+                      return matchesPid && matchesText;
+                    })
                   : [];
                 
                 return (
@@ -1662,7 +1664,7 @@ export default function CSVBulkDescription() {
                       Diese CSV enthält bereits generierte Beschreibungen. Nutze den Filter oben, um Produkte auszuwählen und gezielt anzupassen.
                     </p>
                     
-                    {previewFilter && filteredForAdjust.length > 0 && (
+                    {hasAnyFilter && filteredForAdjust.length > 0 && (
                       <div className="space-y-3">
                         <div>
                           <Label className="text-xs text-muted-foreground mb-1 block">
