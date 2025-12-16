@@ -368,18 +368,28 @@ export default function AttributeFiller() {
                       {rawData.length} Produkte • {attributeConfigs.length} Attribut-Spalten
                     </CardDescription>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setRawData([]);
-                      setFile(null);
-                      setHeaders([]);
-                      setAttributeConfigs([]);
-                    }}
-                  >
-                    Neue Datei
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleDownload}
+                      disabled={processing}
+                      size="sm"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      CSV Export
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setRawData([]);
+                        setFile(null);
+                        setHeaders([]);
+                        setAttributeConfigs([]);
+                      }}
+                    >
+                      Neue Datei
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
             </Card>
