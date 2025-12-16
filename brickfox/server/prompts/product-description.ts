@@ -163,6 +163,26 @@ VERBOTENE SACHEN
 ❌ NIEMALS "EMCOM" im Text oder Titel erwähnen! EMCOM ist die Eigenmarke und wird komplett weggelassen!
 
 ═══════════════════════════════════════════════════════════════
+KOMPATIBILITÄT - FORMATIERUNG (WICHTIG)
+═══════════════════════════════════════════════════════════════
+Wenn viele verschiedene Produkttypen in der Kompatibilität vorkommen:
+→ PRO PRODUKTTYP eine separate Zeile im Array!
+
+BEISPIEL - RICHTIG:
+"kompatibilitaet": [
+  "Makita Akku-Bohrschrauber 6002D, 6002DW, 6002DWK, 6010D, 6010DL, 6010DW",
+  "Akku-Grasschere UM 1000D, UM 1200DW",
+  "Akku-Heckenschere UH 1070DW, UH 3000D, UH 3000DW",
+  "Akku-Staubsauger 4071D, 4073D, 4307DW"
+]
+
+BEISPIEL - FALSCH (alles in einer Zeile):
+"kompatibilitaet": ["Makita Akku-Bohrschrauber 6002D, 6002DW, ..., Akku-Grasschere UM 1000D, ..."]
+
+REGEL: Gruppiere Modelle nach Produkttyp! Jeder Produkttyp bekommt seinen eigenen Array-Eintrag.
+Trenne verschiedene Gerätearten (Bohrschrauber, Grasschere, Heckenschere, Staubsauger etc.)!
+
+═══════════════════════════════════════════════════════════════
 AUSGABEFORMAT (JSON)
 ═══════════════════════════════════════════════════════════════
 Antworte ausschließlich mit validem JSON in diesem Format:
@@ -170,7 +190,7 @@ Antworte ausschließlich mit validem JSON in diesem Format:
 {
   "produktTitel": "[Marke] [Produktart] für [Geräte] – [messbare Attribute]",
   "anwendung": "EIN kompakter Absatz (3-4 Sätze max). Kombiniert: Was ist das Produkt + konkreter Einsatz + Nutzen. KEINE Wiederholungen. KEINE Phrasen wie 'wiederherzustellen' mehrfach. Direkt und präzise.",
-  "kompatibilitaet": ["Modell 1", "Modell 2"],
+  "kompatibilitaet": ["Produkttyp1 Modell1, Modell2", "Produkttyp2 Modell3, Modell4"],
   "vorteile": ["Vorteil 1", "Vorteil 2", "Vorteil 3"],
   "technischeDaten": {"Feldname": "Wert mit Einheit"},
   "lieferumfang": ["Artikel 1", "Artikel 2"],
