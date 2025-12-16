@@ -229,14 +229,18 @@ export default function AttributeFiller() {
       results.forEach(result => {
         if (result) {
           const { index, attributes, attributesToFill } = result;
+          console.log(`[Attribut-Befüller] Produkt ${index}: AI-Antwort:`, attributes);
           attributesToFill.forEach((attr: AttributeConfig) => {
             const value = attributes[attr.label];
+            console.log(`[Attribut-Befüller] Attribut "${attr.label}" (key: ${attr.key}): Wert=${value}, Typ=${attr.type}`);
             if (value !== undefined && value !== null && value !== '') {
               if (attr.type === 'yesNo') {
                 updatedData[index][attr.key] = value ? 'Ja' : 'Nein';
+                console.log(`[Attribut-Befüller] -> Gesetzt: ${attr.key} = ${value ? 'Ja' : 'Nein'}`);
               } else {
                 // Text-Attribute direkt übernehmen
                 updatedData[index][attr.key] = String(value);
+                console.log(`[Attribut-Befüller] -> Gesetzt: ${attr.key} = ${value}`);
               }
             }
           });
@@ -473,32 +477,39 @@ export default function AttributeFiller() {
             )}
 
             <Card className="p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Vorschau (erste 10 Zeilen)</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
+              <h3 className="text-lg font-semibold text-foreground mb-4">
+                Vorschau (erste 20 Zeilen) - {attributeConfigs.filter(a => a.enabled).length} Attribute ausgewählt
+              </h3>
+              <div className="overflow-x-auto max-h-[500px] border rounded-lg">
+                <table className="text-sm min-w-max">
+                  <thead className="sticky top-0 bg-card">
                     <tr className="border-b">
-                      <th className="text-left p-2 text-muted-foreground">p_id</th>
-                      <th className="text-left p-2 text-muted-foreground">Produktart</th>
-                      {attributeConfigs.filter(a => a.enabled).slice(0, 5).map(attr => (
-                        <th key={attr.key} className="text-left p-2 text-muted-foreground truncate max-w-32" title={attr.label}>
+                      <th className="text-left p-2 text-muted-foreground whitespace-nowrap sticky left-0 bg-card z-10">p_id</th>
+                      <th className="text-left p-2 text-muted-foreground whitespace-nowrap">Produktart</th>
+                      <th className="text-left p-2 text-muted-foreground whitespace-nowrap">Farbe</th>
+                      {attributeConfigs.filter(a => a.enabled).map(attr => (
+                        <th key={attr.key} className="text-left p-2 text-muted-foreground whitespace-nowrap" title={attr.key}>
                           {attr.label.replace('WST_', '')}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {rawData.slice(0, 10).map((row, idx) => (
-                      <tr key={idx} className="border-b">
-                        <td className="p-2 text-foreground">{row['p_id']}</td>
-                        <td className="p-2 text-foreground truncate max-w-40">
+                    {rawData.slice(0, 20).map((row, idx) => (
+                      <tr key={idx} className="border-b hover:bg-accent/50">
+                        <td className="p-2 text-foreground whitespace-nowrap sticky left-0 bg-card">{row['p_id']}</td>
+                        <td className="p-2 text-foreground whitespace-nowrap">
                           {row['p_attributes[akku_produktart][de]'] || '-'}
                         </td>
-                        {attributeConfigs.filter(a => a.enabled).slice(0, 5).map(attr => (
-                          <td key={attr.key} className="p-2">
+                        <td className="p-2 text-foreground whitespace-nowrap">
+                          {row['p_attributes[allg_farbe_geheause][de]'] || '-'}
+                        </td>
+                        {attributeConfigs.filter(a => a.enabled).map(attr => (
+                          <td key={attr.key} className="p-2 whitespace-nowrap">
                             <span className={`px-2 py-0.5 rounded text-xs ${
                               row[attr.key] === 'Ja' ? 'bg-chart-2/20 text-chart-2' :
                               row[attr.key] === 'Nein' ? 'bg-destructive/20 text-destructive' :
+                              row[attr.key] && row[attr.key].trim() !== '' ? 'bg-primary/20 text-primary' :
                               'text-muted-foreground'
                             }`}>
                               {row[attr.key] || '-'}
