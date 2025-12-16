@@ -2341,6 +2341,87 @@ Gib NUR die angepasste HTML-Beschreibung zurück, ohne Erklärungen.`;
     }
   });
 
+  // Attribut-Analyse aus Produktbeschreibung (für Wetterstation-Attribute etc.)
+  app.post('/api/analyze-attributes', async (req, res) => {
+    try {
+      const { description, attributes, productType } = req.body;
+
+      if (!description || !attributes || attributes.length === 0) {
+        return res.status(400).json({ error: 'Beschreibung und Attribute erforderlich' });
+      }
+
+      // Import OpenAI
+      const { getSecureOpenAIKey } = await import('./api-key-manager');
+      const apiKey = getSecureOpenAIKey();
+      if (!apiKey) {
+        return res.status(500).json({ error: 'OpenAI API Key nicht konfiguriert' });
+      }
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey });
+
+      // Build prompt for attribute detection
+      const attributeList = attributes.map((a: string) => `- ${a}`).join('\n');
+      
+      const prompt = `Analysiere die folgende Produktbeschreibung und bestimme für jedes Attribut ob es zutrifft (true) oder nicht (false).
+
+Produktart: ${productType || 'Unbekannt'}
+
+Produktbeschreibung:
+${description}
+
+Zu prüfende Attribute:
+${attributeList}
+
+REGELN:
+- Antworte NUR mit einem JSON-Objekt
+- Jedes Attribut als Schlüssel, Wert ist true oder false
+- Wenn ein Feature in der Beschreibung erwähnt wird → true
+- Wenn ein Feature NICHT erwähnt wird → false
+- Bei Unsicherheit → false
+
+Beispiel Antwort:
+{"WST_Datumsanzeige": true, "WST_Weckalarm": false, "WST_Batterieanzeige": true}`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'Du bist ein Produktdaten-Analyst. Analysiere Produktbeschreibungen und extrahiere Attribute. Antworte NUR mit validem JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      });
+
+      const content = response.choices[0]?.message?.content?.trim() || '{}';
+      
+      // Parse JSON response
+      let parsedAttributes: Record<string, boolean> = {};
+      try {
+        // Extract JSON from response (might have markdown code blocks)
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsedAttributes = JSON.parse(jsonMatch[0]);
+        }
+      } catch (parseErr) {
+        console.error('JSON parse error:', parseErr, content);
+        // Return all false if parsing fails
+        attributes.forEach((a: string) => {
+          parsedAttributes[a] = false;
+        });
+      }
+
+      res.json({
+        success: true,
+        attributes: parsedAttributes
+      });
+    } catch (error) {
+      console.error('Analyze attributes error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Analyse fehlgeschlagen'
+      });
+    }
+  });
+
   app.post('/api/pixi/compare', requireAuth, requireFeature('pixiIntegration'), upload.single('csvFile'), async (req: any, res) => {
     try {
       const { supplNr } = req.body;
