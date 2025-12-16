@@ -460,10 +460,10 @@ export default function CSVBulkProjectDetail() {
                     <TableHead className="min-w-[200px]">Produktname (Original)</TableHead>
                     <TableHead className="min-w-[250px]">SEO-Produktname</TableHead>
                     <TableHead className="min-w-[500px]">Produktbeschreibung HTML</TableHead>
+                    <TableHead className="min-w-[400px]">Produktbeschreibung (Original CSV)</TableHead>
                     <TableHead className="min-w-[250px]">Produktname (NL)</TableHead>
                     <TableHead className="min-w-[400px]">Produktbeschreibung (NL)</TableHead>
                     <TableHead className="min-w-[500px]">Produktbeschreibung HTML (NL)</TableHead>
-                    <TableHead className="min-w-[400px]">Produktbeschreibung (Original CSV)</TableHead>
                     <TableHead className="min-w-[250px]">MediaMarkt Name V1</TableHead>
                     <TableHead className="min-w-[250px]">MediaMarkt Name V2</TableHead>
                     <TableHead className="min-w-[200px]">SEO Titel</TableHead>
@@ -535,6 +535,13 @@ export default function CSVBulkProjectDetail() {
                       </TableCell>
                       <TableCell>
                         <Textarea
+                          value={product.produktbeschreibung_original || ''}
+                          readOnly
+                          className="min-h-[100px] text-sm resize-none"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Textarea
                           value={product.produktname_nl}
                           readOnly
                           className="min-h-[80px] text-sm resize-none"
@@ -552,13 +559,6 @@ export default function CSVBulkProjectDetail() {
                           value={product.produktbeschreibung_html_nl}
                           readOnly
                           className="min-h-[120px] text-xs font-mono resize-none"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Textarea
-                          value={product.produktbeschreibung_original || ''}
-                          readOnly
-                          className="min-h-[100px] text-sm resize-none"
                         />
                       </TableCell>
                       <TableCell>
