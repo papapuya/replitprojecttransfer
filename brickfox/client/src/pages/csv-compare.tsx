@@ -177,8 +177,9 @@ export default function CSVCompare() {
     }
   };
 
-  const normalizeText = (text: string): string => {
-    return text
+  const normalizeText = (text: string | number | undefined | null): string => {
+    if (text === null || text === undefined) return '';
+    return String(text)
       .toLowerCase()
       .replace(/[^\w\s]/g, '')
       .replace(/\s+/g, ' ')
