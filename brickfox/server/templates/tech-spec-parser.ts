@@ -685,19 +685,36 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       // ═══════════════════════════════════════════════════════════════
       // KOMPATIBILITÄT 1:1 EXTRAKTION: Rohtext aus "Kompatibilität:" übernehmen
       // KEINE Normalisierung - alles was nach "Kompatibilität:" kommt wird übernommen
+      // Suche nach verschiedenen Formaten: "Kompatibilität:", "Kompatibilitaet:", etc.
       // ═══════════════════════════════════════════════════════════════
-      const compatMatch = normalized.match(/Kompatibilit[äa]t[:\s]+([^\n]+(?:\n[^A-Z\n][^\n]*)*)/i);
-      if (compatMatch) {
-        let rawCompat = compatMatch[1].trim();
-        // Bereinige nur Zeilenumbrüche
-        rawCompat = rawCompat.replace(/\n+/g, ', ').replace(/,\s*,/g, ',').trim();
-        rawCompat = rawCompat.replace(/,\s*$/, ''); // Trailing comma entfernen
-        
-        if (rawCompat.length > 5) {
-          specs['Kompatibilität'] = rawCompat;
-          console.log(`📋 [COMPAT] 1:1 aus CSV übernommen: ${rawCompat.length} Zeichen`);
-          break; // Fertig, keine weitere Extraktion nötig
+      const compatPatterns = [
+        /Kompatibilit[äa]t[:\s]+([\s\S]+?)(?=\n\s*(?:Lieferumfang|Weitere Informationen|Technische Daten|Ihre Vorteile))/i,
+        /Kompatibilit[äa]t[:\s]+([\s\S]+?)(?=\n[A-Z][^a-z]*:)/i,
+        /Kompatibilit[äa]t[:\s]+([^\n]+)/i
+      ];
+      
+      for (const pattern of compatPatterns) {
+        const compatMatch = normalized.match(pattern);
+        if (compatMatch) {
+          let rawCompat = compatMatch[1].trim();
+          // Bereinige nur Zeilenumbrüche zu Kommas
+          rawCompat = rawCompat.replace(/\n+/g, ', ').replace(/,\s*,/g, ',').trim();
+          rawCompat = rawCompat.replace(/,\s*$/, '');
+          
+          if (rawCompat.length > 10) {
+            specs['Kompatibilität'] = rawCompat;
+            console.log(`📋 [COMPAT] 1:1 DIREKT übernommen: ${rawCompat.length} Zeichen`);
+            // WICHTIG: Hier NICHT break aus der for-Schleife der descriptionFields!
+            // Stattdessen setze ein Flag und breche unten ab
+            break;
+          }
         }
+      }
+      
+      // Wenn Kompatibilität bereits 1:1 übernommen wurde, überspringe den Rest
+      if (specs['Kompatibilität']) {
+        console.log(`✅ [COMPAT] Überspringe Normalisierung - 1:1 Daten vorhanden`);
+        break;
       }
       
       // FALLBACK: Alte Methode nur wenn keine direkte "Kompatibilität:" gefunden
