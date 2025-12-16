@@ -88,15 +88,17 @@ export default function AttributeFiller() {
       setHeaders(parsedHeaders);
       setRawData(rows);
 
+      // Unterstützt p_attributes UND v_attributes (Brickfox-Format)
       const attributeHeaders = parsedHeaders.filter(h => 
-        h.startsWith('p_attributes[') && h.includes('][de]')
+        (h.startsWith('p_attributes[') || h.startsWith('v_attributes[')) && h.includes('][de]')
       );
 
       // Text-Attribute die aus Beschreibung extrahiert werden können
       const textAttributes = ['akku_produktart', 'allg_farbe_geheause'];
       
       const configs: AttributeConfig[] = attributeHeaders.map(h => {
-        const match = h.match(/p_attributes\[([^\]]+)\]\[de\]/);
+        // Unterstützt beide Formate: p_attributes[X][de] und v_attributes[X][de]
+        const match = h.match(/[pv]_attributes\[([^\]]+)\]\[de\]/);
         const label = match ? match[1] : h;
         const isTextAttr = textAttributes.includes(label);
         return {
