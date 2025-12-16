@@ -189,8 +189,8 @@ export default function CSVCompare() {
   const runComparison = () => {
     if (!pimCSV || !supplierCSV || !pimColumn || !supplierColumn) return;
 
-    const pimValues = pimCSV.rows.map(row => row[pimColumn] || '').filter(Boolean);
-    const supplierValues = supplierCSV.rows.map(row => row[supplierColumn] || '').filter(Boolean);
+    const pimValues = pimCSV.rows.map(row => String(row[pimColumn] || '')).filter(Boolean);
+    const supplierValues = supplierCSV.rows.map(row => String(row[supplierColumn] || '')).filter(Boolean);
 
     const normalizedPIM = pimValues.map(v => ({ original: v, normalized: normalizeText(v) }));
     const normalizedSupplier = supplierValues.map(v => ({ original: v, normalized: normalizeText(v) }));
@@ -205,9 +205,9 @@ export default function CSVCompare() {
       );
       
       if (match) {
-        matched.push({ pim: match.original, supplier: supplier.original });
+        matched.push({ pim: String(match.original), supplier: String(supplier.original) });
       } else {
-        missing.push(supplier.original);
+        missing.push(String(supplier.original));
       }
     }
 
@@ -218,12 +218,12 @@ export default function CSVCompare() {
   };
 
   const filteredMissing = result?.missing.filter(item => 
-    item.toLowerCase().includes(searchTerm.toLowerCase())
+    String(item || '').toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const filteredMatched = result?.matched.filter(item => 
-    item.pim.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.supplier.toLowerCase().includes(searchTerm.toLowerCase())
+    String(item.pim || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    String(item.supplier || '').toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   return (
