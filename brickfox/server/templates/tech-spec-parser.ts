@@ -754,9 +754,9 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
           break;
         }
         
-        // Nur im Kompatibilitäts-Abschnitt - ALLE Zeilen 1:1 sammeln!
+        // Nur im Kompatibilitäts-Abschnitt parsen
         if (inCompatSection) {
-          // Pattern: "Marke: Modell" → extrahiere "Marke Modell" (mit Marke!)
+          // Pattern: "Marke: Modell" → extrahiere NUR das Modell (Marke wird oben im Titel angezeigt)
           const colonMatch = trimmed.match(/^([^:]+):\s*(.+)$/);
           if (colonMatch) {
             const marke = colonMatch[1].trim();
@@ -765,27 +765,36 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
             // Technische Labels ausschließen
             const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity', 'lieferumfang', 'hinweis', 'achtung', 'typencode'];
             if (!technicalLabels.includes(marke.toLowerCase()) && modell.length > 1) {
-              // MARKE + MODELL zusammen speichern für bessere Lesbarkeit
-              rawCompatLines.push(`${marke} ${modell}`);
-              console.log(`   📱 [RAW] ${marke} ${modell}`);
+              // NUR Modell speichern (ohne Marke) - für Normalisierung
+              allModels.push(modell);
+              console.log(`   📱 Modell extrahiert: "${modell}" (Marke: ${marke})`);
             }
             continue;
           }
           
           // Einfache Zeile ohne Doppelpunkte
           if (!trimmed.includes(':') && trimmed.length > 3 && trimmed.length < 80) {
-            rawCompatLines.push(trimmed);
-            console.log(`   📱 [RAW] ${trimmed}`);
+            allModels.push(trimmed);
+            console.log(`   📱 Modell direkt: "${trimmed}"`);
           }
         }
       }
       
-      console.log(`   🔍 [RAW] Gefundene Einträge: ${rawCompatLines.length}`);
+      console.log(`   🔍 Gefundene Modelle: ${allModels.length}`);
       
-      // KEINE Normalisierung! Einfach 1:1 speichern
-      if (rawCompatLines.length > 0) {
-        specs['Kompatibilität'] = rawCompatLines.join(', ');
-        console.log(`📋 [COMPAT] 1:1 RAW gespeichert: ${rawCompatLines.length} Einträge`);
+      // NORMALISIERUNG aktiviert: Typencodes raus, Duplikate entfernen
+      if (allModels.length > 0) {
+        const { compatible, incompatible } = normalizeCompatibilityModels(allModels);
+        
+        if (compatible.length > 0) {
+          specs['Kompatibilität'] = compatible.join(', ');
+          console.log(`📋 Kompatibilität: ${compatible.length} Modelle (normalisiert)`);
+        }
+        
+        if (incompatible.length > 0) {
+          specs['Nicht kompatibel mit'] = incompatible.join(', ');
+          console.log(`⛔ Nicht kompatibel: ${incompatible.length} Modelle (Ausschlüsse)`);
+        }
         break;
       }
     }
