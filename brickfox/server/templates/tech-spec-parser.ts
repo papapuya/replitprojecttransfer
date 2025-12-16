@@ -543,27 +543,25 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
 function groupByProductFamily(models: string[]): string[] {
   if (models.length === 0) return [];
   
-  // Gruppiere nach Marke+Serie (dynamisch erkannt)
+  // Gruppiere nach Serie (dynamisch erkannt)
   const groups: Map<string, string[]> = new Map();
   
   for (const model of models) {
-    // Pattern 1: "MARKE: SERIE: MODELL" (z.B. "DELL: XPS: M1720")
-    const colonMatch = model.match(/^([A-Z][A-Z\-\s]*?):\s*([A-Z][A-Z0-9\-\s]*?):\s*(.+)$/i);
-    if (colonMatch) {
-      const brand = colonMatch[1].trim();
-      const series = colonMatch[2].trim();
-      const modelNum = colonMatch[3].trim();
-      const familyKey = `${brand} ${series}`;
+    // Pattern 1: "SERIE: MODELL" (z.B. "SF: 150-A", "DA: 390DW", "ML: 700")
+    // Nur kurze Serien-Präfixe (2-4 Buchstaben) mit Doppelpunkt
+    const seriesColonMatch = model.match(/^([A-Z]{2,4}):\s*(.+)$/i);
+    if (seriesColonMatch) {
+      const series = seriesColonMatch[1].trim().toUpperCase();
+      const modelNum = seriesColonMatch[2].trim();
       
-      if (!groups.has(familyKey)) {
-        groups.set(familyKey, []);
+      if (!groups.has(series)) {
+        groups.set(series, []);
       }
-      groups.get(familyKey)!.push(modelNum);
+      groups.get(series)!.push(modelNum);
       continue;
     }
     
     // Pattern 2: "MARKE SERIE MODELL" (z.B. "HP ProLiant ML350")
-    // Bekannte Serien erkennen
     const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'ThinkCentre'];
     let matched = false;
     
@@ -604,7 +602,7 @@ function groupByProductFamily(models: string[]): string[] {
     const uniqueModels = Array.from(new Set(modelNumbers));
     uniqueModels.sort((a: string, b: string) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
     
-    // Format: "DELL XPS: M1720, M1730, M2010"
+    // Format: "SF: 150-A, 151-A" oder "HP ProLiant: ML350, ML370"
     result.push(`${family}: ${uniqueModels.join(', ')}`);
   });
   
