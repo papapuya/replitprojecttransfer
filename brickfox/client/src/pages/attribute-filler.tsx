@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2 } from "lucide-react";
+import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CSVRow {
   [key: string]: string;
@@ -296,162 +297,148 @@ export default function AttributeFiller() {
   }).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="mb-6">
-          <Link href="/">
-            <Button variant="ghost" className="text-slate-400 hover:text-white">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Zurück
-            </Button>
-          </Link>
-        </div>
-
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Attribut-Befüller</h1>
-          <p className="text-slate-400">
-            Analysiert Produktbeschreibungen und füllt Attribute automatisch mit Ja/Nein
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 bg-card border-b border-card-border shadow-sm">
+        <div className="max-w-[1600px] mx-auto px-6 py-6">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Attribut-Befüller
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Analysiert Produktbeschreibungen • Füllt Attribute automatisch • PIM-kompatibles CSV-Format
           </p>
         </div>
+      </header>
 
+      <main className="max-w-[1600px] mx-auto px-6 py-8">
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-            <span className="text-red-400">{error}</span>
-          </div>
+          <Alert className="mb-6 bg-destructive/10 border-destructive text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="ml-2">{error}</AlertDescription>
+          </Alert>
         )}
 
         {rawData.length === 0 ? (
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Upload className="w-5 h-5" />
-                CSV hochladen
-              </CardTitle>
-              <CardDescription>
-                Lade eine PIM-Export CSV mit Produktbeschreibungen und Attribut-Spalten hoch
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div
-                className={`border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer
-                  ${isDragging ? 'border-primary bg-primary/10' : 'border-slate-600 hover:border-slate-500'}`}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onClick={() => document.getElementById('csv-upload')?.click()}
-              >
-                <Upload className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-                <p className="text-slate-300 mb-2">CSV-Datei hier ablegen oder klicken</p>
-                <p className="text-slate-500 text-sm">Unterstützt: .csv mit p_description[de] und p_attributes[...][de]</p>
-                <input
-                  id="csv-upload"
-                  type="file"
-                  accept=".csv"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
-                />
+          <Card
+            className={`p-8 transition-colors ${isDragging ? 'border-primary bg-accent/50' : ''}`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
+            <div className="flex flex-col items-center justify-center gap-6 min-h-[300px]">
+              <div className="p-6 rounded-full bg-primary/10">
+                <Upload className="w-12 h-12 text-primary" />
               </div>
-            </CardContent>
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-semibold text-foreground">
+                  CSV-Datei hochladen
+                </h2>
+                <p className="text-muted-foreground max-w-md">
+                  Lade eine PIM-Export CSV mit Produktbeschreibungen und Attribut-Spalten hoch
+                </p>
+              </div>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+                className="hidden"
+                id="csv-upload"
+              />
+              <label htmlFor="csv-upload">
+                <Button asChild size="lg">
+                  <span className="cursor-pointer">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Datei auswählen
+                  </span>
+                </Button>
+              </label>
+            </div>
           </Card>
         ) : (
           <div className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <CheckCircle2 className="w-8 h-8 text-chart-2" />
                   <div>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-400" />
-                      {file?.name}
-                    </CardTitle>
-                    <CardDescription>
+                    <h2 className="text-xl font-bold text-foreground">{file?.name}</h2>
+                    <p className="text-muted-foreground">
                       {rawData.length} Produkte • {attributeConfigs.length} Attribut-Spalten
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleDownload}
-                      disabled={processing}
-                      size="sm"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      CSV Export
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setRawData([]);
-                        setFile(null);
-                        setHeaders([]);
-                        setAttributeConfigs([]);
-                      }}
-                    >
-                      Neue Datei
-                    </Button>
+                    </p>
                   </div>
                 </div>
-              </CardHeader>
+                <div className="flex gap-2">
+                  <Button onClick={handleDownload} disabled={processing}>
+                    <Download className="w-4 h-4 mr-2" />
+                    CSV Export
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setRawData([]);
+                      setFile(null);
+                      setHeaders([]);
+                      setAttributeConfigs([]);
+                    }}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Neue Datei
+                  </Button>
+                </div>
+              </div>
             </Card>
 
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <Settings2 className="w-5 h-5" />
-                      Attribute auswählen
-                    </CardTitle>
-                    <CardDescription>
-                      Wähle die Attribute die automatisch befüllt werden sollen ({enabledCount} ausgewählt)
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={selectAllWST}>
-                      Alle WST_*
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={selectNone}>
-                      Keine
-                    </Button>
-                  </div>
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Settings2 className="w-5 h-5" />
+                    Attribute auswählen
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    Wähle die Attribute die automatisch befüllt werden sollen ({enabledCount} ausgewählt)
+                  </p>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
-                  {attributeConfigs.map(attr => (
-                    <div key={attr.key} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={attr.key}
-                        checked={attr.enabled}
-                        onCheckedChange={() => toggleAttribute(attr.key)}
-                      />
-                      <Label
-                        htmlFor={attr.key}
-                        className="text-sm text-slate-300 cursor-pointer truncate"
-                        title={attr.label}
-                      >
-                        {attr.label}
-                      </Label>
-                    </div>
-                  ))}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAllWST}>
+                    Alle WST_*
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={selectNone}>
+                    Keine
+                  </Button>
                 </div>
-              </CardContent>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+                {attributeConfigs.map(attr => (
+                  <div key={attr.key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={attr.key}
+                      checked={attr.enabled}
+                      onCheckedChange={() => toggleAttribute(attr.key)}
+                    />
+                    <Label
+                      htmlFor={attr.key}
+                      className="text-sm text-muted-foreground cursor-pointer truncate"
+                      title={attr.label}
+                    >
+                      {attr.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </Card>
 
             {processing && (
-              <Card className="bg-slate-800/50 border-slate-700">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    <div className="flex-1">
-                      <div className="flex justify-between text-sm text-slate-400 mb-2">
-                        <span>Analysiere Beschreibungen...</span>
-                        <span>{processedCount} / {rawData.length}</span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
+              <Card className="p-6">
+                <div className="flex items-center gap-4">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <div className="flex-1">
+                    <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                      <span>Analysiere Beschreibungen...</span>
+                      <span>{processedCount} / {rawData.length}</span>
                     </div>
+                    <Progress value={progress} className="h-2" />
                   </div>
-                </CardContent>
+                </div>
               </Card>
             )}
 
@@ -474,71 +461,59 @@ export default function AttributeFiller() {
                   </>
                 )}
               </Button>
-
-              <Button
-                onClick={handleDownload}
-                disabled={processing}
-                variant="outline"
-                size="lg"
-              >
-                <Download className="w-5 h-5 mr-2" />
-                CSV Export
-              </Button>
             </div>
 
             {filledCount > 0 && (
-              <div className="text-center text-slate-400">
-                <CheckCircle2 className="w-5 h-5 inline mr-2 text-green-400" />
-                {filledCount} Produkte mit Attributen befüllt
-              </div>
+              <Alert className="bg-chart-2/10 border-chart-2 text-chart-2">
+                <CheckCircle2 className="h-4 w-4" />
+                <AlertDescription className="ml-2">
+                  {filledCount} Produkte mit Attributen befüllt
+                </AlertDescription>
+              </Alert>
             )}
 
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white text-lg">Vorschau (erste 10 Zeilen)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-700">
-                        <th className="text-left p-2 text-slate-400">p_id</th>
-                        <th className="text-left p-2 text-slate-400">Produktart</th>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Vorschau (erste 10 Zeilen)</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2 text-muted-foreground">p_id</th>
+                      <th className="text-left p-2 text-muted-foreground">Produktart</th>
+                      {attributeConfigs.filter(a => a.enabled).slice(0, 5).map(attr => (
+                        <th key={attr.key} className="text-left p-2 text-muted-foreground truncate max-w-32" title={attr.label}>
+                          {attr.label.replace('WST_', '')}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rawData.slice(0, 10).map((row, idx) => (
+                      <tr key={idx} className="border-b">
+                        <td className="p-2 text-foreground">{row['p_id']}</td>
+                        <td className="p-2 text-foreground truncate max-w-40">
+                          {row['p_attributes[akku_produktart][de]'] || '-'}
+                        </td>
                         {attributeConfigs.filter(a => a.enabled).slice(0, 5).map(attr => (
-                          <th key={attr.key} className="text-left p-2 text-slate-400 truncate max-w-32" title={attr.label}>
-                            {attr.label.replace('WST_', '')}
-                          </th>
+                          <td key={attr.key} className="p-2">
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              row[attr.key] === 'Ja' ? 'bg-chart-2/20 text-chart-2' :
+                              row[attr.key] === 'Nein' ? 'bg-destructive/20 text-destructive' :
+                              'text-muted-foreground'
+                            }`}>
+                              {row[attr.key] || '-'}
+                            </span>
+                          </td>
                         ))}
                       </tr>
-                    </thead>
-                    <tbody>
-                      {rawData.slice(0, 10).map((row, idx) => (
-                        <tr key={idx} className="border-b border-slate-800">
-                          <td className="p-2 text-slate-300">{row['p_id']}</td>
-                          <td className="p-2 text-slate-300 truncate max-w-40">
-                            {row['p_attributes[akku_produktart][de]'] || '-'}
-                          </td>
-                          {attributeConfigs.filter(a => a.enabled).slice(0, 5).map(attr => (
-                            <td key={attr.key} className="p-2">
-                              <span className={`px-2 py-0.5 rounded text-xs ${
-                                row[attr.key] === 'Ja' ? 'bg-green-500/20 text-green-400' :
-                                row[attr.key] === 'Nein' ? 'bg-red-500/20 text-red-400' :
-                                'text-slate-500'
-                              }`}>
-                                {row[attr.key] || '-'}
-                              </span>
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
