@@ -714,6 +714,7 @@ function removeBrandFromModel(model: string, brand: string): string {
 /**
  * Rendert die Kompatibilitäts-Sektion mit Marke NUR EINMAL am Anfang
  * Format: Pro Produkttyp (z.B. Akku-Bohrschrauber, Grasschere) eine neue Zeile
+ * Modelle des gleichen Typs werden kommagetrennt NEBENEINANDER angezeigt
  */
 function renderKompatibilitaet(models: string[], e: (s: string) => string, productName?: string): string {
   if (!models || models.length === 0) {
@@ -723,8 +724,7 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
   // Extrahiere Marke aus Produktname
   const brand = productName ? extractBrandFromProductName(productName) : null;
   
-  // Prüfe, ob die Modelle bereits nach Produkttypen gruppiert sind (z.B. "Akku-Bohrschrauber 6002D, 6002DW")
-  // Erkennungsmuster: Jeder Eintrag beginnt mit einem Produkttyp-Wort
+  // Erkennungsmuster für Produkttypen
   const productTypePatterns = [
     /^Akku-/i, /^Bohr/i, /^Schraub/i, /^Grasschere/i, /^Heckenschere/i, 
     /^Staubsauger/i, /^Säge/i, /^Lampe/i, /^Stichsäge/i, /^Winkelschleifer/i,
@@ -732,36 +732,64 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
     /^Makita\s+Akku-/i, /^Bosch\s+/i, /^DeWalt\s+/i, /^Philips\s+/i
   ];
   
-  const hasProductTypeGroups = models.length > 1 && models.some(model => 
-    productTypePatterns.some(pattern => pattern.test(model.trim()))
-  );
+  // Prüfe, ob Einträge bereits Produktgruppen sind (mit Kommas drin = mehrere Modelle)
+  const hasGroupedEntries = models.some(model => model.includes(',') && model.length > 20);
   
-  if (hasProductTypeGroups) {
-    // Jeder Eintrag ist bereits eine Produktgruppe - mit <br /> trennen
+  if (hasGroupedEntries) {
+    // Einträge sind bereits gruppiert - mit <br /> trennen
     const formattedLines = models.map(model => e(model.trim()));
     return `<p style="margin-top: 1em; margin-bottom: 16px;"><strong>Kompatibilit&auml;t:</strong><br />${formattedLines.join('<br />')}</p>`;
   }
   
-  if (brand) {
-    // Entferne Marke aus allen Modellen (falls vorhanden)
-    const modelsWithoutBrand = models.map(model => removeBrandFromModel(model, brand));
+  // Einzelne Modelle - nach Produkttyp gruppieren
+  const groups: Map<string, string[]> = new Map();
+  let currentType = 'default';
+  
+  for (const model of models) {
+    const trimmed = model.trim();
     
-    // Erstes Modell MIT Marke, Rest OHNE
-    const formattedModels = modelsWithoutBrand.map((model, index) => {
-      if (index === 0) {
-        // Erstes Modell: Marke + Modell
-        return `${brand} ${model}`;
+    // Prüfe ob dies ein neuer Produkttyp ist
+    const matchedType = productTypePatterns.find(pattern => pattern.test(trimmed));
+    if (matchedType) {
+      // Extrahiere den Produkttyp-Namen (z.B. "Akku-Bohrschrauber" aus "Akku-Bohrschrauber 6002D")
+      const match = trimmed.match(/^[\w\-]+\s+[\w\-]+/i);
+      if (match) {
+        currentType = match[0];
+      } else {
+        currentType = trimmed.split(/\s+/)[0] || 'default';
       }
-      return model;
-    });
+    }
     
-    const modelsInline = formattedModels.map(model => e(model)).join(', ');
+    if (!groups.has(currentType)) {
+      groups.set(currentType, []);
+    }
+    groups.get(currentType)!.push(trimmed);
+  }
+  
+  // Wenn nur eine Gruppe oder keine Produkttypen erkannt
+  if (groups.size <= 1) {
+    // Alle Modelle inline mit Komma
+    if (brand) {
+      const modelsWithoutBrand = models.map(model => removeBrandFromModel(model.trim(), brand));
+      const formattedModels = modelsWithoutBrand.map((model, index) => {
+        if (index === 0) return `${brand} ${model}`;
+        return model;
+      });
+      const modelsInline = formattedModels.map(model => e(model)).join(', ');
+      return `<p><strong>Kompatibilit&auml;t:</strong> ${modelsInline}</p>`;
+    }
+    const modelsInline = models.map(model => e(model.trim())).join(', ');
     return `<p><strong>Kompatibilit&auml;t:</strong> ${modelsInline}</p>`;
   }
   
-  // Kein Brand gefunden - einfach alle Modelle auflisten
-  const modelsInline = models.map(model => e(model)).join(', ');
-  return `<p><strong>Kompatibilit&auml;t:</strong> ${modelsInline}</p>`;
+  // Mehrere Gruppen - pro Gruppe eine Zeile, Modelle kommagetrennt nebeneinander
+  const lines: string[] = [];
+  for (const [type, typeModels] of groups) {
+    const modelsInline = typeModels.map(m => e(m)).join(', ');
+    lines.push(modelsInline);
+  }
+  
+  return `<p style="margin-top: 1em; margin-bottom: 16px;"><strong>Kompatibilit&auml;t:</strong><br />${lines.join('<br />')}</p>`;
 }
 
 function cleanTechnicalTable(htmlTable: string): string {
