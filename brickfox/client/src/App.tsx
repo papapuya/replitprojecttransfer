@@ -40,6 +40,7 @@ import WeightGenerator from "@/pages/weight-generator";
 import PromptAssistant from "@/pages/prompt-assistant";
 import CSVBulkProjects from "@/pages/csv-bulk-projects";
 import CSVBulkProjectDetail from "@/pages/csv-bulk-project-detail";
+import CSVCompare from "@/pages/csv-compare";
 
 function Router() {
   return (
@@ -111,6 +112,11 @@ function Router() {
       <Route path="/suppliers/:id">
         <ProtectedRoute>
           <SupplierDetail />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/csv-compare">
+        <ProtectedRoute>
+          <CSVCompare />
         </ProtectedRoute>
       </Route>
       <Route path="/pixi-compare">
