@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Eye, Copy, Check, HelpCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ChevronLeft, ChevronRight, Eye, Copy, Check, HelpCircle, Search, Filter, X } from "lucide-react";
 import { ExplanationPopover } from "@/components/explanation-popover";
 import {
   Tooltip,
@@ -53,6 +55,8 @@ interface BulkDescriptionTableProps {
 export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml }: BulkDescriptionTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedIds, setCopiedIds] = useState<Set<number>>(new Set());
+  const [searchPid, setSearchPid] = useState('');
+  const [searchText, setSearchText] = useState('');
   const itemsPerPage = 6;
 
   const handleCopyToClipboard = (text: string, productId: number) => {
@@ -68,10 +72,39 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
     });
   };
 
-  const totalPages = Math.ceil(products.length / itemsPerPage);
+  // Filter products based on search criteria
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesPid = searchPid === '' || 
+        product.p_id.toLowerCase().includes(searchPid.toLowerCase());
+      
+      const matchesText = searchText === '' || 
+        product.produktname.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.produktname_neu.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.produktbeschreibung_html.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.p_item_number.toLowerCase().includes(searchText.toLowerCase()) ||
+        (product.produktbeschreibung_original || '').toLowerCase().includes(searchText.toLowerCase());
+      
+      return matchesPid && matchesText;
+    });
+  }, [products, searchPid, searchText]);
+
+  // Reset page when filters change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [searchPid, searchText]);
+
+  const clearFilters = () => {
+    setSearchPid('');
+    setSearchText('');
+  };
+
+  const hasActiveFilters = searchPid !== '' || searchText !== '';
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const displayedProducts = products.slice(startIndex, endIndex);
+  const displayedProducts = filteredProducts.slice(startIndex, endIndex);
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -92,6 +125,64 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
           line-height: 1.45 !important;
         }
       `}</style>
+      
+      {/* Filter Panel */}
+      <Card className="mb-4">
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap items-end gap-4">
+            {/* Search by p_id */}
+            <div className="flex-1 min-w-[180px] max-w-[250px]">
+              <Label htmlFor="filter-pid" className="text-sm font-medium mb-1 block">
+                Produkt-ID (p_id)
+              </Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="filter-pid"
+                  placeholder="z.B. 79251"
+                  value={searchPid}
+                  onChange={(e) => setSearchPid(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            {/* Search by text */}
+            <div className="flex-1 min-w-[250px]">
+              <Label htmlFor="filter-text" className="text-sm font-medium mb-1 block">
+                Suche (Name, Beschreibung, Artikelnummer)
+              </Label>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="filter-text"
+                  placeholder="Suchbegriff eingeben..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            {/* Filter actions */}
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  <X className="w-4 h-4 mr-1" />
+                  Filter löschen
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {hasActiveFilters && (
+            <div className="mt-3 text-sm text-muted-foreground">
+              {filteredProducts.length} von {products.length} Produkten entsprechen dem Filter
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <Table data-testid="table-products">
@@ -256,6 +347,46 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                       </div>
                     </div>
                   </TableCell>
+                  {/* Produktbeschreibung Original CSV - jetzt vor NL */}
+                  <TableCell>
+                    <div className="flex gap-2 items-start">
+                      <Textarea
+                        value={product.produktbeschreibung_original || ''}
+                        onChange={(e) => onUpdateProduct(product.id, 'produktbeschreibung_original', e.target.value)}
+                        className="text-xs resize-none min-h-[100px] font-sans flex-1 bulk-description-textarea bg-muted/30"
+                        readOnly
+                        data-testid={`input-beschreibung-original-${product.id}`}
+                      />
+                      <div className="flex flex-col gap-1 mt-1">
+                        {onPreviewHtml && product.produktbeschreibung_original && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onPreviewHtml(product.produktbeschreibung_original || '', `${product.produktname} (Original)`)}
+                            title="Original Vorschau anzeigen"
+                            className="flex-shrink-0"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {product.produktbeschreibung_original && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyToClipboard(product.produktbeschreibung_original || '', product.id * 1000 + 3)}
+                            title="Original kopieren"
+                            className="flex-shrink-0"
+                          >
+                            {copiedIds.has(product.id * 1000 + 3) ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
                   {/* Produktname Niederländisch */}
                   <TableCell>
                     <div className="flex gap-2 items-start">
@@ -324,46 +455,6 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                       </div>
                     </div>
                   </TableCell>
-                  {/* Produktbeschreibung Original CSV */}
-                  <TableCell>
-                    <div className="flex gap-2 items-start">
-                      <Textarea
-                        value={product.produktbeschreibung_original || ''}
-                        onChange={(e) => onUpdateProduct(product.id, 'produktbeschreibung_original', e.target.value)}
-                        className="text-xs resize-none min-h-[100px] font-sans flex-1 bulk-description-textarea bg-muted/30"
-                        readOnly
-                        data-testid={`input-beschreibung-original-${product.id}`}
-                      />
-                      <div className="flex flex-col gap-1 mt-1">
-                        {onPreviewHtml && product.produktbeschreibung_original && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onPreviewHtml(product.produktbeschreibung_original || '', `${product.produktname} (Original)`)}
-                            title="Original Vorschau anzeigen"
-                            className="flex-shrink-0"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {product.produktbeschreibung_original && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCopyToClipboard(product.produktbeschreibung_original || '', product.id * 1000 + 3)}
-                            title="Original kopieren"
-                            className="flex-shrink-0"
-                          >
-                            {copiedIds.has(product.id * 1000 + 3) ? (
-                              <Check className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
                   <TableCell>
                     <Textarea
                       value={product.mediamarktname_v1}
@@ -417,10 +508,11 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
           </Table>
         </div>
         {/* Pagination Controls */}
-        {products.length > itemsPerPage && (
+        {filteredProducts.length > itemsPerPage && (
           <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
             <div className="text-sm text-muted-foreground">
-              Zeige {startIndex + 1} bis {Math.min(endIndex, products.length)} von {products.length} Produkten
+              Zeige {startIndex + 1} bis {Math.min(endIndex, filteredProducts.length)} von {filteredProducts.length} Produkten
+              {hasActiveFilters && ` (${products.length} gesamt)`}
             </div>
             <div className="flex items-center gap-2">
               <Button
