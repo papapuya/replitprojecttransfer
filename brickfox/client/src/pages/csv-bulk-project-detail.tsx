@@ -2,11 +2,14 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Download, FileSpreadsheet, Package, Eye, Copy, Check } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, Download, FileSpreadsheet, Package, Eye, Copy, Check, Search, RefreshCw, Filter, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useLocation, useParams, Link } from "wouter";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -35,6 +38,7 @@ interface BulkProduct {
   seo_beschreibung: string;
   seo_keywords: string;
   kurzbeschreibung: string;
+  dbProductId?: string;
   [key: string]: string | number | undefined;
 }
 
@@ -47,6 +51,16 @@ export default function CSVBulkProjectDetail() {
   const [htmlPreviewContent, setHtmlPreviewContent] = useState('');
   const [copiedIds, setCopiedIds] = useState<Set<number>>(new Set());
   const itemsPerPage = 6;
+
+  // Filter states
+  const [searchPid, setSearchPid] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  
+  // Regeneration dialog
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const { data: project, isLoading: isLoadingProject } = useQuery<Project>({
     queryKey: [`/api/projects/${id}`],
@@ -69,6 +83,7 @@ export default function CSVBulkProjectDetail() {
 
       return {
         id: idx + 1,
+        dbProductId: p.id,
         p_id: p.articleNumber || '',
         v_id: getCustomAttr('v_id'),
         p_item_number: getCustomAttr('p_item_number'),
@@ -91,9 +106,30 @@ export default function CSVBulkProjectDetail() {
     });
   }, [rawProducts]);
 
-  const totalPages = Math.ceil(bulkProducts.length / itemsPerPage);
+  // Filtered products based on search
+  const filteredProducts = useMemo(() => {
+    return bulkProducts.filter(product => {
+      const matchesPid = searchPid === '' || 
+        product.p_id.toLowerCase().includes(searchPid.toLowerCase());
+      
+      const matchesText = searchText === '' || 
+        product.produktname.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.produktname_neu.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.produktbeschreibung_html.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.p_item_number.toLowerCase().includes(searchText.toLowerCase());
+      
+      return matchesPid && matchesText;
+    });
+  }, [bulkProducts, searchPid, searchText]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedProducts = bulkProducts.slice(startIndex, startIndex + itemsPerPage);
+  const displayedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset page when filter changes
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [searchPid, searchText]);
 
   const handleCopyToClipboard = (text: string, productId: number) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -146,6 +182,97 @@ export default function CSVBulkProjectDetail() {
       description: `${bulkProducts.length} Produkte exportiert.`,
     });
   };
+
+  const toggleProductSelection = (pId: string) => {
+    setSelectedProducts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pId)) {
+        newSet.delete(pId);
+      } else {
+        newSet.add(pId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllVisible = () => {
+    const visiblePids = displayedProducts.map(p => p.p_id);
+    const allSelected = visiblePids.every(pid => selectedProducts.has(pid));
+    
+    setSelectedProducts(prev => {
+      const newSet = new Set(prev);
+      if (allSelected) {
+        visiblePids.forEach(pid => newSet.delete(pid));
+      } else {
+        visiblePids.forEach(pid => newSet.add(pid));
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllFiltered = () => {
+    setSelectedProducts(new Set(filteredProducts.map(p => p.p_id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedProducts(new Set());
+  };
+
+  const handleRegenerate = async () => {
+    if (selectedProducts.size === 0) {
+      toast({
+        title: "Keine Produkte ausgewählt",
+        description: "Bitte wähle mindestens ein Produkt zum Neu-Generieren aus.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRegenerating(true);
+    
+    try {
+      const selectedProductIds = bulkProducts
+        .filter(p => selectedProducts.has(p.p_id))
+        .map(p => p.dbProductId)
+        .filter(id => id !== undefined);
+
+      await fetch(`/api/projects/${id}/regenerate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productIds: selectedProductIds,
+          customPrompt: customPrompt.trim() || undefined,
+        }),
+      });
+
+      toast({
+        title: "Neu-Generierung gestartet",
+        description: `${selectedProducts.size} Produkte werden neu generiert...`,
+      });
+
+      setShowRegenerateDialog(false);
+      setCustomPrompt('');
+      setSelectedProducts(new Set());
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/products`] });
+    } catch (error: any) {
+      toast({
+        title: "Fehler",
+        description: error.message || "Fehler beim Neu-Generieren",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchPid('');
+    setSearchText('');
+  };
+
+  const hasActiveFilters = searchPid !== '' || searchText !== '';
 
   const isLoading = isLoadingProject || isLoadingProducts;
 
@@ -210,11 +337,109 @@ export default function CSVBulkProjectDetail() {
           </Button>
         </div>
 
+        {/* Filter & Selection Panel */}
+        <Card className="mb-4">
+          <CardContent className="pt-4">
+            <div className="flex flex-wrap items-end gap-4">
+              {/* Search by p_id */}
+              <div className="flex-1 min-w-[200px]">
+                <Label htmlFor="search-pid" className="text-sm font-medium mb-1 block">
+                  Produkt-ID (p_id)
+                </Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="search-pid"
+                    placeholder="z.B. 12345"
+                    value={searchPid}
+                    onChange={(e) => setSearchPid(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              {/* Search by text */}
+              <div className="flex-1 min-w-[250px]">
+                <Label htmlFor="search-text" className="text-sm font-medium mb-1 block">
+                  Suche (Name, Beschreibung, Artikelnummer)
+                </Label>
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="search-text"
+                    placeholder="Suchbegriff eingeben..."
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              {/* Filter actions */}
+              <div className="flex items-center gap-2">
+                {hasActiveFilters && (
+                  <Button variant="outline" size="sm" onClick={clearFilters}>
+                    <X className="w-4 h-4 mr-1" />
+                    Filter löschen
+                  </Button>
+                )}
+              </div>
+
+              {/* Selection actions */}
+              <div className="flex items-center gap-2 ml-auto">
+                {selectedProducts.size > 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    {selectedProducts.size} ausgewählt
+                  </span>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={selectAllFiltered}
+                  disabled={filteredProducts.length === 0}
+                >
+                  Alle gefilterten auswählen ({filteredProducts.length})
+                </Button>
+                {selectedProducts.size > 0 && (
+                  <Button variant="outline" size="sm" onClick={clearSelection}>
+                    Auswahl aufheben
+                  </Button>
+                )}
+                <Button 
+                  onClick={() => setShowRegenerateDialog(true)}
+                  disabled={selectedProducts.size === 0}
+                  className="bg-primary"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Ausgewählte neu generieren
+                </Button>
+              </div>
+            </div>
+
+            {hasActiveFilters && (
+              <div className="mt-3 text-sm text-muted-foreground">
+                {filteredProducts.length} von {bulkProducts.length} Produkten entsprechen dem Filter
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {bulkProducts.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16">
               <Package className="w-16 h-16 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">Keine Produkte in diesem Projekt</h3>
+            </CardContent>
+          </Card>
+        ) : filteredProducts.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Search className="w-16 h-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Keine Produkte gefunden</h3>
+              <p className="text-muted-foreground mb-4">Passe deine Filterkriterien an</p>
+              <Button variant="outline" onClick={clearFilters}>
+                Filter zurücksetzen
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -223,6 +448,12 @@ export default function CSVBulkProjectDetail() {
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={displayedProducts.length > 0 && displayedProducts.every(p => selectedProducts.has(p.p_id))}
+                        onCheckedChange={toggleAllVisible}
+                      />
+                    </TableHead>
                     <TableHead className="min-w-[80px]">p_id</TableHead>
                     <TableHead className="min-w-[80px]">v_id</TableHead>
                     <TableHead className="min-w-[120px]">p_item_number</TableHead>
@@ -243,7 +474,16 @@ export default function CSVBulkProjectDetail() {
                 </TableHeader>
                 <TableBody>
                   {displayedProducts.map((product) => (
-                    <TableRow key={product.id}>
+                    <TableRow 
+                      key={product.id}
+                      className={selectedProducts.has(product.p_id) ? 'bg-primary/5' : ''}
+                    >
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedProducts.has(product.p_id)}
+                          onCheckedChange={() => toggleProductSelection(product.p_id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-xs">{product.p_id}</TableCell>
                       <TableCell className="font-mono text-xs">{product.v_id}</TableCell>
                       <TableCell className="font-mono text-xs">{product.p_item_number}</TableCell>
@@ -364,7 +604,8 @@ export default function CSVBulkProjectDetail() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between p-4 border-t">
                 <div className="text-sm text-muted-foreground">
-                  Zeige {startIndex + 1}-{Math.min(startIndex + itemsPerPage, bulkProducts.length)} von {bulkProducts.length} Produkten
+                  Zeige {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredProducts.length)} von {filteredProducts.length} Produkten
+                  {hasActiveFilters && ` (${bulkProducts.length} gesamt)`}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -392,6 +633,7 @@ export default function CSVBulkProjectDetail() {
           </Card>
         )}
 
+        {/* HTML Preview Dialog */}
         <Dialog open={showHtmlPreview} onOpenChange={setShowHtmlPreview}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -401,6 +643,74 @@ export default function CSVBulkProjectDetail() {
               className="prose prose-sm max-w-none dark:prose-invert p-4 border rounded-lg bg-white"
               dangerouslySetInnerHTML={{ __html: htmlPreviewContent }}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Regenerate Dialog */}
+        <Dialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5" />
+                {selectedProducts.size} Produkte neu generieren
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div>
+                <Label htmlFor="custom-prompt" className="text-sm font-medium">
+                  Zusätzliche Anweisungen (optional)
+                </Label>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Gib hier spezielle Anweisungen ein, die bei der Neugenerierung berücksichtigt werden sollen.
+                </p>
+                <Textarea
+                  id="custom-prompt"
+                  placeholder="z.B. 'Betone die Langlebigkeit des Akkus' oder 'Fokussiere auf die Kompatibilität mit Samsung-Geräten'"
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  className="min-h-[120px]"
+                />
+              </div>
+
+              <div className="bg-muted/50 rounded-lg p-3">
+                <h4 className="text-sm font-medium mb-2">Ausgewählte Produkte:</h4>
+                <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto">
+                  {Array.from(selectedProducts).slice(0, 20).map(pid => (
+                    <span 
+                      key={pid} 
+                      className="text-xs bg-background border rounded px-2 py-1 font-mono"
+                    >
+                      {pid}
+                    </span>
+                  ))}
+                  {selectedProducts.size > 20 && (
+                    <span className="text-xs text-muted-foreground">
+                      +{selectedProducts.size - 20} weitere
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRegenerateDialog(false)}>
+                Abbrechen
+              </Button>
+              <Button onClick={handleRegenerate} disabled={isRegenerating}>
+                {isRegenerating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Generiere...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Jetzt neu generieren
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
