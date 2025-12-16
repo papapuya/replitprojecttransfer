@@ -730,6 +730,9 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       
       console.log(`🔍 [COMPAT] Suche "passend für folgende Modelle" Abschnitt...`);
       
+      // 1:1 RAW EXTRAKTION: Alle Zeilen im Kompatibilitäts-Abschnitt sammeln (OHNE Normalisierung!)
+      const rawCompatLines: string[] = [];
+      
       for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.length < 3) continue;
@@ -751,65 +754,38 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
           break;
         }
         
-        // Nur im Kompatibilitäts-Abschnitt parsen
+        // Nur im Kompatibilitäts-Abschnitt - ALLE Zeilen 1:1 sammeln!
         if (inCompatSection) {
-          // Pattern: "Marke: Modell: Kategorie" → extrahiere nur "Modell"
-          const tripleColonMatch = trimmed.match(/^([^:]+):\s*([^:]+):\s*([^:]+)$/);
-          if (tripleColonMatch) {
-            const modell = tripleColonMatch[2].trim();
-            const kategorie = tripleColonMatch[3].trim().toLowerCase();
+          // Pattern: "Marke: Modell" → extrahiere "Marke Modell" (mit Marke!)
+          const colonMatch = trimmed.match(/^([^:]+):\s*(.+)$/);
+          if (colonMatch) {
+            const marke = colonMatch[1].trim();
+            const modell = colonMatch[2].trim();
             
-            // Nur wenn Kategorie eine Produktkategorie ist (nicht Modell)
-            if (productCategories.some(cat => kategorie.includes(cat))) {
-              if (modell.length > 3) {
-                allModels.push(modell);
-                console.log(`   📱 Modell extrahiert: "${modell}" (Kategorie: ${kategorie})`);
-              }
-              continue;
-            }
-          }
-          
-          // Pattern: "Marke: Modell" (ohne dritte Kategorie)
-          // z.B. "Apple: iPhone 8 Plus" → "iPhone 8 Plus"
-          const doubleColonMatch = trimmed.match(/^([^:]+):\s*([^:]+)$/);
-          if (doubleColonMatch) {
-            const marke = doubleColonMatch[1].trim();
-            const modell = doubleColonMatch[2].trim();
-            
-            // NUR technische Labels ausschließen - NICHT Marken wie Apple, Samsung!
-            const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity', 'lieferumfang', 'hinweis', 'achtung'];
-            if (!technicalLabels.includes(marke.toLowerCase()) && modell.length > 3) {
-              allModels.push(modell);
-              console.log(`   📱 Modell extrahiert: "${modell}" (Marke: ${marke})`);
+            // Technische Labels ausschließen
+            const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity', 'lieferumfang', 'hinweis', 'achtung', 'typencode'];
+            if (!technicalLabels.includes(marke.toLowerCase()) && modell.length > 1) {
+              // MARKE + MODELL zusammen speichern für bessere Lesbarkeit
+              rawCompatLines.push(`${marke} ${modell}`);
+              console.log(`   📱 [RAW] ${marke} ${modell}`);
             }
             continue;
           }
           
-          // Einfache Zeile ohne Doppelpunkte (z.B. "iPhone X")
-          if (!trimmed.includes(':') && trimmed.length > 3 && trimmed.length < 50) {
-            allModels.push(trimmed);
-            console.log(`   📱 Modell direkt: "${trimmed}"`);
+          // Einfache Zeile ohne Doppelpunkte
+          if (!trimmed.includes(':') && trimmed.length > 3 && trimmed.length < 80) {
+            rawCompatLines.push(trimmed);
+            console.log(`   📱 [RAW] ${trimmed}`);
           }
         }
       }
       
-      console.log(`   🔍 Gefundene Modelle: ${allModels.length}`)
+      console.log(`   🔍 [RAW] Gefundene Einträge: ${rawCompatLines.length}`);
       
-      if (allModels.length > 0) {
-        // ═══════════════════════════════════════════════════════════════
-        // NORMALISIERUNG & BEREINIGUNG der extrahierten Modelle
-        // ═══════════════════════════════════════════════════════════════
-        const { compatible, incompatible } = normalizeCompatibilityModels(allModels);
-        
-        if (compatible.length > 0) {
-          specs['Kompatibilität'] = compatible.join(', ');
-          console.log(`📋 Kompatibilität: ${compatible.length} Modelle (normalisiert)`);
-        }
-        
-        if (incompatible.length > 0) {
-          specs['Nicht kompatibel mit'] = incompatible.join(', ');
-          console.log(`⛔ Nicht kompatibel: ${incompatible.length} Modelle (Ausschlüsse)`);
-        }
+      // KEINE Normalisierung! Einfach 1:1 speichern
+      if (rawCompatLines.length > 0) {
+        specs['Kompatibilität'] = rawCompatLines.join(', ');
+        console.log(`📋 [COMPAT] 1:1 RAW gespeichert: ${rawCompatLines.length} Einträge`);
         break;
       }
     }

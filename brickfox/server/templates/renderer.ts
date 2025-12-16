@@ -941,43 +941,8 @@ function renderMediaMarktLayout(data: {
   
   // Kompatibilität als Fließtext unter die Tabelle (nicht in Tabelle!)
   // REGEL: Bei Batterien KEIN Kompatibilitätsfeld, bei anderen direkt mit Modellen beginnen
-  // REGEL: Keine technischen Spezifikationen wie "12 Volt Systeme" oder "ab 10.1 Ah" als Kompatibilität!
-  const filterValidCompatibility = (models: string[]): string[] => {
-    if (!models || models.length === 0) return [];
-    
-    return models.filter(model => {
-      const m = model.trim().toLowerCase();
-      
-      // Technische Spezifikationen sind KEINE gültige Kompatibilität
-      const invalidPatterns = [
-        /^\d+\s*volt/i,           // "12 Volt Systeme"
-        /volt\s*system/i,         // "Volt Systeme"
-        /\d+\s*ah\b/i,            // "10.1 Ah"
-        /\d+\s*mah\b/i,           // "2000 mAh"
-        /\d+\s*wh\b/i,            // "50 Wh"
-        /ab\s*\d+/i,              // "ab 10.1"
-        /^system/i,               // "Systeme..."
-        /^\d+\s*v\s/i,            // "12 V ..."
-      ];
-      
-      for (const pattern of invalidPatterns) {
-        if (pattern.test(m)) {
-          console.log(`🚫 [COMPAT] Gefiltert (keine echte Kompatibilität): "${model}"`);
-          return false;
-        }
-      }
-      
-      // Muss mindestens einen Buchstaben enthalten (kein reiner Zahlenwert)
-      if (!/[a-z]/i.test(model)) {
-        console.log(`🚫 [COMPAT] Gefiltert (nur Zahlen): "${model}"`);
-        return false;
-      }
-      
-      return true;
-    });
-  };
-  
-  const validKompatibleModelle = filterValidCompatibility(data.kompatibleModelle || []);
+  // KEINE Filterung mehr - Daten kommen 1:1 aus der CSV!
+  const validKompatibleModelle = data.kompatibleModelle || [];
   
   // REGEL: Kompatibilität mit Marke vor Modellnummern
   // Die Marke wird aus dem Produktnamen extrahiert falls nicht bereits vorhanden
