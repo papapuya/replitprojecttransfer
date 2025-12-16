@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Upload, FileSpreadsheet, CheckCircle, XCircle, Search } from "lucide-react";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 interface CSVData {
   headers: string[];
@@ -30,23 +31,44 @@ export default function CSVCompare() {
   const pimInputRef = useRef<HTMLInputElement>(null);
   const supplierInputRef = useRef<HTMLInputElement>(null);
 
-  const parseCSV = (file: File, callback: (data: CSVData) => void) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      encoding: "UTF-8",
-      complete: (results) => {
-        const headers = results.meta.fields || [];
-        const rows = results.data as Record<string, string>[];
-        callback({ headers, rows });
-      },
-    });
+  const parseFile = (file: File, callback: (data: CSVData) => void) => {
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { defval: '' });
+        
+        if (jsonData.length > 0) {
+          const headers = Object.keys(jsonData[0]);
+          callback({ headers, rows: jsonData });
+        } else {
+          callback({ headers: [], rows: [] });
+        }
+      };
+      reader.readAsBinaryString(file);
+    } else {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        encoding: "UTF-8",
+        complete: (results) => {
+          const headers = results.meta.fields || [];
+          const rows = results.data as Record<string, string>[];
+          callback({ headers, rows });
+        },
+      });
+    }
   };
 
   const handlePimUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      parseCSV(file, (data) => {
+      parseFile(file, (data) => {
         setPimCSV(data);
         const pNameCol = data.headers.find(h => h.toLowerCase().includes('p_name'));
         if (pNameCol) setPimColumn(pNameCol);
@@ -57,7 +79,7 @@ export default function CSVCompare() {
   const handleSupplierUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      parseCSV(file, (data) => {
+      parseFile(file, (data) => {
         setSupplierCSV(data);
         const typCol = data.headers.find(h => h.toLowerCase() === 'typ');
         if (typCol) setSupplierColumn(typCol);
@@ -134,7 +156,7 @@ export default function CSVCompare() {
           <CardContent className="space-y-4">
             <input
               type="file"
-              accept=".csv"
+              accept=".csv,.xlsx,.xls"
               ref={pimInputRef}
               onChange={handlePimUpload}
               className="hidden"
@@ -177,7 +199,7 @@ export default function CSVCompare() {
           <CardContent className="space-y-4">
             <input
               type="file"
-              accept=".csv,.xlsx"
+              accept=".csv,.xlsx,.xls"
               ref={supplierInputRef}
               onChange={handleSupplierUpload}
               className="hidden"
