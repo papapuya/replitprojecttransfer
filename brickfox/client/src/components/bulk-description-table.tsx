@@ -115,14 +115,14 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                 <TableHead className="min-w-[500px]">
                   Produktbeschreibung HTML
                 </TableHead>
+                <TableHead className="min-w-[400px]">
+                  Produktbeschreibung (Original CSV)
+                </TableHead>
                 <TableHead className="min-w-[250px]">
                   Produktname (NL)
                 </TableHead>
                 <TableHead className="min-w-[500px]">
                   Produktbeschreibung (NL)
-                </TableHead>
-                <TableHead className="min-w-[400px]">
-                  Produktbeschreibung (Original CSV)
                 </TableHead>
                 <TableHead className="min-w-[300px]">
                   MediaMarkt Titel V1
