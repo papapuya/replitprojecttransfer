@@ -1469,7 +1469,7 @@ export default function CSVBulkDescription() {
                   </div>
                 </div>
               )}
-              <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg scrollbar-visible" style={{ scrollbarWidth: 'auto', scrollbarColor: '#888 #f1f1f1' }}>
+              <div className="table-scroll-visible max-h-[600px] border rounded-lg" style={{ scrollbarWidth: 'auto', scrollbarColor: '#888 #f1f1f1' }}>
                 <table className="w-full border-collapse text-xs min-w-max">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-muted">
