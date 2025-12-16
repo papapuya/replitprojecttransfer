@@ -57,6 +57,7 @@ const shopMenus = [
 const toolsMenuItems = [
   { title: "Lieferanten-Profile", url: "/suppliers", icon: Building2 },
   { title: "CSV Vergleich", url: "/csv-compare", icon: GitCompare },
+  { title: "Attribut-Befüller", url: "/attribute-filler", icon: FileSpreadsheet },
   { title: "Pixi Vergleich", url: "/pixi-compare", icon: GitCompare, feature: "pixiIntegration" },
   { title: "MediaMarkt Generator", url: "/mediamarkt-generator", icon: ShoppingCart },
   { title: "Gewichte-Generator", url: "/weight-generator", icon: Scale },

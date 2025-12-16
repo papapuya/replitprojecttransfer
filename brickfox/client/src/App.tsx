@@ -41,6 +41,7 @@ import PromptAssistant from "@/pages/prompt-assistant";
 import CSVBulkProjects from "@/pages/csv-bulk-projects";
 import CSVBulkProjectDetail from "@/pages/csv-bulk-project-detail";
 import CSVCompare from "@/pages/csv-compare";
+import AttributeFiller from "@/pages/attribute-filler";
 
 function Router() {
   return (
@@ -117,6 +118,11 @@ function Router() {
       <Route path="/csv-compare">
         <ProtectedRoute>
           <CSVCompare />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/attribute-filler">
+        <ProtectedRoute>
+          <AttributeFiller />
         </ProtectedRoute>
       </Route>
       <Route path="/pixi-compare">
