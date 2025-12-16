@@ -817,11 +817,11 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
   for (const [productType, modelNumbers] of groups) {
     if (modelNumbers.length === 0) {
       // Nur Produkttyp ohne Modellnummern
-      lines.push(`<strong>${e(productType)}</strong>`);
+      lines.push(`${e(productType)}`);
     } else {
-      // Produkttyp in Bold + Modellnummern kommagetrennt
+      // Produkttyp + Modellnummern kommagetrennt
       const modelsStr = modelNumbers.map(m => e(m)).join(', ');
-      lines.push(`<strong>${e(productType)}</strong> ${modelsStr}`);
+      lines.push(`${e(productType)} ${modelsStr}`);
     }
   }
   
