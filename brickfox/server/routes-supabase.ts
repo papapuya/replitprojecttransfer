@@ -976,6 +976,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Regenerate selected products with optional custom prompt
+  app.post('/api/projects/:projectId/regenerate', requireAuth, checkApiLimit, async (req: any, res) => {
+    try {
+      const { productIds, customPrompt } = req.body;
+      const projectId = req.params.projectId;
+
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({ error: 'Keine Produkte ausgewählt' });
+      }
+
+      console.log(`[REGENERATE] Starting regeneration for ${productIds.length} products in project ${projectId}`);
+      if (customPrompt) {
+        console.log(`[REGENERATE] Custom prompt: ${customPrompt.substring(0, 100)}...`);
+      }
+
+      // Get all products from project
+      const allProducts = await supabaseStorage.getProducts(projectId, req.user.id);
+      const productsToRegenerate = allProducts.filter(p => productIds.includes(p.id));
+
+      if (productsToRegenerate.length === 0) {
+        return res.status(404).json({ error: 'Keine passenden Produkte gefunden' });
+      }
+
+      // Send immediate response
+      res.json({ 
+        success: true, 
+        message: `Regenerierung für ${productsToRegenerate.length} Produkte gestartet`,
+        count: productsToRegenerate.length 
+      });
+
+      // Process regeneration in background
+      (async () => {
+        const { generateProductDescription } = await import('./ai-service');
+        
+        for (const product of productsToRegenerate) {
+          try {
+            // Get original description from customAttributes
+            const originalDesc = product.customAttributes?.find(a => a.key === 'produktbeschreibung_original')?.value || product.previewText || '';
+            const productName = product.exactProductName || product.name || '';
+
+            // Build extractedData array for generateProductDescription
+            const extractedData: Record<string, any>[] = [{
+              productName,
+              description: originalDesc,
+              additionalInstructions: customPrompt || '',
+              // Add any other relevant data from customAttributes
+              ...product.customAttributes?.reduce((acc, attr) => {
+                acc[attr.key] = attr.value;
+                return acc;
+              }, {} as Record<string, string>)
+            }];
+
+            // Add custom prompt to attributes if provided
+            const customAttrs = {
+              exactProductName: productName,
+              articleNumber: product.articleNumber || '',
+              customAttributes: product.customAttributes || [],
+            };
+
+            console.log(`[REGENERATE] Processing product: ${productName.substring(0, 50)}...`);
+
+            // Call AI to regenerate description
+            const result = await generateProductDescription(extractedData, undefined, customAttrs);
+
+            if (result && result.html) {
+              // Update product with new HTML
+              await supabaseStorage.updateProduct(product.id, {
+                htmlCode: result.html,
+                name: result.produktTitel || product.name,
+              }, req.user.id);
+              console.log(`[REGENERATE] ✅ Updated product ${product.id}`);
+            }
+          } catch (err) {
+            console.error(`[REGENERATE] ❌ Error processing product ${product.id}:`, err);
+          }
+        }
+        console.log(`[REGENERATE] Finished regenerating ${productsToRegenerate.length} products`);
+      })();
+
+    } catch (error: any) {
+      console.error('[REGENERATE] Error:', error);
+      res.status(500).json({ error: error.message || 'Fehler bei der Neugenerierung' });
+    }
+  });
+
   app.post('/api/bulk-save-to-project', requireAuth, requireFeature('csvBulkImport'), checkApiLimit, async (req: any, res) => {
     try {
       const { projectName, products, sourceType, exportColumns } = req.body;
