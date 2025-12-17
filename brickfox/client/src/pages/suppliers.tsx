@@ -359,7 +359,7 @@ export default function Suppliers() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => setLocation(`/suppliers/${supplier.id}`)}
                 >
-                  <TableCell className="font-medium text-primary hover:underline">
+                  <TableCell className="font-medium text-blue-500 hover:underline cursor-pointer">
                     {supplier.name}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
