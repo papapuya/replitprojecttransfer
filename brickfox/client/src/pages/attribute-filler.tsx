@@ -261,11 +261,11 @@ export default function AttributeFiller() {
           return null; // Alle bereits befüllt
         }
 
-        // Feste Werte sofort setzen (ohne AI)
+        // Feste Werte sofort setzen (ohne AI) - verwende key (CSV-Spaltenname) statt label
         const fixedResults: Record<string, string> = {};
         const aiAttributesToFill = attributesToFill.filter(a => {
           if (a.type === 'fixed' && a.fixedValue) {
-            fixedResults[a.label] = a.fixedValue;
+            fixedResults[a.key] = a.fixedValue;  // key = voller CSV-Spaltenname
             return false;  // Nicht an AI senden
           }
           return true;  // An AI senden
@@ -278,6 +278,7 @@ export default function AttributeFiller() {
           if (aiAttributesToFill.length > 0) {
             const productName = row['p_name[de]'] || '';
             
+            // Sende key UND label für korrektes Mapping
             const response = await fetch('/api/analyze-attributes', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -285,6 +286,7 @@ export default function AttributeFiller() {
                 description,
                 productName,
                 attributes: aiAttributesToFill.map(a => ({ 
+                  key: a.key,     // Voller CSV-Spaltenname für Rück-Mapping
                   label: a.label, 
                   type: a.type,
                   choices: a.choices  // Für choice-Attribute
@@ -318,10 +320,11 @@ export default function AttributeFiller() {
       results.forEach(result => {
         if (result) {
           const { index, attributes, attributesToFill } = result;
-          console.log(`[Attribut-Befüller] Produkt ${index}: AI-Antwort:`, attributes);
+          console.log(`[Attribut-Befüller] Produkt ${index}: API-Antwort (key-basiert):`, attributes);
           attributesToFill.forEach((attr: AttributeConfig) => {
-            const value = attributes[attr.label];
-            console.log(`[Attribut-Befüller] Attribut "${attr.label}" (key: ${attr.key}): Wert=${value}, Typ=${attr.type}`);
+            // Backend liefert jetzt key-basierte Antwort (voller CSV-Spaltenname)
+            const value = attributes[attr.key];
+            console.log(`[Attribut-Befüller] Attribut key="${attr.key}": Wert=${value}, Typ=${attr.type}`);
             if (value !== undefined && value !== null && value !== '') {
               if (attr.type === 'yesNo') {
                 updatedData[index][attr.key] = value ? 'Ja' : 'Nein';
