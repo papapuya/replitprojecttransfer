@@ -104,7 +104,6 @@ export default function AttributeFiller() {
         'allg_farbe_geheause': { type: 'text' },  // Farbe aus Beschreibung
         'tala_stromversorgung': { type: 'text' },  // Stromversorgung aus Beschreibung extrahieren (z.B. "2 x AA Mignon")
         'verp_einheit': { type: 'fixed', fixedValue: '1' },  // Immer 1
-        'allg_lieferumfang': { type: 'fixed', fixedValue: '1' },  // Immer 1
         'allg_gefahrengut': { type: 'fixed', fixedValue: 'Fällt nicht unter Gefahrengut' },  // Immer dieser Text
         // Weitere Ja/Nein Attribute (wie WST_)
         'Wochentagsanzeige': { type: 'yesNo' },
