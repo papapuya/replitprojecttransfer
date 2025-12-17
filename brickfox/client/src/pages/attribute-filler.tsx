@@ -94,6 +94,7 @@ export default function AttributeFiller() {
       const specialRules: Record<string, { type: 'text' | 'fixed' | 'choice' | 'yesNo'; fixedValue?: string; choices?: string[] }> = {
         'akku_produktart': { type: 'fixed', fixedValue: 'neu' },  // Immer "neu" eintragen
         'Artikelzustand': { type: 'fixed', fixedValue: 'neu' },  // Immer "neu" eintragen
+        'OTTOMARKET_GEFAHRGUT': { type: 'text' },  // Gefahrgut-Prüfung durch AI
         'allg_farbe_geheause': { type: 'text' },  // Farbe aus Beschreibung
         'tala_stromversorgung': { type: 'text' },  // Stromversorgung aus Beschreibung extrahieren (z.B. "2 x AA Mignon")
         'verp_einheit': { type: 'fixed', fixedValue: '1' },  // Immer 1
