@@ -404,7 +404,7 @@ export default function AttributeFiller() {
     });
   };
 
-  const handleDownload = () => {
+  const handleDownload = (withBOM: boolean = false) => {
     if (rawData.length === 0) return;
 
     // Exakte Spaltenreihenfolge und -namen wie in Original-CSV
@@ -426,19 +426,22 @@ export default function AttributeFiller() {
       )
     ].join('\n');
 
-    // UTF-8 mit BOM für Excel-Kompatibilität (Excel erkennt UTF-8 sonst nicht beim direkten Öffnen)
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8' });
+    // UTF-8 mit oder ohne BOM
+    const content = withBOM ? '\uFEFF' + csvContent : csvContent;
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${file?.name?.replace('.csv', '') || 'export'}_attributes.csv`;
+    const suffix = withBOM ? '_excel' : '_pim';
+    a.download = `${file?.name?.replace('.csv', '') || 'export'}_attributes${suffix}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 
     toast({
       title: "Export erfolgreich",
-      description: `${rawData.length} Zeilen mit Original-Spaltennamen exportiert`,
+      description: withBOM 
+        ? `${rawData.length} Zeilen exportiert (Excel-Format mit BOM)` 
+        : `${rawData.length} Zeilen exportiert (PIM-Format ohne BOM)`,
     });
   };
 
@@ -519,9 +522,13 @@ export default function AttributeFiller() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={handleDownload} disabled={processing}>
+                  <Button onClick={() => handleDownload(false)} disabled={processing} title="UTF-8 ohne BOM für Brickfox/PIM">
                     <Download className="w-4 h-4 mr-2" />
-                    CSV Export
+                    PIM Export
+                  </Button>
+                  <Button onClick={() => handleDownload(true)} disabled={processing} variant="outline" title="UTF-8 mit BOM für Excel">
+                    <Download className="w-4 h-4 mr-2" />
+                    Excel Export
                   </Button>
                   <Button
                     variant="outline"
