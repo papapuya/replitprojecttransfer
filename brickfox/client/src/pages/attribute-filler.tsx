@@ -627,6 +627,7 @@ export default function AttributeFiller() {
                   <thead className="sticky top-0 bg-card z-20">
                     <tr className="border-b">
                       <th className="text-left p-2 text-muted-foreground whitespace-nowrap sticky left-0 bg-card z-10">p_id</th>
+                      <th className="text-left p-2 text-muted-foreground whitespace-nowrap">p_item_number</th>
                       <th className="text-left p-2 text-muted-foreground whitespace-nowrap">Produktart</th>
                       <th className="text-left p-2 text-muted-foreground whitespace-nowrap">Farbe</th>
                       {attributeConfigs.filter(a => a.enabled).map(attr => (
@@ -654,6 +655,7 @@ export default function AttributeFiller() {
                       return displayRows.map(({ row, realIndex }) => (
                         <tr key={realIndex} className="border-b hover:bg-accent/50">
                           <td className="p-2 text-foreground whitespace-nowrap sticky left-0 bg-card">{row[pidKey]}</td>
+                          <td className="p-2 text-foreground whitespace-nowrap">{row['p_item_number'] || row['v_item_number'] || '-'}</td>
                           <td className="p-2 text-foreground whitespace-nowrap">
                             {row['p_attributes[akku_produktart][de]'] || row['v_attributes[akku_produktart][de]'] || '-'}
                           </td>
