@@ -76,13 +76,18 @@ export default function AttributeFiller() {
       );
 
       // Spezielle Attribut-Regeln
-      const specialRules: Record<string, { type: 'text' | 'fixed' | 'choice'; fixedValue?: string; choices?: string[] }> = {
+      const specialRules: Record<string, { type: 'text' | 'fixed' | 'choice' | 'yesNo'; fixedValue?: string; choices?: string[] }> = {
         'akku_produktart': { type: 'fixed', fixedValue: 'neu' },  // Immer "neu" eintragen
         'allg_farbe_geheause': { type: 'text' },  // Farbe aus Beschreibung
         'tala_stromversorgung': { type: 'choice', choices: ['Akkutyp', 'Batterie'] },  // Nur Akkutyp oder Batterie
         'verp_einheit': { type: 'fixed', fixedValue: '1' },  // Immer 1
         'allg_lieferumfang': { type: 'fixed', fixedValue: '1' },  // Immer 1
         'allg_gefahrengut': { type: 'fixed', fixedValue: 'Fällt nicht unter Gefahrengut' },  // Immer dieser Text
+        // Weitere Ja/Nein Attribute (wie WST_)
+        'Wochentagsanzeige': { type: 'yesNo' },
+        'Zeitzoneneinstellung': { type: 'yesNo' },
+        'Wandaufhängung': { type: 'yesNo' },
+        'Innentemperatur': { type: 'yesNo' },
       };
       
       const configs: AttributeConfig[] = attributeHeaders.map(h => {
@@ -103,11 +108,12 @@ export default function AttributeFiller() {
           };
         }
         
-        // WST_ Attribute sind Ja/Nein
+        // WST_ Attribute sind Ja/Nein und automatisch aktiviert
+        const isWstAttr = label.startsWith('WST_');
         return {
           key: h,
           label: label,
-          enabled: label.startsWith('WST_'),
+          enabled: isWstAttr,
           type: 'yesNo'
         };
       });
