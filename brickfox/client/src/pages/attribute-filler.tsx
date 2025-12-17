@@ -99,7 +99,7 @@ export default function AttributeFiller() {
   const { data: profiles = [], isLoading: profilesLoading } = useQuery<AttributeProfile[]>({
     queryKey: ['attribute-profiles'],
     queryFn: async () => {
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      const token = localStorage.getItem('supabase_token') || sessionStorage.getItem('supabase_token');
       const response = await fetch('/api/attribute-profiles', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -112,7 +112,7 @@ export default function AttributeFiller() {
   // Profil speichern Mutation
   const saveProfileMutation = useMutation({
     mutationFn: async (data: { id?: string; name: string; description?: string; attributes: AttributeConfig[]; aiRules: AIRule[]; customPrompt?: string; isDefault?: boolean }) => {
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      const token = localStorage.getItem('supabase_token') || sessionStorage.getItem('supabase_token');
       const url = data.id ? `/api/attribute-profiles/${data.id}` : '/api/attribute-profiles';
       const method = data.id ? 'PUT' : 'POST';
       const response = await fetch(url, {
@@ -139,7 +139,7 @@ export default function AttributeFiller() {
   // Profil löschen Mutation
   const deleteProfileMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      const token = localStorage.getItem('supabase_token') || sessionStorage.getItem('supabase_token');
       const response = await fetch(`/api/attribute-profiles/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
