@@ -776,32 +776,94 @@ export default function URLScraper() {
         description: `${productUrls.length} ${productUrls.length === 1 ? 'Produkt' : 'Produkte'} - Starte Scraping...`,
       });
 
-      // Step 3: Update preview with URL - For MVP, show found URLs
-      const finalProducts: ScrapedProduct[] = productUrls.map((url, idx) => ({
-        productName: url.split('/').slice(-2, -1)[0]?.replace(/-/g, ' ') || `Produkt ${idx + 1}`,
-        articleNumber: url.split('/').pop() || '',
-        url: url,
-        ean: '',
-        manufacturer: '',
-        price: '',
-        description: 'URL erfolgreich gescraped',
-        images: [],
-        category: '',
-        rawHtml: '',
-        imagesCount: 0,
-        autoExtractedDescription: '',
-        technicalDataTable: '',
-        pdfManualUrl: '',
-        safetyWarnings: '',
-      })) as ScrapedProduct[];
+      // Step 3: Scrape each product page with selectors
+      const scrapedProductsList: ScrapedProduct[] = [];
+      
+      // Determine which selectors to use
+      let activeSelectors: Record<string, string> = {};
+      if (selectedSupplierId !== "__none__" && suppliersData?.suppliers) {
+        const supplier = suppliersData.suppliers.find((s: any) => s.id === selectedSupplierId);
+        if (supplier && supplier.selectors) {
+          activeSelectors = { ...supplier.selectors };
+        }
+      }
+      
+      // Fallback: use selectors from UI state if no supplier selectors
+      if (Object.keys(activeSelectors).length === 0) {
+        Object.entries(selectors).forEach(([key, value]) => {
+          if (value.trim()) activeSelectors[key] = value;
+        });
+      }
 
-      setScrapedProducts(finalProducts);
+      let failedCount = 0;
+      for (let i = 0; i < productUrls.length; i++) {
+        if (abortScrapingRef.current) {
+          break;
+        }
+
+        const productUrl = productUrls[i];
+        
+        setBatchProgress({ 
+          current: i + 1, 
+          total: productUrls.length, 
+          status: `Scrape Produkt ${i + 1}/${productUrls.length}...` 
+        });
+
+        try {
+          const token = localStorage.getItem('supabase_token');
+          const response = await fetch('/api/scrape-product', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              url: productUrl,
+              selectors: Object.keys(activeSelectors).length > 0 ? activeSelectors : undefined,
+              userAgent: userAgent || undefined,
+              cookies: sessionCookies || undefined,
+              supplierId: selectedSupplierId !== "__none__" ? selectedSupplierId : undefined
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.product) {
+              scrapedProductsList.push(data.product);
+              // Live update: show progress in table
+              setScrapedProducts([...scrapedProductsList]);
+            } else {
+              console.error(`Fehler beim Scrapen von ${productUrl}`);
+              failedCount++;
+            }
+          } else {
+            console.error(`HTTP ${response.status} beim Scrapen von ${productUrl}`);
+            failedCount++;
+          }
+        } catch (err) {
+          console.error(`Fehler beim Scrapen von ${productUrl}:`, err);
+          failedCount++;
+        }
+
+        // Small delay between requests
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      setScrapedProducts(scrapedProductsList);
       setBatchProgress({ current: productUrls.length, total: productUrls.length, status: "✅ Fertig!" });
 
-      toast({
-        title: "✅ Scraping abgeschlossen",
-        description: `${productUrls.length} ${productUrls.length === 1 ? 'Produkt-URL' : 'Produkt-URLs'} erfolgreich gefunden`,
-      });
+      if (failedCount > 0) {
+        toast({
+          title: "Teilweise erfolgreich",
+          description: `${scrapedProductsList.length} erfolgreich, ${failedCount} fehlgeschlagen`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "✅ Scraping abgeschlossen",
+          description: `${scrapedProductsList.length} ${scrapedProductsList.length === 1 ? 'Produkt' : 'Produkte'} erfolgreich gescraped`,
+        });
+      }
 
     } catch (error) {
       console.error('Product list scraping error:', error);
