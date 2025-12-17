@@ -438,6 +438,7 @@ export default function AttributeFiller() {
       'p_attributes[WST_Wetteranzeige][de]',
       'p_attributes[WST_Luftfeuchteanzeige][de]',
       'p_attributes[WST_Timer][de]',
+      'p_attributes[WST_Weckalarm][de]',
     ];
     
     // Filtere nur vorhandene Spalten
