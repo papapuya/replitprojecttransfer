@@ -715,7 +715,7 @@ export default function AttributeFiller() {
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">
-                  Vorschau ({(pidFilter || textFilter) ? `${filteredData.length} gefiltert` : 'erste 20 Zeilen'}) - {attributeConfigs.filter(a => a.enabled).length} Attribute
+                  Vorschau ({(pidFilter || textFilter) ? `${filteredData.length} gefiltert` : `alle ${rawData.length} Zeilen`}) - {attributeConfigs.filter(a => a.enabled).length} Attribute
                 </h3>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Pencil className="w-3 h-3" />
@@ -749,14 +749,33 @@ export default function AttributeFiller() {
                           rowsWithIndices.push({ row, realIndex: idx });
                         }
                       });
-                      // Limitiere auf 20 wenn kein Filter aktiv
-                      const displayRows = (pidFilter || textFilter) ? rowsWithIndices : rowsWithIndices.slice(0, 20);
+                      // Zeige alle Zeilen an (kein Limit mehr)
+                      const displayRows = rowsWithIndices;
                       
                       return displayRows.map(({ row, realIndex }) => (
                         <tr key={realIndex} className="border-b hover:bg-accent/50">
                           <td className="p-2 text-foreground whitespace-nowrap sticky left-0 bg-card">{row[pidKey]}</td>
                           <td className="p-2 text-foreground whitespace-nowrap">{row['p_item_number'] || row['v_item_number'] || '-'}</td>
-                          <td className="p-2 text-foreground max-w-[200px] truncate" title={row['p_name[de]'] || ''}>{row['p_name[de]'] || '-'}</td>
+                          <td className="p-2 text-foreground max-w-[200px]">
+                            <div className="flex items-center gap-1">
+                              <span className="truncate max-w-[150px]" title={row['p_name[de]'] || ''}>
+                                {row['p_name[de]'] || '-'}
+                              </span>
+                              {row['p_name[de]'] && (
+                                <button
+                                  onClick={() => {
+                                    setDescriptionDialogTitle('Produktname');
+                                    setDescriptionDialogContent(`<h2>${row['p_name[de]']}</h2>`);
+                                    setShowDescriptionDialog(true);
+                                  }}
+                                  className="p-1 hover:bg-accent rounded"
+                                  title="Produktname anzeigen"
+                                >
+                                  <Eye className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
                           <td className="p-2 text-foreground max-w-[300px]">
                             <div className="flex items-center gap-1">
                               <span className="truncate max-w-[200px]" title={row['p_description[de]'] || ''}>
