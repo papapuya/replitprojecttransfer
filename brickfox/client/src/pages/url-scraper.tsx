@@ -1376,11 +1376,9 @@ export default function URLScraper() {
     let errorCount = 0;
 
     try {
-      // Refresh token before batch generation
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        localStorage.setItem('supabase_token', session.access_token);
-      } else {
+      // Get token from localStorage (works with local login system)
+      const token = localStorage.getItem('supabase_token');
+      if (!token) {
         throw new Error('Keine gültige Session. Bitte neu anmelden.');
       }
 
