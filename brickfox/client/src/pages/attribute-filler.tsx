@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { parseCSV as parseCSVWithEncoding } from "@/lib/csv-processor";
+import { parseCSV as parseCSVWithEncoding, fixBrokenUtf8 } from "@/lib/csv-processor";
 
 interface CSVRow {
   [key: string]: string;
@@ -408,11 +408,15 @@ export default function AttributeFiller() {
     if (rawData.length === 0) return;
 
     // Exakte Spaltenreihenfolge und -namen wie in Original-CSV
+    // Wende fixBrokenUtf8 auf jeden Wert an, um Encoding-Probleme zu korrigieren
     const csvContent = [
       headers.join(';'),  // Header ohne Anführungszeichen (wie Original)
       ...rawData.map(row =>
         headers.map(h => {
-          const val = String(row[h] || '').replace(/"/g, '""');
+          // Encoding-Korrektur für jeden Wert
+          const rawVal = String(row[h] || '');
+          const fixedVal = fixBrokenUtf8(rawVal);
+          const val = fixedVal.replace(/"/g, '""');
           // Nur Anführungszeichen wenn nötig (Semikolon, Zeilenumbruch oder Anführungszeichen im Wert)
           if (val.includes(';') || val.includes('\n') || val.includes('"')) {
             return `"${val}"`;
