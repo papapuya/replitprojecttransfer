@@ -884,11 +884,12 @@ function parseProductFromHTML(
     if (!weightText) {
       console.log(`[Weight] Trying Baltrade .productFeatures extraction...`);
       $('.productFeatures .featRow').each((_, row) => {
-        const labelText = $(row).find('.features-name, .feature-label, .name').text().toLowerCase();
-        if (labelText.includes('weight') || labelText.includes('gewicht') || labelText.includes('waga')) {
+        // Baltrade uses .features-types-title for label
+        const labelText = $(row).find('.features-types-title, .features-name, .feature-label, .name, .col.strong').text().toLowerCase();
+        if (labelText.includes('weight') || labelText.includes('gewicht') || labelText.includes('waga') || labelText.includes('masa')) {
           const valueEl = $(row).find('.features-values-single-value, .feature-value, .value');
           if (valueEl.length > 0) {
-            weightText = valueEl.text().trim();
+            weightText = valueEl.first().text().trim();
             console.log(`[Weight] Found in Baltrade productFeatures: "${weightText}"`);
             return false; // break
           }
@@ -1081,10 +1082,11 @@ function parseProductFromHTML(
     
     // Baltrade-specific: Search in .productFeatures table for individual dimensions
     $('.productFeatures .featRow').each((_, row) => {
-      const labelText = $(row).find('.features-name, .feature-label, .name').text().toLowerCase();
+      // Baltrade uses .features-types-title for label
+      const labelText = $(row).find('.features-types-title, .features-name, .feature-label, .name, .col.strong').text().toLowerCase();
       const valueEl = $(row).find('.features-values-single-value, .feature-value, .value');
       if (valueEl.length > 0) {
-        const valueText = valueEl.text().trim();
+        const valueText = valueEl.first().text().trim();
         
         // Length / Länge / Długość
         if (labelText.includes('length') || labelText.includes('länge') || labelText.includes('długość')) {
