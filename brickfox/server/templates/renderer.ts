@@ -700,59 +700,13 @@ function removeBrandFromModel(model: string, brand: string): string {
 /**
  * Rendert die Kompatibilitäts-Sektion
  * Format: 
- * - Hersteller einmal am Anfang, dann Modellnummern kommagetrennt
- * - z.B. "Fluke Ti-10, Ti-20, Ti-20-RBP, Ti-25"
+ * - Produkttyp NUR EINMAL in BOLD (z.B. "Makita Akku-Bohrschrauber")
+ * - Modellnummern kommagetrennt dahinter (z.B. "6002D, 6002DW, 6010D")
+ * - Pro Produkttyp eine neue Zeile
  */
 function renderKompatibilitaet(models: string[], e: (s: string) => string, productName?: string): string {
   if (!models || models.length === 0) {
     return '';
-  }
-  
-  // Extrahiere Hersteller aus Produktname
-  const knownBrands = [
-    'Fluke', 'Makita', 'Bosch', 'DeWalt', 'Milwaukee', 'Hilti', 'Metabo', 'Festool',
-    'Apple', 'Samsung', 'Sony', 'LG', 'Panasonic', 'Philips', 'HP', 'Dell', 'Lenovo',
-    'Canon', 'Nikon', 'Olympus', 'Fuji', 'Fujifilm', 'Pentax', 'Casio', 'Garmin',
-    'Dyson', 'Siemens', 'Miele', 'Braun', 'Oral-B', 'Remington', 'Rowenta',
-    'Acer', 'Asus', 'Microsoft', 'Huawei', 'Xiaomi', 'Nokia', 'Motorola', 'HTC',
-    'GoPro', 'DJI', 'JBL', 'Bose', 'Sennheiser', 'AKG', 'Audio-Technica',
-    'Nintendo', 'PlayStation', 'Xbox', 'Logitech', 'Razer', 'Corsair',
-    'Black & Decker', 'Stanley', 'Einhell', 'Ryobi', 'Worx', 'Kärcher',
-    'Hitachi', 'Parkside', 'AEG', 'Fein', 'Dremel', 'Proxxon',
-    'Toshiba', 'Sharp', 'JVC', 'Sanyo', 'Kenwood', 'Pioneer',
-    'Agilia', 'Fresenius', 'Medtronic', 'Abbott', 'Baxter', 'B. Braun',
-    'Datalogic', 'Honeywell', 'Zebra', 'Symbol', 'Intermec', 'Psion',
-    'Trimble', 'Leica', 'Topcon', 'Sokkia', 'Nivo', 'Spectra'
-  ];
-  
-  let brandFromProductName = '';
-  if (productName) {
-    const productNameLower = productName.toLowerCase();
-    for (const brand of knownBrands) {
-      if (productNameLower.includes(brand.toLowerCase())) {
-        brandFromProductName = brand;
-        break;
-      }
-    }
-  }
-  
-  // Prüfe ob Modelle bereits mit einer Marke beginnen
-  const firstModel = models[0]?.trim() || '';
-  let modelsHaveBrand = false;
-  for (const brand of knownBrands) {
-    if (firstModel.toLowerCase().startsWith(brand.toLowerCase())) {
-      modelsHaveBrand = true;
-      break;
-    }
-  }
-  
-  // Wenn Modelle keine Marke haben und wir eine aus dem Produktnamen haben,
-  // setze die Marke einmal vor alle Modellnummern
-  if (brandFromProductName && !modelsHaveBrand) {
-    const cleanModels = models.map(m => m.trim()).filter(m => m.length > 0);
-    const modelsStr = cleanModels.map(m => e(m)).join(', ');
-    console.log(`📋 Kompatibilität: ${brandFromProductName} + ${cleanModels.length} Modelle`);
-    return `<h2 style="margin-top: 1.5em;">Kompatibilität</h2>\n<p>${e(brandFromProductName)} ${modelsStr}</p>`;
   }
   
   // Gruppiere nach Produkttyp: Map<ProduktTyp, Modellnummern[]>
