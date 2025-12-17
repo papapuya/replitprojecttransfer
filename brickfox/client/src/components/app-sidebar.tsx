@@ -46,8 +46,9 @@ const shopMenus = [
     title: "Akkushop.de",
     icon: Store,
     items: [
-      { title: "URL Webscraper", url: "/url-scraper", icon: Globe, feature: "urlScraper" },
-      { title: "PDF/CSV Auto-Scraper", url: "/pdf-auto-scraper", icon: FileSpreadsheet, feature: "urlScraper" },
+      { title: "Produkt Neuanlage", url: "", icon: Wrench, isHeader: true },
+      { title: "URL Webscraper", url: "/url-scraper", icon: Globe, feature: "urlScraper", indent: true },
+      { title: "PDF/CSV Auto-Scraper", url: "/pdf-auto-scraper", icon: FileSpreadsheet, feature: "urlScraper", indent: true },
       { title: "Alle Projekte", url: "/projects", icon: FolderOpen },
     ],
   },
@@ -190,30 +191,39 @@ export function AppSidebar() {
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {shop.items
-                          .filter(item => isFeatureEnabled(item.feature))
-                          .map((item) => (
+                          .filter(item => isFeatureEnabled((item as any).feature))
+                          .map((item: any) => (
                             <SidebarMenuSubItem key={item.title}>
-                              <SidebarMenuSubButton
-                                asChild
-                                isActive={location === item.url || location === item.projectsUrl}
-                              >
-                                <Link href={item.url}>
-                                  <item.icon className="w-4 h-4" />
-                                  <span>{item.title}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                              {/* Show projects link if tool has separate projects page */}
-                              {item.projectsUrl && (
-                                <SidebarMenuSubButton
-                                  asChild
-                                  isActive={location === item.projectsUrl}
-                                  className="pl-8 text-xs text-muted-foreground"
-                                >
-                                  <Link href={item.projectsUrl}>
-                                    <FolderOpen className="w-3 h-3" />
-                                    <span>Projekte</span>
-                                  </Link>
-                                </SidebarMenuSubButton>
+                              {item.isHeader ? (
+                                <div className="px-2 py-1 mt-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                  <item.icon className="w-3 h-3 inline mr-1" />
+                                  {item.title}
+                                </div>
+                              ) : (
+                                <>
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={location === item.url || location === item.projectsUrl}
+                                    className={item.indent ? "pl-6" : ""}
+                                  >
+                                    <Link href={item.url}>
+                                      <item.icon className="w-4 h-4" />
+                                      <span>{item.title}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                  {item.projectsUrl && (
+                                    <SidebarMenuSubButton
+                                      asChild
+                                      isActive={location === item.projectsUrl}
+                                      className="pl-8 text-xs text-muted-foreground"
+                                    >
+                                      <Link href={item.projectsUrl}>
+                                        <FolderOpen className="w-3 h-3" />
+                                        <span>Projekte</span>
+                                      </Link>
+                                    </SidebarMenuSubButton>
+                                  )}
+                                </>
                               )}
                             </SidebarMenuSubItem>
                           ))}
