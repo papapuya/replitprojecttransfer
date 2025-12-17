@@ -1063,7 +1063,7 @@ function renderMediaMarktLayout(data: {
   
   // Tabelle mit dynamischer Spaltenbreite: erste Spalte passt sich an längsten Label an
   const techTableHtml = finalSpecs.length > 0
-    ? `<h2>Technische Daten</h2>
+    ? `<h2 style="margin-top: 1.5em;">Technische Daten</h2>
 <table style="width: auto; border-collapse: collapse;">
 ${finalSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 2em; vertical-align: top;">${e(spec.label)}</td><td style="vertical-align: top;">${e(spec.value)}</td></tr>`).join('\n')}
 </table>`
@@ -1071,7 +1071,7 @@ ${finalSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 2em
 
   const werkzeugItems = data.werkzeuguebersicht || [];
   const werkzeuguebersichtHtml = (produktTyp === 'werkzeug' && werkzeugItems.length > 0)
-    ? `<h2>Werkzeugübersicht</h2>
+    ? `<h2 style="margin-top: 1.5em;">Werkzeugübersicht</h2>
 <ul>
 ${werkzeugItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 </ul>`
@@ -1103,7 +1103,7 @@ ${werkzeuguebersichtHtml}`;
 
   if (vorteileHtml) {
     html += `
-<h2>Ihre Vorteile</h2>
+<h2 style="margin-top: 1.5em;">Ihre Vorteile</h2>
 <p>
 ${vorteileHtml}
 </p>`;
@@ -1213,10 +1213,8 @@ ${kompatibilitaetHtml}`;
 ${batteryTypeHtml}`;
   }
 
-  // Lieferumfang immer zum Schluss - mit mehr Abstand zur Tabelle
   if (lieferumfangHtml) {
     html += `
-<br />
 ${lieferumfangHtml}`;
   }
 
