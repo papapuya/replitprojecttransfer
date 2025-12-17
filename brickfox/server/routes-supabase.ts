@@ -2404,8 +2404,8 @@ REGELN:
     - Beispiele: "2 x AA Mignon", "3 x AAA Micro", "1 x CR2032", "2 Stück AA Batterien", "Li-Ion Akku 3.7V"
     - Suche nach Begriffen wie "Stromversorgung:", "Batterien:", "Akku:", "benötigt X Batterien"
     - Gib den kompletten Text zurück wie er in der Beschreibung steht
-  - Bei Text-Attributen: null zurückgeben wenn nicht gefunden
-- Bei Unsicherheit: false bzw. null${customPromptSection}
+  - Bei Text-Attributen: leeren String "" zurückgeben wenn nicht gefunden (NICHT "-" oder null)
+- Bei Unsicherheit: false bzw. leeren String ""${customPromptSection}
 
 Beispiel Antwort:
 {"WST_Datumsanzeige": true, "WST_Weckalarm": false, "allg_farbe_geheause": "Schwarz", "tala_stromversorgung": "2 x AA Mignon"}`;
