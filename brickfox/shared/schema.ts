@@ -335,6 +335,21 @@ export const backups = pgTable("backups", {
   metadata: jsonb("metadata"), // Additional info: table counts, duration, etc.
 });
 
+// Attribut-Profile für Kategorie-spezifische KI-Regeln
+export const attributeProfiles = pgTable("attribute_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // z.B. "Wetterstationen", "Akkus", "Kabel"
+  description: text("description"), // Kurze Beschreibung des Profils
+  attributes: jsonb("attributes").notNull(), // Array von { key, label, type, enabled, fixedValue?, choices? }
+  aiRules: jsonb("ai_rules").notNull(), // Array von { condition, attribute, value, priority }
+  customPrompt: text("custom_prompt"), // Zusätzliche KI-Anweisungen
+  isDefault: boolean("is_default").default(false), // Standard-Profil für neue CSVs
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 // Audit log table for RBAC compliance
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -369,6 +384,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   suppliers: many(suppliers),
   templates: many(templates),
   scrapeSessions: many(scrapeSession),
+  attributeProfiles: many(attributeProfiles),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -379,6 +395,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   projects: many(projects),
   suppliers: many(suppliers),
   scrapeSessions: many(scrapeSession),
+  attributeProfiles: many(attributeProfiles),
 }));
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
