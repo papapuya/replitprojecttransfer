@@ -38,7 +38,6 @@ const shopMenus = [
     icon: Store,
     items: [
       { title: "CSV Bulk Beschreibungen", url: "/csv-bulk-description", icon: Zap, feature: "csvBulkImport", projectsUrl: "/csv-bulk-projects" },
-      { title: "PDF/CSV Auto-Scraper", url: "/pdf-auto-scraper", icon: FileSpreadsheet, feature: "urlScraper" },
       { title: "Alle Projekte", url: "/projects", icon: FolderOpen },
     ],
   },
@@ -48,6 +47,7 @@ const shopMenus = [
     icon: Store,
     items: [
       { title: "URL Webscraper", url: "/url-scraper", icon: Globe, feature: "urlScraper" },
+      { title: "PDF/CSV Auto-Scraper", url: "/pdf-auto-scraper", icon: FileSpreadsheet, feature: "urlScraper" },
       { title: "Alle Projekte", url: "/projects", icon: FolderOpen },
     ],
   },
