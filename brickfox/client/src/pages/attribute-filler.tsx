@@ -107,7 +107,7 @@ export default function AttributeFiller() {
       );
 
       // Text-Attribute die aus Beschreibung extrahiert werden können
-      const textAttributes = ['akku_produktart', 'allg_farbe_geheause'];
+      const textAttributes = ['akku_produktart', 'allg_farbe_geheause', 'tala_stromversorgung'];
       
       const configs: AttributeConfig[] = attributeHeaders.map(h => {
         // Unterstützt beide Formate: p_attributes[X][de] und v_attributes[X][de]
