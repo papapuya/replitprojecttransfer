@@ -93,7 +93,7 @@ export default function AttributeFiller() {
 
       // Unterstützt p_attributes UND v_attributes (Brickfox-Format)
       // Ausgeschlossene Attribute (werden nicht in der Spaltenauswahl angezeigt)
-      const excludedAttributes = ['allg_lieferumfang'];
+      const excludedAttributes = ['allg_lieferumfang', 'tala_stromversorgung'];
       const attributeHeaders = parsedHeaders.filter(h => {
         if (!((h.startsWith('p_attributes[') || h.startsWith('v_attributes[')) && h.includes('][de]'))) {
           return false;
@@ -110,7 +110,6 @@ export default function AttributeFiller() {
         'Artikelzustand': { type: 'fixed', fixedValue: 'neu' },  // Immer "neu" eintragen
         'OTTOMARKET_GEFAHRGUT': { type: 'text' },  // Gefahrgut-Prüfung durch AI
         'allg_farbe_geheause': { type: 'text' },  // Farbe aus Beschreibung
-        'tala_stromversorgung': { type: 'text' },  // Stromversorgung aus Beschreibung extrahieren (z.B. "2 x AA Mignon")
         'verp_einheit': { type: 'fixed', fixedValue: '1' },  // Immer 1
         'allg_gefahrengut': { type: 'fixed', fixedValue: 'Fällt nicht unter Gefahrengut' },  // Immer dieser Text
         // Weitere Ja/Nein Attribute (wie WST_)
