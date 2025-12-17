@@ -2407,6 +2407,9 @@ REGELN:
     - Nur die Kurzform: "2 x AA Mignon" NICHT "2 x AA Mignon LR06 (nicht inklusive)"
     - Kein zusätzlicher Text wie "benötigt", "inklusive", "nicht enthalten", "erforderlich"
     - Bei mehreren Batterietypen: "2 x AA Mignon, 2 x AAA Micro"
+  - OTTOMARKET_GEFAHRGUT: Prüfe ob das Produkt Gefahrgut ist:
+    - Gefahrgut: Lithium-Ionen-Akkus, Li-Ion Batterien, Li-Po Akkus, Powerbanks mit Li-Ion → "Produkt fällt unter die Gefahrgutvorschriften."
+    - KEIN Gefahrgut: Normale Alkaline-Batterien (AA, AAA, CR2032), Wecker, Uhren, Wetterstationen → "Produkt fällt nicht unter die Gefahrgutvorschriften."
   - Bei Text-Attributen: leeren String "" zurückgeben wenn nicht gefunden (NICHT "-" oder null)
 - Bei Unsicherheit: false bzw. leeren String ""${customPromptSection}
 
