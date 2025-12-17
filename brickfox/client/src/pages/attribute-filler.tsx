@@ -518,10 +518,10 @@ export default function AttributeFiller() {
                     />
                     <Label
                       htmlFor={attr.key}
-                      className="text-sm text-muted-foreground cursor-pointer truncate"
-                      title={attr.label}
+                      className="text-xs text-muted-foreground cursor-pointer truncate"
+                      title={attr.key}
                     >
-                      {attr.label}
+                      {attr.key}
                     </Label>
                   </div>
                 ))}
