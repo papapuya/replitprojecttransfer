@@ -57,6 +57,10 @@ export default function AttributeFiller() {
   const [descriptionDialogContent, setDescriptionDialogContent] = useState<string>('');
   const [descriptionDialogTitle, setDescriptionDialogTitle] = useState<string>('');
   
+  // State für Export-Spaltenauswahl Dialog
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportColumns, setExportColumns] = useState<string[]>([]);
+  
   const handleAbort = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -150,6 +154,13 @@ export default function AttributeFiller() {
       console.log('[CSV-Import] Erkannte Attribut-Spalten:', attributeHeaders);
       console.log('[CSV-Import] Aktivierte Attribute:', configs.filter(c => c.enabled).map(c => c.key));
       setAttributeConfigs(configs);
+      
+      // Standard-Export-Spalten initialisieren (p_id + alle WST_* Attribute)
+      const defaultExportCols = [
+        'p_id',
+        ...attributeHeaders.filter(h => h.includes('WST_'))
+      ];
+      setExportColumns(defaultExportCols);
 
       toast({
         title: "CSV geladen",
@@ -415,33 +426,7 @@ export default function AttributeFiller() {
   const handleDownload = (withBOM: boolean = false) => {
     if (rawData.length === 0) return;
 
-    // Nur diese Spalten exportieren (p_id + WST_* Attribute)
-    const exportColumns = [
-      'p_id',
-      'p_attributes[WST_Datumsanzeige][de]',
-      'p_attributes[WST_Batterieanzeige][de]',
-      'p_attributes[WST_Funkuhr digital][de]',
-      'p_attributes[WST_Wettervorhersage][de]',
-      'p_attributes[WST_MIN/MAX Anzeige][de]',
-      'p_attributes[WST_Regenwahrscheinlichkeit][de]',
-      'p_attributes[WST_Schlummerfunktion][de]',
-      'p_attributes[WST_Sturmwarnung][de]',
-      'p_attributes[WST_Temperaturanzeige][de]',
-      'p_attributes[WST_Tischaufstellung][de]',
-      'p_attributes[WST_WetterDirekt][de]',
-      'p_attributes[WST_Wettertendenz][de]',
-      'p_attributes[WST_Wettervorhersage Region][de]',
-      'p_attributes[WST_Wochentagsanzeige][de]',
-      'p_attributes[WST_Zeitzoneneinstellung][de]',
-      'p_attributes[WST_Wandaufhängung][de]',
-      'p_attributes[WST_Innentemperatur][de]',
-      'p_attributes[WST_Wetteranzeige][de]',
-      'p_attributes[WST_Luftfeuchteanzeige][de]',
-      'p_attributes[WST_Timer][de]',
-      'p_attributes[WST_Weckalarm][de]',
-    ];
-    
-    // Filtere nur vorhandene Spalten
+    // Nutze die ausgewählten Export-Spalten
     const availableExportColumns = exportColumns.filter(col => headers.includes(col));
 
     // Wende fixBrokenUtf8 auf jeden Wert an, um Encoding-Probleme zu korrigieren
@@ -558,6 +543,10 @@ export default function AttributeFiller() {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <Button onClick={() => setShowExportDialog(true)} variant="outline" disabled={processing} title="Export-Spalten auswählen">
+                    <Settings2 className="w-4 h-4 mr-2" />
+                    Spalten ({exportColumns.length})
+                  </Button>
                   <Button onClick={() => handleDownload(false)} disabled={processing} title="UTF-8 ohne BOM für Brickfox/PIM">
                     <Download className="w-4 h-4 mr-2" />
                     PIM Export
@@ -916,6 +905,72 @@ export default function AttributeFiller() {
           <div className="overflow-auto max-h-[70vh] border rounded-lg bg-white p-6">
             <div className="prose prose-sm max-w-none text-gray-700">
               <div dangerouslySetInnerHTML={{ __html: descriptionDialogContent }} />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog für Export-Spaltenauswahl */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Export-Spalten auswählen</DialogTitle>
+            <DialogDescription>
+              Wähle die Spalten für den CSV-Export ({exportColumns.length} ausgewählt)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setExportColumns(['p_id', ...headers.filter(h => h.includes('WST_'))])}
+              >
+                Nur p_id + WST_*
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setExportColumns(['p_id', ...attributeConfigs.map(a => a.key)])}
+              >
+                p_id + Alle Attribute
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setExportColumns(headers)}
+              >
+                Alle Spalten
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto border rounded-lg p-3">
+              {headers.map(header => (
+                <div key={header} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`export-${header}`}
+                    checked={exportColumns.includes(header)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setExportColumns(prev => [...prev, header]);
+                      } else {
+                        setExportColumns(prev => prev.filter(c => c !== header));
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor={`export-${header}`}
+                    className="text-xs text-muted-foreground cursor-pointer truncate"
+                    title={header}
+                  >
+                    {header}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => setShowExportDialog(false)}>
+                Fertig
+              </Button>
             </div>
           </div>
         </DialogContent>
