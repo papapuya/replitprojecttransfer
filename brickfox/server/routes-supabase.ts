@@ -2400,8 +2400,15 @@ REGELN:
 - WICHTIG: Bei Kurzzeitweckern (Timer) ist WST_Weckalarm IMMER false, aber WST_Timer IMMER true (sie haben Timer, keinen Weckalarm!)
 - WICHTIG: Bei Weckern (Wecker, Funkwecker, Reisewecker, Lichtwecker) ist WST_Weckalarm IMMER true (Wecker haben per Definition einen Weckalarm!)
 - Text-Attribute:
-  - akku_produktart: Extrahiere die Produktart/Kategorie aus dem Produktnamen (z.B. "Akku", "Batterie", "Ladegerät", "Netzteil", "Kabel", "Wecker", "Wetterstation", "Thermometer", "Hygrometer")
-    - NUR die Produktart, NICHT "neu" oder andere Werte
+  - akku_produktart: Extrahiere die EXAKTE Produktart aus dem Produktnamen - nicht vereinfachen!
+    - "Radiowecker WT500" → "Radiowecker" (NICHT "Wecker")
+    - "Funkwecker ABC" → "Funkwecker" (NICHT "Wecker")
+    - "Quarzwecker XY" → "Quarzwecker" (NICHT "Wecker")
+    - "Lichtwecker" → "Lichtwecker" (NICHT "Wecker")
+    - "Reisewecker" → "Reisewecker" (NICHT "Wecker")
+    - "Funk-Wetterstation" → "Funk-Wetterstation" (NICHT "Wetterstation")
+    - "Li-Ion Akku" → "Li-Ion Akku" (NICHT nur "Akku")
+    - Immer die spezifischste Bezeichnung verwenden!
   - allg_farbe_geheause: Extrahiere Gehäusefarbe aus Produktname ODER Beschreibung (z.B. "Schwarz", "Weiß", "Silber", "Grau", "Rot", "Blau", "Grün")
     - Prüfe zuerst den Produktnamen auf Farbangaben wie "-schwarz", "-weiß", "black", "white" etc.
   - tala_stromversorgung: Extrahiere NUR Anzahl und Batterietyp, NICHTS anderes!
