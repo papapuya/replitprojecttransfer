@@ -426,8 +426,9 @@ export default function AttributeFiller() {
       )
     ].join('\n');
 
-    // UTF-8 ohne BOM für Brickfox-Kompatibilität
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    // UTF-8 mit BOM für Excel-Kompatibilität (Excel erkennt UTF-8 sonst nicht beim direkten Öffnen)
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
