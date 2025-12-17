@@ -440,15 +440,8 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
       continue;
     }
     
-    // ═══════════════════════════════════════════════════════════════
-    // NUR-ZAHLEN FILTERN: Reine Zahlenwerte sind keine echten Modellnamen
-    // z.B. "190100", "190130" → RAUS!
-    // ABER: "SF 151-A", "6093DW" bleiben (haben Buchstaben)
-    // ═══════════════════════════════════════════════════════════════
-    if (/^\d+$/.test(model)) {
-      console.log(`🚫 [NORM] Nur-Zahlen gefiltert: "${model}"`);
-      continue;
-    }
+    // HINWEIS: Reine Zahlenwerte wie "10256296" werden NICHT mehr gefiltert
+    // Diese können echte Modellnummern sein (z.B. NUK: 10256296)
     
     // ═══════════════════════════════════════════════════════════════
     // SCHRITT 1: Hersteller normalisieren → HP
