@@ -92,7 +92,7 @@ export default function AttributeFiller() {
 
       // Spezielle Attribut-Regeln
       const specialRules: Record<string, { type: 'text' | 'fixed' | 'choice' | 'yesNo'; fixedValue?: string; choices?: string[] }> = {
-        'akku_produktart': { type: 'fixed', fixedValue: 'neu' },  // Immer "neu" eintragen
+        'akku_produktart': { type: 'text' },  // Produktart aus p_name[de] extrahieren
         'Artikelzustand': { type: 'fixed', fixedValue: 'neu' },  // Immer "neu" eintragen
         'OTTOMARKET_GEFAHRGUT': { type: 'text' },  // Gefahrgut-Prüfung durch AI
         'allg_farbe_geheause': { type: 'text' },  // Farbe aus Beschreibung
