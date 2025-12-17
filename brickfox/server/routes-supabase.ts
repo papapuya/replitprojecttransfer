@@ -2362,6 +2362,7 @@ Gib NUR die angepasste HTML-Beschreibung zurück, ohne Erklärungen.`;
       // Attribute nach Typ trennen
       const yesNoAttrs = attributes.filter((a: any) => a.type === 'yesNo').map((a: any) => a.label);
       const textAttrs = attributes.filter((a: any) => a.type === 'text').map((a: any) => a.label);
+      const choiceAttrs = attributes.filter((a: any) => a.type === 'choice');
       
       // Backwards compatibility: Falls nur Strings übergeben werden (alte Aufrufe)
       const isNewFormat = attributes.length > 0 && typeof attributes[0] === 'object';
@@ -2375,6 +2376,9 @@ Gib NUR die angepasste HTML-Beschreibung zurück, ohne Erklärungen.`;
       }
       if (allText.length > 0) {
         attributeSection += `\n\nText-Attribute (extrahiere passenden Wert oder null):\n${allText.map((a: string) => `- ${a}`).join('\n')}`;
+      }
+      if (choiceAttrs.length > 0) {
+        attributeSection += `\n\nAuswahl-Attribute (nur einen der erlaubten Werte verwenden):\n${choiceAttrs.map((a: any) => `- ${a.label}: Erlaubte Werte: ${a.choices?.join(', ') || 'keine'}`).join('\n')}`;
       }
       
       // Custom Prompt Anweisungen, falls vorhanden
@@ -2398,10 +2402,15 @@ REGELN:
   - allg_farbe_geheause: Extrahiere Gehäusefarbe aus Produktname ODER Beschreibung (z.B. "Schwarz", "Weiß", "Silber", "Grau", "Rot", "Blau", "Grün")
     - Prüfe zuerst den Produktnamen auf Farbangaben wie "-schwarz", "-weiß", "black", "white" etc.
   - Bei Text-Attributen: null zurückgeben wenn nicht gefunden
+- Auswahl-Attribute:
+  - tala_stromversorgung: Prüfe ob "Akku", "Batterie", "AAA", "AA", "CR2032", "LR44" etc. erwähnt werden
+    - Wenn Batterie-Typen wie AAA, AA, CR2032, LR44, Micro, Mignon etc. erwähnt → "Batterie"
+    - Wenn "Akku", "aufladbar", "wiederaufladbar", "Li-Ion", "LiPo" erwähnt → "Akku"
+    - NUR einen der erlaubten Werte zurückgeben, sonst null
 - Bei Unsicherheit: false bzw. null${customPromptSection}
 
 Beispiel Antwort:
-{"WST_Datumsanzeige": true, "WST_Weckalarm": false, "akku_produktart": "Wetterstation", "allg_farbe_geheause": "Schwarz"}`;
+{"WST_Datumsanzeige": true, "WST_Weckalarm": false, "akku_produktart": "Wetterstation", "allg_farbe_geheause": "Schwarz", "tala_stromversorgung": "Batterie"}`;
 
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
