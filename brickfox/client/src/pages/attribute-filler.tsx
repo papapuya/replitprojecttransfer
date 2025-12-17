@@ -661,11 +661,9 @@ export default function AttributeFiller() {
                     <tr className="border-b">
                       <th className="text-left p-2 text-muted-foreground whitespace-nowrap sticky left-0 bg-card z-10">p_id</th>
                       <th className="text-left p-2 text-muted-foreground whitespace-nowrap">p_item_number</th>
-                      <th className="text-left p-2 text-muted-foreground whitespace-nowrap">Produktart</th>
-                      <th className="text-left p-2 text-muted-foreground whitespace-nowrap">Farbe</th>
                       {attributeConfigs.filter(a => a.enabled).map(attr => (
-                        <th key={attr.key} className="text-left p-2 text-muted-foreground whitespace-nowrap" title={attr.key}>
-                          {attr.label.replace('WST_', '')}
+                        <th key={attr.key} className="text-left p-2 text-muted-foreground whitespace-nowrap text-xs" title={attr.key}>
+                          {attr.key}
                         </th>
                       ))}
                     </tr>
@@ -689,12 +687,6 @@ export default function AttributeFiller() {
                         <tr key={realIndex} className="border-b hover:bg-accent/50">
                           <td className="p-2 text-foreground whitespace-nowrap sticky left-0 bg-card">{row[pidKey]}</td>
                           <td className="p-2 text-foreground whitespace-nowrap">{row['p_item_number'] || row['v_item_number'] || '-'}</td>
-                          <td className="p-2 text-foreground whitespace-nowrap">
-                            {row['p_attributes[akku_produktart][de]'] || row['v_attributes[akku_produktart][de]'] || '-'}
-                          </td>
-                          <td className="p-2 text-foreground whitespace-nowrap">
-                            {row['p_attributes[allg_farbe_geheause][de]'] || row['v_attributes[allg_farbe_geheause][de]'] || '-'}
-                          </td>
                           {attributeConfigs.filter(a => a.enabled).map(attr => (
                             <td key={attr.key} className="p-2 whitespace-nowrap">
                               {editingCell?.rowIndex === realIndex && editingCell?.attrKey === attr.key ? (
