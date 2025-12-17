@@ -126,12 +126,11 @@ export default function AttributeFiller() {
           };
         }
         
-        // WST_ Attribute sind Ja/Nein und automatisch aktiviert
-        const isWstAttr = label.startsWith('WST_');
+        // Alle Attribute standardmäßig aktiviert
         return {
           key: h,
           label: label,
-          enabled: isWstAttr,
+          enabled: true,  // Alle markieren
           type: 'yesNo'
         };
       });
