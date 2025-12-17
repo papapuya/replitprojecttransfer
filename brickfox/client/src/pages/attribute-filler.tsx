@@ -19,7 +19,9 @@ interface AttributeConfig {
   key: string;
   label: string;
   enabled: boolean;
-  type: 'yesNo' | 'text';
+  type: 'yesNo' | 'text' | 'fixed' | 'choice';
+  fixedValue?: string;  // Für type='fixed'
+  choices?: string[];   // Für type='choice'
 }
 
 export default function AttributeFiller() {
@@ -106,19 +108,40 @@ export default function AttributeFiller() {
         (h.startsWith('p_attributes[') || h.startsWith('v_attributes[')) && h.includes('][de]')
       );
 
-      // Text-Attribute die aus Beschreibung extrahiert werden können
-      const textAttributes = ['akku_produktart', 'allg_farbe_geheause', 'tala_stromversorgung'];
+      // Spezielle Attribut-Regeln
+      const specialRules: Record<string, { type: 'text' | 'fixed' | 'choice'; fixedValue?: string; choices?: string[] }> = {
+        'akku_produktart': { type: 'text' },  // Immer Text aus Beschreibung
+        'allg_farbe_geheause': { type: 'text' },  // Farbe aus Beschreibung
+        'tala_stromversorgung': { type: 'choice', choices: ['Akku', 'Batterie'] },  // Nur Akku oder Batterie
+        'verp_einheit': { type: 'fixed', fixedValue: '1' },  // Immer 1
+        'allg_lieferumfang': { type: 'fixed', fixedValue: '1' },  // Immer 1
+        'allg_gefahrengut': { type: 'fixed', fixedValue: 'Fällt nicht unter Gefahrengut' },  // Immer dieser Text
+      };
       
       const configs: AttributeConfig[] = attributeHeaders.map(h => {
         // Unterstützt beide Formate: p_attributes[X][de] und v_attributes[X][de]
         const match = h.match(/[pv]_attributes\[([^\]]+)\]\[de\]/);
         const label = match ? match[1] : h;
-        const isTextAttr = textAttributes.includes(label);
+        
+        // Prüfe ob spezielle Regel existiert
+        const specialRule = specialRules[label];
+        if (specialRule) {
+          return {
+            key: h,
+            label: label,
+            enabled: true,  // Spezielle Attribute immer aktiviert
+            type: specialRule.type,
+            fixedValue: specialRule.fixedValue,
+            choices: specialRule.choices,
+          };
+        }
+        
+        // WST_ Attribute sind Ja/Nein
         return {
           key: h,
           label: label,
-          enabled: label.startsWith('WST_') || isTextAttr,
-          type: isTextAttr ? 'text' : 'yesNo'
+          enabled: label.startsWith('WST_'),
+          type: 'yesNo'
         };
       });
 
@@ -262,28 +285,54 @@ export default function AttributeFiller() {
           return null; // Alle bereits befüllt
         }
 
+        // Feste Werte sofort setzen (ohne AI)
+        const fixedResults: Record<string, string> = {};
+        const aiAttributesToFill = attributesToFill.filter(a => {
+          if (a.type === 'fixed' && a.fixedValue) {
+            fixedResults[a.label] = a.fixedValue;
+            return false;  // Nicht an AI senden
+          }
+          return true;  // An AI senden
+        });
+
         try {
-          // Produktname für Farb-Erkennung
-          const productName = row['p_name[de]'] || '';
+          let aiResults: Record<string, any> = {};
           
-          const response = await fetch('/api/analyze-attributes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              description,
-              productName,
-              attributes: attributesToFill.map(a => ({ label: a.label, type: a.type })),
-              productType: row['p_attributes[akku_produktart][de]'] || row['v_attributes[akku_produktart][de]'] || '',
-              customPrompt: customPrompt.trim() || undefined,
-            }),
-          });
+          // Nur AI aufrufen wenn noch Attribute übrig sind
+          if (aiAttributesToFill.length > 0) {
+            const productName = row['p_name[de]'] || '';
+            
+            const response = await fetch('/api/analyze-attributes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                description,
+                productName,
+                attributes: aiAttributesToFill.map(a => ({ 
+                  label: a.label, 
+                  type: a.type,
+                  choices: a.choices  // Für choice-Attribute
+                })),
+                productType: row['p_attributes[akku_produktart][de]'] || row['v_attributes[akku_produktart][de]'] || '',
+                customPrompt: customPrompt.trim() || undefined,
+              }),
+            });
 
-          if (!response.ok) throw new Error('API Fehler');
+            if (!response.ok) throw new Error('API Fehler');
 
-          const result = await response.json();
-          return { index: realIndex, attributes: result.attributes, attributesToFill };
+            const result = await response.json();
+            aiResults = result.attributes || {};
+          }
+          
+          // Merge feste und AI-Ergebnisse
+          const allResults = { ...fixedResults, ...aiResults };
+          return { index: realIndex, attributes: allResults, attributesToFill };
         } catch (err) {
           console.error('Fehler bei Attribut-Analyse:', err);
+          // Auch bei Fehler die festen Werte setzen
+          if (Object.keys(fixedResults).length > 0) {
+            return { index: realIndex, attributes: fixedResults, attributesToFill: attributesToFill.filter(a => a.type === 'fixed') };
+          }
           return null;
         }
       });
@@ -301,6 +350,17 @@ export default function AttributeFiller() {
               if (attr.type === 'yesNo') {
                 updatedData[index][attr.key] = value ? 'Ja' : 'Nein';
                 console.log(`[Attribut-Befüller] -> Gesetzt: ${attr.key} = ${value ? 'Ja' : 'Nein'}`);
+              } else if (attr.type === 'fixed') {
+                // Feste Werte direkt übernehmen
+                updatedData[index][attr.key] = String(value);
+                console.log(`[Attribut-Befüller] -> Fest gesetzt: ${attr.key} = ${value}`);
+              } else if (attr.type === 'choice') {
+                // Choice-Werte validieren
+                const validChoice = attr.choices?.includes(String(value)) ? String(value) : '';
+                if (validChoice) {
+                  updatedData[index][attr.key] = validChoice;
+                  console.log(`[Attribut-Befüller] -> Choice gesetzt: ${attr.key} = ${validChoice}`);
+                }
               } else {
                 // Text-Attribute direkt übernehmen
                 updatedData[index][attr.key] = String(value);
