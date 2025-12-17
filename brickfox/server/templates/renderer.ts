@@ -797,19 +797,20 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
     }
   }
   
-  // Baue die Ausgabe
-  const lines: string[] = [];
+  // Baue kompakte Ausgabe: Alle Modelle kommagetrennt in einem Fließtext
+  const allModels: string[] = [];
   
   groups.forEach((modelNumbers: string[], productType: string) => {
     if (modelNumbers.length === 0) {
-      lines.push(`${e(productType)}`);
+      allModels.push(e(productType));
     } else {
-      const modelsStr = modelNumbers.map((m: string) => e(m)).join(', ');
-      lines.push(`${e(productType)} ${modelsStr}`);
+      // Produkttyp mit Modellnummern kombinieren
+      const modelsStr = modelNumbers.map((m: string) => e(m)).join('/');
+      allModels.push(`${e(productType)} ${modelsStr}`);
     }
   });
   
-  return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilität</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${lines.join('<br />')}</p>`;
+  return `<h2 style="margin-top: 1.5em;">Kompatibilität</h2>\n<p>${allModels.join(', ')}</p>`;
 }
 
 function cleanTechnicalTable(htmlTable: string): string {
