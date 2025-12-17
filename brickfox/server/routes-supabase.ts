@@ -2422,25 +2422,36 @@ Beispiel Antwort:
 
       const content = response.choices[0]?.message?.content?.trim() || '{}';
       
-      // Parse JSON response
-      let parsedAttributes: Record<string, boolean> = {};
+      // Parse JSON response (AI antwortet mit label als Key)
+      let aiResponse: Record<string, any> = {};
       try {
         // Extract JSON from response (might have markdown code blocks)
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          parsedAttributes = JSON.parse(jsonMatch[0]);
+          aiResponse = JSON.parse(jsonMatch[0]);
         }
       } catch (parseErr) {
         console.error('JSON parse error:', parseErr, content);
-        // Return all false if parsing fails
-        attributes.forEach((a: string) => {
-          parsedAttributes[a] = false;
-        });
       }
+
+      // Mappe AI-Antwort (label-basiert) auf CSV-Keys (key-basiert)
+      // So wird sichergestellt, dass Werte in die richtige Spalte kommen
+      const mappedAttributes: Record<string, any> = {};
+      attributes.forEach((attr: any) => {
+        const key = attr.key || attr.label;  // Voller CSV-Spaltenname
+        const label = attr.label || attr;     // Kurzer Name für AI-Lookup
+        
+        if (aiResponse.hasOwnProperty(label)) {
+          mappedAttributes[key] = aiResponse[label];
+        }
+      });
+
+      console.log('[Analyze-Attributes] AI Response (label-keys):', aiResponse);
+      console.log('[Analyze-Attributes] Mapped Response (csv-keys):', mappedAttributes);
 
       res.json({
         success: true,
-        attributes: parsedAttributes
+        attributes: mappedAttributes
       });
     } catch (error) {
       console.error('Analyze attributes error:', error);
