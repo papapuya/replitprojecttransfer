@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from "react";
-import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2, FileText, Filter, X, Pencil, StopCircle, Copy, Eye } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2, FileText, Filter, X, Pencil, StopCircle, Copy, Eye, Save, FolderOpen, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,7 +11,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { parseCSV as parseCSVWithEncoding, fixBrokenUtf8 } from "@/lib/csv-processor";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth-context";
 
 interface CSVRow {
   [key: string]: string;
@@ -26,7 +29,29 @@ interface AttributeConfig {
   choices?: string[];   // Für type='choice'
 }
 
+interface AIRule {
+  id: string;
+  condition: string;  // z.B. "Kurzzeitwecker" im Namen
+  attribute: string;  // z.B. "WST_Weckalarm"
+  value: string;      // z.B. "Nein"
+  priority: number;
+}
+
+interface AttributeProfile {
+  id: string;
+  name: string;
+  description?: string;
+  attributes: AttributeConfig[];
+  aiRules: AIRule[];
+  customPrompt?: string;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export default function AttributeFiller() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [rawData, setRawData] = useState<CSVRow[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -60,6 +85,125 @@ export default function AttributeFiller() {
   // State für Export-Spaltenauswahl Dialog
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportColumns, setExportColumns] = useState<string[]>([]);
+  
+  // Profil-Management States
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [profileName, setProfileName] = useState<string>('');
+  const [profileDescription, setProfileDescription] = useState<string>('');
+  const [aiRules, setAiRules] = useState<AIRule[]>([]);
+  const [isDefaultProfile, setIsDefaultProfile] = useState(false);
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
+  
+  // Profile von API laden
+  const { data: profiles = [], isLoading: profilesLoading } = useQuery<AttributeProfile[]>({
+    queryKey: ['attribute-profiles'],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      const response = await fetch('/api/attribute-profiles', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!user,
+  });
+  
+  // Profil speichern Mutation
+  const saveProfileMutation = useMutation({
+    mutationFn: async (data: { id?: string; name: string; description?: string; attributes: AttributeConfig[]; aiRules: AIRule[]; customPrompt?: string; isDefault?: boolean }) => {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      const url = data.id ? `/api/attribute-profiles/${data.id}` : '/api/attribute-profiles';
+      const method = data.id ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method,
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Speichern fehlgeschlagen');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attribute-profiles'] });
+      setShowProfileDialog(false);
+      toast({ title: "Profil gespeichert", description: "Das Profil wurde erfolgreich gespeichert" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    }
+  });
+  
+  // Profil löschen Mutation
+  const deleteProfileMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      const response = await fetch(`/api/attribute-profiles/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Löschen fehlgeschlagen');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attribute-profiles'] });
+      setSelectedProfileId('');
+      toast({ title: "Profil gelöscht", description: "Das Profil wurde erfolgreich gelöscht" });
+    }
+  });
+  
+  // Profil laden
+  const loadProfile = (profile: AttributeProfile) => {
+    // Attribute aus Profil laden und mit aktuellen CSV-Spalten abgleichen
+    const profileAttrs = profile.attributes || [];
+    const updatedConfigs = attributeConfigs.map(cfg => {
+      const profileAttr = profileAttrs.find(pa => pa.label === cfg.label || pa.key === cfg.key);
+      if (profileAttr) {
+        return { ...cfg, enabled: profileAttr.enabled, type: profileAttr.type, fixedValue: profileAttr.fixedValue, choices: profileAttr.choices };
+      }
+      return { ...cfg, enabled: false };
+    });
+    setAttributeConfigs(updatedConfigs);
+    setAiRules(profile.aiRules || []);
+    setCustomPrompt(profile.customPrompt || '');
+    setSelectedProfileId(profile.id);
+    toast({ title: "Profil geladen", description: `"${profile.name}" wurde geladen` });
+  };
+  
+  // Aktuelles Profil speichern
+  const saveCurrentProfile = () => {
+    if (!profileName.trim()) {
+      toast({ title: "Fehler", description: "Profilname erforderlich", variant: "destructive" });
+      return;
+    }
+    saveProfileMutation.mutate({
+      id: editingProfileId || undefined,
+      name: profileName,
+      description: profileDescription,
+      attributes: attributeConfigs,
+      aiRules,
+      customPrompt,
+      isDefault: isDefaultProfile,
+    });
+  };
+  
+  // Dialog zum Speichern öffnen
+  const openSaveProfileDialog = (existingProfile?: AttributeProfile) => {
+    if (existingProfile) {
+      setEditingProfileId(existingProfile.id);
+      setProfileName(existingProfile.name);
+      setProfileDescription(existingProfile.description || '');
+      setIsDefaultProfile(existingProfile.isDefault || false);
+    } else {
+      setEditingProfileId(null);
+      setProfileName('');
+      setProfileDescription('');
+      setIsDefaultProfile(false);
+    }
+    setShowProfileDialog(true);
+  };
   
   const handleAbort = () => {
     if (abortControllerRef.current) {
@@ -573,6 +717,63 @@ export default function AttributeFiller() {
             </Card>
 
             <Card className="p-6">
+              {/* Profil-Auswahl Bereich */}
+              <div className="flex items-center gap-4 mb-4 pb-4 border-b">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm font-medium">Profil:</span>
+                </div>
+                <Select value={selectedProfileId} onValueChange={(value) => {
+                  if (value === '__new__') {
+                    openSaveProfileDialog();
+                  } else {
+                    const profile = profiles.find(p => p.id === value);
+                    if (profile) loadProfile(profile);
+                  }
+                }}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Profil wählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles.map(profile => (
+                      <SelectItem key={profile.id} value={profile.id}>
+                        {profile.name} {profile.isDefault && '(Standard)'}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__new__">
+                      <span className="flex items-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        Neues Profil erstellen...
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {attributeConfigs.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => openSaveProfileDialog()}>
+                    <Save className="w-4 h-4 mr-2" />
+                    Als Profil speichern
+                  </Button>
+                )}
+                {selectedProfileId && (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      const profile = profiles.find(p => p.id === selectedProfileId);
+                      if (profile) openSaveProfileDialog(profile);
+                    }}>
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Bearbeiten
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      if (confirm('Profil wirklich löschen?')) {
+                        deleteProfileMutation.mutate(selectedProfileId);
+                      }
+                    }}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
+              
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -981,6 +1182,75 @@ export default function AttributeFiller() {
             <div className="flex justify-end">
               <Button onClick={() => setShowExportDialog(false)}>
                 Fertig
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog für Profil speichern/bearbeiten */}
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingProfileId ? 'Profil bearbeiten' : 'Neues Profil erstellen'}</DialogTitle>
+            <DialogDescription>
+              Speichere die aktuelle Attribut-Konfiguration als wiederverwendbares Profil
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="profile-name">Profilname *</Label>
+              <Input
+                id="profile-name"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                placeholder="z.B. Wetterstationen, Akkus, Kabel..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="profile-description">Beschreibung</Label>
+              <Textarea
+                id="profile-description"
+                value={profileDescription}
+                onChange={(e) => setProfileDescription(e.target.value)}
+                placeholder="Optionale Beschreibung für dieses Profil..."
+                rows={2}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="profile-default"
+                checked={isDefaultProfile}
+                onCheckedChange={(checked) => setIsDefaultProfile(!!checked)}
+              />
+              <Label htmlFor="profile-default" className="text-sm">
+                Als Standard-Profil setzen
+              </Label>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-sm text-muted-foreground">
+                <strong>Gespeichert werden:</strong><br />
+                • {attributeConfigs.filter(a => a.enabled).length} aktivierte Attribute<br />
+                • {aiRules.length} KI-Regeln<br />
+                {customPrompt && '• Custom Prompt'}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowProfileDialog(false)}>
+                Abbrechen
+              </Button>
+              <Button onClick={saveCurrentProfile} disabled={saveProfileMutation.isPending}>
+                {saveProfileMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Speichern...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Speichern
+                  </>
+                )}
               </Button>
             </div>
           </div>
