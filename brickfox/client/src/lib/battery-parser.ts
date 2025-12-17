@@ -380,20 +380,13 @@ function getEmptyData(): BatteryData {
   };
 }
 
-function escapeHtml(text: string): string {
+function escapeHtmlTags(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
-    .replace(/ä/g, "&auml;")
-    .replace(/ö/g, "&ouml;")
-    .replace(/ü/g, "&uuml;")
-    .replace(/Ä/g, "&Auml;")
-    .replace(/Ö/g, "&Ouml;")
-    .replace(/Ü/g, "&Uuml;")
-    .replace(/ß/g, "&szlig;");
+    .replace(/'/g, "&#039;");
 }
 
 export function generateHTML(data: BatteryData): string {
@@ -417,14 +410,14 @@ export function generateHTML(data: BatteryData): string {
   if (data.betriebstemperatur !== NA) tableRows += `<tr><td>Betriebstemperatur:</td><td>${data.betriebstemperatur}</td></tr>\n`;
   if (data.kompatibilitaet_kurz !== NA) tableRows += `<tr><td>Kompatibilität:</td><td>${data.kompatibilitaet_kurz}</td></tr>\n`;
 
-  // Apply HTML entity escaping to static German text where needed to match legacy system requirements
+  // Use direct UTF-8 characters - no HTML entity encoding for German umlauts
   return `<h1>${data.produktname}</h1>
 
-<h2>Zuverl&auml;ssige Energie f&uuml;r professionelle Anwendungen</h2>
-<p>Die ${data.produktname} ist eine hochwertige Energiequelle, die speziell f&uuml;r zuverl&auml;ssige Leistung in anspruchsvollen Anwendungen entwickelt wurde. Mit ihrer stabilen Spannung${data.spannung !== NA ? " von " + data.spannung : ""} und einer hohen Energiedichte eignet sie sich ideal f&uuml;r ${data.einsatzzweck} und elektronische Systeme mit dauerhaftem Energiebedarf.</p>
-<p>Diese Batterie zeichnet sich durch ihre lange Lebensdauer, ${data.lagereigenschaften !== NA ? data.lagereigenschaften.toLowerCase() : "geringe selbstentladung"} und hohe Zuverl&auml;ssigkeit aus. Sie ist perfekt f&uuml;r professionelle Anforderungen geeignet.</p>
-<p>Passend f&uuml;r folgende Ger&auml;te:</p>
-<p>&#9989; ${data.kompatibilitaet_kurz.replace("Kompatibel mit Geräten der Hersteller ", "").replace(".", "")}</p>
+<h2>Zuverlässige Energie für professionelle Anwendungen</h2>
+<p>Die ${data.produktname} ist eine hochwertige Energiequelle, die speziell für zuverlässige Leistung in anspruchsvollen Anwendungen entwickelt wurde. Mit ihrer stabilen Spannung${data.spannung !== NA ? " von " + data.spannung : ""} und einer hohen Energiedichte eignet sie sich ideal für ${data.einsatzzweck} und elektronische Systeme mit dauerhaftem Energiebedarf.</p>
+<p>Diese Batterie zeichnet sich durch ihre lange Lebensdauer, ${data.lagereigenschaften !== NA ? data.lagereigenschaften.toLowerCase() : "geringe selbstentladung"} und hohe Zuverlässigkeit aus. Sie ist perfekt für professionelle Anforderungen geeignet.</p>
+<p>Passend für folgende Geräte:</p>
+<p>✅ ${data.kompatibilitaet_kurz.replace("Kompatibel mit Geräten der Hersteller ", "").replace(".", "")}</p>
 
 <h2>Technische Daten</h2>
 <table border="0" summary="">
