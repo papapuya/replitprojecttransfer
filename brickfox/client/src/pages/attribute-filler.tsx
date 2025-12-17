@@ -121,6 +121,7 @@ export default function AttributeFiller() {
         'Zeitzoneneinstellung': { type: 'yesNo' },
         'Wandaufhängung': { type: 'yesNo' },
         'Innentemperatur': { type: 'yesNo' },
+        'WST_Weckalarm': { type: 'yesNo' },  // Weckalarm-Funktion
       };
       
       const configs: AttributeConfig[] = attributeHeaders.map(h => {
@@ -589,6 +590,9 @@ export default function AttributeFiller() {
                   <Button variant="outline" size="sm" onClick={selectNone}>
                     Keine
                   </Button>
+                  <Button variant="outline" size="sm" onClick={() => setAttributeConfigs(prev => prev.map(a => ({ ...a, enabled: false })))}>
+                    Alle abwählen
+                  </Button>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
@@ -920,7 +924,7 @@ export default function AttributeFiller() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -941,6 +945,13 @@ export default function AttributeFiller() {
                 onClick={() => setExportColumns(headers)}
               >
                 Alle Spalten
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setExportColumns([])}
+              >
+                Alle abwählen
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto border rounded-lg p-3">
