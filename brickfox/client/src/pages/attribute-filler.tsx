@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2, FileText, Filter, X, Pencil } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2, FileText, Filter, X, Pencil, StopCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -47,6 +47,21 @@ export default function AttributeFiller() {
   // Editiermodus für manuelle Nachbearbeitung
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; attrKey: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  
+  // Abort-Controller für Verarbeitungsabbruch
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
+  const handleAbort = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setProcessing(false);
+      toast({
+        title: "Abgebrochen",
+        description: `Verarbeitung wurde nach ${processedCount} Produkten abgebrochen`,
+      });
+    }
+  };
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
@@ -222,6 +237,10 @@ export default function AttributeFiller() {
     setProcessing(true);
     setProgress(0);
     setProcessedCount(0);
+    
+    // Neuen AbortController erstellen
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
 
     // Bei Filter: nur gefilterte Produkte verarbeiten, sonst alle
     // Erstelle Array mit echten Indizes für robuste Zuordnung (keine Objekt-Referenzen)
@@ -242,6 +261,11 @@ export default function AttributeFiller() {
     const batchSize = 5;
 
     for (let i = 0; i < indicesToProcess.length; i += batchSize) {
+      // Prüfe ob abgebrochen wurde
+      if (signal.aborted) {
+        break;
+      }
+      
       const batchIndices = indicesToProcess.slice(i, Math.min(i + batchSize, indicesToProcess.length));
 
       const promises = batchIndices.map(async (realIndex) => {
@@ -548,6 +572,15 @@ export default function AttributeFiller() {
                     </div>
                     <Progress value={progress} className="h-2" />
                   </div>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={handleAbort}
+                    className="flex items-center gap-2"
+                  >
+                    <StopCircle className="w-4 h-4" />
+                    Abbrechen
+                  </Button>
                 </div>
               </Card>
             )}
