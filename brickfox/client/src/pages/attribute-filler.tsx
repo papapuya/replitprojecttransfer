@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2, FileText, Filter, X, Pencil, StopCircle } from "lucide-react";
+import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2, FileText, Filter, X, Pencil, StopCircle, Copy, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -733,7 +733,36 @@ export default function AttributeFiller() {
                           <td className="p-2 text-foreground whitespace-nowrap sticky left-0 bg-card">{row[pidKey]}</td>
                           <td className="p-2 text-foreground whitespace-nowrap">{row['p_item_number'] || row['v_item_number'] || '-'}</td>
                           <td className="p-2 text-foreground max-w-[200px] truncate" title={row['p_name[de]'] || ''}>{row['p_name[de]'] || '-'}</td>
-                          <td className="p-2 text-foreground max-w-[300px] truncate" title={row['p_description[de]'] || ''}>{(row['p_description[de]'] || '').substring(0, 100)}{(row['p_description[de]'] || '').length > 100 ? '...' : ''}</td>
+                          <td className="p-2 text-foreground max-w-[300px]">
+                            <div className="flex items-center gap-1">
+                              <span className="truncate max-w-[200px]" title={row['p_description[de]'] || ''}>
+                                {(row['p_description[de]'] || '').substring(0, 60)}{(row['p_description[de]'] || '').length > 60 ? '...' : ''}
+                              </span>
+                              {row['p_description[de]'] && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(row['p_description[de]'] || '');
+                                      toast({ title: "Kopiert", description: "Beschreibung in Zwischenablage kopiert" });
+                                    }}
+                                    className="p-1 hover:bg-accent rounded"
+                                    title="Beschreibung kopieren"
+                                  >
+                                    <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      alert(row['p_description[de]']);
+                                    }}
+                                    className="p-1 hover:bg-accent rounded"
+                                    title="Beschreibung anzeigen"
+                                  >
+                                    <Eye className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
                           {attributeConfigs.filter(a => a.enabled).map(attr => (
                             <td key={attr.key} className="p-2 whitespace-nowrap">
                               {editingCell?.rowIndex === realIndex && editingCell?.attrKey === attr.key ? (
