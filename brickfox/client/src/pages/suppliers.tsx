@@ -344,9 +344,9 @@ export default function Suppliers() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>URL-Muster</TableHead>
-                <TableHead>Beschreibung</TableHead>
+                <TableHead>Pixi-Nr.</TableHead>
                 <TableHead>Selektoren</TableHead>
+                <TableHead>Login</TableHead>
                 <TableHead className="text-right">Aktionen</TableHead>
               </TableRow>
             </TableHeader>
@@ -363,15 +363,19 @@ export default function Suppliers() {
                     {supplier.name}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {supplier.urlPattern || '-'}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {supplier.description || '-'}
+                    {supplier.supplNr || '-'}
                   </TableCell>
                   <TableCell>
                     <span className="text-xs px-2 py-1 bg-muted rounded">
                       {Object.keys(supplier.selectors).length} Selektoren
                     </span>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {supplier.loginUrl ? (
+                      <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">✓ Konfiguriert</span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -482,30 +486,6 @@ export default function Suppliers() {
             </div>
 
             <div>
-              <Label htmlFor="urlPattern">URL-Muster (optional)</Label>
-              <Input
-                id="urlPattern"
-                value={formData.urlPattern}
-                onChange={(e) => setFormData({ ...formData, urlPattern: e.target.value })}
-                placeholder="z.B. conrad.de, reichelt.de"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Wird verwendet, um den Lieferanten automatisch zu erkennen
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="description">Beschreibung (optional)</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Notizen zu diesem Lieferanten..."
-                rows={2}
-              />
-            </div>
-
-            <div>
               <Label htmlFor="productLinkSelector">Produktlink CSS-Selektor (optional)</Label>
               <Input
                 id="productLinkSelector"
@@ -519,44 +499,10 @@ export default function Suppliers() {
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="font-semibold mb-3">🔐 Authentifizierung (optional)</h3>
-              
-              <div className="mb-4">
-                <Label htmlFor="sessionCookies">Session Cookies</Label>
-                <Textarea
-                  id="sessionCookies"
-                  value={formData.sessionCookies}
-                  onChange={(e) => setFormData({ ...formData, sessionCookies: e.target.value })}
-                  placeholder="sessionid=abc123; csrftoken=xyz789"
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  💡 <strong>So kopieren Sie Cookies:</strong><br/>
-                  1. Loggen Sie sich auf der Lieferanten-Webseite ein<br/>
-                  2. Öffnen Sie DevTools (F12) → Tab "Application" → "Cookies"<br/>
-                  3. Kopieren Sie relevante Cookies (z.B. sessionid, auth_token)<br/>
-                  4. Format: <code>cookie1=value1; cookie2=value2</code>
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="userAgent">Custom User-Agent (optional)</Label>
-                <Input
-                  id="userAgent"
-                  value={formData.userAgent}
-                  onChange={(e) => setFormData({ ...formData, userAgent: e.target.value })}
-                  placeholder="Mozilla/5.0 (Windows NT 10.0; Win64; x64)..."
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Falls die Webseite bestimmte Browser erfordert
-                </p>
-              </div>
-
-              <div className="border-t pt-4 mt-4">
-                <h4 className="font-medium mb-3">Automatischer Login</h4>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Für Shops, die eine Anmeldung erfordern
-                </p>
+              <h3 className="font-semibold mb-3">🔐 Automatischer Login</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Für Shops, die eine Anmeldung erfordern
+              </p>
                 
                 <div className="space-y-3">
                   <div>
@@ -637,7 +583,6 @@ export default function Suppliers() {
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
 
             <div className="border-t pt-4">
