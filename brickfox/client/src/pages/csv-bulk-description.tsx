@@ -417,6 +417,19 @@ export default function CSVBulkDescription() {
             productData.existingBullets = existingBullets.join('|');
             console.log(`📋 ${existingBullets.length} bestehende Bulletpoints gefunden für: ${produktname}`);
           }
+          
+          // Kompatibilität 1:1 aus CSV-Spalten extrahieren (WICHTIG: Alle Modelle übernehmen!)
+          // Suche in verschiedenen CSV-Spalten nach Kompatibilitätsdaten
+          const csvKompatibilitaet = 
+            row['p_attributes[akku1][de]'] || row['v_attributes[akku1][de]'] ||
+            row['p_attributes[kompatibilitaet][de]'] || row['v_attributes[kompatibilitaet][de]'] ||
+            row['p_attributes[passend_fuer][de]'] || row['v_attributes[passend_fuer][de]'] ||
+            row['p_group_part[de]'] || row['v_group_part[de]'] ||
+            row['kompatibilitaet'] || row['compatible_models'] || row['passend_fuer'] || '';
+          
+          if (csvKompatibilitaet && csvKompatibilitaet.trim()) {
+            console.log(`📋 Kompatibilität direkt aus CSV: ${csvKompatibilitaet.substring(0, 100)}...`);
+          }
 
           // Use local admin token (ignore Supabase for local dev)
           const token = 'local-admin-token-pimpilot-dev';
@@ -435,7 +448,8 @@ export default function CSVBulkDescription() {
               customAttributes: { 
                 exactProductName: produktname,
                 existingBullets: existingBullets.length > 0 ? existingBullets : undefined,
-                existingDescription: existingDescription // Bestehende Beschreibung als Basis
+                existingDescription: existingDescription, // Bestehende Beschreibung als Basis
+                csvKompatibilitaet: csvKompatibilitaet.trim() || undefined // 1:1 aus CSV
               },
             }),
           });
