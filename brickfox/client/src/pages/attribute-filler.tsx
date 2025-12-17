@@ -415,12 +415,39 @@ export default function AttributeFiller() {
   const handleDownload = (withBOM: boolean = false) => {
     if (rawData.length === 0) return;
 
-    // Exakte Spaltenreihenfolge und -namen wie in Original-CSV
+    // Nur diese Spalten exportieren (p_id + WST_* Attribute)
+    const exportColumns = [
+      'p_id',
+      'p_attributes[WST_Datumsanzeige][de]',
+      'p_attributes[WST_Batterieanzeige][de]',
+      'p_attributes[WST_Funkuhr digital][de]',
+      'p_attributes[WST_Wettervorhersage][de]',
+      'p_attributes[WST_MIN/MAX Anzeige][de]',
+      'p_attributes[WST_Regenwahrscheinlichkeit][de]',
+      'p_attributes[WST_Schlummerfunktion][de]',
+      'p_attributes[WST_Sturmwarnung][de]',
+      'p_attributes[WST_Temperaturanzeige][de]',
+      'p_attributes[WST_Tischaufstellung][de]',
+      'p_attributes[WST_WetterDirekt][de]',
+      'p_attributes[WST_Wettertendenz][de]',
+      'p_attributes[WST_Wettervorhersage Region][de]',
+      'p_attributes[WST_Wochentagsanzeige][de]',
+      'p_attributes[WST_Zeitzoneneinstellung][de]',
+      'p_attributes[WST_Wandaufhängung][de]',
+      'p_attributes[WST_Innentemperatur][de]',
+      'p_attributes[WST_Wetteranzeige][de]',
+      'p_attributes[WST_Luftfeuchteanzeige][de]',
+      'p_attributes[WST_Timer][de]',
+    ];
+    
+    // Filtere nur vorhandene Spalten
+    const availableExportColumns = exportColumns.filter(col => headers.includes(col));
+
     // Wende fixBrokenUtf8 auf jeden Wert an, um Encoding-Probleme zu korrigieren
     const csvContent = [
-      headers.join(';'),  // Header ohne Anführungszeichen (wie Original)
+      availableExportColumns.join(';'),  // Header ohne Anführungszeichen (wie Original)
       ...rawData.map(row =>
-        headers.map(h => {
+        availableExportColumns.map(h => {
           // Encoding-Korrektur für jeden Wert
           const rawVal = String(row[h] || '');
           const fixedVal = fixBrokenUtf8(rawVal);
