@@ -98,6 +98,7 @@ export default function AttributeFiller() {
         // Prüfe ob spezielle Regel existiert
         const specialRule = specialRules[label];
         if (specialRule) {
+          console.log(`[CSV-Import] Spezielle Regel gefunden: ${label} -> ${specialRule.type}`);
           return {
             key: h,
             label: label,
@@ -118,6 +119,8 @@ export default function AttributeFiller() {
         };
       });
 
+      console.log('[CSV-Import] Erkannte Attribut-Spalten:', attributeHeaders);
+      console.log('[CSV-Import] Aktivierte Attribute:', configs.filter(c => c.enabled).map(c => c.key));
       setAttributeConfigs(configs);
 
       toast({
