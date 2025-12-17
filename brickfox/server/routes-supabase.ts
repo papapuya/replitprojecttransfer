@@ -2398,19 +2398,17 @@ REGELN:
 - Antworte NUR mit einem JSON-Objekt
 - Ja/Nein Attribute: true wenn erwähnt, false wenn nicht
 - Text-Attribute:
-  - akku_produktart: Extrahiere Produkttyp (z.B. "Wetterstation", "Wecker", "Funkuhr", "Thermometer", "Wanduhr")
   - allg_farbe_geheause: Extrahiere Gehäusefarbe aus Produktname ODER Beschreibung (z.B. "Schwarz", "Weiß", "Silber", "Grau", "Rot", "Blau", "Grün")
     - Prüfe zuerst den Produktnamen auf Farbangaben wie "-schwarz", "-weiß", "black", "white" etc.
+  - tala_stromversorgung: Extrahiere die VOLLSTÄNDIGE Stromversorgungsangabe aus der Beschreibung
+    - Beispiele: "2 x AA Mignon", "3 x AAA Micro", "1 x CR2032", "2 Stück AA Batterien", "Li-Ion Akku 3.7V"
+    - Suche nach Begriffen wie "Stromversorgung:", "Batterien:", "Akku:", "benötigt X Batterien"
+    - Gib den kompletten Text zurück wie er in der Beschreibung steht
   - Bei Text-Attributen: null zurückgeben wenn nicht gefunden
-- Auswahl-Attribute:
-  - tala_stromversorgung: Prüfe ob "Akku", "Batterie", "AAA", "AA", "CR2032", "LR44" etc. erwähnt werden
-    - Wenn Batterie-Typen wie AAA, AA, CR2032, LR44, Micro, Mignon etc. erwähnt → "Batterie"
-    - Wenn "Akku", "aufladbar", "wiederaufladbar", "Li-Ion", "LiPo" erwähnt → "Akkutyp"
-    - NUR einen der erlaubten Werte zurückgeben, sonst null
 - Bei Unsicherheit: false bzw. null${customPromptSection}
 
 Beispiel Antwort:
-{"WST_Datumsanzeige": true, "WST_Weckalarm": false, "akku_produktart": "Wetterstation", "allg_farbe_geheause": "Schwarz", "tala_stromversorgung": "Batterie"}`;
+{"WST_Datumsanzeige": true, "WST_Weckalarm": false, "allg_farbe_geheause": "Schwarz", "tala_stromversorgung": "2 x AA Mignon"}`;
 
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
