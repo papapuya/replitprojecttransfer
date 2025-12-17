@@ -880,9 +880,34 @@ function parseProductFromHTML(
       }
     }
     
+    // Baltrade-specific: Search in .productFeatures table for weight
+    if (!weightText) {
+      console.log(`[Weight] Trying Baltrade .productFeatures extraction...`);
+      $('.productFeatures .featRow').each((_, row) => {
+        const labelText = $(row).find('.features-name, .feature-label, .name').text().toLowerCase();
+        if (labelText.includes('weight') || labelText.includes('gewicht') || labelText.includes('waga')) {
+          const valueEl = $(row).find('.features-values-single-value, .feature-value, .value');
+          if (valueEl.length > 0) {
+            weightText = valueEl.text().trim();
+            console.log(`[Weight] Found in Baltrade productFeatures: "${weightText}"`);
+            return false; // break
+          }
+        }
+      });
+    }
+    
+    // Also try Schema.org markup for weight
+    if (!weightText) {
+      const schemaWeight = $('[itemprop="weight"]').text().trim();
+      if (schemaWeight) {
+        weightText = schemaWeight;
+        console.log(`[Weight] Found via Schema.org: "${weightText}"`);
+      }
+    }
+    
     // Fallback: Search for "gewicht: XXXg" or "weight: XXXg" in HTML
     if (!weightText) {
-      const weightMatch = html.match(/(?:gewicht|weight):\s*([\d,\.]+)\s*[gk]/i);
+      const weightMatch = html.match(/(?:gewicht|weight|waga)[\s:]*(\d+[\.,]?\d*)\s*(?:g|kg|gram)/i);
       if (weightMatch) {
         weightText = weightMatch[1];
         console.log(`[Weight] Found via regex: "${weightText}"`);
@@ -892,6 +917,8 @@ function parseProductFromHTML(
     if (weightText) {
       product.weight = formatMeasurement(weightText);
       console.log(`[Weight] Final weight: ${product.weight}`);
+    } else {
+      console.log(`[Weight] ⚠️ No weight found for this product`);
     }
   }
 
@@ -1160,12 +1187,13 @@ function parseProductFromHTML(
       product.weight = pageSpecs.gewicht;
       console.log(`⚖️ Extracted weight from page text: ${product.weight}`);
     }
-    // For Phonetastik: if dicke (thickness) is found but no weight, set weight to "1" (very light product)
-    if (pageSpecs.dicke && !product.weight && !product.length) {
+    // For Phonetastik ONLY: if dicke (thickness) is found but no weight, set weight to "1" (very light product)
+    const isPhonetastik = url.toLowerCase().includes('phonetastik');
+    if (pageSpecs.dicke && !product.weight && !product.length && isPhonetastik) {
       product.length = pageSpecs.dicke;
       if (!product.weight) {
         product.weight = '1'; // Schutzglas is very light, assume ~1g
-        console.log(`📏 Extracted thickness (dicke) & set default weight for Phonetastik: thickness=${product.length}, weight=1g`);
+        console.log(`📏 [Phonetastik] Extracted thickness (dicke) & set default weight: thickness=${product.length}, weight=1g`);
       }
     } else if (pageSpecs.dicke && !product.length) {
       product.length = pageSpecs.dicke;
