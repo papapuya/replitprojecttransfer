@@ -92,9 +92,17 @@ export default function AttributeFiller() {
       setRawData(rows);
 
       // Unterstützt p_attributes UND v_attributes (Brickfox-Format)
-      const attributeHeaders = parsedHeaders.filter(h => 
-        (h.startsWith('p_attributes[') || h.startsWith('v_attributes[')) && h.includes('][de]')
-      );
+      // Ausgeschlossene Attribute (werden nicht in der Spaltenauswahl angezeigt)
+      const excludedAttributes = ['allg_lieferumfang'];
+      const attributeHeaders = parsedHeaders.filter(h => {
+        if (!((h.startsWith('p_attributes[') || h.startsWith('v_attributes[')) && h.includes('][de]'))) {
+          return false;
+        }
+        // Prüfe ob Attribut ausgeschlossen ist
+        const match = h.match(/[pv]_attributes\[([^\]]+)\]\[de\]/);
+        const attrName = match ? match[1] : '';
+        return !excludedAttributes.includes(attrName);
+      });
 
       // Spezielle Attribut-Regeln
       const specialRules: Record<string, { type: 'text' | 'fixed' | 'choice' | 'yesNo'; fixedValue?: string; choices?: string[] }> = {
