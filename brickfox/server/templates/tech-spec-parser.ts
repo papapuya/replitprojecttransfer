@@ -699,29 +699,47 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       }
       
       // ═══════════════════════════════════════════════════════════════
-      // KOMPATIBILITÄT 1:1 EXTRAKTION: Rohtext aus "Kompatibilität:" übernehmen
-      // KEINE Normalisierung - alles was nach "Kompatibilität:" kommt wird übernommen
-      // Suche nach verschiedenen Formaten: "Kompatibilität:", "Kompatibilitaet:", etc.
+      // KOMPATIBILITÄT 1:1 EXTRAKTION: ALLE Modelle aus Beschreibung übernehmen
+      // KEINE Filterung - alles was nach "Kompatibilität" kommt wird übernommen
       // ═══════════════════════════════════════════════════════════════
+      
+      // Pattern: Finde "Kompatibilität" Überschrift und extrahiere ALLES bis zur nächsten Überschrift
+      const compatEndMarkers = [
+        'Lieferumfang', 'Weitere Informationen', 'Technische Daten', 
+        'Ihre Vorteile', 'Typ:', 'Einsatzbereiche', 'Hinweis'
+      ];
+      const endMarkersPattern = compatEndMarkers.join('|');
+      
+      // Breites Pattern das ALLES nach Kompatibilität erfasst
       const compatPatterns = [
-        /Kompatibilit[äa]t[:\s]+([\s\S]+?)(?=\n\s*(?:Lieferumfang|Weitere Informationen|Technische Daten|Ihre Vorteile))/i,
-        /Kompatibilit[äa]t[:\s]+([\s\S]+?)(?=\n[A-Z][^a-z]*:)/i,
-        /Kompatibilit[äa]t[:\s]+([^\n]+)/i
+        // H2-Tag mit Kompatibilität - alles bis zum nächsten H2 oder bekannten Überschriften
+        new RegExp(`<h2[^>]*>\\s*Kompatibilit[äa]t\\s*</h2>\\s*<p[^>]*>([\\s\\S]+?)</p>`, 'i'),
+        // Kompatibilität: gefolgt von mehrzeiligem Content
+        new RegExp(`Kompatibilit[äa]t[:\\s]+([\\s\\S]+?)(?=(?:${endMarkersPattern})|$)`, 'i'),
+        // Fallback: Einzelne Zeile
+        /Kompatibilit[äa]t[:\s]+([^\n]+(?:\n[^\n]+)*)/i
       ];
       
       for (const pattern of compatPatterns) {
         const compatMatch = normalized.match(pattern);
         if (compatMatch) {
           let rawCompat = compatMatch[1].trim();
-          // Bereinige nur Zeilenumbrüche zu Kommas
-          rawCompat = rawCompat.replace(/\n+/g, ', ').replace(/,\s*,/g, ',').trim();
-          rawCompat = rawCompat.replace(/,\s*$/, '');
+          
+          // HTML-Tags entfernen falls noch vorhanden
+          rawCompat = rawCompat.replace(/<[^>]+>/g, ' ');
+          
+          // Bereinige: Zeilenumbrüche zu Kommas, aber behalte ALLE Modelle
+          rawCompat = rawCompat
+            .replace(/\n+/g, ', ')
+            .replace(/\s+/g, ' ')
+            .replace(/,\s*,/g, ', ')
+            .replace(/,\s*$/, '')
+            .trim();
           
           if (rawCompat.length > 10) {
             specs['Kompatibilität'] = rawCompat;
-            console.log(`📋 [COMPAT] 1:1 DIREKT übernommen: ${rawCompat.length} Zeichen`);
-            // WICHTIG: Hier NICHT break aus der for-Schleife der descriptionFields!
-            // Stattdessen setze ein Flag und breche unten ab
+            console.log(`📋 [COMPAT] 1:1 KOMPLETT übernommen: ${rawCompat.length} Zeichen`);
+            console.log(`📋 [COMPAT] Inhalt: ${rawCompat.substring(0, 200)}...`);
             break;
           }
         }
@@ -729,7 +747,7 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
       
       // Wenn Kompatibilität bereits 1:1 übernommen wurde, überspringe den Rest
       if (specs['Kompatibilität']) {
-        console.log(`✅ [COMPAT] Überspringe Normalisierung - 1:1 Daten vorhanden`);
+        console.log(`✅ [COMPAT] Überspringe weitere Extraktion - 1:1 Daten vorhanden`);
         break;
       }
       
