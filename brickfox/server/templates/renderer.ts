@@ -699,118 +699,55 @@ function removeBrandFromModel(model: string, brand: string): string {
 
 /**
  * Rendert die Kompatibilitäts-Sektion
- * Format: 
- * - Produkttyp NUR EINMAL in BOLD (z.B. "Makita Akku-Bohrschrauber")
- * - Modellnummern kommagetrennt dahinter (z.B. "6002D, 6002DW, 6010D")
- * - Pro Produkttyp eine neue Zeile
+ * Format: Marke einmal am Anfang, dann alle Modelle kommagetrennt
+ * Beispiel: "Philips SBC-EB4870 A1507, SBC-EB4880 A1507, SCD 48100"
  */
 function renderKompatibilitaet(models: string[], e: (s: string) => string, productName?: string): string {
   if (!models || models.length === 0) {
     return '';
   }
   
-  // Gruppiere nach Produkttyp: Map<ProduktTyp, Modellnummern[]>
-  const groups: Map<string, string[]> = new Map();
+  // Bekannte Marken
+  const knownBrands = ['Philips', 'Makita', 'Bosch', 'DeWalt', 'Metabo', 'Hilti', 'Festool', 
+                       'Milwaukee', 'Ryobi', 'Black+Decker', 'Einhell', 'Kärcher', 'Braun',
+                       'Panasonic', 'Sony', 'Samsung', 'Apple', 'LG', 'Siemens', 'Miele',
+                       'AEG', 'Hitachi', 'Husqvarna', 'Stihl', 'Gardena', 'Fein', 'Flex'];
   
-  // Muster um Produkttyp von Modellnummer zu trennen
-  // z.B. "Makita Akku-Bohrschrauber 6002D" -> Typ: "Makita Akku-Bohrschrauber", Modell: "6002D"
-  const productTypeRegex = /^((?:[A-Za-zäöüÄÖÜß]+\s+)?(?:Akku-)?[A-Za-zäöüÄÖÜß\-]+(?:schrauber|schleifer|säge|fräse|schere|sauger|lampe|bohrhammer|bohrmaschine|maschine|werkzeug|radio|lautsprecher|strahler))\s+(.+)$/i;
-  
-  // Spezielle Muster für bekannte Produktkategorien
-  const specialPatterns = [
-    /^((?:Makita\s+)?Akku-Bohrschrauber)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Grasschere)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Heckenschere)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Staubsauger)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Stichsäge)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Winkelschleifer)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Winkelbohrmaschine)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Kantenfräse)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Typ)\s+(.+)$/i,
-    /^((?:Makita\s+)?LED\s+Akku-Lampe)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Handkreissäge)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Werkstattradio)\s+(.+)$/i,
-    /^((?:Makita\s+)?Akku-Radiolampe)\s+(.+)$/i,
-    /^(Akku-Gebläse)\s+(.+)$/i,
-  ];
-  
-  for (const model of models) {
-    const trimmed = model.trim();
-    if (!trimmed) continue;
-    
-    let productType = '';
-    let modelNumber = '';
-    let matched = false;
-    
-    // Versuche spezielle Muster zuerst
-    for (const pattern of specialPatterns) {
-      const match = trimmed.match(pattern);
-      if (match) {
-        productType = match[1].trim();
-        modelNumber = match[2].trim();
-        matched = true;
+  // Extrahiere Marke aus dem Produktnamen
+  let brand = '';
+  if (productName) {
+    for (const b of knownBrands) {
+      if (productName.toLowerCase().includes(b.toLowerCase())) {
+        brand = b;
         break;
       }
     }
-    
-    // Fallback: Allgemeines Muster
-    if (!matched) {
-      const match = trimmed.match(productTypeRegex);
-      if (match) {
-        productType = match[1].trim();
-        modelNumber = match[2].trim();
-        matched = true;
-      }
-    }
-    
-    // Wenn kein Muster passt, als eigene Zeile behandeln
-    if (!matched) {
-      // Prüfe ob es ein bekanntes LED-Akku-Lampe Kürzel ist (MUH, MUM, MUS, RJ, SH, WT, ML)
-      const ledLampeKuerzel = /^(MUH|MUM|MUS|RJ|SH|WT|ML)\s+(.+)$/i;
-      const ledMatch = trimmed.match(ledLampeKuerzel);
-      if (ledMatch) {
-        // Diese Kürzel gehören alle zur LED Akku-Lampe
-        productType = 'LED Akku-Lampe';
-        modelNumber = trimmed; // Komplettes "MUH 260DZ" als Modellnummer
-        matched = true;
-      } else {
-        // Prüfe ob es mit anderem Kürzel beginnt (z.B. "BMR 100")
-        const simpleMatch = trimmed.match(/^([A-Z]{2,4})\s+(.+)$/);
-        if (simpleMatch) {
-          // Kürzel wie BMR etc. - als eigene Kategorie
-          productType = simpleMatch[1];
-          modelNumber = simpleMatch[2];
-          matched = true;
-        } else {
-          // Ganzer String als eigene Zeile
-          productType = trimmed;
-          modelNumber = '';
-        }
-      }
-    }
-    
-    if (!groups.has(productType)) {
-      groups.set(productType, []);
-    }
-    if (modelNumber) {
-      groups.get(productType)!.push(modelNumber);
-    }
   }
   
-  // Baue kompakte Ausgabe: Alle Modelle kommagetrennt in einem Fließtext
-  const allModels: string[] = [];
-  
-  groups.forEach((modelNumbers: string[], productType: string) => {
-    if (modelNumbers.length === 0) {
-      allModels.push(e(productType));
-    } else {
-      // Produkttyp mit Modellnummern kombinieren
-      const modelsStr = modelNumbers.map((m: string) => e(m)).join('/');
-      allModels.push(`${e(productType)} ${modelsStr}`);
+  // Bereinige Modelle und entferne redundante Marken
+  const cleanedModels: string[] = [];
+  for (const model of models) {
+    let cleaned = model.trim();
+    if (!cleaned) continue;
+    
+    // Entferne Marke am Anfang falls vorhanden (da sie einmal am Anfang steht)
+    if (brand) {
+      const brandRegex = new RegExp(`^${brand}\\s+`, 'i');
+      cleaned = cleaned.replace(brandRegex, '');
     }
-  });
+    
+    cleanedModels.push(e(cleaned));
+  }
   
-  return `<h2 style="margin-top: 1.5em;">Kompatibilität</h2>\n<p>${allModels.join(', ')}</p>`;
+  // Baue Ausgabe: Marke + Modelle kommagetrennt
+  let result = '';
+  if (brand && cleanedModels.length > 0) {
+    result = `${e(brand)} ${cleanedModels.join(', ')}`;
+  } else {
+    result = cleanedModels.join(', ');
+  }
+  
+  return `<h2 style="margin-top: 1.5em;">Kompatibilität</h2>\n<p>${result}</p>`;
 }
 
 function cleanTechnicalTable(htmlTable: string): string {
