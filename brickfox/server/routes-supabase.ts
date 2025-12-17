@@ -2400,10 +2400,11 @@ REGELN:
 - Text-Attribute:
   - allg_farbe_geheause: Extrahiere Gehäusefarbe aus Produktname ODER Beschreibung (z.B. "Schwarz", "Weiß", "Silber", "Grau", "Rot", "Blau", "Grün")
     - Prüfe zuerst den Produktnamen auf Farbangaben wie "-schwarz", "-weiß", "black", "white" etc.
-  - tala_stromversorgung: Extrahiere die VOLLSTÄNDIGE Stromversorgungsangabe aus der Beschreibung
-    - Beispiele: "2 x AA Mignon", "3 x AAA Micro", "1 x CR2032", "2 Stück AA Batterien", "Li-Ion Akku 3.7V"
-    - Suche nach Begriffen wie "Stromversorgung:", "Batterien:", "Akku:", "benötigt X Batterien"
-    - Gib den kompletten Text zurück wie er in der Beschreibung steht
+  - tala_stromversorgung: Extrahiere NUR Anzahl und Batterietyp, NICHTS anderes!
+    - Format: "[Anzahl] x [Typ]" z.B. "2 x AA Mignon", "3 x AAA Micro", "1 x CR2032"
+    - Nur die Kurzform: "2 x AA Mignon" NICHT "2 x AA Mignon LR06 (nicht inklusive)"
+    - Kein zusätzlicher Text wie "benötigt", "inklusive", "nicht enthalten", "erforderlich"
+    - Bei mehreren Batterietypen: "2 x AA Mignon, 2 x AAA Micro"
   - Bei Text-Attributen: leeren String "" zurückgeben wenn nicht gefunden (NICHT "-" oder null)
 - Bei Unsicherheit: false bzw. leeren String ""${customPromptSection}
 
