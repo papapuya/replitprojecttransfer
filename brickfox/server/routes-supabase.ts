@@ -2397,7 +2397,7 @@ Zu prüfende Attribute:${attributeSection}
 REGELN:
 - Antworte NUR mit einem JSON-Objekt
 - Ja/Nein Attribute: true wenn erwähnt, false wenn nicht
-- WICHTIG: Bei Kurzzeitweckern (Timer) ist WST_Weckalarm IMMER false (sie haben Timer, keinen Weckalarm!)
+- WICHTIG: Bei Kurzzeitweckern (Timer) ist WST_Weckalarm IMMER false, aber WST_Timer IMMER true (sie haben Timer, keinen Weckalarm!)
 - Text-Attribute:
   - allg_farbe_geheause: Extrahiere Gehäusefarbe aus Produktname ODER Beschreibung (z.B. "Schwarz", "Weiß", "Silber", "Grau", "Rot", "Blau", "Grün")
     - Prüfe zuerst den Produktnamen auf Farbangaben wie "-schwarz", "-weiß", "black", "white" etc.
