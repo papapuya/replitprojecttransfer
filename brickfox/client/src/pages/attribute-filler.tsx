@@ -254,6 +254,9 @@ export default function AttributeFiller() {
           return !currentValue || currentValue.trim() === '';
         });
 
+        console.log(`[Attribut-Befüller] Produkt ${realIndex}: Zu befüllende Attribute:`, 
+          attributesToFill.map(a => ({ key: a.key, label: a.label, type: a.type })));
+
         if (attributesToFill.length === 0) {
           return null; // Alle bereits befüllt
         }
