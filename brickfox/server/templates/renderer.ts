@@ -33,22 +33,8 @@ function cleanMarkdown(text: string): string {
   return cleaned;
 }
 
-function encodeHtmlEntities(text: string): string {
-  if (!text) return text;
-  
-  return text
-    .replace(/ä/g, '&auml;')
-    .replace(/Ä/g, '&Auml;')
-    .replace(/ö/g, '&ouml;')
-    .replace(/Ö/g, '&Ouml;')
-    .replace(/ü/g, '&uuml;')
-    .replace(/Ü/g, '&Uuml;')
-    .replace(/ß/g, '&szlig;')
-    .replace(/×/g, '&times;')
-    .replace(/–/g, '&ndash;')
-    .replace(/—/g, '&mdash;')
-    .replace(/€/g, '&euro;')
-    .replace(/°/g, '&deg;');
+function passThrough(text: string): string {
+  return text || '';
 }
 
 /**
@@ -273,7 +259,7 @@ export function renderProductHtml(options: RenderOptions): string {
   // Extrahiere APN aus dem Produktnamen für den Fließtext unter der Tabelle
   const extractedApn = extractApnFromText(productName);
   const apnSatz = extractedApn 
-    ? `Akku passend f&uuml;r folgende Teilenummer (APN): ${extractedApn}`
+    ? `Akku passend für folgende Teilenummer (APN): ${extractedApn}`
     : cleanMarkdown(copy.apnSatz || '');
   
   // Verwende AI-generierten produktTitel wenn vorhanden, sonst Original-Produktname
@@ -814,18 +800,16 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
   // Baue die Ausgabe
   const lines: string[] = [];
   
-  for (const [productType, modelNumbers] of groups) {
+  groups.forEach((modelNumbers: string[], productType: string) => {
     if (modelNumbers.length === 0) {
-      // Nur Produkttyp ohne Modellnummern
       lines.push(`${e(productType)}`);
     } else {
-      // Produkttyp + Modellnummern kommagetrennt
-      const modelsStr = modelNumbers.map(m => e(m)).join(', ');
+      const modelsStr = modelNumbers.map((m: string) => e(m)).join(', ');
       lines.push(`${e(productType)} ${modelsStr}`);
     }
-  }
+  });
   
-  return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilit&auml;t</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${lines.join('<br />')}</p>`;
+  return `<h2 style="margin-top: 1.5em; margin-bottom: 0.5em;">Kompatibilität</h2>\n<p style="margin-top: 0; margin-bottom: 16px;">${lines.join('<br />')}</p>`;
 }
 
 function cleanTechnicalTable(htmlTable: string): string {
@@ -877,7 +861,7 @@ function renderMediaMarktLayout(data: {
   einsatzbereiche?: string;
   achtungHinweis?: string;
 }): string {
-  const e = encodeHtmlEntities;
+  const e = passThrough;
   
   const produktTyp: 'akku' | 'elektronik' | 'werkzeug' = data.produktTyp || 'elektronik';
   
@@ -962,7 +946,7 @@ function renderMediaMarktLayout(data: {
     }
   }
   if (achtungText) {
-    kompatibilitaetHtml += `<p style="margin-top: 0; margin-bottom: 32px;"><strong>Achtung: ${encodeHtmlEntities(achtungText)}</strong></p>`;
+    kompatibilitaetHtml += `<p style="margin-top: 0; margin-bottom: 32px;"><strong>Achtung: ${passThrough(achtungText)}</strong></p>`;
     console.log(`⚠️ ACHTUNG-Hinweis in HTML eingefügt: ${achtungText}`);
   }
   
@@ -1087,7 +1071,7 @@ ${finalSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 2em
 
   const werkzeugItems = data.werkzeuguebersicht || [];
   const werkzeuguebersichtHtml = (produktTyp === 'werkzeug' && werkzeugItems.length > 0)
-    ? `<h2>Werkzeug&uuml;bersicht</h2>
+    ? `<h2>Werkzeugübersicht</h2>
 <ul>
 ${werkzeugItems.map(item => `<li>${e(item)}</li>`).join('\n')}
 </ul>`
