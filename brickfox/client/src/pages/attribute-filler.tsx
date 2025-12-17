@@ -704,6 +704,8 @@ export default function AttributeFiller() {
                     <tr className="border-b">
                       <th className="text-left p-2 text-muted-foreground whitespace-nowrap sticky left-0 bg-card z-10">p_id</th>
                       <th className="text-left p-2 text-muted-foreground whitespace-nowrap">p_item_number</th>
+                      <th className="text-left p-2 text-muted-foreground whitespace-nowrap max-w-[200px]">p_name[de]</th>
+                      <th className="text-left p-2 text-muted-foreground whitespace-nowrap max-w-[300px]">p_description[de]</th>
                       {attributeConfigs.filter(a => a.enabled).map(attr => (
                         <th key={attr.key} className="text-left p-2 text-muted-foreground whitespace-nowrap text-xs" title={attr.key}>
                           {attr.key}
@@ -730,6 +732,8 @@ export default function AttributeFiller() {
                         <tr key={realIndex} className="border-b hover:bg-accent/50">
                           <td className="p-2 text-foreground whitespace-nowrap sticky left-0 bg-card">{row[pidKey]}</td>
                           <td className="p-2 text-foreground whitespace-nowrap">{row['p_item_number'] || row['v_item_number'] || '-'}</td>
+                          <td className="p-2 text-foreground max-w-[200px] truncate" title={row['p_name[de]'] || ''}>{row['p_name[de]'] || '-'}</td>
+                          <td className="p-2 text-foreground max-w-[300px] truncate" title={row['p_description[de]'] || ''}>{(row['p_description[de]'] || '').substring(0, 100)}{(row['p_description[de]'] || '').length > 100 ? '...' : ''}</td>
                           {attributeConfigs.filter(a => a.enabled).map(attr => (
                             <td key={attr.key} className="p-2 whitespace-nowrap">
                               {editingCell?.rowIndex === realIndex && editingCell?.attrKey === attr.key ? (
