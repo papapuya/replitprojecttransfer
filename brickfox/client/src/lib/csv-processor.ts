@@ -41,6 +41,11 @@ function parseCSVLine(line: string, delimiter: string): string[] {
 function fixBrokenUtf8(text: string): string {
   // Map of broken UTF-8 patterns to correct characters (using Unicode escape sequences)
   const brokenPatterns: [string, string][] = [
+    ['Ã¼', 'ü'], // Ã¼ → ü (literal pattern)
+    ['Ã¤', 'ä'], // Ã¤ → ä
+    ['Ã¶', 'ö'], // Ã¶ → ö
+    ['ÃŸ', 'ß'], // ÃŸ → ß (literal pattern for Außensender)
+    ['Ã\u009f', 'ß'], // Alternative ß pattern
     ['\u00c3\u00bc', '\u00fc'], // Ã¼ → ü
     ['\u00c3\u00a4', '\u00e4'], // Ã¤ → ä
     ['\u00c3\u00b6', '\u00f6'], // Ã¶ → ö
