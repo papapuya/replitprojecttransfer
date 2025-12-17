@@ -37,8 +37,9 @@ function parseCSVLine(line: string, delimiter: string): string[] {
 /**
  * Fix broken UTF-8 encoding (double-encoded or misinterpreted characters)
  * Common patterns: "Ã¼" → "ü", "Ã¤" → "ä", "Ã¶" → "ö", etc.
+ * Exported for use in export functions
  */
-function fixBrokenUtf8(text: string): string {
+export function fixBrokenUtf8(text: string): string {
   // Map of broken UTF-8 patterns to correct characters (using Unicode escape sequences)
   const brokenPatterns: [string, string][] = [
     ['Ã¼', 'ü'], // Ã¼ → ü (literal pattern)
