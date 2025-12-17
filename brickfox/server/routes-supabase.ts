@@ -2400,14 +2400,18 @@ REGELN:
 - WICHTIG: Bei Kurzzeitweckern (Timer) ist WST_Weckalarm IMMER false, aber WST_Timer IMMER true (sie haben Timer, keinen Weckalarm!)
 - WICHTIG: Bei Weckern (Wecker, Funkwecker, Reisewecker, Lichtwecker) ist WST_Weckalarm IMMER true (Wecker haben per Definition einen Weckalarm!)
 - Text-Attribute:
-  - akku_produktart: Extrahiere die EXAKTE Produktart aus dem Produktnamen - nicht vereinfachen!
-    - "Radiowecker WT500" → "Radiowecker" (NICHT "Wecker")
-    - "Funkwecker ABC" → "Funkwecker" (NICHT "Wecker")
-    - "Quarzwecker XY" → "Quarzwecker" (NICHT "Wecker")
-    - "Lichtwecker" → "Lichtwecker" (NICHT "Wecker")
-    - "Reisewecker" → "Reisewecker" (NICHT "Wecker")
-    - "Funk-Wetterstation" → "Funk-Wetterstation" (NICHT "Wetterstation")
-    - "Li-Ion Akku" → "Li-Ion Akku" (NICHT nur "Akku")
+  - akku_produktart: Extrahiere die EXAKTE Produktart aus dem Produktnamen - suche im GANZEN Namen, nicht nur am Anfang!
+    - Die Produktart kann ÜBERALL im Namen stehen, nicht nur am Anfang!
+    - "WS 6715 - Wetterstation mit..." → "Wetterstation" (Produktart steht NACH dem Modellnamen)
+    - "WS6610 Wetterstation mit..." → "Wetterstation"
+    - "Radiowecker WT500" → "Radiowecker"
+    - "Funkwecker ABC" → "Funkwecker"
+    - "Quarzwecker XY" → "Quarzwecker"
+    - "Lichtwecker" → "Lichtwecker"
+    - "Reisewecker" → "Reisewecker"
+    - "Funk-Wetterstation" → "Funk-Wetterstation"
+    - "Li-Ion Akku" → "Li-Ion Akku"
+    - Bekannte Produktarten: Wetterstation, Funk-Wetterstation, Thermometer, Hygrometer, Radiowecker, Funkwecker, Quarzwecker, Lichtwecker, Reisewecker, Kurzzeitwecker, Kinderwecker, Akku, Batterie, Ladegerät, Netzteil, Kabel
     - Immer die spezifischste Bezeichnung verwenden!
   - allg_farbe_geheause: Extrahiere Gehäusefarbe aus Produktname ODER Beschreibung (z.B. "Schwarz", "Weiß", "Silber", "Grau", "Rot", "Blau", "Grün")
     - Prüfe zuerst den Produktnamen auf Farbangaben wie "-schwarz", "-weiß", "black", "white" etc.
