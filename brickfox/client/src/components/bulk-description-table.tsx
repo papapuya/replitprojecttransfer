@@ -212,18 +212,6 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                 <TableHead className="min-w-[250px]">
                   Produktname (NL)
                 </TableHead>
-                <TableHead className="min-w-[300px]">
-                  MediaMarkt Titel V1
-                </TableHead>
-                <TableHead className="min-w-[250px]">
-                  MediaMarkt Titel V2
-                </TableHead>
-                <TableHead className="min-w-[300px]">
-                  SEO Beschreibung
-                </TableHead>
-                <TableHead className="min-w-[350px]">
-                  Kurzbeschreibung
-                </TableHead>
                 <TableHead className="min-w-[100px]">
                   mAh
                 </TableHead>
@@ -412,38 +400,6 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                         )}
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Textarea
-                      value={product.mediamarktname_v1}
-                      onChange={(e) => onUpdateProduct(product.id, 'mediamarktname_v1', e.target.value)}
-                      className="text-sm resize-none min-h-[80px] font-sans font-medium bulk-description-textarea"
-                      data-testid={`input-marktplatz-${product.id}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Textarea
-                      value={product.mediamarktname_v2}
-                      onChange={(e) => onUpdateProduct(product.id, 'mediamarktname_v2', e.target.value)}
-                      className="text-sm resize-none min-h-[80px] font-sans font-medium bulk-description-textarea"
-                      data-testid={`input-marktplatz-v2-${product.id}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Textarea
-                      value={product.seo_beschreibung}
-                      onChange={(e) => onUpdateProduct(product.id, 'seo_beschreibung', e.target.value)}
-                      className="text-sm resize-none min-h-[80px] font-sans bulk-description-textarea"
-                      data-testid={`input-seo-${product.id}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Textarea
-                      value={product.kurzbeschreibung}
-                      onChange={(e) => onUpdateProduct(product.id, 'kurzbeschreibung', e.target.value)}
-                      className="text-sm resize-none min-h-[80px] font-sans bulk-description-textarea"
-                      data-testid={`input-kurz-${product.id}`}
-                    />
                   </TableCell>
                   <TableCell>
                     <span className="text-sm font-mono">{product.akku_mah || '-'}</span>
