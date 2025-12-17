@@ -736,13 +736,34 @@ function parseProductFromHTML(
   // Images (support both 'images' and 'image')
   const imageSelector = (selectors as any).image || selectors.images;
   if (imageSelector) {
+    console.log(`[Images] Using selector: ${imageSelector}`);
     const imageElements = $(imageSelector);
+    console.log(`[Images] Found ${imageElements.length} elements`);
     product.images = imageElements.map((_, el) => {
       const $el = $(el);
-      // Try src, data-src, href
-      const src = $el.attr('src') || $el.attr('data-src') || $el.attr('href') || '';
+      // Try src, data-src, href - also check for nested img elements
+      let src = $el.attr('src') || $el.attr('data-src') || $el.attr('href') || '';
+      
+      // If this is a link (a tag), look for img inside or use href
+      if (!src || src.startsWith('javascript:')) {
+        const nestedImg = $el.find('img');
+        if (nestedImg.length > 0) {
+          src = nestedImg.attr('src') || nestedImg.attr('data-src') || '';
+        }
+      }
+      
+      // Make absolute URL if relative
+      if (src && !src.startsWith('http') && !src.startsWith('//')) {
+        try {
+          const urlObj = new URL(url);
+          src = new URL(src, urlObj.origin).toString();
+        } catch {}
+      }
+      
+      console.log(`[Images] Element src: ${src.substring(0, 100)}...`);
       return src.trim();
     }).get().filter(Boolean);
+    console.log(`[Images] Extracted ${product.images.length} images`);
   }
 
   // ANSMANN/Magento: ALWAYS try to extract gallery images from JSON (Magento stores all images in JSON)
@@ -831,19 +852,46 @@ function parseProductFromHTML(
 
   // Weight - Format for Brickfox: German format with comma, NO units (e.g., 250 or 1,5)
   if (selectors.weight) {
-    const element = $(selectors.weight).first();
+    console.log(`[Weight] Using selector: ${selectors.weight}`);
+    let element = $(selectors.weight).first();
     let weightText = element.text().trim() || '';
+    console.log(`[Weight] Direct selector result: "${weightText}"`);
     
-    // Fallback: Search for "gewicht: XXXg" in HTML
+    // Fallback for :contains() selectors (Cheerio has limited support)
+    // Handle Baltrade-style: .featRow:contains(Weight) .features-values-single-value
+    if (!weightText && selectors.weight.includes(':contains(')) {
+      const containsMatch = selectors.weight.match(/:contains\(([^)]+)\)/i);
+      if (containsMatch) {
+        const searchText = containsMatch[1].toLowerCase();
+        console.log(`[Weight] Fallback: searching for rows containing "${searchText}"`);
+        // Find all rows and look for the one containing the search text
+        $('.featRow, .product-info-row, .specification-row, tr').each((_, row) => {
+          const rowText = $(row).text().toLowerCase();
+          if (rowText.includes(searchText) || rowText.includes('gewicht') || rowText.includes('weight')) {
+            // Get the value from the row
+            const valueEl = $(row).find('.features-values-single-value, .value, td:last-child, span:last-child');
+            if (valueEl.length > 0) {
+              weightText = valueEl.text().trim();
+              console.log(`[Weight] Found in row: "${weightText}"`);
+              return false; // break
+            }
+          }
+        });
+      }
+    }
+    
+    // Fallback: Search for "gewicht: XXXg" or "weight: XXXg" in HTML
     if (!weightText) {
-      const weightMatch = html.match(/gewicht:\s*([\d,\.]+)\s*[gk]/i);
+      const weightMatch = html.match(/(?:gewicht|weight):\s*([\d,\.]+)\s*[gk]/i);
       if (weightMatch) {
         weightText = weightMatch[1];
+        console.log(`[Weight] Found via regex: "${weightText}"`);
       }
     }
     
     if (weightText) {
       product.weight = formatMeasurement(weightText);
+      console.log(`[Weight] Final weight: ${product.weight}`);
     }
   }
 
