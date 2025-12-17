@@ -1142,8 +1142,10 @@ function parseProductFromHTML(
     }
     
     // Parse the extracted text (from selector or HTML)
-    const abmessungenMatch = abmessungenText.match(/([\d.,]+)\s*[×x]\s*([\d.,]+)\s*[×x]\s*([\d.,]+)\s*(mm|cm)/i);
+    // Support both with and without units: "15 x 36 x 81" or "15 x 36 x 81 mm"
+    const abmessungenMatch = abmessungenText.match(/([\d.,]+)\s*[×x]\s*([\d.,]+)\s*[×x]\s*([\d.,]+)(?:\s*(mm|cm))?/i);
     if (abmessungenMatch) {
+      console.log(`[Dimensions] Parsing combined dimensions: "${abmessungenText}"`);
       // Normalize numbers: handle both German (,) and English (.) decimal separators
       const normalizeNumber = (num: string): string => {
         // If both comma and dot present, assume German format (1.234,5)
@@ -1161,7 +1163,7 @@ function parseProductFromHTML(
       let laenge = normalizeNumber(abmessungenMatch[1]);
       let breite = normalizeNumber(abmessungenMatch[2]);
       let hoehe = normalizeNumber(abmessungenMatch[3]);
-      const unit = abmessungenMatch[4].toLowerCase();
+      const unit = abmessungenMatch[4]?.toLowerCase() || 'mm'; // Default to mm if no unit
       
       // Convert cm to mm if needed
       if (unit === 'cm') {
@@ -1174,6 +1176,8 @@ function parseProductFromHTML(
       if (!(product as any).laenge) (product as any).laenge = formatMeasurement(laenge);
       if (!(product as any).breite) (product as any).breite = formatMeasurement(breite);
       if (!(product as any).hoehe) (product as any).hoehe = formatMeasurement(hoehe);
+      
+      console.log(`[Dimensions] Parsed: Länge=${(product as any).laenge}, Breite=${(product as any).breite}, Höhe=${(product as any).hoehe}`);
     }
     
     // Log final dimensions
