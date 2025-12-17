@@ -14,6 +14,7 @@ import {
   auditLogs as auditLogsTable,
   backups as backupsTable,
   permissions as permissionsTable,
+  attributeProfiles as attributeProfilesTable,
 } from '@shared/schema';
 import Stripe from 'stripe';
 import { 
@@ -1350,6 +1351,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message || 'Fehler beim Löschen des Lieferanten' });
+    }
+  });
+
+  // ============================================================
+  // ATTRIBUT-PROFILE ROUTES (Kategorie-spezifische KI-Regeln)
+  // ============================================================
+  
+  // Alle Profile abrufen
+  app.get('/api/attribute-profiles', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const profiles = await heliumDb.select().from(attributeProfilesTable).where(eq(attributeProfilesTable.userId, userId));
+      res.json(profiles);
+    } catch (error: any) {
+      console.error('[Attribute Profiles] Fehler beim Laden:', error);
+      res.status(500).json({ error: error.message || 'Fehler beim Laden der Profile' });
+    }
+  });
+
+  // Einzelnes Profil abrufen
+  app.get('/api/attribute-profiles/:id', requireAuth, async (req: any, res) => {
+    try {
+      const profileId = req.params.id;
+      const [profile] = await heliumDb.select().from(attributeProfilesTable).where(eq(attributeProfilesTable.id, profileId));
+      if (!profile) {
+        return res.status(404).json({ error: 'Profil nicht gefunden' });
+      }
+      res.json(profile);
+    } catch (error: any) {
+      console.error('[Attribute Profiles] Fehler beim Laden:', error);
+      res.status(500).json({ error: error.message || 'Fehler beim Laden des Profils' });
+    }
+  });
+
+  // Neues Profil erstellen
+  app.post('/api/attribute-profiles', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const tenantId = req.tenantId;
+      const { name, description, attributes, aiRules, customPrompt, isDefault } = req.body;
+
+      if (!name || !attributes) {
+        return res.status(400).json({ error: 'Name und Attribute erforderlich' });
+      }
+
+      // Wenn isDefault=true, alle anderen Profile auf isDefault=false setzen
+      if (isDefault) {
+        await heliumDb.update(attributeProfilesTable)
+          .set({ isDefault: false })
+          .where(eq(attributeProfilesTable.userId, userId));
+      }
+
+      const [newProfile] = await heliumDb.insert(attributeProfilesTable).values({
+        userId,
+        tenantId,
+        name,
+        description: description || null,
+        attributes: attributes || [],
+        aiRules: aiRules || [],
+        customPrompt: customPrompt || null,
+        isDefault: isDefault || false,
+      }).returning();
+
+      res.json(newProfile);
+    } catch (error: any) {
+      console.error('[Attribute Profiles] Fehler beim Erstellen:', error);
+      res.status(500).json({ error: error.message || 'Fehler beim Erstellen des Profils' });
+    }
+  });
+
+  // Profil aktualisieren
+  app.put('/api/attribute-profiles/:id', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const profileId = req.params.id;
+      const { name, description, attributes, aiRules, customPrompt, isDefault } = req.body;
+
+      // Wenn isDefault=true, alle anderen Profile auf isDefault=false setzen
+      if (isDefault) {
+        await heliumDb.update(attributeProfilesTable)
+          .set({ isDefault: false })
+          .where(eq(attributeProfilesTable.userId, userId));
+      }
+
+      const [updatedProfile] = await heliumDb.update(attributeProfilesTable)
+        .set({
+          name,
+          description: description || null,
+          attributes: attributes || [],
+          aiRules: aiRules || [],
+          customPrompt: customPrompt || null,
+          isDefault: isDefault || false,
+          updatedAt: new Date(),
+        })
+        .where(eq(attributeProfilesTable.id, profileId))
+        .returning();
+
+      if (!updatedProfile) {
+        return res.status(404).json({ error: 'Profil nicht gefunden' });
+      }
+
+      res.json(updatedProfile);
+    } catch (error: any) {
+      console.error('[Attribute Profiles] Fehler beim Aktualisieren:', error);
+      res.status(500).json({ error: error.message || 'Fehler beim Aktualisieren des Profils' });
+    }
+  });
+
+  // Profil löschen
+  app.delete('/api/attribute-profiles/:id', requireAuth, async (req: any, res) => {
+    try {
+      const profileId = req.params.id;
+      await heliumDb.delete(attributeProfilesTable).where(eq(attributeProfilesTable.id, profileId));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[Attribute Profiles] Fehler beim Löschen:', error);
+      res.status(500).json({ error: error.message || 'Fehler beim Löschen des Profils' });
     }
   });
 
