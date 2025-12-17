@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2, FileText } from "lucide-react";
+import { Upload, Download, Loader2, CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, Settings2, FileText, Filter, X, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CSVRow {
   [key: string]: string;
@@ -31,6 +33,17 @@ export default function AttributeFiller() {
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
+  
+  // Filter-States
+  const [pidFilter, setPidFilter] = useState<string>('');
+  const [textFilter, setTextFilter] = useState<string>('');
+  
+  // Custom Prompt für spezielle Befüllungs-Anweisungen
+  const [customPrompt, setCustomPrompt] = useState<string>('');
+  
+  // Editiermodus für manuelle Nachbearbeitung
+  const [editingCell, setEditingCell] = useState<{ rowIndex: number; attrKey: string } | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
 
   const parseCSV = (text: string): { headers: string[]; rows: CSVRow[] } => {
     const lines = text.split(/\r?\n/).filter(line => line.trim());
@@ -154,6 +167,38 @@ export default function AttributeFiller() {
     );
   };
 
+  // Gefilterte Daten berechnen
+  const filteredData = rawData.filter(row => {
+    const pidKey = headers.find(h => h === 'p_id' || h === 'v_id') || 'p_id';
+    const matchesPid = !pidFilter || String(row[pidKey] || '').toLowerCase().includes(pidFilter.toLowerCase());
+    const matchesText = !textFilter || Object.values(row).some(v => String(v).toLowerCase().includes(textFilter.toLowerCase()));
+    return matchesPid && matchesText;
+  });
+
+  // Zelle bearbeiten - Start
+  const handleCellEdit = (rowIndex: number, attrKey: string, currentValue: string) => {
+    setEditingCell({ rowIndex, attrKey });
+    setEditValue(currentValue || '');
+  };
+
+  // Zelle bearbeiten - Speichern (verwendet direkten rawData-Index)
+  const saveCellEdit = () => {
+    if (editingCell) {
+      const updatedData = [...rawData];
+      // editingCell.rowIndex ist bereits der echte rawData-Index
+      updatedData[editingCell.rowIndex][editingCell.attrKey] = editValue;
+      setRawData(updatedData);
+      setEditingCell(null);
+      setEditValue('');
+    }
+  };
+
+  // Zelle bearbeiten - Abbrechen
+  const cancelCellEdit = () => {
+    setEditingCell(null);
+    setEditValue('');
+  };
+
   const processAttributes = async () => {
     const enabledAttributes = attributeConfigs.filter(a => a.enabled);
     if (enabledAttributes.length === 0) {
@@ -179,13 +224,29 @@ export default function AttributeFiller() {
     setProgress(0);
     setProcessedCount(0);
 
+    // Bei Filter: nur gefilterte Produkte verarbeiten, sonst alle
+    // Erstelle Array mit echten Indizes für robuste Zuordnung (keine Objekt-Referenzen)
+    const hasFilter = pidFilter.trim() || textFilter.trim();
+    const pidKey = headers.find(h => h === 'p_id' || h === 'v_id') || 'p_id';
+    
+    // Berechne welche rawData-Indizes zu verarbeiten sind
+    const indicesToProcess: number[] = [];
+    rawData.forEach((row, idx) => {
+      const matchesPid = !pidFilter || String(row[pidKey] || '').toLowerCase().includes(pidFilter.toLowerCase());
+      const matchesText = !textFilter || Object.values(row).some(v => String(v).toLowerCase().includes(textFilter.toLowerCase()));
+      if (!hasFilter || (matchesPid && matchesText)) {
+        indicesToProcess.push(idx);
+      }
+    });
+
     const updatedData = [...rawData];
     const batchSize = 5;
 
-    for (let i = 0; i < updatedData.length; i += batchSize) {
-      const batch = updatedData.slice(i, Math.min(i + batchSize, updatedData.length));
+    for (let i = 0; i < indicesToProcess.length; i += batchSize) {
+      const batchIndices = indicesToProcess.slice(i, Math.min(i + batchSize, indicesToProcess.length));
 
-      const promises = batch.map(async (row, batchIdx) => {
+      const promises = batchIndices.map(async (realIndex) => {
+        const row = updatedData[realIndex];
         const description = row[descriptionKey];
         if (!description || description.trim().length < 10) {
           return null;
@@ -212,14 +273,15 @@ export default function AttributeFiller() {
               description,
               productName,
               attributes: attributesToFill.map(a => ({ label: a.label, type: a.type })),
-              productType: row['p_attributes[akku_produktart][de]'] || '',
+              productType: row['p_attributes[akku_produktart][de]'] || row['v_attributes[akku_produktart][de]'] || '',
+              customPrompt: customPrompt.trim() || undefined,
             }),
           });
 
           if (!response.ok) throw new Error('API Fehler');
 
           const result = await response.json();
-          return { index: i + batchIdx, attributes: result.attributes, attributesToFill };
+          return { index: realIndex, attributes: result.attributes, attributesToFill };
         } catch (err) {
           console.error('Fehler bei Attribut-Analyse:', err);
           return null;
@@ -249,9 +311,9 @@ export default function AttributeFiller() {
         }
       });
 
-      const processed = Math.min(i + batchSize, updatedData.length);
+      const processed = Math.min(i + batchSize, indicesToProcess.length);
       setProcessedCount(processed);
-      setProgress((processed / updatedData.length) * 100);
+      setProgress((processed / indicesToProcess.length) * 100);
     }
 
     setRawData(updatedData);
@@ -463,7 +525,10 @@ export default function AttributeFiller() {
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Attribute befüllen ({enabledCount} Attribute)
+                    {(pidFilter || textFilter) 
+                      ? `${filteredData.length} gefilterte Produkte befüllen (${enabledCount} Attribute)`
+                      : `Alle ${rawData.length} Produkte befüllen (${enabledCount} Attribute)`
+                    }
                   </>
                 )}
               </Button>
@@ -478,13 +543,88 @@ export default function AttributeFiller() {
               </Alert>
             )}
 
+            {/* Filter und Custom Prompt */}
             <Card className="p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">
-                Vorschau (erste 20 Zeilen) - {attributeConfigs.filter(a => a.enabled).length} Attribute ausgewählt
-              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Filter-Bereich */}
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                    <Filter className="w-5 h-5" />
+                    Filter
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="pid-filter" className="text-xs text-muted-foreground">p_id / v_id Filter</Label>
+                      <Input
+                        id="pid-filter"
+                        value={pidFilter}
+                        onChange={(e) => setPidFilter(e.target.value)}
+                        placeholder="z.B. 41877"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="text-filter" className="text-xs text-muted-foreground">Text-Suche (alle Spalten)</Label>
+                      <Input
+                        id="text-filter"
+                        value={textFilter}
+                        onChange={(e) => setTextFilter(e.target.value)}
+                        placeholder="z.B. Wetterstation"
+                        className="mt-1"
+                      />
+                    </div>
+                    {(pidFilter || textFilter) && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-primary font-medium">
+                          {filteredData.length} von {rawData.length} Produkten gefiltert
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setPidFilter(''); setTextFilter(''); }}
+                          className="h-8"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Filter zurücksetzen
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Custom Prompt */}
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                    <Sparkles className="w-5 h-5" />
+                    Zusätzliche Anweisungen (optional)
+                  </h3>
+                  <Textarea
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    placeholder="z.B. 'Bei Weckern immer WST_Weckalarm auf true setzen' oder 'Farbe auch aus EAN-Bezeichnung extrahieren'"
+                    className="min-h-[100px]"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Diese Anweisungen werden an die AI übergeben um die Attribut-Erkennung anzupassen
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Vorschau-Tabelle mit editierbaren Zellen */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">
+                  Vorschau ({(pidFilter || textFilter) ? `${filteredData.length} gefiltert` : 'erste 20 Zeilen'}) - {attributeConfigs.filter(a => a.enabled).length} Attribute
+                </h3>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Pencil className="w-3 h-3" />
+                  Klicke auf Werte zum Bearbeiten
+                </div>
+              </div>
               <div className="overflow-x-auto max-h-[500px] border rounded-lg">
                 <table className="text-sm min-w-max">
-                  <thead className="sticky top-0 bg-card">
+                  <thead className="sticky top-0 bg-card z-20">
                     <tr className="border-b">
                       <th className="text-left p-2 text-muted-foreground whitespace-nowrap sticky left-0 bg-card z-10">p_id</th>
                       <th className="text-left p-2 text-muted-foreground whitespace-nowrap">Produktart</th>
@@ -497,29 +637,81 @@ export default function AttributeFiller() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rawData.slice(0, 20).map((row, idx) => (
-                      <tr key={idx} className="border-b hover:bg-accent/50">
-                        <td className="p-2 text-foreground whitespace-nowrap sticky left-0 bg-card">{row['p_id']}</td>
-                        <td className="p-2 text-foreground whitespace-nowrap">
-                          {row['p_attributes[akku_produktart][de]'] || '-'}
-                        </td>
-                        <td className="p-2 text-foreground whitespace-nowrap">
-                          {row['p_attributes[allg_farbe_geheause][de]'] || '-'}
-                        </td>
-                        {attributeConfigs.filter(a => a.enabled).map(attr => (
-                          <td key={attr.key} className="p-2 whitespace-nowrap">
-                            <span className={`px-2 py-0.5 rounded text-xs ${
-                              row[attr.key] === 'Ja' ? 'bg-chart-2/20 text-chart-2' :
-                              row[attr.key] === 'Nein' ? 'bg-destructive/20 text-destructive' :
-                              row[attr.key] && row[attr.key].trim() !== '' ? 'bg-primary/20 text-primary' :
-                              'text-muted-foreground'
-                            }`}>
-                              {row[attr.key] || '-'}
-                            </span>
+                    {(() => {
+                      const pidKey = headers.find(h => h === 'p_id' || h === 'v_id') || 'p_id';
+                      // Erstelle Array mit echten rawData-Indizes für korrekte Bearbeitung
+                      const rowsWithIndices: { row: CSVRow; realIndex: number }[] = [];
+                      rawData.forEach((row, idx) => {
+                        const matchesPid = !pidFilter || String(row[pidKey] || '').toLowerCase().includes(pidFilter.toLowerCase());
+                        const matchesText = !textFilter || Object.values(row).some(v => String(v).toLowerCase().includes(textFilter.toLowerCase()));
+                        if (matchesPid && matchesText) {
+                          rowsWithIndices.push({ row, realIndex: idx });
+                        }
+                      });
+                      // Limitiere auf 20 wenn kein Filter aktiv
+                      const displayRows = (pidFilter || textFilter) ? rowsWithIndices : rowsWithIndices.slice(0, 20);
+                      
+                      return displayRows.map(({ row, realIndex }) => (
+                        <tr key={realIndex} className="border-b hover:bg-accent/50">
+                          <td className="p-2 text-foreground whitespace-nowrap sticky left-0 bg-card">{row[pidKey]}</td>
+                          <td className="p-2 text-foreground whitespace-nowrap">
+                            {row['p_attributes[akku_produktart][de]'] || row['v_attributes[akku_produktart][de]'] || '-'}
                           </td>
-                        ))}
-                      </tr>
-                    ))}
+                          <td className="p-2 text-foreground whitespace-nowrap">
+                            {row['p_attributes[allg_farbe_geheause][de]'] || row['v_attributes[allg_farbe_geheause][de]'] || '-'}
+                          </td>
+                          {attributeConfigs.filter(a => a.enabled).map(attr => (
+                            <td key={attr.key} className="p-2 whitespace-nowrap">
+                              {editingCell?.rowIndex === realIndex && editingCell?.attrKey === attr.key ? (
+                                <div className="flex items-center gap-1">
+                                  {attr.type === 'yesNo' ? (
+                                    <select
+                                      value={editValue}
+                                      onChange={(e) => setEditValue(e.target.value)}
+                                      className="text-xs border rounded px-1 py-0.5 bg-background"
+                                      autoFocus
+                                    >
+                                      <option value="">-</option>
+                                      <option value="Ja">Ja</option>
+                                      <option value="Nein">Nein</option>
+                                    </select>
+                                  ) : (
+                                    <Input
+                                      value={editValue}
+                                      onChange={(e) => setEditValue(e.target.value)}
+                                      className="h-6 text-xs w-24"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') saveCellEdit();
+                                        if (e.key === 'Escape') cancelCellEdit();
+                                      }}
+                                    />
+                                  )}
+                                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={saveCellEdit}>
+                                    <CheckCircle2 className="w-3 h-3 text-chart-2" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={cancelCellEdit}>
+                                    <X className="w-3 h-3 text-destructive" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span
+                                  onClick={() => handleCellEdit(realIndex, attr.key, row[attr.key] || '')}
+                                  className={`px-2 py-0.5 rounded text-xs cursor-pointer hover:ring-2 hover:ring-primary/50 ${
+                                    row[attr.key] === 'Ja' ? 'bg-chart-2/20 text-chart-2' :
+                                    row[attr.key] === 'Nein' ? 'bg-destructive/20 text-destructive' :
+                                    row[attr.key] && row[attr.key].trim() !== '' ? 'bg-primary/20 text-primary' :
+                                    'text-muted-foreground'
+                                  }`}
+                                >
+                                  {row[attr.key] || '-'}
+                                </span>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>
