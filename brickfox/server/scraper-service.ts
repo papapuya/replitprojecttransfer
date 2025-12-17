@@ -1072,24 +1072,70 @@ function parseProductFromHTML(
     (product as any).farbe = element.text().trim() || '';
   }
 
-  // ANSMANN: Extract Abmessungen (Dimensions) and split into Länge, Breite, Höhe
+  // EXTRACT DIMENSIONS: Länge, Breite, Höhe (in mm)
   // Format: "1.5 × 1.5 × 5.1 cm" or "70×37.5×37.5 mm" or "70×37,5×37,5 mm je Zelle"
   if (!(product as any).laenge || !(product as any).breite || !(product as any).hoehe) {
+    console.log(`[Dimensions] Starting extraction...`);
     let abmessungenText = '';
+    let foundLaenge = '', foundBreite = '', foundHoehe = '';
+    
+    // Baltrade-specific: Search in .productFeatures table for individual dimensions
+    $('.productFeatures .featRow').each((_, row) => {
+      const labelText = $(row).find('.features-name, .feature-label, .name').text().toLowerCase();
+      const valueEl = $(row).find('.features-values-single-value, .feature-value, .value');
+      if (valueEl.length > 0) {
+        const valueText = valueEl.text().trim();
+        
+        // Length / Länge / Długość
+        if (labelText.includes('length') || labelText.includes('länge') || labelText.includes('długość')) {
+          if (!labelText.includes('cable')) { // Avoid "cable length"
+            foundLaenge = valueText;
+            console.log(`[Dimensions] Found Länge in productFeatures: "${valueText}"`);
+          }
+        }
+        // Width / Breite / Szerokość
+        if (labelText.includes('width') || labelText.includes('breite') || labelText.includes('szerokość')) {
+          foundBreite = valueText;
+          console.log(`[Dimensions] Found Breite in productFeatures: "${valueText}"`);
+        }
+        // Height / Höhe / Wysokość / Thickness / Dicke
+        if (labelText.includes('height') || labelText.includes('höhe') || labelText.includes('wysokość') || 
+            labelText.includes('thickness') || labelText.includes('dicke') || labelText.includes('grubość')) {
+          foundHoehe = valueText;
+          console.log(`[Dimensions] Found Höhe in productFeatures: "${valueText}"`);
+        }
+        // Dimensions combined / Abmessungen / Wymiary
+        if (labelText.includes('dimensions') || labelText.includes('abmessungen') || labelText.includes('wymiary')) {
+          abmessungenText = valueText;
+          console.log(`[Dimensions] Found combined Abmessungen: "${valueText}"`);
+        }
+      }
+    });
+    
+    // Apply found individual dimensions
+    if (foundLaenge && !(product as any).laenge) {
+      (product as any).laenge = formatMeasurement(foundLaenge);
+    }
+    if (foundBreite && !(product as any).breite) {
+      (product as any).breite = formatMeasurement(foundBreite);
+    }
+    if (foundHoehe && !(product as any).hoehe) {
+      (product as any).hoehe = formatMeasurement(foundHoehe);
+    }
     
     // First try: Use abmessungen selector if available
-    if ((selectors as any).abmessungen) {
+    if (!abmessungenText && (selectors as any).abmessungen) {
       const element = $((selectors as any).abmessungen).first();
       abmessungenText = element.text().trim();
-      console.log(`🔍 Extracted Abmessungen via selector: "${abmessungenText}"`);
+      console.log(`[Dimensions] Extracted Abmessungen via selector: "${abmessungenText}"`);
     }
     
     // Fallback: Search in HTML if selector didn't work
     if (!abmessungenText) {
-      const abmessungenHtmlMatch = html.match(/abmessungen[:\s]+([\d.,]+)\s*[×x]\s*([\d.,]+)\s*[×x]\s*([\d.,]+)\s*(mm|cm)/i);
+      const abmessungenHtmlMatch = html.match(/(?:abmessungen|dimensions|wymiary)[:\s]+([\d.,]+)\s*[×x]\s*([\d.,]+)\s*[×x]\s*([\d.,]+)\s*(mm|cm)/i);
       if (abmessungenHtmlMatch) {
         abmessungenText = abmessungenHtmlMatch[0];
-        console.log(`🔍 Extracted Abmessungen from HTML: "${abmessungenText}"`);
+        console.log(`[Dimensions] Extracted Abmessungen from HTML: "${abmessungenText}"`);
       }
     }
     
@@ -1122,12 +1168,17 @@ function parseProductFromHTML(
         hoehe = (parseFloat(hoehe) * 10).toString();
       }
       
-      // Format with German comma and no units
-      (product as any).laenge = formatMeasurement(laenge);
-      (product as any).breite = formatMeasurement(breite);
-      (product as any).hoehe = formatMeasurement(hoehe);
-      
-      console.log(`📏 Extracted Abmessungen: ${(product as any).laenge} × ${(product as any).breite} × ${(product as any).hoehe} mm`);
+      // Only apply if not already found from individual fields
+      if (!(product as any).laenge) (product as any).laenge = formatMeasurement(laenge);
+      if (!(product as any).breite) (product as any).breite = formatMeasurement(breite);
+      if (!(product as any).hoehe) (product as any).hoehe = formatMeasurement(hoehe);
+    }
+    
+    // Log final dimensions
+    if ((product as any).laenge || (product as any).breite || (product as any).hoehe) {
+      console.log(`📏 Final Dimensions: Länge=${(product as any).laenge || 'N/A'}, Breite=${(product as any).breite || 'N/A'}, Höhe=${(product as any).hoehe || 'N/A'} mm`);
+    } else {
+      console.log(`[Dimensions] ⚠️ No dimensions found for this product`);
     }
   }
 
