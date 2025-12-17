@@ -10,6 +10,7 @@ import { Link } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { parseCSV as parseCSVWithEncoding } from "@/lib/csv-processor";
 
 interface CSVRow {
   [key: string]: string;
@@ -47,44 +48,6 @@ export default function AttributeFiller() {
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; attrKey: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
-  const parseCSV = (text: string): { headers: string[]; rows: CSVRow[] } => {
-    const lines = text.split(/\r?\n/).filter(line => line.trim());
-    if (lines.length === 0) return { headers: [], rows: [] };
-
-    const delimiter = ';';
-    const headerLine = lines[0];
-    const headers = headerLine.split(delimiter).map(h => h.replace(/^"|"$/g, '').trim());
-
-    const rows: CSVRow[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values: string[] = [];
-      let current = '';
-      let inQuotes = false;
-
-      for (const char of lines[i]) {
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === delimiter && !inQuotes) {
-          values.push(current.replace(/^"|"$/g, '').trim());
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      values.push(current.replace(/^"|"$/g, '').trim());
-
-      if (values.length === headers.length) {
-        const row: CSVRow = {};
-        headers.forEach((h, idx) => {
-          row[h] = values[idx] || '';
-        });
-        rows.push(row);
-      }
-    }
-
-    return { headers, rows };
-  };
-
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
     setError(null);
@@ -92,13 +55,17 @@ export default function AttributeFiller() {
     setProgress(0);
 
     try {
-      const text = await selectedFile.text();
-      const { headers: parsedHeaders, rows } = parseCSV(text);
-
-      if (rows.length === 0) {
+      // Verwende csv-processor mit korrekter Encoding-Erkennung (UTF-8, Windows-1252, etc.)
+      const parseResult = await parseCSVWithEncoding(selectedFile);
+      
+      if (parseResult.data.length === 0) {
         setError('Die CSV-Datei enthält keine gültigen Daten.');
         return;
       }
+
+      // Extrahiere Headers aus erstem Datensatz
+      const parsedHeaders = parseResult.data.length > 0 ? Object.keys(parseResult.data[0]) : [];
+      const rows = parseResult.data as CSVRow[];
 
       setHeaders(parsedHeaders);
       setRawData(rows);
