@@ -365,11 +365,19 @@ export default function AttributeFiller() {
             // Backend liefert jetzt key-basierte Antwort (voller CSV-Spaltenname)
             const value = attributes[attr.key];
             console.log(`[Attribut-Befüller] Attribut key="${attr.key}": Wert=${value}, Typ=${attr.type}`);
-            if (value !== undefined && value !== null && value !== '') {
-              if (attr.type === 'yesNo') {
-                updatedData[index][attr.key] = value ? 'Ja' : 'Nein';
-                console.log(`[Attribut-Befüller] -> Gesetzt: ${attr.key} = ${value ? 'Ja' : 'Nein'}`);
-              } else if (attr.type === 'fixed') {
+            
+            // Bei Ja/Nein-Attributen: Leere Werte = "Nein"
+            if (attr.type === 'yesNo') {
+              if (value === true || value === 'true' || value === 'Ja' || value === 'ja') {
+                updatedData[index][attr.key] = 'Ja';
+                console.log(`[Attribut-Befüller] -> Gesetzt: ${attr.key} = Ja`);
+              } else {
+                // Alles andere (false, undefined, null, '', 'Nein') = "Nein"
+                updatedData[index][attr.key] = 'Nein';
+                console.log(`[Attribut-Befüller] -> Gesetzt: ${attr.key} = Nein (Standard für leere/falsche Werte)`);
+              }
+            } else if (value !== undefined && value !== null && value !== '') {
+              if (attr.type === 'fixed') {
                 // Feste Werte direkt übernehmen
                 updatedData[index][attr.key] = String(value);
                 console.log(`[Attribut-Befüller] -> Fest gesetzt: ${attr.key} = ${value}`);
