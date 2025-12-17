@@ -2405,7 +2405,7 @@ REGELN:
 - Auswahl-Attribute:
   - tala_stromversorgung: Prüfe ob "Akku", "Batterie", "AAA", "AA", "CR2032", "LR44" etc. erwähnt werden
     - Wenn Batterie-Typen wie AAA, AA, CR2032, LR44, Micro, Mignon etc. erwähnt → "Batterie"
-    - Wenn "Akku", "aufladbar", "wiederaufladbar", "Li-Ion", "LiPo" erwähnt → "Akku"
+    - Wenn "Akku", "aufladbar", "wiederaufladbar", "Li-Ion", "LiPo" erwähnt → "Akkutyp"
     - NUR einen der erlaubten Werte zurückgeben, sonst null
 - Bei Unsicherheit: false bzw. null${customPromptSection}
 
