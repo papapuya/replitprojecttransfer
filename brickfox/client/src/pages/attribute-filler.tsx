@@ -10,6 +10,7 @@ import { Link } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { parseCSV as parseCSVWithEncoding } from "@/lib/csv-processor";
 
 interface CSVRow {
@@ -50,6 +51,11 @@ export default function AttributeFiller() {
   
   // Abort-Controller für Verarbeitungsabbruch
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // State für Beschreibungs-Vorschau Dialog
+  const [showDescriptionDialog, setShowDescriptionDialog] = useState(false);
+  const [descriptionDialogContent, setDescriptionDialogContent] = useState<string>('');
+  const [descriptionDialogTitle, setDescriptionDialogTitle] = useState<string>('');
   
   const handleAbort = () => {
     if (abortControllerRef.current) {
@@ -752,7 +758,9 @@ export default function AttributeFiller() {
                                   </button>
                                   <button
                                     onClick={() => {
-                                      alert(row['p_description[de]']);
+                                      setDescriptionDialogTitle(row['p_name[de]'] || row[pidKey] || 'Beschreibung');
+                                      setDescriptionDialogContent(row['p_description[de]'] || '');
+                                      setShowDescriptionDialog(true);
                                     }}
                                     className="p-1 hover:bg-accent rounded"
                                     title="Beschreibung anzeigen"
@@ -822,6 +830,23 @@ export default function AttributeFiller() {
           </div>
         )}
       </main>
+
+      {/* Dialog für Beschreibungs-Vorschau */}
+      <Dialog open={showDescriptionDialog} onOpenChange={setShowDescriptionDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{descriptionDialogTitle}</DialogTitle>
+            <DialogDescription>
+              Produktbeschreibung aus CSV
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[70vh] border rounded-lg bg-white p-6">
+            <div className="prose prose-sm max-w-none text-gray-700">
+              <div dangerouslySetInnerHTML={{ __html: descriptionDialogContent }} />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
