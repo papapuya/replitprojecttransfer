@@ -83,7 +83,7 @@ export default function CSVBulkDescription() {
   const [previewFilter, setPreviewFilter] = useState<string>('');
   const [previewPidFilter, setPreviewPidFilter] = useState<string>('');
   const [showPreviewColumnSelector, setShowPreviewColumnSelector] = useState(false);
-  const [visibleKiColumns, setVisibleKiColumns] = useState<string[]>(['seo_beschreibung', 'beschreibung_nl']);
+  const [visibleKiColumns, setVisibleKiColumns] = useState<string[]>(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'seo_beschreibung', 'keywords']);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
@@ -1476,7 +1476,7 @@ export default function CSVBulkDescription() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setVisibleKiColumns(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'keywords'])}
+                        onClick={() => setVisibleKiColumns(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'seo_beschreibung', 'keywords'])}
                       >
                         Alle
                       </Button>
@@ -1492,9 +1492,10 @@ export default function CSVBulkDescription() {
                   <div className="flex flex-wrap gap-4">
                     {[
                       { key: 'produktname_neu', label: 'Produktname Neu' },
-                      { key: 'mediamarkt_v1', label: 'p_name[de] V1' },
-                      { key: 'mediamarkt_v2', label: 'p_name[de] V2' },
-                      { key: 'keywords', label: 'p_keywords' }
+                      { key: 'mediamarkt_v1', label: 'MediaMarkt V1' },
+                      { key: 'mediamarkt_v2', label: 'MediaMarkt V2' },
+                      { key: 'seo_beschreibung', label: 'SEO Beschreibung' },
+                      { key: 'keywords', label: 'Keywords' }
                     ].map(col => (
                       <div key={col.key} className="flex items-center space-x-2">
                         <Checkbox
@@ -1540,22 +1541,27 @@ export default function CSVBulkDescription() {
                       {/* KI-generierte Spalten - nur sichtbare */}
                       {visibleKiColumns.includes('produktname_neu') && (
                         <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
-                          🤖 p_name[de] (KI)
+                          🤖 Produktname Neu
                         </th>
                       )}
                       {visibleKiColumns.includes('mediamarkt_v1') && (
                         <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
-                          🤖 p_name[de] V1
+                          🤖 MediaMarkt V1
                         </th>
                       )}
                       {visibleKiColumns.includes('mediamarkt_v2') && (
                         <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
-                          🤖 p_name[de] V2
+                          🤖 MediaMarkt V2
+                        </th>
+                      )}
+                      {visibleKiColumns.includes('seo_beschreibung') && (
+                        <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
+                          🤖 SEO Beschreibung
                         </th>
                       )}
                       {visibleKiColumns.includes('keywords') && (
                         <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-orange-500/20">
-                          🔑 p_keywords
+                          🔑 Keywords
                         </th>
                       )}
                     </tr>
@@ -1648,6 +1654,15 @@ export default function CSVBulkDescription() {
                             <td className="px-2 py-1 border border-border bg-primary/5 text-foreground">
                               {generatedProduct ? (
                                 <span className="line-clamp-1 font-medium">{generatedProduct.mediamarktname_v2}</span>
+                              ) : (
+                                <span className="text-muted-foreground italic text-xs">wird generiert...</span>
+                              )}
+                            </td>
+                          )}
+                          {visibleKiColumns.includes('seo_beschreibung') && (
+                            <td className="px-2 py-1 border border-border bg-primary/5 text-foreground">
+                              {generatedProduct ? (
+                                <span className="line-clamp-1 text-xs">{generatedProduct.seo_beschreibung}</span>
                               ) : (
                                 <span className="text-muted-foreground italic text-xs">wird generiert...</span>
                               )}
