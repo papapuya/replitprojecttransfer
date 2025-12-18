@@ -698,22 +698,58 @@ function removeBrandFromModel(model: string, brand: string): string {
 }
 
 /**
+ * Gruppiert Modelle nach Präfix/Serie
+ * Beispiel: ["SATELLITE: A10", "SATELLITE: A15", "TECRA: M9"] 
+ *        → "SATELLITE: A10, A15, TECRA: M9"
+ */
+function groupModelsByPrefix(models: string[]): string {
+  const groups = new Map<string, string[]>();
+  const noPrefix: string[] = [];
+  
+  for (const model of models) {
+    const trimmed = model.trim();
+    if (!trimmed) continue;
+    
+    const colonMatch = trimmed.match(/^([A-Za-z0-9\-]+)\s*:\s*(.+)$/);
+    if (colonMatch) {
+      const prefix = colonMatch[1].toUpperCase();
+      const modelNum = colonMatch[2].trim();
+      if (!groups.has(prefix)) {
+        groups.set(prefix, []);
+      }
+      groups.get(prefix)!.push(modelNum);
+    } else {
+      noPrefix.push(trimmed);
+    }
+  }
+  
+  const parts: string[] = [];
+  Array.from(groups.entries()).forEach(([prefix, modelNums]) => {
+    parts.push(`${prefix}: ${modelNums.join(', ')}`);
+  });
+  if (noPrefix.length > 0) {
+    parts.push(noPrefix.join(', '));
+  }
+  
+  return parts.join(', ');
+}
+
+/**
  * Rendert die Kompatibilitäts-Sektion
- * Format: Marke einmal am Anfang, dann alle Modelle kommagetrennt
- * Beispiel: "Philips SBC-EB4870 A1507, SBC-EB4880 A1507, SCD 48100"
+ * Format: Marke/Serie einmal, dann alle Modelle kommagetrennt
+ * Beispiel: "SATELLITE: A10, A15, A40, TECRA: M9"
  */
 function renderKompatibilitaet(models: string[], e: (s: string) => string, productName?: string): string {
   if (!models || models.length === 0) {
     return '';
   }
   
-  // Bekannte Marken
   const knownBrands = ['Philips', 'Makita', 'Bosch', 'DeWalt', 'Metabo', 'Hilti', 'Festool', 
                        'Milwaukee', 'Ryobi', 'Black+Decker', 'Einhell', 'Kärcher', 'Braun',
                        'Panasonic', 'Sony', 'Samsung', 'Apple', 'LG', 'Siemens', 'Miele',
-                       'AEG', 'Hitachi', 'Husqvarna', 'Stihl', 'Gardena', 'Fein', 'Flex'];
+                       'AEG', 'Hitachi', 'Husqvarna', 'Stihl', 'Gardena', 'Fein', 'Flex',
+                       'Toshiba', 'HP', 'Dell', 'Lenovo', 'Acer', 'Asus', 'MSI'];
   
-  // Extrahiere Marke aus dem Produktnamen
   let brand = '';
   if (productName) {
     for (const b of knownBrands) {
@@ -724,13 +760,18 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
     }
   }
   
-  // Bereinige Modelle und entferne redundante Marken
+  const hasColonFormat = models.some(m => /^[A-Za-z0-9\-]+\s*:\s*.+$/.test(m.trim()));
+  
+  if (hasColonFormat) {
+    const grouped = groupModelsByPrefix(models);
+    return `<h2 style="margin-top: 1.5em;">Kompatibilität</h2>\n<p>${e(grouped)}</p>`;
+  }
+  
   const cleanedModels: string[] = [];
   for (const model of models) {
     let cleaned = model.trim();
     if (!cleaned) continue;
     
-    // Entferne Marke am Anfang falls vorhanden (da sie einmal am Anfang steht)
     if (brand) {
       const brandRegex = new RegExp(`^${brand}\\s+`, 'i');
       cleaned = cleaned.replace(brandRegex, '');
@@ -739,7 +780,6 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
     cleanedModels.push(e(cleaned));
   }
   
-  // Baue Ausgabe: Marke + Modelle kommagetrennt
   let result = '';
   if (brand && cleanedModels.length > 0) {
     result = `${e(brand)} ${cleanedModels.join(', ')}`;
