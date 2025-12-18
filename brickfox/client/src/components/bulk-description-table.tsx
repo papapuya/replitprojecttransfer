@@ -48,11 +48,12 @@ interface BulkProduct {
 
 interface BulkDescriptionTableProps {
   products: BulkProduct[];
-  onUpdateProduct: (id: number, field: keyof BulkProduct, value: string) => void;
+  onUpdateProduct?: (id: number, field: keyof BulkProduct, value: string) => void;
   onPreviewHtml?: (htmlContent: string, productName?: string) => void;
+  readOnly?: boolean;
 }
 
-export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml }: BulkDescriptionTableProps) {
+export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml, readOnly = false }: BulkDescriptionTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedIds, setCopiedIds] = useState<Set<number>>(new Set());
   const [searchPid, setSearchPid] = useState('');
@@ -278,19 +279,21 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                   <TableCell>
                     <Textarea
                       value={product.produktname_neu || ''}
-                      onChange={(e) => onUpdateProduct(product.id, 'produktname_neu', e.target.value)}
+                      onChange={(e) => onUpdateProduct?.(product.id, 'produktname_neu', e.target.value)}
                       className="text-xs resize-none min-h-[80px] font-sans bulk-description-textarea"
                       placeholder="SEO-optimierter Produktname..."
                       data-testid={`input-produktname-neu-${product.id}`}
+                      readOnly={readOnly}
                     />
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2 items-start">
                       <Textarea
                         value={product.produktbeschreibung_html}
-                        onChange={(e) => onUpdateProduct(product.id, 'produktbeschreibung_html', e.target.value)}
+                        onChange={(e) => onUpdateProduct?.(product.id, 'produktbeschreibung_html', e.target.value)}
                         className="text-xs resize-none min-h-[100px] font-mono flex-1 bulk-description-textarea"
                         data-testid={`input-beschreibung-html-${product.id}`}
+                        readOnly={readOnly}
                       />
                       <div className="flex flex-col gap-1 mt-1">
                         {onPreviewHtml && product.produktbeschreibung_html && (
@@ -340,7 +343,7 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                     <div className="flex gap-2 items-start">
                       <Textarea
                         value={product.produktbeschreibung_original || ''}
-                        onChange={(e) => onUpdateProduct(product.id, 'produktbeschreibung_original', e.target.value)}
+                        onChange={(e) => onUpdateProduct?.(product.id, 'produktbeschreibung_original', e.target.value)}
                         className="text-xs resize-none min-h-[100px] font-sans flex-1 bulk-description-textarea bg-muted/30"
                         readOnly
                         data-testid={`input-beschreibung-original-${product.id}`}
@@ -380,10 +383,11 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                     <div className="flex gap-2 items-start">
                       <Textarea
                         value={product.produktname_nl || ''}
-                        onChange={(e) => onUpdateProduct(product.id, 'produktname_nl', e.target.value)}
+                        onChange={(e) => onUpdateProduct?.(product.id, 'produktname_nl', e.target.value)}
                         className="text-xs resize-none min-h-[80px] font-sans flex-1 bulk-description-textarea"
                         placeholder="Niederländischer Produktname..."
                         data-testid={`input-produktname-nl-${product.id}`}
+                        readOnly={readOnly}
                       />
                       <div className="flex flex-col gap-1 mt-1">
                         {product.produktname_nl && (
@@ -409,10 +413,11 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                     <div className="flex gap-2 items-start">
                       <Textarea
                         value={product.produktbeschreibung_html_nl || ''}
-                        onChange={(e) => onUpdateProduct(product.id, 'produktbeschreibung_html_nl', e.target.value)}
+                        onChange={(e) => onUpdateProduct?.(product.id, 'produktbeschreibung_html_nl', e.target.value)}
                         className="text-xs resize-none min-h-[100px] font-mono flex-1 bulk-description-textarea"
                         placeholder="Niederländische Produktbeschreibung..."
                         data-testid={`input-beschreibung-nl-${product.id}`}
+                        readOnly={readOnly}
                       />
                       <div className="flex flex-col gap-1 mt-1">
                         {onPreviewHtml && product.produktbeschreibung_html_nl && (
