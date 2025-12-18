@@ -100,7 +100,7 @@ export default function CSVBulkDescription() {
   const [htmlPreviewProductName, setHtmlPreviewProductName] = useState("");
   const [isMobilePreview, setIsMobilePreview] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
-  
+  const [exportFileName, setExportFileName] = useState<string>("");
   
   // Filter für bereits generierte Produkte (zum selektiven Regenerieren)
   const [productFilter, setProductFilter] = useState<string>('');
@@ -757,7 +757,8 @@ export default function CSVBulkDescription() {
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `produktbeschreibungen_${new Date().toISOString().split('T')[0]}.csv`;
+      const baseName = exportFileName.trim() || file?.name?.replace('.csv', '') || 'produktbeschreibungen';
+      link.download = `${baseName}_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1844,14 +1845,22 @@ export default function CSVBulkDescription() {
                       </>
                     )}
                   </Button>
-                  <Button
-                    onClick={handleDownload}
-                    disabled={bulkProducts.length === 0}
-                    size="sm"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    CSV Exportieren
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={exportFileName}
+                      onChange={(e) => setExportFileName(e.target.value)}
+                      placeholder={file?.name?.replace('.csv', '') || 'Dateiname'}
+                      className="w-40 h-8 text-sm"
+                    />
+                    <Button
+                      onClick={handleDownload}
+                      disabled={bulkProducts.length === 0}
+                      size="sm"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
+                  </div>
                   <Button
                     variant="outline"
                     onClick={reset}
