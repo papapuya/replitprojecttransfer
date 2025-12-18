@@ -1000,26 +1000,44 @@ export default function CSVBulkDescription() {
 
     setSavingProject(true);
     try {
+      const productsToSave = bulkProducts.length > 0 
+        ? bulkProducts 
+        : rawData.map((row, idx) => {
+            const pidKey = Object.keys(row).find(k => k.toLowerCase() === 'p_id') || 'p_id';
+            const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('p_name[de]')) || 'p_name[de]';
+            const descKey = Object.keys(row).find(k => k.toLowerCase().includes('p_description[de]')) || 'p_description[de]';
+            return {
+              id: idx + 1,
+              p_id: String(row[pidKey] || ''),
+              produktname: String(row[nameKey] || ''),
+              produktname_neu: String(row[nameKey] || ''),
+              beschreibung_html: String(row[descKey] || ''),
+              ean: String(row['ean'] || row['EAN'] || ''),
+              hersteller: String(row['hersteller'] || row['Hersteller'] || row['p_manufacturer'] || ''),
+              preis: String(row['preis'] || row['Preis'] || row['p_price'] || ''),
+              gewicht: String(row['gewicht'] || row['Gewicht'] || row['p_weight'] || ''),
+              kategorie: String(row['kategorie'] || row['Kategorie'] || row['p_category'] || ''),
+            };
+          });
+      
       if (selectedProjectId === "new") {
-        // Neues Projekt erstellen mit sourceType und exportColumns
         const enabledExportColumns = exportColumns
           .filter(col => col.enabled)
           .map(col => ({ key: col.key, label: col.label, enabled: col.enabled }));
         
         await apiRequest('POST', '/api/bulk-save-to-project', {
           projectName: projectName.trim(),
-          products: bulkProducts,
+          products: productsToSave,
           sourceType: 'csv-bulk',
           exportColumns: enabledExportColumns,
         });
         
         toast({
           title: "Projekt gespeichert",
-          description: `${bulkProducts.length} Produkte wurden erfolgreich in "${projectName}" gespeichert`,
+          description: `${productsToSave.length} Produkte wurden erfolgreich in "${projectName}" gespeichert`,
         });
       } else {
-        // Zu bestehendem Projekt hinzufügen
-        const savedCount = await addProductsToExistingProject(selectedProjectId, bulkProducts);
+        const savedCount = await addProductsToExistingProject(selectedProjectId, productsToSave as BulkProduct[]);
         const project = existingProjects.find(p => p.id === selectedProjectId);
         
         // Invalidate queries to refresh product counts
@@ -1261,6 +1279,15 @@ export default function CSVBulkDescription() {
                   CSV Vorschau ({rawData.length} Zeilen) + KI-Felder {processing && '🔄'}
                 </h3>
                 <div className="flex items-center gap-3">
+                  <Button
+                    onClick={() => setShowSaveDialog(true)}
+                    disabled={rawData.length === 0}
+                    size="sm"
+                    variant="default"
+                  >
+                    <FolderPlus className="w-4 h-4 mr-2" />
+                    Als Projekt speichern
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
