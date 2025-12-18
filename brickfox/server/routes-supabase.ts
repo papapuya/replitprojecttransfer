@@ -3435,7 +3435,7 @@ Beispiel Antwort:
   // Weight estimation endpoint
   app.post('/api/estimate-weight', requireAuth, async (req, res) => {
     try {
-      const { products } = req.body;
+      const { products, customPrompt } = req.body;
       
       if (!products || !Array.isArray(products)) {
         return res.status(400).json({ error: 'products array required' });
@@ -3457,14 +3457,25 @@ Beispiel Antwort:
       const results = [];
       
       for (const product of products) {
-        const { name, description, category, brand } = product;
+        const { name, description, category, brand, allData } = product;
         
-        const prompt = `Schätze das Gewicht für folgendes Produkt in Gramm.
+        const allDataStr = allData ? Object.entries(allData)
+          .filter(([key, value]) => value && String(value).trim())
+          .map(([key, value]) => `${key}: ${value}`)
+          .join('\n') : '';
+        
+        const userInstruction = customPrompt || 'Schätze das Gewicht auf Basis der verfügbaren Produktdaten.';
+        
+        const prompt = `${userInstruction}
 
+PRODUKTDATEN:
 Produktname: ${name || 'Unbekannt'}
 Marke: ${brand || 'Unbekannt'}
 Kategorie: ${category || 'Unbekannt'}
 Beschreibung: ${description || 'Keine Beschreibung'}
+
+ALLE CSV-FELDER:
+${allDataStr}
 
 Antworte NUR mit einer Zahl (Gewicht in Gramm). Keine Einheit, keine Erklärung.
 Beispiel: 150`;

@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Scale, Upload, Download, RefreshCw, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Scale, Upload, Download, RefreshCw, Trash2, AlertCircle, CheckCircle2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
 import { apiRequest } from "@/lib/queryClient";
@@ -21,6 +23,7 @@ export default function WeightGenerator() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<"upload" | "estimating" | "done">("upload");
+  const [customAiPrompt, setCustomAiPrompt] = useState<string>("Schätze das Gewicht auf Basis der Länge (v_length) und Produktbeschreibung (p_description[de]) und trage das geschätzte Gewicht in Gramm ein.");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -129,8 +132,10 @@ export default function WeightGenerator() {
             name: getProductName(p),
             description: getProductDescription(p),
             brand: getProductBrand(p),
-            category: getProductCategory(p)
-          }))
+            category: getProductCategory(p),
+            allData: p.originalData
+          })),
+          customPrompt: customAiPrompt
         });
 
         const data = await response.json();
@@ -216,7 +221,7 @@ export default function WeightGenerator() {
   const estimatedCount = products.filter(p => p.estimatedWeight !== null).length;
 
   const displayHeaders = headers.length > 0 
-    ? [...headers.slice(0, 8), "Geschätzt (g)", "Status"]
+    ? [...headers, "Geschätzt (g)", "Status"]
     : [];
 
   return (
@@ -317,6 +322,33 @@ export default function WeightGenerator() {
               </div>
             </div>
 
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="w-5 h-5 text-primary" />
+                  <CardTitle className="text-lg">KI-Varianten Option</CardTitle>
+                </div>
+                <CardDescription>
+                  Definieren Sie hier die KI-Logik für die Gewichtsschätzung. Die KI nutzt diese Anweisung zusammen mit den Produktdaten.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="custom-prompt">KI-Anweisung</Label>
+                  <Textarea
+                    id="custom-prompt"
+                    value={customAiPrompt}
+                    onChange={(e) => setCustomAiPrompt(e.target.value)}
+                    placeholder="Beispiel: Schätze das Gewicht auf Basis der Länge (v_length) und Produktbeschreibung..."
+                    className="min-h-[100px] resize-y"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Verfügbare Felder: {headers.slice(0, 10).join(", ")}{headers.length > 10 ? `, ... (+${headers.length - 10} weitere)` : ""}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
             {isProcessing && currentStep === "estimating" && (
               <Card>
                 <CardContent className="py-6">
@@ -346,21 +378,21 @@ export default function WeightGenerator() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {products.slice(0, 100).map((item, i) => (
+                      {products.map((item, i) => (
                         <tr key={i} className={`hover:bg-muted/50 transition-colors ${item.needsEstimation ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : ''}`}>
-                          {headers.slice(0, 8).map((header, idx) => (
-                            <td key={idx} className="p-3 text-xs max-w-[200px] truncate" title={item.originalData[header] || ""}>
+                          {headers.map((header, idx) => (
+                            <td key={idx} className="p-3 text-xs max-w-[300px] truncate whitespace-nowrap" title={item.originalData[header] || ""}>
                               {item.originalData[header] || "-"}
                             </td>
                           ))}
-                          <td className="p-3 text-xs">
+                          <td className="p-3 text-xs whitespace-nowrap">
                             {item.estimatedWeight !== null ? (
                               <span className="font-semibold text-primary">{item.estimatedWeight} g</span>
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3 whitespace-nowrap">
                             {item.needsEstimation ? (
                               item.estimatedWeight !== null ? (
                                 <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-xs">
@@ -379,11 +411,6 @@ export default function WeightGenerator() {
                       ))}
                     </tbody>
                   </table>
-                  {products.length > 100 && (
-                    <div className="p-4 text-center text-muted-foreground border-t">
-                      ... und {products.length - 100} weitere Produkte (Export enthält alle)
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
