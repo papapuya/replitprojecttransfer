@@ -83,7 +83,7 @@ export default function CSVBulkDescription() {
   const [previewFilter, setPreviewFilter] = useState<string>('');
   const [previewPidFilter, setPreviewPidFilter] = useState<string>('');
   const [showPreviewColumnSelector, setShowPreviewColumnSelector] = useState(false);
-  const [visibleKiColumns, setVisibleKiColumns] = useState<string[]>(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'keywords']);
+  const [visibleKiColumns, setVisibleKiColumns] = useState<string[]>(['seo_beschreibung', 'beschreibung_nl']);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
