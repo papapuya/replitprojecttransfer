@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Scale, Upload, Download, RefreshCw, Trash2, AlertCircle, CheckCircle2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
@@ -24,6 +25,7 @@ export default function WeightGenerator() {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<"upload" | "estimating" | "done">("upload");
   const [customAiPrompt, setCustomAiPrompt] = useState<string>("Schätze das Gewicht auf Basis der Länge (v_length) und Produktbeschreibung (p_description[de]) und trage das geschätzte Gewicht in Gramm ein.");
+  const [forceEstimateAll, setForceEstimateAll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -105,7 +107,9 @@ export default function WeightGenerator() {
   };
 
   const estimateWeights = async () => {
-    const productsToEstimate = products.filter(p => p.needsEstimation);
+    const productsToEstimate = forceEstimateAll 
+      ? products 
+      : products.filter(p => p.needsEstimation);
     
     if (productsToEstimate.length === 0) {
       toast({
@@ -311,10 +315,10 @@ export default function WeightGenerator() {
                 <Button 
                   variant="secondary"
                   onClick={estimateWeights}
-                  disabled={isProcessing || needsEstimationCount === 0}
+                  disabled={isProcessing || (needsEstimationCount === 0 && !forceEstimateAll)}
                 >
                   <Scale className="w-4 h-4 mr-2" /> 
-                  {isProcessing ? "Schätze..." : "Gewichte schätzen"}
+                  {isProcessing ? "Schätze..." : forceEstimateAll ? `Alle ${products.length} schätzen` : `${needsEstimationCount} schätzen`}
                 </Button>
                 <Button onClick={downloadResults} disabled={products.length === 0}>
                   <Download className="w-4 h-4 mr-2" /> CSV Export
@@ -333,18 +337,30 @@ export default function WeightGenerator() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <Label htmlFor="custom-prompt">KI-Anweisung</Label>
-                  <Textarea
-                    id="custom-prompt"
-                    value={customAiPrompt}
-                    onChange={(e) => setCustomAiPrompt(e.target.value)}
-                    placeholder="Beispiel: Schätze das Gewicht auf Basis der Länge (v_length) und Produktbeschreibung..."
-                    className="min-h-[100px] resize-y"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Verfügbare Felder: {headers.slice(0, 10).join(", ")}{headers.length > 10 ? `, ... (+${headers.length - 10} weitere)` : ""}
-                  </p>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="force-estimate"
+                      checked={forceEstimateAll}
+                      onCheckedChange={(checked) => setForceEstimateAll(checked === true)}
+                    />
+                    <Label htmlFor="force-estimate" className="cursor-pointer">
+                      Alle Produkte schätzen (auch die mit vorhandenem Gewicht)
+                    </Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-prompt">KI-Anweisung</Label>
+                    <Textarea
+                      id="custom-prompt"
+                      value={customAiPrompt}
+                      onChange={(e) => setCustomAiPrompt(e.target.value)}
+                      placeholder="Beispiel: Schätze das Gewicht auf Basis der Länge (v_length) und Produktbeschreibung..."
+                      className="min-h-[100px] resize-y"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Verfügbare Felder: {headers.slice(0, 10).join(", ")}{headers.length > 10 ? `, ... (+${headers.length - 10} weitere)` : ""}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
