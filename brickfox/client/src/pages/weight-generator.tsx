@@ -3,10 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Scale, Upload, Download, RefreshCw, Trash2, AlertCircle, CheckCircle2, Wand2 } from "lucide-react";
+import { Scale, Upload, Download, RefreshCw, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
 import { apiRequest } from "@/lib/queryClient";
@@ -24,8 +21,6 @@ export default function WeightGenerator() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<"upload" | "estimating" | "done">("upload");
-  const [customAiPrompt, setCustomAiPrompt] = useState<string>("");
-  const [forceEstimateAll, setForceEstimateAll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -107,9 +102,7 @@ export default function WeightGenerator() {
   };
 
   const estimateWeights = async () => {
-    const productsToEstimate = forceEstimateAll 
-      ? products 
-      : products.filter(p => p.needsEstimation);
+    const productsToEstimate = products.filter(p => p.needsEstimation);
     
     if (productsToEstimate.length === 0) {
       toast({
@@ -139,8 +132,7 @@ export default function WeightGenerator() {
             brand: getProductBrand(p),
             category: getProductCategory(p),
             allData: p.originalData
-          })),
-          customPrompt: customAiPrompt
+          }))
         });
 
         const data = await response.json();
@@ -316,55 +308,16 @@ export default function WeightGenerator() {
                 <Button 
                   variant="secondary"
                   onClick={estimateWeights}
-                  disabled={isProcessing || (needsEstimationCount === 0 && !forceEstimateAll)}
+                  disabled={isProcessing || needsEstimationCount === 0}
                 >
                   <Scale className="w-4 h-4 mr-2" /> 
-                  {isProcessing ? "Schätze..." : forceEstimateAll ? `Alle ${products.length} schätzen` : `${needsEstimationCount} schätzen`}
+                  {isProcessing ? "Schätze..." : `${needsEstimationCount} Gewichte schätzen`}
                 </Button>
                 <Button onClick={downloadResults} disabled={products.length === 0}>
                   <Download className="w-4 h-4 mr-2" /> CSV Export
                 </Button>
               </div>
             </div>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <Wand2 className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-lg">KI-Varianten Option</CardTitle>
-                </div>
-                <CardDescription>
-                  Definieren Sie hier die KI-Logik für die Gewichtsschätzung. Die KI nutzt diese Anweisung zusammen mit den Produktdaten.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="force-estimate"
-                      checked={forceEstimateAll}
-                      onCheckedChange={(checked) => setForceEstimateAll(checked === true)}
-                    />
-                    <Label htmlFor="force-estimate" className="cursor-pointer">
-                      Alle Produkte schätzen (auch die mit vorhandenem Gewicht)
-                    </Label>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="custom-prompt">KI-Anweisung</Label>
-                    <Textarea
-                      id="custom-prompt"
-                      value={customAiPrompt}
-                      onChange={(e) => setCustomAiPrompt(e.target.value)}
-                      placeholder="Beispiel: Schätze das Gewicht auf Basis der Länge (v_length) und Produktbeschreibung..."
-                      className="min-h-[100px] resize-y"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Verfügbare Felder: {headers.slice(0, 10).join(", ")}{headers.length > 10 ? `, ... (+${headers.length - 10} weitere)` : ""}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
             {isProcessing && currentStep === "estimating" && (
               <Card>
