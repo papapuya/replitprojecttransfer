@@ -24,7 +24,7 @@ export default function WeightGenerator() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<"upload" | "estimating" | "done">("upload");
-  const [customAiPrompt, setCustomAiPrompt] = useState<string>("Schätze das Gewicht auf Basis der Länge (v_length) und Produktbeschreibung (p_description[de]) und trage das geschätzte Gewicht in Gramm ein.");
+  const [customAiPrompt, setCustomAiPrompt] = useState<string>("");
   const [forceEstimateAll, setForceEstimateAll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
