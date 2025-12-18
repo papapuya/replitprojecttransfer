@@ -83,7 +83,7 @@ export default function CSVBulkDescription() {
   const [previewFilter, setPreviewFilter] = useState<string>('');
   const [previewPidFilter, setPreviewPidFilter] = useState<string>('');
   const [showPreviewColumnSelector, setShowPreviewColumnSelector] = useState(false);
-  const [visibleKiColumns, setVisibleKiColumns] = useState<string[]>(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'seo_beschreibung', 'beschreibung_nl', 'keywords']);
+  const [visibleKiColumns, setVisibleKiColumns] = useState<string[]>(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'keywords']);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
@@ -1476,7 +1476,7 @@ export default function CSVBulkDescription() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setVisibleKiColumns(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'seo_beschreibung', 'keywords'])}
+                        onClick={() => setVisibleKiColumns(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'keywords'])}
                       >
                         Alle
                       </Button>
@@ -1494,8 +1494,6 @@ export default function CSVBulkDescription() {
                       { key: 'produktname_neu', label: 'Produktname Neu' },
                       { key: 'mediamarkt_v1', label: 'p_name[de] V1' },
                       { key: 'mediamarkt_v2', label: 'p_name[de] V2' },
-                      { key: 'seo_beschreibung', label: 'p_description[de] (KI)' },
-                      { key: 'beschreibung_nl', label: 'p_description[nl] (KI)' },
                       { key: 'keywords', label: 'p_keywords' }
                     ].map(col => (
                       <div key={col.key} className="flex items-center space-x-2">
@@ -1553,16 +1551,6 @@ export default function CSVBulkDescription() {
                       {visibleKiColumns.includes('mediamarkt_v2') && (
                         <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
                           🤖 p_name[de] V2
-                        </th>
-                      )}
-                      {visibleKiColumns.includes('seo_beschreibung') && (
-                        <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
-                          🤖 p_description[de] (KI)
-                        </th>
-                      )}
-                      {visibleKiColumns.includes('beschreibung_nl') && (
-                        <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-blue-500/20">
-                          🇳🇱 p_description[nl] (KI)
                         </th>
                       )}
                       {visibleKiColumns.includes('keywords') && (
@@ -1662,37 +1650,6 @@ export default function CSVBulkDescription() {
                                 <span className="line-clamp-1 font-medium">{generatedProduct.mediamarktname_v2}</span>
                               ) : (
                                 <span className="text-muted-foreground italic text-xs">wird generiert...</span>
-                              )}
-                            </td>
-                          )}
-                          {visibleKiColumns.includes('seo_beschreibung') && (
-                            <td className="px-2 py-1 border border-border bg-primary/5 text-foreground">
-                              {generatedProduct ? (
-                                <span className="line-clamp-1 text-xs">{generatedProduct.seo_beschreibung}</span>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">wird generiert...</span>
-                              )}
-                            </td>
-                          )}
-                          {visibleKiColumns.includes('beschreibung_nl') && (
-                            <td className="px-2 py-1 border border-border bg-blue-500/10 text-foreground">
-                              {generatedProduct?.produktbeschreibung_html_nl ? (
-                                <div className="flex items-center gap-1">
-                                  <span className="line-clamp-1 text-xs">{generatedProduct.produktbeschreibung_html_nl.substring(0, 50)}...</span>
-                                  <button
-                                    onClick={() => {
-                                      setHtmlPreviewContent(generatedProduct.produktbeschreibung_html_nl);
-                                      setHtmlPreviewProductName(generatedProduct.produktname_neu || 'Produkt (NL)');
-                                      setShowHtmlPreview(true);
-                                    }}
-                                    className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
-                                    title="NL Vorschau"
-                                  >
-                                    <Eye className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">-</span>
                               )}
                             </td>
                           )}
