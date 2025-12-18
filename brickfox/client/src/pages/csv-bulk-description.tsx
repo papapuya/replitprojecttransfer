@@ -1004,14 +1004,23 @@ export default function CSVBulkDescription() {
         ? bulkProducts 
         : rawData.map((row, idx) => {
             const pidKey = Object.keys(row).find(k => k.toLowerCase() === 'p_id') || 'p_id';
+            const vidKey = Object.keys(row).find(k => k.toLowerCase() === 'v_id') || 'v_id';
+            const itemNumKey = Object.keys(row).find(k => k.toLowerCase() === 'p_item_number') || 'p_item_number';
             const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('p_name[de]')) || 'p_name[de]';
+            const nameNlKey = Object.keys(row).find(k => k.toLowerCase().includes('p_name[nl]')) || 'p_name[nl]';
             const descKey = Object.keys(row).find(k => k.toLowerCase().includes('p_description[de]')) || 'p_description[de]';
+            const descNlKey = Object.keys(row).find(k => k.toLowerCase().includes('p_description[nl]')) || 'p_description[nl]';
             return {
               id: idx + 1,
               p_id: String(row[pidKey] || ''),
+              v_id: String(row[vidKey] || ''),
+              p_item_number: String(row[itemNumKey] || ''),
               produktname: String(row[nameKey] || ''),
               produktname_neu: String(row[nameKey] || ''),
-              beschreibung_html: String(row[descKey] || ''),
+              produktbeschreibung_html: String(row[descKey] || ''),
+              produktbeschreibung_original: String(row[descKey] || ''),
+              produktname_nl: String(row[nameNlKey] || ''),
+              produktbeschreibung_html_nl: String(row[descNlKey] || ''),
               ean: String(row['ean'] || row['EAN'] || ''),
               hersteller: String(row['hersteller'] || row['Hersteller'] || row['p_manufacturer'] || ''),
               preis: String(row['preis'] || row['Preis'] || row['p_price'] || ''),

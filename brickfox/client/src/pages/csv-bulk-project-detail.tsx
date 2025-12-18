@@ -17,6 +17,7 @@ import type { Project, ProductInProject, ExportColumn } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BulkDescriptionTable } from "@/components/bulk-description-table";
 
 interface BulkProduct {
   id: number;
