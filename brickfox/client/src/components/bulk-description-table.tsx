@@ -212,6 +212,9 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                 <TableHead className="min-w-[250px]">
                   Produktname (NL)
                 </TableHead>
+                <TableHead className="min-w-[500px]">
+                  Produktbeschreibung (NL)
+                </TableHead>
                 <TableHead className="min-w-[100px]">
                   mAh
                 </TableHead>
@@ -392,6 +395,46 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                             className="flex-shrink-0"
                           >
                             {copiedIds.has(product.id * 1000 + 1) ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  {/* Produktbeschreibung Niederländisch */}
+                  <TableCell>
+                    <div className="flex gap-2 items-start">
+                      <Textarea
+                        value={product.produktbeschreibung_html_nl || ''}
+                        onChange={(e) => onUpdateProduct(product.id, 'produktbeschreibung_html_nl', e.target.value)}
+                        className="text-xs resize-none min-h-[100px] font-mono flex-1 bulk-description-textarea"
+                        placeholder="Niederländische Produktbeschreibung..."
+                        data-testid={`input-beschreibung-nl-${product.id}`}
+                      />
+                      <div className="flex flex-col gap-1 mt-1">
+                        {onPreviewHtml && product.produktbeschreibung_html_nl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onPreviewHtml(product.produktbeschreibung_html_nl || '', `${product.produktname} (NL)`)}
+                            title="NL Vorschau anzeigen"
+                            className="flex-shrink-0"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {product.produktbeschreibung_html_nl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyToClipboard(product.produktbeschreibung_html_nl || '', product.id * 1000 + 4)}
+                            title="NL Beschreibung kopieren"
+                            className="flex-shrink-0"
+                          >
+                            {copiedIds.has(product.id * 1000 + 4) ? (
                               <Check className="w-4 h-4 text-green-600" />
                             ) : (
                               <Copy className="w-4 h-4" />
