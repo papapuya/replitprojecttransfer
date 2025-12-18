@@ -128,11 +128,12 @@ export default function WeightGenerator() {
 
     for (let i = 0; i < productsToEstimate.length; i += batchSize) {
       const batch = productsToEstimate.slice(i, i + batchSize);
+      const batchIndices = batch.map(p => products.indexOf(p));
       
       try {
         const response = await apiRequest("POST", "/api/estimate-weight", {
-          products: batch.map(p => ({
-            id: getProductId(p),
+          products: batch.map((p, idx) => ({
+            id: getProductId(p) || `batch_${i + idx}`,
             name: getProductName(p),
             description: getProductDescription(p),
             brand: getProductBrand(p),
@@ -145,11 +146,11 @@ export default function WeightGenerator() {
         const data = await response.json();
         
         if (data.success && data.results) {
-          data.results.forEach((result: any) => {
-            const index = updatedProducts.findIndex(p => getProductId(p) === result.id);
-            if (index !== -1) {
-              updatedProducts[index] = {
-                ...updatedProducts[index],
+          data.results.forEach((result: any, resultIdx: number) => {
+            const productIndex = batchIndices[resultIdx];
+            if (productIndex !== -1 && productIndex !== undefined) {
+              updatedProducts[productIndex] = {
+                ...updatedProducts[productIndex],
                 estimatedWeight: result.estimatedWeight,
                 confidence: result.confidence
               };
