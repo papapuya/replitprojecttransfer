@@ -198,22 +198,22 @@ export function BulkDescriptionTable({ products, onUpdateProduct, onPreviewHtml 
                   p_item_number
                 </TableHead>
                 <TableHead className="min-w-[200px]">
-                  Produktname (Original)
+                  p_name[de] (Original)
                 </TableHead>
                 <TableHead className="min-w-[250px]">
-                  SEO-Produktname
+                  p_name[de]
                 </TableHead>
                 <TableHead className="min-w-[500px]">
-                  Produktbeschreibung HTML
+                  p_description[de]
                 </TableHead>
                 <TableHead className="min-w-[400px]">
-                  Produktbeschreibung (Original CSV)
+                  p_description[de] (Original CSV)
                 </TableHead>
                 <TableHead className="min-w-[250px]">
-                  Produktname (NL)
+                  p_name[nl]
                 </TableHead>
                 <TableHead className="min-w-[500px]">
-                  Produktbeschreibung (NL)
+                  p_description[nl]
                 </TableHead>
                 <TableHead className="min-w-[100px]">
                   mAh
