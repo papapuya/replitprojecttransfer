@@ -45,7 +45,7 @@ export default function WeightGenerator() {
       header: true,
       skipEmptyLines: true,
       delimiter: ";",
-      encoding: "ISO-8859-1",
+      encoding: "UTF-8",
       complete: (results) => {
         if (results && results.data && results.meta.fields) {
           const csvHeaders = results.meta.fields;
