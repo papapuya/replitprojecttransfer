@@ -1357,37 +1357,46 @@ export default function CSVBulkDescription() {
                       </>
                     )}
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      // CSV Export für rawData
-                      if (rawData.length === 0) return;
-                      
-                      const headers = Object.keys(rawData[0]);
-                      const csvContent = [
-                        headers.join(';'),
-                        ...rawData.map(row => 
-                          headers.map(h => {
-                            const val = String(row[h] || '');
-                            return `"${val.replace(/"/g, '""')}"`;
-                          }).join(';')
-                        )
-                      ].join('\n');
-                      
-                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `${file?.name?.replace('.csv', '') || 'export'}_bearbeitet.csv`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      
-                      toast({ title: "Export erfolgreich", description: `${rawData.length} Zeilen exportiert` });
-                    }}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={exportFileName}
+                      onChange={(e) => setExportFileName(e.target.value)}
+                      placeholder={file?.name?.replace('.csv', '') || 'Dateiname'}
+                      className="w-32 h-8 text-sm"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        // CSV Export für rawData
+                        if (rawData.length === 0) return;
+                        
+                        const headers = Object.keys(rawData[0]);
+                        const csvContent = [
+                          headers.join(';'),
+                          ...rawData.map(row => 
+                            headers.map(h => {
+                              const val = String(row[h] || '');
+                              return `"${val.replace(/"/g, '""')}"`;
+                            }).join(';')
+                          )
+                        ].join('\n');
+                        
+                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        const baseName = exportFileName.trim() || file?.name?.replace('.csv', '') || 'export';
+                        a.download = `${baseName}_${new Date().toISOString().split('T')[0]}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        
+                        toast({ title: "Export erfolgreich", description: `${rawData.length} Zeilen exportiert` });
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
+                  </div>
                   <div className="flex items-center gap-2">
                     <div className="relative">
                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
