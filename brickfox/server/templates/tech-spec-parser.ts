@@ -790,7 +790,7 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
         
         // Nur im Kompatibilitäts-Abschnitt parsen
         if (inCompatSection) {
-          // Pattern: "Marke: Modell" → extrahiere NUR das Modell (Marke wird oben im Titel angezeigt)
+          // Pattern: "Marke: Modell" → extrahiere MARKE + MODELL zusammen (z.B. "Audioline CDL971")
           const colonMatch = trimmed.match(/^([^:]+):\s*(.+)$/);
           if (colonMatch) {
             const marke = colonMatch[1].trim();
@@ -799,9 +799,10 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
             // Technische Labels ausschließen
             const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity', 'lieferumfang', 'hinweis', 'achtung', 'typencode'];
             if (!technicalLabels.includes(marke.toLowerCase()) && modell.length > 1) {
-              // NUR Modell speichern (ohne Marke) - für Normalisierung
-              allModels.push(modell);
-              console.log(`   📱 Modell extrahiert: "${modell}" (Marke: ${marke})`);
+              // MARKE + MODELL zusammen speichern (z.B. "Audioline CDL971 Universal")
+              const fullModel = `${marke} ${modell}`;
+              allModels.push(fullModel);
+              console.log(`   📱 Modell extrahiert: "${fullModel}"`);
             }
             continue;
           }
