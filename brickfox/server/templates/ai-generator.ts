@@ -1014,7 +1014,9 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       const produktName = productData.name || '';
       const wieMatch = produktName.match(/(?:wie|ersetzt|entspricht|als)\s+([A-Z0-9,\s\-\/]+)/i);
       if (wieMatch) {
-        const codes = wieMatch[1].split(/[,\s]+/).filter((c: string) => c.length >= 2 && /[A-Z0-9]/i.test(c));
+        const codes = wieMatch[1].split(/[,\s]+/)
+          .map((c: string) => c.replace(/^-+/, '')) // Führende Minuszeichen entfernen
+          .filter((c: string) => c.length >= 2 && /[A-Z0-9]/i.test(c));
         if (codes.length > 0) {
           kompatibleModelle = codes;
           console.log(`🔧 [COMPAT] Typencodes aus Produktname extrahiert: ${codes.join(', ')}`);
