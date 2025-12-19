@@ -278,6 +278,7 @@ export default function CSVBulkDescription() {
     setProcessing(true);
     setError("");
     setProgress(0);
+    setBulkProducts([]); // Liste zurücksetzen für neuen Durchlauf
     
     try {
       await generateDescriptions(rawData);
@@ -524,6 +525,7 @@ export default function CSVBulkDescription() {
         })
       );
 
+      const batchResults: BulkProduct[] = [];
       settled.forEach((outcome, batchIndex) => {
         const globalIndex = i + batchIndex;
         processedCount += 1;
@@ -531,9 +533,10 @@ export default function CSVBulkDescription() {
 
         if (outcome.status === 'fulfilled') {
           results[globalIndex] = outcome.value;
+          if (outcome.value) batchResults.push(outcome.value);
         } else {
           console.error(`Error processing row ${globalIndex}:`, outcome.reason);
-          results[globalIndex] = {
+          const errorProduct = {
             id: globalIndex + 1,
             p_id: '-',
             v_id: '-',
@@ -552,8 +555,13 @@ export default function CSVBulkDescription() {
             seo_keywords: '',
             kurzbeschreibung: '',
           } satisfies BulkProduct;
+          results[globalIndex] = errorProduct;
+          batchResults.push(errorProduct);
         }
       });
+      
+      // Inkrementell nach jedem Batch aktualisieren für Echtzeit-Fortschritt
+      setBulkProducts(prev => [...prev, ...batchResults]);
     }
 
     const completedResults = results.filter(Boolean) as BulkProduct[];
