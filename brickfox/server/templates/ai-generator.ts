@@ -1028,7 +1028,17 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
         console.log(`✅ [COMPAT] "wie" Match gefunden: "${wieMatch[1]}"`);
         const codes = wieMatch[1].split(/[,\s]+/)
           .map((c: string) => c.replace(/^-+/, '').trim()) // Führende Minuszeichen entfernen
-          .filter((c: string) => c.length >= 2 && /[A-Z0-9]/i.test(c));
+          .filter((c: string) => {
+            // Mindestlänge und alphanumerisch
+            if (c.length < 2 || !/[A-Z0-9]/i.test(c)) return false;
+            // KEINE technischen Werte: Volt, mAh, Wh, etc.
+            if (/^\d+[\.,]?\d*\s*V$/i.test(c)) return false;        // "3.7V", "3,7 V"
+            if (/^\d+[\.,]?\d*\s*mAh$/i.test(c)) return false;      // "2100mAh", "2100 mAh"
+            if (/^\d+[\.,]?\d*\s*Wh$/i.test(c)) return false;       // "10Wh", "10.5 Wh"
+            if (/^\d+[\.,]?\d*\s*Ah$/i.test(c)) return false;       // "2.1Ah"
+            if (/^[\d\.,]+$/i.test(c)) return false;                // Reine Zahlen wie "3.7"
+            return true;
+          });
         if (codes.length > 0) {
           // MERGE: Füge Typencodes zu bestehenden Modellen hinzu (nicht ersetzen!)
           kompatibleModelle = [...kompatibleModelle, ...codes];
@@ -1039,14 +1049,22 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       }
     }
     
-    // Entferne generische Platzhalter wie "und weitere Modelle", "u.a.", "etc."
+    // Entferne generische Platzhalter und technische Werte
     kompatibleModelle = kompatibleModelle.filter((m: string) => {
       const lower = m.toLowerCase();
-      return !/(und\s+)?weitere\s+modelle/i.test(m) &&
-             !/^u\.?\s*a\.?$/i.test(m) &&
-             !/^etc\.?$/i.test(m) &&
-             !/^\.\.\.$/i.test(m) &&
-             !/^und\s+mehr$/i.test(m);
+      // Generische Platzhalter
+      if (/(und\s+)?weitere\s+modelle/i.test(m)) return false;
+      if (/^u\.?\s*a\.?$/i.test(m)) return false;
+      if (/^etc\.?$/i.test(m)) return false;
+      if (/^\.\.\.$/i.test(m)) return false;
+      if (/^und\s+mehr$/i.test(m)) return false;
+      // Technische Werte (Volt, mAh, Wh, Ah)
+      if (/^\d+[\.,]?\d*\s*V$/i.test(m)) return false;
+      if (/^\d+[\.,]?\d*\s*mAh$/i.test(m)) return false;
+      if (/^\d+[\.,]?\d*\s*Wh$/i.test(m)) return false;
+      if (/^\d+[\.,]?\d*\s*Ah$/i.test(m)) return false;
+      if (/^[\d\.,]+$/i.test(m)) return false;
+      return true;
     });
     
     // ═══════════════════════════════════════════════════════════════
