@@ -1005,11 +1005,11 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     }
     
     // ═══════════════════════════════════════════════════════════════
-    // GLOBAL: Typencodes aus Produktnamen extrahieren (alle Produkte)
+    // GLOBAL: Typencodes aus Produktnamen IMMER extrahieren und hinzufügen
     // z.B. "Akku für XY, wie 824, E92, LR03N" → [824, E92, LR03N]
-    // WICHTIG: Nur wenn NICHT in Ausschlussliste!
+    // Diese werden ZUSÄTZLICH zu bereits gefundenen Modellen hinzugefügt
     // ═══════════════════════════════════════════════════════════════
-    if (!shouldSkipCompatibility && kompatibleModelle.length === 0) {
+    if (!shouldSkipCompatibility) {
       // Extrahiere Typencodes aus Produktnamen (nach "wie", "ersetzt", "entspricht", "als")
       const produktName = productData.name || '';
       const wieMatch = produktName.match(/(?:wie|ersetzt|entspricht|als)\s+([A-Z0-9,\s\-\/]+)/i);
@@ -1018,8 +1018,9 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
           .map((c: string) => c.replace(/^-+/, '')) // Führende Minuszeichen entfernen
           .filter((c: string) => c.length >= 2 && /[A-Z0-9]/i.test(c));
         if (codes.length > 0) {
-          kompatibleModelle = codes;
-          console.log(`🔧 [COMPAT] Typencodes aus Produktname extrahiert: ${codes.join(', ')}`);
+          // MERGE: Füge Typencodes zu bestehenden Modellen hinzu (nicht ersetzen!)
+          kompatibleModelle = [...kompatibleModelle, ...codes];
+          console.log(`🔧 [COMPAT] Typencodes aus Produktname hinzugefügt: ${codes.join(', ')}`);
         }
       }
     }
