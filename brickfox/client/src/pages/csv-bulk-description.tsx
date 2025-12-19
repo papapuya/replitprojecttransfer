@@ -295,8 +295,198 @@ export default function CSVBulkDescription() {
     setProcessing(false);
     toast({
       title: "Abgebrochen",
-      description: `Generierung abgebrochen. ${bulkProducts.length} Produkte wurden bereits verarbeitet.`,
+      description: `Generierung abgebrochen. ${bulkProducts.length} Produkte wurden bereits verarbeitet. Du kannst die Generierung jederzeit fortsetzen.`,
     });
+  };
+
+  // Berechne wie viele Produkte noch generiert werden müssen
+  const ungeneratedCount = rawData.length - bulkProducts.length;
+  const canResume = !processing && rawData.length > 0 && bulkProducts.length > 0 && ungeneratedCount > 0;
+
+  const resumeAIGeneration = async () => {
+    if (rawData.length === 0) {
+      setError('Keine Daten zum Verarbeiten vorhanden');
+      return;
+    }
+
+    // Finde die Produkte die noch nicht generiert wurden
+    const alreadyGeneratedPIds = new Set(bulkProducts.map(p => p.p_id));
+    const remainingData = rawData.filter(row => {
+      const pId = row['p_id'] || row['P ID'] || row['PID'] || '';
+      return !alreadyGeneratedPIds.has(pId);
+    });
+
+    if (remainingData.length === 0) {
+      toast({
+        title: "Alle Produkte generiert",
+        description: "Es gibt keine weiteren Produkte zum Generieren.",
+      });
+      return;
+    }
+
+    abortRef.current = false;
+    setProcessing(true);
+    setError("");
+    // Behalte den aktuellen Fortschritt bei
+    const startProgress = Math.round((bulkProducts.length / rawData.length) * 100);
+    setProgress(startProgress);
+    
+    toast({
+      title: "Generierung wird fortgesetzt",
+      description: `${remainingData.length} verbleibende Produkte werden generiert...`,
+    });
+
+    try {
+      await generateDescriptionsResume(remainingData);
+    } catch (err) {
+      console.error('Generierungsfehler:', err);
+      if (!abortRef.current) {
+        setError(err instanceof Error ? err.message : 'Fehler bei der AI-Generierung');
+      }
+      setProcessing(false);
+    }
+  };
+
+  const generateDescriptionsResume = async (data: RawCSVRow[]) => {
+    const BATCH_SIZE = 15;
+    const total = data.length;
+    const startCount = bulkProducts.length;
+    let processedCount = 0;
+
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      if (abortRef.current) {
+        console.log('Generierung abgebrochen bei Batch', i);
+        break;
+      }
+      
+      const batch = data.slice(i, Math.min(i + BATCH_SIZE, total));
+
+      const settled = await Promise.allSettled(
+        batch.map(async (row) => {
+          const productData: Record<string, string> = {};
+
+          Object.keys(row).forEach((key) => {
+            const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
+            productData[normalizedKey] = row[key];
+          });
+
+          const extractProductNameFromDescription = (desc: string): string => {
+            if (!desc) return 'Unbekanntes Produkt';
+            const dasMatch = desc.match(/<p>Das\s+([^<]+?)\s+(bietet|ermöglicht|ist|sorgt|verfügt|garantiert|liefert|zeichnet)/i);
+            if (dasMatch && dasMatch[1].length > 5 && dasMatch[1].length < 80) {
+              return dasMatch[1].trim();
+            }
+            const derDieMatch = desc.match(/<p>(?:Der|Die)\s+([^<]+?)\s+(bietet|ermöglicht|ist|sorgt|verfügt|garantiert|liefert|zeichnet)/i);
+            if (derDieMatch && derDieMatch[1].length > 5 && derDieMatch[1].length < 80) {
+              return derDieMatch[1].trim();
+            }
+            const strongMatch = desc.match(/<strong>([^<]{5,60})<\/strong>/);
+            if (strongMatch) {
+              return strongMatch[1].trim();
+            }
+            return 'Unbekanntes Produkt';
+          };
+
+          const existingDescription = row['p_description[de]'] || row['P Description[de]'] || 
+                                      row['p_description'] || row['beschreibung'] || '';
+          
+          const rawProduktname =
+            productData.produktname ||
+            productData.bezeichnung ||
+            productData.name ||
+            productData['p_name_de'] ||
+            productData['p_name[de]'] ||
+            row['p_name[de]'] ||
+            row['P_name[de]'] ||
+            row['Produktname'] ||
+            row['Bezeichnung'] ||
+            row['Name'] ||
+            row['produktname'] ||
+            row['bezeichnung'] ||
+            row['P Name[de]'] ||
+            row['P Name de'] ||
+            extractProductNameFromDescription(existingDescription);
+
+          const p_id = row['p_id'] || row['P ID'] || row['PID'] || 
+                      productData.p_id || productData.pid || 
+                      String(startCount + processedCount + 1);
+          const v_id = row['v_id'] || row['V ID'] || row['VID'] || productData.v_id || '';
+          const p_item_number = row['p_item_number'] || row['P Item Number'] || row['Artikelnummer'] || 
+                               productData.p_item_number || productData.artikelnummer || '';
+
+          try {
+            const response = await fetch('/api/ai/generate-pim-data', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                produktname: rawProduktname,
+                kategorie: productData.kategorie || productData.category || row['Kategorie'] || row['kategorie'] || '',
+                ean: productData.ean || row['EAN'] || row['ean'] || '',
+                hersteller: productData.hersteller || productData.manufacturer || row['Hersteller'] || row['hersteller'] || '',
+                preis: productData.preis || productData.price || row['Preis'] || row['preis'] || '',
+                gewicht: productData.gewicht || productData.weight || row['Gewicht'] || row['gewicht'] || '',
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`API Fehler: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            return {
+              id: startCount + processedCount + 1,
+              p_id,
+              v_id,
+              p_item_number,
+              produktname: rawProduktname,
+              produktname_csv_original: rawProduktname,
+              produktname_neu: result.produktname_neu || rawProduktname,
+              produktbeschreibung: result.produktbeschreibung || '',
+              produktbeschreibung_html: result.produktbeschreibung_html || '',
+              produktname_nl: row['p_name[nl]'] || row['P Name[nl]'] || '',
+              produktbeschreibung_nl: '',
+              produktbeschreibung_html_nl: row['p_description[nl]'] || row['P Description[nl]'] || '',
+              produktbeschreibung_original: existingDescription,
+              mediamarktname_v1: result.mediamarkt_name_v1 || '',
+              mediamarktname_v2: result.mediamarkt_name_v2 || '',
+              seo_titel: result.seo_titel || '',
+              seo_beschreibung: result.seo_beschreibung || '',
+              seo_keywords: result.seo_keywords || '',
+              kurzbeschreibung: result.kurzbeschreibung || '',
+              ean: productData.ean || row['EAN'] || '',
+              hersteller: productData.hersteller || row['Hersteller'] || '',
+              preis: productData.preis || row['Preis'] || '',
+              gewicht: productData.gewicht || row['Gewicht'] || '',
+            } as BulkProduct;
+          } catch (error) {
+            console.error('Fehler bei Produkt:', rawProduktname, error);
+            return undefined;
+          }
+        })
+      );
+
+      const batchResults = settled
+        .filter((r): r is PromiseFulfilledResult<BulkProduct | undefined> => r.status === 'fulfilled')
+        .map(r => r.value)
+        .filter((p): p is BulkProduct => p !== undefined);
+
+      processedCount += batch.length;
+      
+      setBulkProducts(prev => [...prev, ...batchResults]);
+      
+      const totalProgress = Math.round(((startCount + processedCount) / rawData.length) * 100);
+      setProgress(totalProgress);
+    }
+
+    setProcessing(false);
+    
+    if (!abortRef.current) {
+      toast({
+        title: "Generierung abgeschlossen",
+        description: `Alle ${rawData.length} Produkte wurden erfolgreich verarbeitet.`,
+      });
+    }
   };
 
   const generateDescriptions = async (data: RawCSVRow[]) => {
@@ -1277,6 +1467,32 @@ export default function CSVBulkDescription() {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Fortsetzen-Button wenn Generierung abgebrochen wurde */}
+            {canResume && (
+              <Card className="p-6 border-primary/50 bg-primary/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <RefreshCw className="w-5 h-5 text-primary" />
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Generierung unterbrochen
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {bulkProducts.length} von {rawData.length} Produkten fertig - {ungeneratedCount} verbleibend
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={resumeAIGeneration}
+                    className="bg-primary"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Generierung fortsetzen
+                  </Button>
                 </div>
               </Card>
             )}
