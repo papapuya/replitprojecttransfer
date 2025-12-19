@@ -880,7 +880,7 @@ function renderMediaMarktLayout(data: {
         // Entferne führende ">" Zeichen (von GPT als Markdown-Zitat generiert)
         const cleanedUsp = usp.replace(/^>\s*/, '').trim();
         return `✅ ${e(cleanedUsp)}`;
-      }).join('<br />\n')
+      }).join('<br>\n')
     : '';
 
   // Dynamische technische Tabelle (ohne Kompatibilität - die kommt als Fließtext darunter)
@@ -1070,7 +1070,12 @@ function renderMediaMarktLayout(data: {
   const techTableHtml = finalSpecs.length > 0
     ? `<h2 style="margin-top: 1.5em;">Technische Daten</h2>
 <table style="width: auto; border-collapse: collapse;">
-${finalSpecs.map(spec => `<tr><td style="white-space: nowrap; padding-right: 2em; vertical-align: top;">${e(spec.label)}</td><td style="vertical-align: top;">${e(spec.value)}</td></tr>`).join('\n')}
+<tbody>
+${finalSpecs.map(spec => `<tr>
+<td style="white-space: nowrap; padding-right: 2em; vertical-align: top;">${e(spec.label)}</td>
+<td style="vertical-align: top;">${e(spec.value)}</td>
+</tr>`).join('\n')}
+</tbody>
 </table>`
     : '';
 
