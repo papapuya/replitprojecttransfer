@@ -1049,21 +1049,60 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       }
     }
     
-    // Entferne generische Platzhalter und technische Werte
+    // ═══════════════════════════════════════════════════════════════
+    // ROBUSTE FILTERLOGIK: NUR Marken und Modelle durchlassen
+    // ═══════════════════════════════════════════════════════════════
+    const BLOCKLIST_EXACT = new Set([
+      // Technische Begriffe
+      'controller', 'wireless', 'bluetooth', 'gprs', 'wifi', 'wlan',
+      // Akkuchemie
+      'nimh', 'ni-mh', 'nicd', 'ni-cd', 'li-ion', 'li-ionen', 'li-polymer', 'lipo',
+      'lithium', 'nickel', 'cadmium', 'alkaline', 'zink', 'kohle',
+      // Produkttypen
+      'akku', 'akkupack', 'batterie', 'battery', 'zelle', 'cell', 'pack',
+      'ladegerät', 'charger', 'netzteil', 'adapter', 'kabel', 'cable',
+      // Generische Begriffe
+      'stück', 'stk', 'pcs', 'set', 'kit', 'incl', 'inkl', 'mit', 'für', 'for',
+      'passend', 'geeignet', 'kompatibel', 'compatible', 'ersatz', 'replacement',
+      // Farben
+      'schwarz', 'black', 'weiß', 'white', 'grau', 'grey', 'gray', 'rot', 'red',
+      'blau', 'blue', 'grün', 'green', 'gelb', 'yellow', 'orange', 'pink', 'silber', 'silver',
+      // Platzhalter
+      'diverse', 'various', 'andere', 'other', 'etc', 'usw', 'mehr', 'more'
+    ]);
+    
     kompatibleModelle = kompatibleModelle.filter((m: string) => {
-      const lower = m.toLowerCase();
-      // Generische Platzhalter
-      if (/(und\s+)?weitere\s+modelle/i.test(m)) return false;
-      if (/^u\.?\s*a\.?$/i.test(m)) return false;
-      if (/^etc\.?$/i.test(m)) return false;
-      if (/^\.\.\.$/i.test(m)) return false;
-      if (/^und\s+mehr$/i.test(m)) return false;
-      // Technische Werte (Volt, mAh, Wh, Ah)
-      if (/^\d+[\.,]?\d*\s*V$/i.test(m)) return false;
-      if (/^\d+[\.,]?\d*\s*mAh$/i.test(m)) return false;
-      if (/^\d+[\.,]?\d*\s*Wh$/i.test(m)) return false;
-      if (/^\d+[\.,]?\d*\s*Ah$/i.test(m)) return false;
-      if (/^[\d\.,]+$/i.test(m)) return false;
+      const trimmed = m.trim();
+      const lower = trimmed.toLowerCase();
+      
+      // Mindestlänge
+      if (trimmed.length < 2) return false;
+      
+      // Generische Platzhalter (Phrasen)
+      if (/(und\s+)?weitere\s+modelle/i.test(trimmed)) return false;
+      if (/^u\.?\s*a\.?$/i.test(trimmed)) return false;
+      if (/^\.\.\.$/i.test(trimmed)) return false;
+      if (/^und\s+mehr$/i.test(trimmed)) return false;
+      
+      // Technische Werte mit Einheiten
+      if (/^\d+[\.,]?\d*\s*V(olt)?$/i.test(trimmed)) return false;
+      if (/^\d+[\.,]?\d*\s*m?Ah$/i.test(trimmed)) return false;
+      if (/^\d+[\.,]?\d*\s*Wh$/i.test(trimmed)) return false;
+      if (/^\d+[\.,]?\d*\s*mm$/i.test(trimmed)) return false;
+      if (/^\d+[\.,]?\d*\s*g$/i.test(trimmed)) return false;
+      if (/^[\d\.,\s]+$/i.test(trimmed)) return false;  // Reine Zahlen
+      
+      // Blocklist (exakte Matches, case-insensitive)
+      if (BLOCKLIST_EXACT.has(lower)) return false;
+      
+      // Muss mindestens einen Buchstaben UND (eine Zahl ODER Bindestrich) haben
+      // um als Modellcode erkannt zu werden, ODER eine bekannte Marke sein
+      const hasLetter = /[A-Za-z]/.test(trimmed);
+      const hasNumberOrDash = /[\d\-]/.test(trimmed);
+      const isLikelyModel = hasLetter && (hasNumberOrDash || trimmed.length >= 3);
+      
+      if (!isLikelyModel) return false;
+      
       return true;
     });
     
