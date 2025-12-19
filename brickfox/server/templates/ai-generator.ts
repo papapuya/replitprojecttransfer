@@ -1058,6 +1058,8 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       // Akkuchemie
       'nimh', 'ni-mh', 'nicd', 'ni-cd', 'li-ion', 'li-ionen', 'li-polymer', 'lipo',
       'lithium', 'nickel', 'cadmium', 'alkaline', 'zink', 'kohle',
+      // Einheiten (auch alleinstehend)
+      'mah', 'ah', 'v', 'volt', 'wh', 'w', 'watt', 'mm', 'cm', 'g', 'kg', 'ml', 'l',
       // Produkttypen
       'akku', 'akkupack', 'batterie', 'battery', 'zelle', 'cell', 'pack',
       'ladegerät', 'charger', 'netzteil', 'adapter', 'kabel', 'cable',
