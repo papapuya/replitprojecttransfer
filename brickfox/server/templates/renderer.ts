@@ -699,36 +699,61 @@ function removeBrandFromModel(model: string, brand: string): string {
 
 /**
  * Gruppiert Modelle nach Präfix/Serie
- * Beispiel: ["SATELLITE: A10", "SATELLITE: A15", "TECRA: M9"] 
- *        → "SATELLITE: A10, A15, TECRA: M9"
+ * Beispiel: ["Fritz!Fon: 2000", "Fritz!Fon: C5", "AVM 2000"] 
+ *        → "Fritz!Fon C5, AVM 2000, 2446"
+ * 
+ * Regeln:
+ * - Rein numerische Modelle (2000, 2446) werden ohne Serie-Prefix gruppiert
+ * - Alphanumerische Modelle (C5, MT-F) behalten Serie-Prefix
+ * - Duplikate werden entfernt
  */
 function groupModelsByPrefix(models: string[]): string {
   const groups = new Map<string, string[]>();
   const noPrefix: string[] = [];
+  const seenModels = new Set<string>();
   
   for (const model of models) {
     const trimmed = model.trim();
     if (!trimmed) continue;
     
-    const colonMatch = trimmed.match(/^([A-Za-z0-9\-]+)\s*:\s*(.+)$/);
+    // Duplikate überspringen (case-insensitive)
+    const normalized = trimmed.toLowerCase();
+    if (seenModels.has(normalized)) continue;
+    seenModels.add(normalized);
+    
+    const colonMatch = trimmed.match(/^([A-Za-z0-9!'\-]+)\s*:\s*(.+)$/);
     if (colonMatch) {
-      const prefix = colonMatch[1].toUpperCase();
+      const prefix = colonMatch[1];
       const modelNum = colonMatch[2].trim();
-      if (!groups.has(prefix)) {
-        groups.set(prefix, []);
+      
+      // Rein numerische Modelle (z.B. "2000", "2446") → ohne Prefix
+      if (/^\d+$/.test(modelNum)) {
+        noPrefix.push(modelNum);
+      } else {
+        // Alphanumerische Modelle behalten Prefix
+        if (!groups.has(prefix)) {
+          groups.set(prefix, []);
+        }
+        groups.get(prefix)!.push(modelNum);
       }
-      groups.get(prefix)!.push(modelNum);
     } else {
       noPrefix.push(trimmed);
     }
   }
   
   const parts: string[] = [];
+  
+  // Erst gruppierte Serien mit alphanumerischen Modellen
   Array.from(groups.entries()).forEach(([prefix, modelNums]) => {
-    parts.push(`${prefix}: ${modelNums.join(', ')}`);
+    // Duplikate innerhalb der Gruppe entfernen
+    const uniqueNums = Array.from(new Set(modelNums));
+    parts.push(`${prefix}: ${uniqueNums.join(', ')}`);
   });
+  
+  // Dann ungegruppierte Modelle (numerische + andere)
   if (noPrefix.length > 0) {
-    parts.push(noPrefix.join(', '));
+    const uniqueNoPrefix = Array.from(new Set(noPrefix));
+    parts.push(uniqueNoPrefix.join(', '));
   }
   
   return parts.join(', ');
