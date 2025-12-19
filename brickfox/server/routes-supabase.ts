@@ -3696,9 +3696,10 @@ KRITISCH WICHTIG:
 - Nutze normales Minus (-) statt – oder —
 - Nutze normale Leerzeichen, NICHT &nbsp;
 - Gib NUR das HTML zurück, keine Markdown-Codeblocks
-- Wenn Infos fehlen, lass die Sektion weg oder schreibe "keine Angabe"
+- WICHTIG: Wenn für eine Sektion keine Infos vorhanden sind, lass die komplette Sektion weg (inkl. Überschrift)
+- Besonders bei Kompatibilität: NUR anzeigen wenn echte Gerätemodelle gefunden wurden, sonst komplett weglassen
 
-HTML-STRUKTUR:
+HTML-STRUKTUR (nur Sektionen mit Inhalt verwenden):
 <h2>[Produktname/Titel]</h2>
 <p>[Einleitungstext mit Produktbeschreibung]</p>
 
@@ -3718,7 +3719,7 @@ HTML-STRUKTUR:
 </table>
 
 <h3>Kompatibilität</h3>
-<p>[Liste kompatibler Modelle/Geräte]</p>
+<p>[NUR wenn echte Gerätemodelle bekannt - sonst diese Sektion komplett weglassen!]</p>
 
 <h3>Lieferumfang</h3>
 <ul>
