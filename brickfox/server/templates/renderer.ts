@@ -33,6 +33,35 @@ function cleanMarkdown(text: string): string {
   return cleaned;
 }
 
+/**
+ * Entfernt Highlighting-Tags und Farb-Styles aus Text
+ * - <mark> Tags (gelbes Highlighting)
+ * - style-Attribute mit Farben (background-color, color)
+ * - <font> Tags mit color-Attribut
+ */
+function removeHighlightingAndColors(text: string): string {
+  if (!text) return text;
+  
+  let cleaned = text;
+  
+  // Entferne <mark> Tags aber behalte Inhalt
+  cleaned = cleaned.replace(/<\/?mark[^>]*>/gi, '');
+  
+  // Entferne <font> Tags aber behalte Inhalt
+  cleaned = cleaned.replace(/<\/?font[^>]*>/gi, '');
+  
+  // Entferne <span> mit style aber behalte Inhalt
+  cleaned = cleaned.replace(/<span[^>]*style\s*=\s*["'][^"']*(?:color|background)[^"']*["'][^>]*>(.*?)<\/span>/gi, '$1');
+  
+  // Entferne style-Attribute mit Farben aus anderen Tags
+  cleaned = cleaned.replace(/\s*style\s*=\s*["'][^"']*(?:background-color|background|color)\s*:[^"']*["']/gi, '');
+  
+  // Entferne leere style-Attribute
+  cleaned = cleaned.replace(/\s*style\s*=\s*["']\s*["']/gi, '');
+  
+  return cleaned;
+}
+
 function passThrough(text: string): string {
   return text || '';
 }
@@ -769,6 +798,9 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
     return '';
   }
   
+  // Entferne Highlighting und Farben aus allen Modellen
+  const cleanedInputModels = models.map(m => removeHighlightingAndColors(m));
+  
   const knownBrands = ['Philips', 'Makita', 'Bosch', 'DeWalt', 'Metabo', 'Hilti', 'Festool', 
                        'Milwaukee', 'Ryobi', 'Black+Decker', 'Einhell', 'Kärcher', 'Braun',
                        'Panasonic', 'Sony', 'Samsung', 'Apple', 'LG', 'Siemens', 'Miele',
@@ -787,15 +819,15 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
     }
   }
   
-  const hasColonFormat = models.some(m => /^[A-Za-z0-9\-]+\s*:\s*.+$/.test(m.trim()));
+  const hasColonFormat = cleanedInputModels.some(m => /^[A-Za-z0-9\-]+\s*:\s*.+$/.test(m.trim()));
   
   if (hasColonFormat) {
-    const grouped = groupModelsByPrefix(models);
+    const grouped = groupModelsByPrefix(cleanedInputModels);
     return `<h2 style="margin-top: 1.5em;">Kompatibilität</h2>\n<p>${e(grouped)}</p>`;
   }
   
   const cleanedModels: string[] = [];
-  for (const model of models) {
+  for (const model of cleanedInputModels) {
     let cleaned = model.trim();
     if (!cleaned) continue;
     
