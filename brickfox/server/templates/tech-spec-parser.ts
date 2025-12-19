@@ -790,7 +790,7 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
         
         // Nur im Kompatibilitäts-Abschnitt parsen
         if (inCompatSection) {
-          // Pattern: "Marke: Modell" → extrahiere MARKE + MODELL zusammen (z.B. "Audioline CDL971")
+          // Pattern: "Marke: Modell" → extrahiere MARKE + MODELL zusammen
           const colonMatch = trimmed.match(/^([^:]+):\s*(.+)$/);
           if (colonMatch) {
             const marke = colonMatch[1].trim();
@@ -802,8 +802,25 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
             // Technische Labels ausschließen
             const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity', 'lieferumfang', 'hinweis', 'achtung', 'typencode'];
             if (!technicalLabels.includes(marke.toLowerCase()) && modell.length > 1) {
-              // MARKE + MODELL zusammen speichern OHNE Doppelpunkt (z.B. "Audioline CDL971 Universal")
-              const fullModel = `${marke} ${modell}`;
+              // Bekannte Marken/Serien behalten Doppelpunkt-Format für Gruppierung
+              const knownSeriesWithColon = [
+                'gigaset', 'unify', 'unify openstage', 'openstage', 'siemens gigaset',
+                'satellite', 'tecra', 'portege', 'nokia', 'samsung', 'apple',
+                'philips', 'panasonic', 'sony', 'lg', 'motorola', 'htc'
+              ];
+              
+              const isKnownSeries = knownSeriesWithColon.some(s => 
+                marke.toLowerCase() === s || marke.toLowerCase().includes(s)
+              );
+              
+              let fullModel: string;
+              if (isKnownSeries) {
+                // Bekannte Serie: Doppelpunkt behalten für spätere Gruppierung
+                fullModel = `${marke}: ${modell}`;
+              } else {
+                // Unbekannte Marke: Leerzeichen statt Doppelpunkt
+                fullModel = `${marke} ${modell}`;
+              }
               allModels.push(fullModel);
               console.log(`   📱 Modell extrahiert: "${fullModel}"`);
             }
