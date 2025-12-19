@@ -152,7 +152,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {generalMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
+                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-primary/10 hover:text-primary">
                     <Link href={item.url} className="text-blue-600">
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
@@ -177,7 +177,7 @@ export function AppSidebar() {
                 >
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton className="w-full justify-between text-blue-600">
+                      <SidebarMenuButton className="w-full justify-between text-blue-600 hover:bg-primary/10 hover:text-primary">
                         <div className="flex items-center gap-2">
                           <shop.icon className="w-4 h-4" />
                           <span>{shop.title}</span>
@@ -205,7 +205,7 @@ export function AppSidebar() {
                                   <SidebarMenuSubButton
                                     asChild
                                     isActive={location === item.url || location === item.projectsUrl}
-                                    className={item.indent ? "pl-6 text-blue-600" : "text-blue-600"}
+                                    className={item.indent ? "pl-6 text-blue-600 hover:bg-primary/10 hover:text-primary" : "text-blue-600 hover:bg-primary/10 hover:text-primary"}
                                   >
                                     <Link href={item.url}>
                                       <item.icon className="w-4 h-4" />
@@ -244,7 +244,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {filteredTools.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
+                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-primary/10 hover:text-primary">
                     <Link href={item.url} className="text-blue-600">
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
@@ -263,7 +263,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {filteredAccountItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
+                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-primary/10 hover:text-primary">
                     <Link href={item.url} className="text-blue-600">
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
