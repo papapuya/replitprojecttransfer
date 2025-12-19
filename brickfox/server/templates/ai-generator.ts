@@ -1066,11 +1066,27 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       // Generische Begriffe
       'stück', 'stk', 'pcs', 'set', 'kit', 'incl', 'inkl', 'mit', 'für', 'for',
       'passend', 'geeignet', 'kompatibel', 'compatible', 'ersatz', 'replacement',
+      // Lieferung/Versand (KEINE Modelle!)
+      'lieferumfang', 'lieferung', 'versand', 'inhalt', 'enthält', 'enthalten',
+      'inklusive', 'beinhaltet', 'bestandteile', 'zubehör', 'accessories',
+      'verpackung', 'karton', 'originalverpackung', 'ovp',
+      // Beschreibende Begriffe (KEINE Modelle!)
+      'eigenschaften', 'merkmale', 'features', 'spezifikationen', 'technisch',
+      'hochwertig', 'qualität', 'premium', 'original', 'neu', 'new', 'gebraucht',
+      'garantie', 'warranty', 'jahre', 'monate', 'tage',
+      'anwendung', 'verwendung', 'nutzung', 'einsatz', 'zweck',
+      'vorteil', 'vorteile', 'nutzen', 'benefit', 'benefits',
+      'hinweis', 'hinweise', 'achtung', 'warnung', 'wichtig',
+      'information', 'informationen', 'info', 'details', 'beschreibung',
       // Farben
       'schwarz', 'black', 'weiß', 'white', 'grau', 'grey', 'gray', 'rot', 'red',
       'blau', 'blue', 'grün', 'green', 'gelb', 'yellow', 'orange', 'pink', 'silber', 'silver',
+      'anthrazit', 'gold', 'bronze', 'kupfer', 'beige', 'braun', 'lila', 'violett',
       // Platzhalter
-      'diverse', 'various', 'andere', 'other', 'etc', 'usw', 'mehr', 'more'
+      'diverse', 'various', 'andere', 'other', 'etc', 'usw', 'mehr', 'more',
+      // Sonstige generische Wörter
+      'artikel', 'produkt', 'product', 'gerät', 'device', 'modell', 'model',
+      'typ', 'type', 'serie', 'series', 'version', 'variante', 'ausführung'
     ]);
     
     kompatibleModelle = kompatibleModelle.filter((m: string) => {
