@@ -972,9 +972,29 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       categoryConfig
     );
     
+    // ═══════════════════════════════════════════════════════════════
+    // AUSSCHLUSSLISTE: Kategorien die KEINE Kompatibilität brauchen
+    // ═══════════════════════════════════════════════════════════════
+    const COMPAT_EXCLUSION_KEYWORDS = [
+      'popsocket', 'pop socket', 'handyhalter',
+      'desinfektionsmittel', 'desinfektion', 'hygiene', 'reinigungsmittel',
+      'neoprentasche', 'neopren', 'tasche universal', 'schutztasche',
+      'sicherheitskleidung', 'warnweste', 'schutzkleidung', 'arbeitskleidung',
+      'werkzeugkoffer', 'aufbewahrung', 'organizer'
+    ];
+    
+    const produktNameLowerCompat = (productData.name || '').toLowerCase();
+    const shouldSkipCompatibility = COMPAT_EXCLUSION_KEYWORDS.some(keyword => 
+      produktNameLowerCompat.includes(keyword)
+    );
+    
     // Nutze extrahierte Kompatibilität aus CSV (falls vorhanden)
     let kompatibleModelle: string[] = [];
-    if (extractedTechSpecs['Kompatibilität'] && extractedTechSpecs['Kompatibilität'].length > 0) {
+    
+    if (shouldSkipCompatibility) {
+      console.log(`🚫 [COMPAT] Übersprungen - Kategorie braucht keine Kompatibilität: ${produktNameLowerCompat.substring(0, 50)}`);
+      kompatibleModelle = [];
+    } else if (extractedTechSpecs['Kompatibilität'] && extractedTechSpecs['Kompatibilität'].length > 0) {
       // Kompatibilität ist ein String mit komma-getrennten Modellen
       kompatibleModelle = extractedTechSpecs['Kompatibilität'].split(', ').map((m: string) => m.trim()).filter((m: string) => m.length > 0);
       console.log(`📋 [COMPAT] Verwende ${kompatibleModelle.length} Modelle aus CSV-Beschreibung`);
@@ -982,6 +1002,24 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       // Fallback: AI-generierte Kompatibilität
       kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
       console.log(`📋 [COMPAT] Verwende AI-generierte Kompatibilität: ${kompatibleModelle.length} Modelle`);
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // GLOBAL: Typencodes aus Produktnamen extrahieren (alle Produkte)
+    // z.B. "Akku für XY, wie 824, E92, LR03N" → [824, E92, LR03N]
+    // WICHTIG: Nur wenn NICHT in Ausschlussliste!
+    // ═══════════════════════════════════════════════════════════════
+    if (!shouldSkipCompatibility && kompatibleModelle.length === 0) {
+      // Extrahiere Typencodes aus Produktnamen (nach "wie", "ersetzt", "entspricht", "als")
+      const produktName = productData.name || '';
+      const wieMatch = produktName.match(/(?:wie|ersetzt|entspricht|als)\s+([A-Z0-9,\s\-\/]+)/i);
+      if (wieMatch) {
+        const codes = wieMatch[1].split(/[,\s]+/).filter((c: string) => c.length >= 2 && /[A-Z0-9]/i.test(c));
+        if (codes.length > 0) {
+          kompatibleModelle = codes;
+          console.log(`🔧 [COMPAT] Typencodes aus Produktname extrahiert: ${codes.join(', ')}`);
+        }
+      }
     }
     
     // Entferne generische Platzhalter wie "und weitere Modelle", "u.a.", "etc."
@@ -992,6 +1030,17 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
              !/^etc\.?$/i.test(m) &&
              !/^\.\.\.$/i.test(m) &&
              !/^und\s+mehr$/i.test(m);
+    });
+    
+    // ═══════════════════════════════════════════════════════════════
+    // DUPLIKATE ENTFERNEN (case-insensitive)
+    // ═══════════════════════════════════════════════════════════════
+    const seenModels = new Set<string>();
+    kompatibleModelle = kompatibleModelle.filter((m: string) => {
+      const normalized = m.toLowerCase().trim();
+      if (seenModels.has(normalized)) return false;
+      seenModels.add(normalized);
+      return true;
     });
     const werkzeuguebersicht = parsedContent.werkzeuguebersicht || [];
     const einsatzbereiche = parsedContent.einsatzbereiche || '';
