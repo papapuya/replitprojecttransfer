@@ -748,7 +748,9 @@ function renderKompatibilitaet(models: string[], e: (s: string) => string, produ
                        'Milwaukee', 'Ryobi', 'Black+Decker', 'Einhell', 'Kärcher', 'Braun',
                        'Panasonic', 'Sony', 'Samsung', 'Apple', 'LG', 'Siemens', 'Miele',
                        'AEG', 'Hitachi', 'Husqvarna', 'Stihl', 'Gardena', 'Fein', 'Flex',
-                       'Toshiba', 'HP', 'Dell', 'Lenovo', 'Acer', 'Asus', 'MSI'];
+                       'Toshiba', 'HP', 'Dell', 'Lenovo', 'Acer', 'Asus', 'MSI',
+                       'Gigaset', 'UNIFY', 'OpenStage', 'Audioline', 'Alcatel', 'Avaya',
+                       'Ascom', 'Swissvoice', 'DeTeWe', 'Telekom', 'AVM', 'Fritz'];
   
   let brand = '';
   if (productName) {
