@@ -1012,16 +1012,22 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     if (!shouldSkipCompatibility) {
       // Extrahiere Typencodes aus Produktnamen (nach "wie", "ersetzt", "entspricht", "als")
       const produktName = productData.name || '';
-      const wieMatch = produktName.match(/(?:wie|ersetzt|entspricht|als)\s+([A-Z0-9,\s\-\/]+)/i);
+      console.log(`🔍 [COMPAT] Suche "wie" in Produktname: "${produktName.substring(0, 80)}..."`);
+      
+      // Verbessertes Regex: Erfasst alles nach "wie" bis zum Ende oder bis zu bekannten Stoppwörtern
+      const wieMatch = produktName.match(/(?:wie|ersetzt|entspricht|als)\s+([A-Z0-9][A-Z0-9,\s\-\/\.]+)/i);
       if (wieMatch) {
+        console.log(`✅ [COMPAT] "wie" Match gefunden: "${wieMatch[1]}"`);
         const codes = wieMatch[1].split(/[,\s]+/)
-          .map((c: string) => c.replace(/^-+/, '')) // Führende Minuszeichen entfernen
+          .map((c: string) => c.replace(/^-+/, '').trim()) // Führende Minuszeichen entfernen
           .filter((c: string) => c.length >= 2 && /[A-Z0-9]/i.test(c));
         if (codes.length > 0) {
           // MERGE: Füge Typencodes zu bestehenden Modellen hinzu (nicht ersetzen!)
           kompatibleModelle = [...kompatibleModelle, ...codes];
           console.log(`🔧 [COMPAT] Typencodes aus Produktname hinzugefügt: ${codes.join(', ')}`);
         }
+      } else {
+        console.log(`❌ [COMPAT] Kein "wie" Match in Produktname`);
       }
     }
     

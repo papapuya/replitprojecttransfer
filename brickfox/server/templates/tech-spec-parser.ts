@@ -802,11 +802,16 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
             // Technische Labels ausschließen
             const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity', 'lieferumfang', 'hinweis', 'achtung', 'typencode'];
             if (!technicalLabels.includes(marke.toLowerCase()) && modell.length > 1) {
+              // REGEL: Wenn Modell NUR eine Zahl ist (z.B. "2", "3", "10"), 
+              // dann gehört sie zum Modellnamen → KEIN Doppelpunkt
+              const isOnlyNumber = /^\d+$/.test(modell);
+              
               // Bekannte Marken/Serien behalten Doppelpunkt-Format für Gruppierung
               const knownSeriesWithColon = [
                 'gigaset', 'unify', 'unify openstage', 'openstage', 'siemens gigaset',
                 'satellite', 'tecra', 'portege', 'nokia', 'samsung', 'apple',
-                'philips', 'panasonic', 'sony', 'lg', 'motorola', 'htc'
+                'philips', 'panasonic', 'sony', 'lg', 'motorola', 'htc',
+                'fritz!fon', 'fritzfon', 'avm fritz'
               ];
               
               const isKnownSeries = knownSeriesWithColon.some(s => 
@@ -814,7 +819,10 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
               );
               
               let fullModel: string;
-              if (isKnownSeries) {
+              if (isOnlyNumber) {
+                // Reine Zahl nach Doppelpunkt → gehört zum Modellnamen (z.B. "BeoCom 2")
+                fullModel = `${marke} ${modell}`;
+              } else if (isKnownSeries) {
                 // Bekannte Serie: Doppelpunkt behalten für spätere Gruppierung
                 fullModel = `${marke}: ${modell}`;
               } else {
