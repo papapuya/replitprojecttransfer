@@ -309,12 +309,11 @@ export default function CSVBulkDescription() {
       return;
     }
 
-    // Finde die Produkte die noch nicht generiert wurden
-    const alreadyGeneratedPIds = new Set(bulkProducts.map(p => p.p_id));
-    const remainingData = rawData.filter(row => {
-      const pId = row['p_id'] || row['P ID'] || row['PID'] || '';
-      return !alreadyGeneratedPIds.has(pId);
-    });
+    // Einfache Index-basierte Fortsetzung: Überspringe die bereits generierten Produkte
+    const alreadyProcessedCount = bulkProducts.length;
+    const remainingData = rawData.slice(alreadyProcessedCount);
+
+    console.log(`[Resume] Bereits generiert: ${alreadyProcessedCount}, Verbleibend: ${remainingData.length}`);
 
     if (remainingData.length === 0) {
       toast({
@@ -337,7 +336,8 @@ export default function CSVBulkDescription() {
     });
 
     try {
-      await generateDescriptionsResume(remainingData);
+      // Verwende die gleiche Generierungslogik wie die Hauptfunktion
+      await generateDescriptionsForResume(remainingData, alreadyProcessedCount);
     } catch (err) {
       console.error('Generierungsfehler:', err);
       if (!abortRef.current) {
@@ -347,10 +347,11 @@ export default function CSVBulkDescription() {
     }
   };
 
-  const generateDescriptionsResume = async (data: RawCSVRow[]) => {
+  // Resume-Version der Generierung - verwendet die gleiche API wie die Hauptfunktion
+  const generateDescriptionsForResume = async (data: RawCSVRow[], startIndex: number) => {
     const BATCH_SIZE = 15;
     const total = data.length;
-    const startCount = bulkProducts.length;
+    const existingProducts = [...bulkProducts]; // Kopie der bereits generierten Produkte
     let processedCount = 0;
 
     for (let i = 0; i < total; i += BATCH_SIZE) {
@@ -362,7 +363,8 @@ export default function CSVBulkDescription() {
       const batch = data.slice(i, Math.min(i + BATCH_SIZE, total));
 
       const settled = await Promise.allSettled(
-        batch.map(async (row) => {
+        batch.map(async (row, batchIndex) => {
+          const globalIndex = startIndex + i + batchIndex;
           const productData: Record<string, string> = {};
 
           Object.keys(row).forEach((key) => {
@@ -407,76 +409,140 @@ export default function CSVBulkDescription() {
             row['P Name de'] ||
             extractProductNameFromDescription(existingDescription);
 
-          const p_id = row['p_id'] || row['P ID'] || row['PID'] || 
-                      productData.p_id || productData.pid || 
-                      String(startCount + processedCount + 1);
-          const v_id = row['v_id'] || row['V ID'] || row['VID'] || productData.v_id || '';
-          const p_item_number = row['p_item_number'] || row['P Item Number'] || row['Artikelnummer'] || 
-                               productData.p_item_number || productData.artikelnummer || '';
-
-          try {
-            const response = await fetch('/api/ai/generate-pim-data', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                produktname: rawProduktname,
-                kategorie: productData.kategorie || productData.category || row['Kategorie'] || row['kategorie'] || '',
-                ean: productData.ean || row['EAN'] || row['ean'] || '',
-                hersteller: productData.hersteller || productData.manufacturer || row['Hersteller'] || row['hersteller'] || '',
-                preis: productData.preis || productData.price || row['Preis'] || row['preis'] || '',
-                gewicht: productData.gewicht || productData.weight || row['Gewicht'] || row['gewicht'] || '',
-              }),
-            });
-
-            if (!response.ok) {
-              throw new Error(`API Fehler: ${response.status}`);
+          const cleanProductName = (name: string): string => {
+            let cleaned = name
+              .replace(/\s*[–-]\s*(ersetzt\.?|passend für\.{0,3}|passend\s*für\s*\.{0,3}|kompatibel mit\.{0,3})\s*$/i, '')
+              .replace(/\s*[–-]\s*\.{2,}$/, '')
+              .replace(/\s*\.{3}$/, '')
+              .trim();
+            
+            if (name.toLowerCase().includes('– ersetzt') || name.toLowerCase().includes('- ersetzt')) {
+              cleaned = cleaned.replace(/\b(Akku|Batterie|Display|Screen|Ladekabel|Kabel)\b/i, (match) => {
+                return 'Ersatz' + match.toLowerCase();
+              });
             }
+            
+            return cleaned;
+          };
+          
+          const produktname = cleanProductName(rawProduktname);
+          productData.productName = produktname;
 
-            const result = await response.json();
-
-            return {
-              id: startCount + processedCount + 1,
-              p_id,
-              v_id,
-              p_item_number,
-              produktname: rawProduktname,
-              produktname_csv_original: rawProduktname,
-              produktname_neu: result.produktname_neu || rawProduktname,
-              produktbeschreibung: result.produktbeschreibung || '',
-              produktbeschreibung_html: result.produktbeschreibung_html || '',
-              produktname_nl: row['p_name[nl]'] || row['P Name[nl]'] || '',
-              produktbeschreibung_nl: '',
-              produktbeschreibung_html_nl: row['p_description[nl]'] || row['P Description[nl]'] || '',
-              produktbeschreibung_original: existingDescription,
-              mediamarktname_v1: result.mediamarkt_name_v1 || '',
-              mediamarktname_v2: result.mediamarkt_name_v2 || '',
-              seo_titel: result.seo_titel || '',
-              seo_beschreibung: result.seo_beschreibung || '',
-              seo_keywords: result.seo_keywords || '',
-              kurzbeschreibung: result.kurzbeschreibung || '',
-              ean: productData.ean || row['EAN'] || '',
-              hersteller: productData.hersteller || row['Hersteller'] || '',
-              preis: productData.preis || row['Preis'] || '',
-              gewicht: productData.gewicht || row['Gewicht'] || '',
-            } as BulkProduct;
-          } catch (error) {
-            console.error('Fehler bei Produkt:', rawProduktname, error);
-            return undefined;
+          const existingBullets: string[] = [];
+          for (let bulletNum = 1; bulletNum <= 10; bulletNum++) {
+            const bullet = row[`p_bullet${bulletNum}`] || row[`p_usp${bulletNum}`] || 
+                          row[`bullet${bulletNum}`] || row[`usp${bulletNum}`] ||
+                          productData[`p_bullet${bulletNum}`] || productData[`bullet${bulletNum}`];
+            if (bullet && bullet.trim()) {
+              existingBullets.push(bullet.trim());
+            }
           }
+          const vorteileFeld = row['vorteile'] || row['features'] || row['p_features'] || 
+                              productData['vorteile'] || productData['features'] || '';
+          if (vorteileFeld) {
+            const splitBullets = vorteileFeld.split(/[,;|]/).map((b: string) => b.trim()).filter((b: string) => b.length > 3);
+            existingBullets.push(...splitBullets);
+          }
+          
+          if (existingBullets.length > 0) {
+            productData.existingBullets = existingBullets.join('|');
+          }
+          
+          const csvKompatibilitaet = 
+            row['p_attributes[akku1][de]'] || row['v_attributes[akku1][de]'] ||
+            row['p_attributes[kompatibilitaet][de]'] || row['v_attributes[kompatibilitaet][de]'] ||
+            row['p_attributes[passend_fuer][de]'] || row['v_attributes[passend_fuer][de]'] ||
+            row['p_group_part[de]'] || row['v_group_part[de]'] ||
+            row['kompatibilitaet'] || row['compatible_models'] || row['passend_fuer'] || '';
+
+          const token = 'local-admin-token-pimpilot-dev';
+          
+          const response = await fetch('/api/generate-description', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              extractedData: [{ 
+                extractedText: JSON.stringify(productData),
+                structuredData: productData
+              }],
+              customAttributes: { 
+                exactProductName: produktname,
+                existingBullets: existingBullets.length > 0 ? existingBullets : undefined,
+                existingDescription: existingDescription,
+                csvKompatibilitaet: csvKompatibilitaet.trim() || undefined
+              },
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`API request failed (${response.status})`);
+          }
+
+          const payload = await response.json();
+          const plainText = stripHtml(payload.description || '');
+          
+          const p_id = row['p_id'] || row['P ID'] || row['PID'] || productData.p_id || productData.pid || String(globalIndex + 1);
+          const v_id = row['v_id'] || row['V ID'] || row['VID'] || productData.v_id || '';
+          const artikelnummer = row['p_item_number'] || row['P Item Number'] || row['Artikelnummer'] || productData.p_item_number || productData.artikelnummer || '';
+
+          const sentences = plainText
+            .split('.')
+            .filter((sentence) => sentence.trim().length > 10);
+
+          const mmNameV1 = produktname;
+          const mmNameV2 = produktname.split(' ').slice(0, 4).join(' ');
+          const shortDesc = sentences.slice(0, 2).join('. ') + '.';
+          const seoDesc = cleanSeoProductName(produktname);
+          const plainTextNL = stripHtml(payload.descriptionNL || '');
+          const originalDescription = row['p_description[de]'] || row['P Description[de]'] || 
+                                      row['p_description'] || row['beschreibung'] || '';
+          
+          return {
+            id: globalIndex + 1,
+            p_id: p_id,
+            v_id: v_id,
+            p_item_number: artikelnummer,
+            produktname: produktname,
+            produktname_neu: limitModelsInName(produktname),
+            produktname_csv_original: rawProduktname,
+            produktbeschreibung: cleanDescription(plainText),
+            produktbeschreibung_html: cleanDescription(payload.description || ''),
+            produktname_nl: payload.produktTitelNL || '',
+            produktbeschreibung_nl: cleanDescription(plainTextNL),
+            produktbeschreibung_html_nl: cleanDescription(payload.descriptionNL || ''),
+            produktbeschreibung_original: originalDescription,
+            mediamarktname_v1: mmNameV1.substring(0, 60),
+            mediamarktname_v2: mmNameV2.substring(0, 40),
+            seo_beschreibung: seoDesc,
+            seo_keywords: payload.seoKeywords || '',
+            kurzbeschreibung: shortDesc.substring(0, 300),
+            akku_mah: row['p_attributes[akku_mah][de]'] || '',
+            akku_v: row['p_attributes[akku_v][de]'] || '',
+            akku_wh: row['p_attributes[akku_wh][de]'] || '',
+            akku_ch: row['p_attributes[akku_ch][de]'] || '',
+            farbe: row['p_attributes[farbe][de]'] || '',
+          } satisfies BulkProduct;
         })
       );
 
-      const batchResults = settled
-        .filter((r): r is PromiseFulfilledResult<BulkProduct | undefined> => r.status === 'fulfilled')
-        .map(r => r.value)
-        .filter((p): p is BulkProduct => p !== undefined);
+      const batchResults: BulkProduct[] = [];
+      settled.forEach((outcome, batchIndex) => {
+        processedCount += 1;
+        const totalProcessed = startIndex + processedCount;
+        setProgress(Math.round((totalProcessed / rawData.length) * 100));
 
-      processedCount += batch.length;
-      
+        if (outcome.status === 'fulfilled' && outcome.value) {
+          batchResults.push(outcome.value);
+        } else {
+          console.error(`Error processing row:`, outcome.status === 'rejected' ? outcome.reason : 'undefined result');
+        }
+      });
+
+      // Füge neue Ergebnisse zu den bestehenden hinzu
       setBulkProducts(prev => [...prev, ...batchResults]);
-      
-      const totalProgress = Math.round(((startCount + processedCount) / rawData.length) * 100);
-      setProgress(totalProgress);
     }
 
     setProcessing(false);
