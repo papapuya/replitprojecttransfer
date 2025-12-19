@@ -983,7 +983,16 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       'werkzeugkoffer', 'aufbewahrung', 'organizer'
     ];
     
-    const produktNameLowerCompat = (productData.name || '').toLowerCase();
+    // Ermittle Produktname aus allen möglichen Quellen
+    const produktNameForCompat = productData.productName || 
+                                  productData.produktname || 
+                                  (productData.structuredData && productData.structuredData['p_name[de]']) ||
+                                  (productData.structuredData && productData.structuredData['P Name[de]']) ||
+                                  structuredDataSource['p_name[de]'] ||
+                                  structuredDataSource['P Name[de]'] ||
+                                  '';
+    
+    const produktNameLowerCompat = produktNameForCompat.toLowerCase();
     const shouldSkipCompatibility = COMPAT_EXCLUSION_KEYWORDS.some(keyword => 
       produktNameLowerCompat.includes(keyword)
     );
@@ -1011,11 +1020,10 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     // ═══════════════════════════════════════════════════════════════
     if (!shouldSkipCompatibility) {
       // Extrahiere Typencodes aus Produktnamen (nach "wie", "ersetzt", "entspricht", "als")
-      const produktName = productData.name || '';
-      console.log(`🔍 [COMPAT] Suche "wie" in Produktname: "${produktName.substring(0, 80)}..."`);
+      console.log(`🔍 [COMPAT] Suche "wie" in Produktname: "${produktNameForCompat.substring(0, 80)}..."`);
       
       // Verbessertes Regex: Erfasst alles nach "wie" bis zum Ende oder bis zu bekannten Stoppwörtern
-      const wieMatch = produktName.match(/(?:wie|ersetzt|entspricht|als)\s+([A-Z0-9][A-Z0-9,\s\-\/\.]+)/i);
+      const wieMatch = produktNameForCompat.match(/(?:wie|ersetzt|entspricht|als)\s+([A-Z0-9][A-Z0-9,\s\-\/\.]+)/i);
       if (wieMatch) {
         console.log(`✅ [COMPAT] "wie" Match gefunden: "${wieMatch[1]}"`);
         const codes = wieMatch[1].split(/[,\s]+/)
