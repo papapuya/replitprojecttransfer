@@ -3752,8 +3752,10 @@ HTML-STRUKTUR (nur Sektionen mit echtem Inhalt):
 <h3>Technische Daten</h3>
 <table>
 <tbody>
-<tr><td>[Eigenschaft]</td><td>[Wert 1:1 aus Original]</td></tr>
-<!-- Alle technischen Daten dynamisch -->
+<!-- ALLE technischen Daten aus dem Original 1:1 übertragen - NICHTS weglassen! -->
+<!-- Beispiele: Spannung, Kapazität, Maße, Gewicht, Farbe, Material, Typ, Bauform, Zellenanzahl, etc. -->
+<tr><td>Eigenschaft</td><td>Wert exakt wie im Original</td></tr>
+<tr><td>...</td><td>...</td></tr>
 </tbody>
 </table>
 
