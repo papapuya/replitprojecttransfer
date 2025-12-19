@@ -3657,6 +3657,148 @@ Frage: ${question}`;
     }
   });
 
+  // HTML Generator - Text/Bild zu HTML-Produktbeschreibung
+  app.post('/api/generate-html-description', requireAuth, upload.single('image'), async (req: any, res) => {
+    try {
+      const { text } = req.body;
+      const imageFile = req.file;
+      
+      if (!text && !imageFile) {
+        return res.status(400).json({ error: 'Text oder Bild erforderlich' });
+      }
+
+      const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: 'OpenAI API Key nicht konfiguriert' });
+      }
+
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ 
+        apiKey,
+        baseURL: process.env.OPENAI_BASE_URL || process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
+      });
+
+      const systemPrompt = `Du bist ein Experte für E-Commerce-Produktbeschreibungen. Analysiere den gegebenen Text/das Bild und erstelle eine strukturierte HTML-Produktbeschreibung.
+
+Extrahiere alle relevanten Produktinformationen:
+- Produktname/Titel
+- Technische Daten (Spannung, Kapazität, Maße, etc.)
+- Kompatibilität (Gerätemodelle)
+- Lieferumfang
+- Vorteile/Features
+
+KRITISCH WICHTIG:
+- Verwende NUR diese Tags: h2, h3, p, br, table, tr, td, ul, li, b
+- KEINE style-Attribute
+- KEINE HTML-Entities - schreibe Umlaute DIREKT (ü statt &uuml;)
+- Schreibe "für" nicht "für"
+- Schreibe "Größe" nicht "Größe"
+- Nutze normales Minus (-) statt – oder —
+- Nutze normale Leerzeichen, NICHT &nbsp;
+- Gib NUR das HTML zurück, keine Markdown-Codeblocks
+- Wenn Infos fehlen, lass die Sektion weg oder schreibe "keine Angabe"
+
+HTML-STRUKTUR:
+<h2>[Produktname/Titel]</h2>
+<p>[Einleitungstext mit Produktbeschreibung]</p>
+
+<h3>Ihre Vorteile</h3>
+<p>
+✅ [Vorteil 1]<br>
+✅ [Vorteil 2]<br>
+✅ [Vorteil 3]
+</p>
+
+<h3>Technische Daten</h3>
+<table>
+<tbody>
+<tr><td>[Eigenschaft 1]</td><td>[Wert 1]</td></tr>
+<tr><td>[Eigenschaft 2]</td><td>[Wert 2]</td></tr>
+</tbody>
+</table>
+
+<h3>Kompatibilität</h3>
+<p>[Liste kompatibler Modelle/Geräte]</p>
+
+<h3>Lieferumfang</h3>
+<ul>
+<li>[Artikel 1]</li>
+<li>[Artikel 2]</li>
+</ul>`;
+
+      let userContent: any[] = [];
+      
+      if (text) {
+        userContent.push({
+          type: 'text',
+          text: `Erstelle eine HTML-Produktbeschreibung aus folgendem Text:\n\n${text}`
+        });
+      }
+      
+      if (imageFile) {
+        const base64Image = imageFile.buffer.toString('base64');
+        const mimeType = imageFile.mimetype || 'image/jpeg';
+        
+        if (text) {
+          userContent[0].text += '\n\nZusätzlich analysiere das beigefügte Bild und kombiniere die Informationen.';
+        } else {
+          userContent.push({
+            type: 'text',
+            text: 'Analysiere das Bild und erstelle eine HTML-Produktbeschreibung mit allen erkennbaren Produktinformationen.'
+          });
+        }
+        
+        userContent.push({
+          type: 'image_url',
+          image_url: {
+            url: `data:${mimeType};base64,${base64Image}`
+          }
+        });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent }
+        ],
+        max_tokens: 2000,
+        temperature: 0.3
+      });
+
+      let htmlOutput = response.choices[0]?.message?.content || '';
+      
+      // Bereinigung gemäß Anforderungen
+      // 1. Entferne BOM falls vorhanden
+      htmlOutput = htmlOutput.replace(/^\uFEFF/, '');
+      
+      // 2. Entferne Markdown-Codeblocks
+      htmlOutput = htmlOutput.replace(/^```html?\n?/i, '');
+      htmlOutput = htmlOutput.replace(/\n?```$/i, '');
+      
+      // 3. Normalisiere Zeilenumbrüche zu Unix-Style
+      htmlOutput = htmlOutput.replace(/\r\n/g, '\n');
+      htmlOutput = htmlOutput.replace(/\r/g, '\n');
+      
+      // 4. Entferne unsichtbare Zeichen (behalte normale Spaces und \n)
+      htmlOutput = htmlOutput.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      
+      // 5. Ersetze Non-Breaking Spaces mit normalen Spaces
+      htmlOutput = htmlOutput.replace(/\xA0/g, ' ');
+      htmlOutput = htmlOutput.replace(/&nbsp;/g, ' ');
+      
+      // 6. Trimme Start/Ende
+      htmlOutput = htmlOutput.trim();
+      
+      console.log('[HTML Generator] Generated HTML:', htmlOutput.substring(0, 200) + '...');
+
+      res.json({ success: true, html: htmlOutput });
+    } catch (error: any) {
+      console.error('[HTML Generator] Error:', error);
+      res.status(500).json({ error: error.message || 'Fehler bei der HTML-Generierung' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

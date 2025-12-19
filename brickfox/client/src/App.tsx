@@ -42,6 +42,7 @@ import CSVBulkProjects from "@/pages/csv-bulk-projects";
 import CSVBulkProjectDetail from "@/pages/csv-bulk-project-detail";
 import CSVCompare from "@/pages/csv-compare";
 import AttributeFiller from "@/pages/attribute-filler";
+import HtmlGenerator from "@/pages/html-generator";
 
 function Router() {
   return (
@@ -168,6 +169,11 @@ function Router() {
       <Route path="/csv-bulk-project/:id">
         <ProtectedRoute>
           <CSVBulkProjectDetail />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/html-generator">
+        <ProtectedRoute>
+          <HtmlGenerator />
         </ProtectedRoute>
       </Route>
       
