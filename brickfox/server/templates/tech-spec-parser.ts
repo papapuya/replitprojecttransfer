@@ -794,12 +794,15 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
           const colonMatch = trimmed.match(/^([^:]+):\s*(.+)$/);
           if (colonMatch) {
             const marke = colonMatch[1].trim();
-            const modell = colonMatch[2].trim();
+            let modell = colonMatch[2].trim();
+            
+            // Führendes Minus entfernen (z.B. "-28100010" → "28100010")
+            modell = modell.replace(/^-+/, '');
             
             // Technische Labels ausschließen
             const technicalLabels = ['spannung', 'kapazität', 'typ', 'farbe', 'gewicht', 'chemie', 'voltage', 'capacity', 'lieferumfang', 'hinweis', 'achtung', 'typencode'];
             if (!technicalLabels.includes(marke.toLowerCase()) && modell.length > 1) {
-              // MARKE + MODELL zusammen speichern (z.B. "Audioline CDL971 Universal")
+              // MARKE + MODELL zusammen speichern OHNE Doppelpunkt (z.B. "Audioline CDL971 Universal")
               const fullModel = `${marke} ${modell}`;
               allModels.push(fullModel);
               console.log(`   📱 Modell extrahiert: "${fullModel}"`);
@@ -809,8 +812,10 @@ function extractBrickfoxAttributes(structuredData: any): Record<string, string> 
           
           // Einfache Zeile ohne Doppelpunkte
           if (!trimmed.includes(':') && trimmed.length > 3 && trimmed.length < 80) {
-            allModels.push(trimmed);
-            console.log(`   📱 Modell direkt: "${trimmed}"`);
+            // Führendes Minus entfernen
+            let cleanedLine = trimmed.replace(/^-+/, '');
+            allModels.push(cleanedLine);
+            console.log(`   📱 Modell direkt: "${cleanedLine}"`);
           }
         }
       }
