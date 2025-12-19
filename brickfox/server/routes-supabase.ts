@@ -3682,8 +3682,8 @@ Frage: ${question}`;
 
 Extrahiere alle relevanten Produktinformationen:
 - Produktname/Titel
-- Technische Daten (Spannung, Kapazität, Maße, etc.)
-- Kompatibilität (Gerätemodelle)
+- ALLE technischen Daten 1:1 übernehmen (Spannung, Kapazität, Maße, Gewicht, Farbe, Material, etc.)
+- Kompatibilität (nur echte Gerätemodelle)
 - Lieferumfang
 - Vorteile/Features
 
@@ -3713,8 +3713,9 @@ HTML-STRUKTUR (nur Sektionen mit Inhalt verwenden):
 <h3>Technische Daten</h3>
 <table>
 <tbody>
-<tr><td>[Eigenschaft 1]</td><td>[Wert 1]</td></tr>
-<tr><td>[Eigenschaft 2]</td><td>[Wert 2]</td></tr>
+[ALLE technischen Daten des Lieferanten 1:1 übernehmen - dynamisch so viele Zeilen wie nötig]
+<tr><td>Eigenschaft</td><td>Wert</td></tr>
+...weitere Zeilen für jede gefundene Spezifikation...
 </tbody>
 </table>
 
