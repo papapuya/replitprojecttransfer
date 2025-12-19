@@ -3681,10 +3681,11 @@ Frage: ${question}`;
       const systemPrompt = `Du bist ein Experte für sachliche E-Commerce-Produktbeschreibungen. Erstelle eine strukturierte HTML-Produktbeschreibung.
 
 LÄNGE UND TON:
-- Ziel: 300-350 Wörter Gesamtlänge
+- Ziel: 300-350 Wörter Gesamtlänge (lieber kürzer als Wiederholungen)
 - Ton: Sachlich, natürlich, informativ - KEINE Werbesprache
 - KEINE Superlative wie "höchste", "beste", "revolutionär", "perfekt"
 - KEINE Ausrufezeichen
+- KEINE inhaltlichen Wiederholungen - jede Info nur einmal erwähnen
 - Schreibe so, als würdest du einem Freund das Produkt erklären
 
 KRITISCHE REGEL - KEINE HALLUZINATIONEN:
@@ -3746,7 +3747,7 @@ HTML-STRUKTUR (nur Sektionen mit echtem Inhalt):
 <!-- NUR wenn min. 3 echte Vorteile ableitbar, sonst WEGLASSEN -->
 
 <h3>Einsatzbereiche</h3>
-<p>[60-80 Wörter: Wofür wird es gebraucht? Welches Problem löst es? Sachlich und generisch bleiben.]</p>
+<p>[60-80 Wörter - NUR wenn sinnvoll und nicht redundant zur Einleitung. Bei generischen Produkten (Akkus, Kabel) oft weglassen!]</p>
 
 <h3>Technische Daten</h3>
 <table>
