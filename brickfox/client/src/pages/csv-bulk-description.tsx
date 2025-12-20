@@ -113,6 +113,14 @@ export default function CSVBulkDescription() {
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [avgTimePerProduct, setAvgTimePerProduct] = useState<number>(0);
   
+  // Statistiken nach Abschluss
+  const [generationStats, setGenerationStats] = useState<{
+    totalTime: number;
+    avgPerProduct: number;
+    productCount: number;
+    translationTime?: number;
+  } | null>(null);
+  
   // Abbruch-Referenz für die AI-Generierung
   const abortRef = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -314,6 +322,16 @@ export default function CSVBulkDescription() {
       const totalTime = (Date.now() - startTime) / 1000;
       setElapsedTime(Math.floor(totalTime));
       setProcessing(false);
+      
+      // Statistiken speichern
+      const productCount = bulkProducts.length || rawData.length;
+      if (productCount > 0 && !abortRef.current) {
+        setGenerationStats({
+          totalTime: Math.round(totalTime),
+          avgPerProduct: Math.round((totalTime / productCount) * 10) / 10,
+          productCount: productCount,
+        });
+      }
     }
   };
   
@@ -941,6 +959,7 @@ export default function CSVBulkDescription() {
     }
 
     setIsTranslating(true);
+    const translationStart = Date.now();
     let translated = 0;
 
     try {
@@ -977,9 +996,14 @@ export default function CSVBulkDescription() {
         }
       }
 
+      const translationTime = Math.round((Date.now() - translationStart) / 1000);
+      
+      // Übersetzungszeit zu Statistiken hinzufügen
+      setGenerationStats(prev => prev ? { ...prev, translationTime } : null);
+
       toast({
         title: "Erfolg",
-        description: `${translated} Produkt(e) ins Niederländische übersetzt`,
+        description: `${translated} Produkt(e) übersetzt in ${Math.floor(translationTime / 60)}:${(translationTime % 60).toString().padStart(2, '0')}`,
       });
     } catch (error) {
       console.error('Übersetzungsfehler:', error);
@@ -1901,6 +1925,49 @@ export default function CSVBulkDescription() {
 
         {bulkProducts.length > 0 && !processing && (
           <div className="space-y-6">
+            {/* Statistik-Box nach Abschluss */}
+            {generationStats && (
+              <Card className="p-4 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-600 dark:text-green-400 font-semibold">Generierung abgeschlossen</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Dauer:</span>{' '}
+                        <span className="font-mono font-semibold">
+                          {Math.floor(generationStats.totalTime / 60)}:{(generationStats.totalTime % 60).toString().padStart(2, '0')}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Produkte:</span>{' '}
+                        <span className="font-semibold">{generationStats.productCount}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Durchschnitt:</span>{' '}
+                        <span className="font-mono font-semibold">{generationStats.avgPerProduct}s</span>/Produkt
+                      </div>
+                      {generationStats.translationTime && (
+                        <div>
+                          <span className="text-muted-foreground">Übersetzung:</span>{' '}
+                          <span className="font-mono font-semibold">
+                            {Math.floor(generationStats.translationTime / 60)}:{(generationStats.translationTime % 60).toString().padStart(2, '0')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setGenerationStats(null)} 
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </Card>
+            )}
+            
             <Card className="p-6">
               <div className="flex items-center justify-between">
                 <div>
