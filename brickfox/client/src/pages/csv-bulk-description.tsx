@@ -108,8 +108,14 @@ export default function CSVBulkDescription() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerateProgress, setRegenerateProgress] = useState({ current: 0, total: 0 });
   
+  // Timer für Generierungsdauer
+  const [generationStartTime, setGenerationStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [avgTimePerProduct, setAvgTimePerProduct] = useState<number>(0);
+  
   // Abbruch-Referenz für die AI-Generierung
   const abortRef = useRef(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Lade bestehende Projekte
   const { data: projectsData } = useQuery<{ success: boolean; projects: Project[] }>({
@@ -280,6 +286,18 @@ export default function CSVBulkDescription() {
     setProgress(0);
     setBulkProducts([]); // Liste zurücksetzen für neuen Durchlauf
     
+    // Timer starten
+    const startTime = Date.now();
+    setGenerationStartTime(startTime);
+    setElapsedTime(0);
+    setAvgTimePerProduct(0);
+    
+    // Timer-Intervall für Live-Update
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    
     try {
       await generateDescriptions(rawData);
     } catch (err) {
@@ -287,12 +305,25 @@ export default function CSVBulkDescription() {
       if (!abortRef.current) {
         setError(err instanceof Error ? err.message : 'Fehler bei der AI-Generierung');
       }
+    } finally {
+      // Timer stoppen
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      const totalTime = (Date.now() - startTime) / 1000;
+      setElapsedTime(Math.floor(totalTime));
       setProcessing(false);
     }
   };
   
   const cancelGeneration = () => {
     abortRef.current = true;
+    // Timer stoppen
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     setProcessing(false);
     toast({
       title: "Abgebrochen",
@@ -1270,14 +1301,26 @@ export default function CSVBulkDescription() {
                         </p>
                       </div>
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={cancelGeneration}
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Abbrechen
-                    </Button>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm font-mono font-semibold text-foreground">
+                          {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {bulkProducts.length > 0 
+                            ? `~${(elapsedTime / bulkProducts.length).toFixed(1)}s/Produkt` 
+                            : 'berechne...'}
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={cancelGeneration}
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Abbrechen
+                      </Button>
+                    </div>
                   </div>
                   <div className="h-3 bg-muted rounded-full overflow-hidden">
                     <div 
@@ -1285,6 +1328,11 @@ export default function CSVBulkDescription() {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
+                  {bulkProducts.length > 0 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Geschätzte Restzeit: ~{Math.ceil((rawData.length - bulkProducts.length) * (elapsedTime / bulkProducts.length) / 60)} Min.
+                    </p>
+                  )}
                 </div>
               </Card>
             )}
