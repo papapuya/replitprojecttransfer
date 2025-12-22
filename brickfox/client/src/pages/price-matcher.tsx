@@ -42,28 +42,54 @@ export default function PriceMatcher() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const parseXLSX = (data: ArrayBuffer): { headers: string[], rows: CSVRow[] } => {
-    const workbook = XLSX.read(data, { type: 'array' });
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-    const jsonData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
-    
-    if (jsonData.length === 0) return { headers: [], rows: [] };
-    
-    const headers = (jsonData[0] as string[]).map(h => String(h || '').trim());
-    const rows: CSVRow[] = [];
-    
-    for (let i = 1; i < jsonData.length; i++) {
-      const values = jsonData[i] as string[];
-      if (values && values.length > 0) {
-        const row: CSVRow = {};
-        headers.forEach((header, idx) => {
-          row[header] = String(values[idx] ?? '').trim();
-        });
-        rows.push(row);
+    try {
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      const jsonData = XLSX.utils.sheet_to_json<any[]>(worksheet, { 
+        header: 1,
+        raw: false,
+        defval: ''
+      });
+      
+      if (!jsonData || jsonData.length === 0) {
+        console.log('XLSX: Keine Daten gefunden');
+        return { headers: [], rows: [] };
       }
+      
+      const headerRow = jsonData[0] as any[];
+      if (!headerRow || headerRow.length === 0) {
+        console.log('XLSX: Keine Header gefunden');
+        return { headers: [], rows: [] };
+      }
+      
+      const headers = headerRow.map((h, idx) => {
+        const val = String(h ?? '').trim();
+        return val || `Spalte_${idx + 1}`;
+      }).filter(h => h.length > 0);
+      
+      console.log('XLSX Headers:', headers);
+      
+      const rows: CSVRow[] = [];
+      
+      for (let i = 1; i < jsonData.length; i++) {
+        const values = jsonData[i] as any[];
+        if (values && values.some(v => v !== '' && v !== undefined && v !== null)) {
+          const row: CSVRow = {};
+          headers.forEach((header, idx) => {
+            row[header] = String(values[idx] ?? '').trim();
+          });
+          rows.push(row);
+        }
+      }
+      
+      console.log(`XLSX: ${rows.length} Zeilen geparst`);
+      return { headers, rows };
+    } catch (error) {
+      console.error('XLSX Parsing Fehler:', error);
+      return { headers: [], rows: [] };
     }
-    
-    return { headers, rows };
   };
 
   const parseCSV = (text: string): { headers: string[], rows: CSVRow[] } => {
