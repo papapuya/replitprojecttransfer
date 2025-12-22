@@ -800,60 +800,31 @@ function groupModelsByPrefix(models: string[]): string {
 /**
  * Rendert die Kompatibilitäts-Sektion
  * Format: Marke/Serie einmal, dann alle Modelle kommagetrennt
- * Beispiel: "SATELLITE: A10, A15, A40, TECRA: M9"
+ * Beispiel: "THINKPAD R50, R51, R52, T40, T41"
+ * 
+ * HINWEIS: Die Daten kommen bereits gruppiert aus groupByProductFamily()
+ * und sollten KEINE Doppelpunkte mehr enthalten.
  */
 function renderKompatibilitaet(models: string[], e: (s: string) => string, productName?: string): string {
   if (!models || models.length === 0) {
     return '';
   }
   
-  // Entferne Highlighting und Farben aus allen Modellen
-  const cleanedInputModels = models.map(m => removeHighlightingAndColors(m));
+  // Entferne Highlighting, Farben und verbliebene Doppelpunkte aus allen Modellen
+  const cleanedInputModels = models.map(m => {
+    let cleaned = removeHighlightingAndColors(m);
+    // Letzte Sicherheit: Doppelpunkte durch Leerzeichen ersetzen
+    cleaned = cleaned.replace(/\s*:\s*/g, ' ').replace(/\s+/g, ' ').trim();
+    return cleaned;
+  });
   
-  const knownBrands = ['Philips', 'Makita', 'Bosch', 'DeWalt', 'Metabo', 'Hilti', 'Festool', 
-                       'Milwaukee', 'Ryobi', 'Black+Decker', 'Einhell', 'Kärcher', 'Braun',
-                       'Panasonic', 'Sony', 'Samsung', 'Apple', 'LG', 'Siemens', 'Miele',
-                       'AEG', 'Hitachi', 'Husqvarna', 'Stihl', 'Gardena', 'Fein', 'Flex',
-                       'Toshiba', 'HP', 'Dell', 'Lenovo', 'Acer', 'Asus', 'MSI',
-                       'Gigaset', 'UNIFY', 'OpenStage', 'Audioline', 'Alcatel', 'Avaya',
-                       'Ascom', 'Swissvoice', 'DeTeWe', 'Telekom', 'AVM', 'Fritz'];
+  // Dedupliziere und sortiere
+  const uniqueModels = Array.from(new Set(cleanedInputModels)).filter(m => m.length > 0);
+  uniqueModels.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
   
-  let brand = '';
-  if (productName) {
-    for (const b of knownBrands) {
-      if (productName.toLowerCase().includes(b.toLowerCase())) {
-        brand = b;
-        break;
-      }
-    }
-  }
-  
-  const hasColonFormat = cleanedInputModels.some(m => /^[A-Za-z0-9\-]+\s*:\s*.+$/.test(m.trim()));
-  
-  if (hasColonFormat) {
-    const grouped = groupModelsByPrefix(cleanedInputModels);
-    return `<h2 style="margin-top: 1.5em;">Kompatibilität</h2>\n<p>${e(grouped)}</p>`;
-  }
-  
-  const cleanedModels: string[] = [];
-  for (const model of cleanedInputModels) {
-    let cleaned = model.trim();
-    if (!cleaned) continue;
-    
-    if (brand) {
-      const brandRegex = new RegExp(`^${brand}\\s+`, 'i');
-      cleaned = cleaned.replace(brandRegex, '');
-    }
-    
-    cleanedModels.push(e(cleaned));
-  }
-  
-  let result = '';
-  if (brand && cleanedModels.length > 0) {
-    result = `${e(brand)} ${cleanedModels.join(', ')}`;
-  } else {
-    result = cleanedModels.join(', ');
-  }
+  // Escape und zusammenfügen
+  const escapedModels = uniqueModels.map(m => e(m));
+  const result = escapedModels.join(', ');
   
   return `<h2 style="margin-top: 1.5em;">Kompatibilität</h2>\n<p>${result}</p>`;
 }
