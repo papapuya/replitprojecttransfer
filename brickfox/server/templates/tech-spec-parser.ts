@@ -564,17 +564,11 @@ export function groupByProductFamily(models: string[]): string[] {
   for (const model of normalizedModels) {
     let matched = false;
     
-    // "wie" markiert Teilenummern - diese brechen den Kontext
+    // "wie" markiert Teilenummern - diese gehören NUR ins APN-Feld, NICHT in Kompatibilität
+    // Teilenummern werden komplett übersprungen (brechen aber den Kontext)
     if (model.toLowerCase().startsWith('wie ')) {
       lastSeriesContext = null;
-      // Teilenummern ohne "wie" Prefix speichern
-      const partNumbers = model.substring(4).trim();
-      if (partNumbers) {
-        if (!groups.has('_ungrouped_')) {
-          groups.set('_ungrouped_', []);
-        }
-        groups.get('_ungrouped_')!.push(partNumbers);
-      }
+      console.log(`🔢 [GROUP] Teilenummer übersprungen (gehört ins APN-Feld): ${model}`);
       continue;
     }
     

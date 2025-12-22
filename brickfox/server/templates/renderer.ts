@@ -193,11 +193,27 @@ function filterFarbeBullets(bullets: string[]): string[] {
 /**
  * Extrahiert APN/Teilenummern aus Text
  * Gibt die gefundenen Nummern zurück
+ * Erfasst: "wie 310-5964, 35h00056-00, HC03U" oder "APN: 616-0579"
  */
 function extractApnFromText(text: string): string | null {
   if (!text) return null;
   
-  // Pattern für APN-Nummern
+  // Pattern für "wie" im Produktnamen - erfasst ALLES nach "wie" bis zum Ende oder Kapazitätsangaben
+  // z.B. "wie 310-5964, 35h00056-00, HC03U, T4676, T6845"
+  const wieMatch = text.match(/,?\s*wie\s+([A-Z0-9][A-Z0-9\-,\s]+?)(?:,?\s*\d+[.,]?\d*\s*(?:mAh|Ah|Wh|V|Volt)\b|$)/i);
+  if (wieMatch) {
+    let apn = wieMatch[1].trim();
+    // Entferne technische Einheiten die versehentlich erfasst wurden
+    apn = apn.replace(/,?\s*(Li-Ion|Li-Polymer|Li-Po|NiMH|NiCd|Lithium|Alkaline)\b.*/i, '');
+    apn = apn.replace(/,?\s*\d+[.,]?\d*\s*(V|mAh|Ah|Wh|W)\b.*/i, '');
+    apn = apn.trim().replace(/,\s*$/, ''); // Trailing comma entfernen
+    if (apn && apn.length > 2) {
+      console.log(`🔢 APN aus "wie" extrahiert: ${apn}`);
+      return apn;
+    }
+  }
+  
+  // Fallback: Pattern für explizite APN-Nummern
   const apnPatterns = [
     /APN[:\s]+([0-9\-,\s]+)/i,
     /entspricht\s+APN\s+([0-9\-,\s]+)/i,
