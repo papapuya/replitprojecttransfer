@@ -36,6 +36,8 @@ export default function PriceMatcher() {
   const [supplierMatchKey, setSupplierMatchKey] = useState<string>("");
   const [pimMatchKey, setPimMatchKey] = useState<string>("");
   const [ekColumn, setEkColumn] = useState<string>("");
+  const [pimEkColumn, setPimEkColumn] = useState<string>("v_purchase_price");
+  const [pimVkColumn, setPimVkColumn] = useState<string>("v_price[eur]");
   
   const [results, setResults] = useState<MatchResult[]>([]);
   const [unmatchedProducts, setUnmatchedProducts] = useState<CSVRow[]>([]);
@@ -307,11 +309,11 @@ export default function PriceMatcher() {
         const vkPim = convertToPimFormat(vkEuro);
         
         const updatedRow = { ...pimRow };
-        const oldEK = pimRow['v_purchase_price'] || '';
-        const oldVK = pimRow['v_price[eur]'] || '';
+        const oldEK = pimRow[pimEkColumn] || '';
+        const oldVK = pimRow[pimVkColumn] || '';
         
-        updatedRow['v_purchase_price'] = ekPim;
-        updatedRow['v_price[eur]'] = vkPim;
+        updatedRow[pimEkColumn] = ekPim;
+        updatedRow[pimVkColumn] = vkPim;
 
         matchResults.push({
           originalRow: pimRow,
@@ -410,7 +412,7 @@ export default function PriceMatcher() {
   };
 
   const matchedCount = results.filter(r => r.matched).length;
-  const canProcess = supplierCSV.length > 0 && pimCSV.length > 0 && supplierMatchKey && pimMatchKey && ekColumn;
+  const canProcess = supplierCSV.length > 0 && pimCSV.length > 0 && supplierMatchKey && pimMatchKey && ekColumn && pimEkColumn && pimVkColumn;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -511,6 +513,34 @@ export default function PriceMatcher() {
                 <div>
                   <Label>Matching-Key (PIM)</Label>
                   <Select value={pimMatchKey} onValueChange={setPimMatchKey}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Spalte wählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pimHeaders.map(h => (
+                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>EK-Spalte (PIM)</Label>
+                  <Select value={pimEkColumn} onValueChange={setPimEkColumn}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Spalte wählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pimHeaders.map(h => (
+                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>VK-Spalte (PIM)</Label>
+                  <Select value={pimVkColumn} onValueChange={setPimVkColumn}>
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Spalte wählen..." />
                     </SelectTrigger>
@@ -709,11 +739,11 @@ export default function PriceMatcher() {
                     <TableHeader>
                       <TableRow>
                         {pimHeaders.map(h => (
-                          <TableHead key={h} className={h === pimMatchKey || h === 'v_purchase_price' || h === 'v_price[eur]' ? 'bg-blue-50 dark:bg-blue-900/30' : ''}>
+                          <TableHead key={h} className={h === pimMatchKey || h === pimEkColumn || h === pimVkColumn ? 'bg-blue-50 dark:bg-blue-900/30' : ''}>
                             {h}
                             {h === pimMatchKey && <Badge variant="outline" className="ml-1">Key</Badge>}
-                            {h === 'v_purchase_price' && <Badge variant="outline" className="ml-1">EK</Badge>}
-                            {h === 'v_price[eur]' && <Badge variant="outline" className="ml-1">VK</Badge>}
+                            {h === pimEkColumn && <Badge variant="outline" className="ml-1">EK</Badge>}
+                            {h === pimVkColumn && <Badge variant="outline" className="ml-1">VK</Badge>}
                           </TableHead>
                         ))}
                       </TableRow>
@@ -722,7 +752,7 @@ export default function PriceMatcher() {
                       {pimCSV.slice(0, 100).map((row, idx) => (
                         <TableRow key={idx}>
                           {pimHeaders.map(h => (
-                            <TableCell key={h} className={`max-w-[200px] truncate ${h === pimMatchKey || h === 'v_purchase_price' || h === 'v_price[eur]' ? 'bg-blue-50 dark:bg-blue-900/30 font-medium' : ''}`}>
+                            <TableCell key={h} className={`max-w-[200px] truncate ${h === pimMatchKey || h === pimEkColumn || h === pimVkColumn ? 'bg-blue-50 dark:bg-blue-900/30 font-medium' : ''}`}>
                               {row[h]}
                             </TableCell>
                           ))}
