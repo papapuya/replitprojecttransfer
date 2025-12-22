@@ -268,6 +268,39 @@ export default function PriceMatcher() {
     });
   };
 
+  const downloadUnmatchedCSV = () => {
+    if (unmatchedProducts.length === 0) return;
+
+    const headers = pimHeaders;
+    const csvContent = [
+      headers.join(';'),
+      ...unmatchedProducts.map(row => 
+        headers.map(h => {
+          const value = row[h] || '';
+          if (value.includes(';') || value.includes('"') || value.includes('\n')) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        }).join(';')
+      )
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `unmatched_products_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Download gestartet",
+      description: `${unmatchedProducts.length} Produkte ohne Match exportiert.`,
+    });
+  };
+
   const matchedCount = results.filter(r => r.matched).length;
   const canProcess = supplierCSV.length > 0 && pimCSV.length > 0 && supplierMatchKey && pimMatchKey && ekColumn;
 
@@ -483,13 +516,19 @@ export default function PriceMatcher() {
               </TabsContent>
 
               <TabsContent value="unmatched" className="mt-4">
+                <div className="flex justify-end mb-2">
+                  <Button variant="outline" size="sm" onClick={downloadUnmatchedCSV} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Ungematchte exportieren
+                  </Button>
+                </div>
                 <div className="border rounded-lg overflow-auto max-h-[500px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Status</TableHead>
-                        <TableHead>{pimMatchKey}</TableHead>
-                        {pimHeaders.slice(0, 5).map(h => (
+                        <TableHead className="sticky left-0 bg-background z-10">Status</TableHead>
+                        <TableHead className="sticky left-12 bg-background z-10">{pimMatchKey}</TableHead>
+                        {pimHeaders.filter(h => h !== pimMatchKey).map(h => (
                           <TableHead key={h}>{h}</TableHead>
                         ))}
                       </TableRow>
@@ -497,15 +536,15 @@ export default function PriceMatcher() {
                     <TableBody>
                       {unmatchedProducts.slice(0, 100).map((row, idx) => (
                         <TableRow key={idx}>
-                          <TableCell>
+                          <TableCell className="sticky left-0 bg-background">
                             <Badge variant="secondary">
                               <AlertCircle className="h-3 w-3" />
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-mono text-sm sticky left-12 bg-background">
                             {row[pimMatchKey]}
                           </TableCell>
-                          {pimHeaders.slice(0, 5).map(h => (
+                          {pimHeaders.filter(h => h !== pimMatchKey).map(h => (
                             <TableCell key={h} className="max-w-[200px] truncate">
                               {row[h]}
                             </TableCell>
@@ -515,6 +554,11 @@ export default function PriceMatcher() {
                     </TableBody>
                   </Table>
                 </div>
+                {unmatchedProducts.length > 100 && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Zeige 100 von {unmatchedProducts.length} ungematchten Produkten
+                  </p>
+                )}
               </TabsContent>
 
               <TabsContent value="supplier" className="mt-4">
@@ -522,8 +566,8 @@ export default function PriceMatcher() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        {supplierHeaders.slice(0, 8).map(h => (
-                          <TableHead key={h} className={h === supplierMatchKey || h === ekColumn ? 'bg-blue-50' : ''}>
+                        {supplierHeaders.map(h => (
+                          <TableHead key={h} className={h === supplierMatchKey || h === ekColumn ? 'bg-blue-50 dark:bg-blue-900/30' : ''}>
                             {h}
                             {h === supplierMatchKey && <Badge variant="outline" className="ml-1">Key</Badge>}
                             {h === ekColumn && <Badge variant="outline" className="ml-1">EK</Badge>}
@@ -532,10 +576,10 @@ export default function PriceMatcher() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {supplierCSV.slice(0, 50).map((row, idx) => (
+                      {supplierCSV.slice(0, 100).map((row, idx) => (
                         <TableRow key={idx}>
-                          {supplierHeaders.slice(0, 8).map(h => (
-                            <TableCell key={h} className={`max-w-[200px] truncate ${h === supplierMatchKey || h === ekColumn ? 'bg-blue-50 font-medium' : ''}`}>
+                          {supplierHeaders.map(h => (
+                            <TableCell key={h} className={`max-w-[200px] truncate ${h === supplierMatchKey || h === ekColumn ? 'bg-blue-50 dark:bg-blue-900/30 font-medium' : ''}`}>
                               {row[h]}
                             </TableCell>
                           ))}
@@ -544,6 +588,11 @@ export default function PriceMatcher() {
                     </TableBody>
                   </Table>
                 </div>
+                {supplierCSV.length > 100 && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Zeige 100 von {supplierCSV.length} Zeilen
+                  </p>
+                )}
               </TabsContent>
 
               <TabsContent value="pim" className="mt-4">
@@ -551,8 +600,8 @@ export default function PriceMatcher() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        {pimHeaders.slice(0, 8).map(h => (
-                          <TableHead key={h} className={h === pimMatchKey || h === 'v_purchase_price' || h === 'v_price[eur]' ? 'bg-blue-50' : ''}>
+                        {pimHeaders.map(h => (
+                          <TableHead key={h} className={h === pimMatchKey || h === 'v_purchase_price' || h === 'v_price[eur]' ? 'bg-blue-50 dark:bg-blue-900/30' : ''}>
                             {h}
                             {h === pimMatchKey && <Badge variant="outline" className="ml-1">Key</Badge>}
                             {h === 'v_purchase_price' && <Badge variant="outline" className="ml-1">EK</Badge>}
@@ -562,10 +611,10 @@ export default function PriceMatcher() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pimCSV.slice(0, 50).map((row, idx) => (
+                      {pimCSV.slice(0, 100).map((row, idx) => (
                         <TableRow key={idx}>
-                          {pimHeaders.slice(0, 8).map(h => (
-                            <TableCell key={h} className={`max-w-[200px] truncate ${h === pimMatchKey || h === 'v_purchase_price' || h === 'v_price[eur]' ? 'bg-blue-50 font-medium' : ''}`}>
+                          {pimHeaders.map(h => (
+                            <TableCell key={h} className={`max-w-[200px] truncate ${h === pimMatchKey || h === 'v_purchase_price' || h === 'v_price[eur]' ? 'bg-blue-50 dark:bg-blue-900/30 font-medium' : ''}`}>
                               {row[h]}
                             </TableCell>
                           ))}
@@ -574,6 +623,11 @@ export default function PriceMatcher() {
                     </TableBody>
                   </Table>
                 </div>
+                {pimCSV.length > 100 && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Zeige 100 von {pimCSV.length} Zeilen
+                  </p>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
