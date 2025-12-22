@@ -43,6 +43,7 @@ import CSVBulkProjectDetail from "@/pages/csv-bulk-project-detail";
 import CSVCompare from "@/pages/csv-compare";
 import AttributeFiller from "@/pages/attribute-filler";
 import HtmlGenerator from "@/pages/html-generator";
+import PriceMatcher from "@/pages/price-matcher";
 
 function Router() {
   return (
@@ -174,6 +175,11 @@ function Router() {
       <Route path="/html-generator">
         <ProtectedRoute>
           <HtmlGenerator />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/price-matcher">
+        <ProtectedRoute>
+          <PriceMatcher />
         </ProtectedRoute>
       </Route>
       
