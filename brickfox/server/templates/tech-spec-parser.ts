@@ -645,8 +645,8 @@ function groupByProductFamily(models: string[]): string[] {
     const uniqueModels = Array.from(new Set(modelNumbers));
     uniqueModels.sort((a: string, b: string) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
     
-    // Format: "SF: 150-A, 151-A" oder "HP ProLiant: ML350, ML370"
-    result.push(`${family}: ${uniqueModels.join(', ')}`);
+    // Format: "HP ProLiant ML350, ML370" (ohne Doppelpunkt)
+    result.push(`${family} ${uniqueModels.join(', ')}`);
   });
   
   // Füge nicht-gruppierte Modelle hinzu
