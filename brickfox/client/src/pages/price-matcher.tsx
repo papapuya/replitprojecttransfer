@@ -671,15 +671,15 @@ export default function PriceMatcher() {
                             {result.originalRow[pimMatchKey]}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {result.oldEK ? formatEuro(convertFromPimFormat(result.oldEK)) : '-'}
+                            {result.oldEK && convertFromPimFormat(result.oldEK) > 0 ? formatEuro(convertFromPimFormat(result.oldEK)) : '0,00 €'}
                           </TableCell>
-                          <TableCell className="font-semibold text-green-600">
+                          <TableCell className={`font-semibold ${(!result.oldEK || convertFromPimFormat(result.oldEK) === 0) ? 'text-red-600' : 'text-green-600'}`}>
                             {result.newEK ? formatEuro(convertFromPimFormat(result.newEK)) : '-'}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {result.oldVK ? formatEuro(convertFromPimFormat(result.oldVK)) : '-'}
+                            {result.oldVK && convertFromPimFormat(result.oldVK) > 0 ? formatEuro(convertFromPimFormat(result.oldVK)) : '0,00 €'}
                           </TableCell>
-                          <TableCell className="font-semibold text-green-600">
+                          <TableCell className={`font-semibold ${(!result.oldVK || convertFromPimFormat(result.oldVK) === 0) ? 'text-red-600' : 'text-green-600'}`}>
                             {result.newVK ? formatEuro(convertFromPimFormat(result.newVK)) : '-'}
                           </TableCell>
                         </TableRow>
