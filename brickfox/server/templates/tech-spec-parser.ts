@@ -543,79 +543,38 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
 function groupByProductFamily(models: string[]): string[] {
   if (models.length === 0) return [];
   
-  // Pre-Processing: Normalisiere "MARKE: BUCHSTABE: NUMMER" zu "MARKE: BUCHSTABENUMMER"
-  // z.B. "SAMSUNG: N: 140" → "SAMSUNG: N140"
+  // Pre-Processing: ALLE Doppelpunkte in Leerzeichen umwandeln für konsistente Verarbeitung
+  // "SAMSUNG: N: 140" → "SAMSUNG N 140"
+  // "THINKPAD: R50" → "THINKPAD R50"
+  // "IBM THINKPAD: R51" → "IBM THINKPAD R51"
   const normalizedModels = models.map(model => {
-    // Pattern: "MARKE: X: 123" → "MARKE: X123" (X = 1-2 Buchstaben, 123 = Nummer)
-    const doubleColonMatch = model.match(/^([A-Z][A-Z\s]*?):\s*([A-Z]{1,2}):\s*(\d+.*)$/i);
-    if (doubleColonMatch) {
-      const brand = doubleColonMatch[1].trim();
-      const seriesLetter = doubleColonMatch[2].trim();
-      const modelNum = doubleColonMatch[3].trim();
-      return `${brand}: ${seriesLetter}${modelNum}`;
-    }
-    return model;
+    // Ersetze alle ":" durch " " und normalisiere mehrfache Leerzeichen
+    return model.replace(/\s*:\s*/g, ' ').replace(/\s+/g, ' ').trim();
   });
   
   // Gruppiere nach Serie (dynamisch erkannt)
   const groups: Map<string, string[]> = new Map();
   
+  // Bekannte Serien für Gruppierung
+  const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'Thinkpad', 'THINKPAD', 'ThinkCentre', 'MacBook Pro', 'MacBook Air', 'MacBook', 'MACBOOK', 'iPhone', 'iPad', 'Galaxy', 'Pixel', 'IdeaPad', 'Ideapad', 'EliteBook', 'ProBook', 'ZBook', 'Spectre', 'Envy', 'Omen', 'AXIM', 'Axim', 'Vostro', 'Precision', 'OptiPlex', 'PowerEdge', 'Alienware', 'G Series', 'Chromebook', 'Satellite', 'Tecra', 'Portege', 'Dynabook', 'LifeBook', 'Stylistic', 'Esprimo', 'Celsius', 'Amilo', 'Vaio', 'Xperia', 'Aspire', 'Swift', 'Nitro', 'Predator', 'TravelMate', 'Extensa', 'Spin', 'ROG', 'TUF', 'VivoBook', 'ZenBook', 'ExpertBook'];
+  
   for (const model of normalizedModels) {
     let matched = false;
     
-    // Pattern 0: "PRODUKT GRÖSSE": MODELL" (z.B. "MACBOOK PRO 15.4": A1286", "MACBOOK PRO 15": Core i7")
-    // Erkennt Produktnamen mit Größenangabe und Doppelpunkt vor Modellnummer
-    const productSizeMatch = model.match(/^([A-Z][A-Z\s]+\d+(?:\.\d+)?(?:"|'')?)\s*:\s*(.+)$/i);
-    if (productSizeMatch) {
-      const productFamily = productSizeMatch[1].trim().toUpperCase();
-      const modelNum = productSizeMatch[2].trim();
-      
-      if (!groups.has(productFamily)) {
-        groups.set(productFamily, []);
-      }
-      groups.get(productFamily)!.push(modelNum);
-      continue;
-    }
-    
-    // Pattern 1: "SERIE: MODELL" (z.B. "SF: 150-A", "DA: 390DW", "ML: 700")
-    // Kurze Serien-Präfixe (2-4 Buchstaben) mit Doppelpunkt
-    const seriesColonMatch = model.match(/^([A-Z]{2,4}):\s*(.+)$/i);
-    if (seriesColonMatch) {
-      const series = seriesColonMatch[1].trim().toUpperCase();
-      const modelNum = seriesColonMatch[2].trim();
-      
-      if (!groups.has(series)) {
-        groups.set(series, []);
-      }
-      groups.get(series)!.push(modelNum);
-      continue;
-    }
-    
-    // Pattern 1b: Längere bekannte Marken mit Doppelpunkt (z.B. "APPLE: iPhone 12", "SAMSUNG: Galaxy S21")
-    const brandColonMatch = model.match(/^(APPLE|SAMSUNG|DELL|HP|LENOVO|ASUS|ACER|SONY|LG|MOTOROLA|NOKIA|HUAWEI|XIAOMI|GOOGLE|MICROSOFT|TOSHIBA|FUJITSU|PANASONIC|PHILIPS):\s*(.+)$/i);
-    if (brandColonMatch) {
-      const brand = brandColonMatch[1].trim().toUpperCase();
-      const modelNum = brandColonMatch[2].trim();
-      
-      if (!groups.has(brand)) {
-        groups.set(brand, []);
-      }
-      groups.get(brand)!.push(modelNum);
-      continue;
-    }
-    
-    // Pattern 2: "MARKE SERIE MODELL" (z.B. "HP ProLiant ML350", "Lenovo IBM Thinkpad R50", "Dell AXIM X50")
-    const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'Thinkpad', 'ThinkCentre', 'MacBook Pro', 'MacBook Air', 'MacBook', 'iPhone', 'iPad', 'Galaxy', 'Pixel', 'IdeaPad', 'Ideapad', 'EliteBook', 'ProBook', 'ZBook', 'Spectre', 'Envy', 'Omen', 'AXIM', 'Axim', 'Vostro', 'Precision', 'OptiPlex', 'PowerEdge', 'Alienware', 'G Series', 'Chromebook', 'Satellite', 'Tecra', 'Portege', 'Dynabook', 'LifeBook', 'Stylistic', 'Esprimo', 'Celsius', 'Amilo', 'Vaio', 'Xperia', 'Aspire', 'Swift', 'Nitro', 'Predator', 'TravelMate', 'Extensa', 'Spin', 'ROG', 'TUF', 'VivoBook', 'ZenBook', 'ExpertBook'];
-    
+    // Pattern: "MARKE SERIE MODELL" oder "SERIE MODELL"
+    // z.B. "Lenovo IBM Thinkpad R50", "THINKPAD R50", "Dell AXIM X50"
     for (const series of knownSeries) {
-      // Erweitert: Erlaubt auch Markennamen mit Zahlen (z.B. "Lenovo IBM")
-      const seriesPattern = new RegExp(`^([A-Za-z][A-Za-z0-9\\-\\s]*?)\\s+(${series})\\s+(.+)$`, 'i');
+      // Pattern mit optionaler Marke vor der Serie
+      const seriesPattern = new RegExp(`^(.*?)\\b(${series})\\s+(.+)$`, 'i');
       const seriesMatch = model.match(seriesPattern);
       if (seriesMatch) {
-        const brand = seriesMatch[1].trim();
-        const seriesName = seriesMatch[2].trim();
+        const brandPart = seriesMatch[1].trim();
+        const seriesName = seriesMatch[2].trim().toUpperCase();
         const modelNum = seriesMatch[3].trim();
-        const familyKey = `${brand} ${seriesName}`;
+        
+        // Family Key: nur die Serie (normalisiert), um Duplikate zu vermeiden
+        // "IBM THINKPAD" und "THINKPAD" → beide unter "THINKPAD"
+        const familyKey = seriesName;
         
         if (!groups.has(familyKey)) {
           groups.set(familyKey, []);
