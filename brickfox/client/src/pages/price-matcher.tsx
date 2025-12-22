@@ -63,15 +63,40 @@ export default function PriceMatcher() {
       let headerRowIndex = 0;
       let headerRow: any[] = [];
       
-      for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
+      const headerKeywords = ['barcode', 'ean', 'produktcode', 'artikelnummer', 'artikel', 'sku', 'produktname', 
+        'name', 'bezeichnung', 'beschreibung', 'preis', 'ek', 'vk', 'uvp', 'price', 'menge', 'bestand',
+        'hersteller', 'marke', 'brand', 'lieferant', 'supplier', 'kategorie', 'gewicht', 'verpackung'];
+      
+      for (let i = 0; i < Math.min(jsonData.length, 50); i++) {
         const row = jsonData[i] as any[];
         if (row && row.length > 0) {
           const nonEmptyCount = row.filter(cell => cell !== '' && cell !== undefined && cell !== null).length;
-          if (nonEmptyCount >= 2) {
-            headerRow = row;
-            headerRowIndex = i;
-            console.log(`XLSX: Header in Zeile ${i + 1} gefunden`);
-            break;
+          
+          if (nonEmptyCount >= 3) {
+            const rowText = row.map(c => String(c || '').toLowerCase()).join(' ');
+            const hasHeaderKeyword = headerKeywords.some(kw => rowText.includes(kw));
+            
+            if (hasHeaderKeyword) {
+              headerRow = row;
+              headerRowIndex = i;
+              console.log(`XLSX: Header in Zeile ${i + 1} gefunden (Keyword-Match)`);
+              break;
+            }
+          }
+        }
+      }
+      
+      if (headerRow.length === 0) {
+        for (let i = 0; i < Math.min(jsonData.length, 50); i++) {
+          const row = jsonData[i] as any[];
+          if (row && row.length >= 3) {
+            const nonEmptyCount = row.filter(cell => cell !== '' && cell !== undefined && cell !== null).length;
+            if (nonEmptyCount >= 3) {
+              headerRow = row;
+              headerRowIndex = i;
+              console.log(`XLSX: Header in Zeile ${i + 1} gefunden (Fallback: erste Zeile mit 3+ Zellen)`);
+              break;
+            }
           }
         }
       }
