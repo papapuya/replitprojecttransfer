@@ -558,8 +558,25 @@ function groupByProductFamily(models: string[]): string[] {
   // Bekannte Serien für Gruppierung
   const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'Thinkpad', 'THINKPAD', 'ThinkCentre', 'MacBook Pro', 'MacBook Air', 'MacBook', 'MACBOOK', 'iPhone', 'iPad', 'Galaxy', 'Pixel', 'IdeaPad', 'Ideapad', 'EliteBook', 'ProBook', 'ZBook', 'Spectre', 'Envy', 'Omen', 'AXIM', 'Axim', 'Vostro', 'Precision', 'OptiPlex', 'PowerEdge', 'Alienware', 'G Series', 'Chromebook', 'Satellite', 'Tecra', 'Portege', 'Dynabook', 'LifeBook', 'Stylistic', 'Esprimo', 'Celsius', 'Amilo', 'Vaio', 'Xperia', 'Aspire', 'Swift', 'Nitro', 'Predator', 'TravelMate', 'Extensa', 'Spin', 'ROG', 'TUF', 'VivoBook', 'ZenBook', 'ExpertBook'];
   
+  // Kontext-Carry: Merke die letzte erkannte Serie für nachfolgende kurze Modellnummern
+  let lastSeriesContext: string | null = null;
+  
   for (const model of normalizedModels) {
     let matched = false;
+    
+    // "wie" markiert Teilenummern - diese brechen den Kontext
+    if (model.toLowerCase().startsWith('wie ')) {
+      lastSeriesContext = null;
+      // Teilenummern ohne "wie" Prefix speichern
+      const partNumbers = model.substring(4).trim();
+      if (partNumbers) {
+        if (!groups.has('_ungrouped_')) {
+          groups.set('_ungrouped_', []);
+        }
+        groups.get('_ungrouped_')!.push(partNumbers);
+      }
+      continue;
+    }
     
     // Pattern: "MARKE SERIE MODELL" oder "SERIE MODELL"
     // z.B. "Lenovo IBM Thinkpad R50", "THINKPAD R50", "Dell AXIM X50"
@@ -580,13 +597,31 @@ function groupByProductFamily(models: string[]): string[] {
           groups.set(familyKey, []);
         }
         groups.get(familyKey)!.push(modelNum);
+        
+        // Setze Kontext für nachfolgende kurze Modellnummern
+        lastSeriesContext = familyKey;
         matched = true;
         break;
       }
     }
     
     if (!matched) {
-      // Kein Pattern erkannt - als eigenständiges Modell behalten
+      // Prüfe ob es eine kurze Modellnummer ist die zum letzten Kontext gehört
+      // z.B. "D520" nach "Dell Latitude D500" → gehört zu LATITUDE
+      // Kurze Modellnummern: Buchstabe + Zahlen, oder nur Buchstaben+Zahlen Mix (max 10 Zeichen)
+      const isShortModelNum = /^[A-Z]{1,2}\d+[A-Z]?$/i.test(model) || /^[A-Z0-9]{2,10}$/i.test(model);
+      
+      if (lastSeriesContext && isShortModelNum && model.length <= 10) {
+        // Zur letzten Serie hinzufügen
+        groups.get(lastSeriesContext)!.push(model);
+        matched = true;
+      }
+    }
+    
+    if (!matched) {
+      // Kein Pattern erkannt und kein Kontext - als eigenständiges Modell behalten
+      // Bricht auch den Kontext
+      lastSeriesContext = null;
       if (!groups.has('_ungrouped_')) {
         groups.set('_ungrouped_', []);
       }
