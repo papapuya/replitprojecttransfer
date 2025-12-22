@@ -543,10 +543,24 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
 function groupByProductFamily(models: string[]): string[] {
   if (models.length === 0) return [];
   
+  // Pre-Processing: Normalisiere "MARKE: BUCHSTABE: NUMMER" zu "MARKE: BUCHSTABENUMMER"
+  // z.B. "SAMSUNG: N: 140" → "SAMSUNG: N140"
+  const normalizedModels = models.map(model => {
+    // Pattern: "MARKE: X: 123" → "MARKE: X123" (X = 1-2 Buchstaben, 123 = Nummer)
+    const doubleColonMatch = model.match(/^([A-Z][A-Z\s]*?):\s*([A-Z]{1,2}):\s*(\d+.*)$/i);
+    if (doubleColonMatch) {
+      const brand = doubleColonMatch[1].trim();
+      const seriesLetter = doubleColonMatch[2].trim();
+      const modelNum = doubleColonMatch[3].trim();
+      return `${brand}: ${seriesLetter}${modelNum}`;
+    }
+    return model;
+  });
+  
   // Gruppiere nach Serie (dynamisch erkannt)
   const groups: Map<string, string[]> = new Map();
   
-  for (const model of models) {
+  for (const model of normalizedModels) {
     let matched = false;
     
     // Pattern 0: "PRODUKT GRÖSSE": MODELL" (z.B. "MACBOOK PRO 15.4": A1286", "MACBOOK PRO 15": Core i7")
