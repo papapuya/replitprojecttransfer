@@ -1007,7 +1007,42 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       // Kompatibilität ist ein String mit komma-getrennten Modellen
       // WICHTIG: Nach dem Split mit Kontext-Carry erneut gruppieren, damit 
       // "THINKPAD R50, R51, R52" nicht als separate Einträge ohne Serie erscheinen
-      const rawModels = extractedTechSpecs['Kompatibilität'].split(', ').map((m: string) => m.trim()).filter((m: string) => m.length > 0);
+      let rawModels = extractedTechSpecs['Kompatibilität'].split(', ').map((m: string) => m.trim()).filter((m: string) => m.length > 0);
+      
+      // ═══════════════════════════════════════════════════════════════
+      // MARKE AUS PRODUKTNAMEN EXTRAHIEREN:
+      // z.B. "Akku für Dell Axim X50, X50V" → Marke = "Dell"
+      // Dann der Kompatibilität voranstellen: "AXIM X50" → "Dell AXIM X50"
+      // ═══════════════════════════════════════════════════════════════
+      const knownBrands = ['Dell', 'HP', 'Lenovo', 'IBM', 'Acer', 'Asus', 'Samsung', 'Apple', 'Sony', 'LG', 'Huawei', 'Xiaomi', 'Motorola', 'Nokia', 'BlackBerry', 'HTC', 'Toshiba', 'Fujitsu', 'Panasonic', 'Compaq', 'Hewlett-Packard', 'Microsoft', 'Google', 'OnePlus', 'Oppo', 'Vivo', 'ZTE', 'Alcatel', 'CAT', 'Gigaset', 'Medion', 'Wiko', 'Archos', 'Doro'];
+      
+      let extractedBrand: string | null = null;
+      for (const brand of knownBrands) {
+        // Pattern: "für Brand Modell" oder "Brand Modell"
+        const brandPattern = new RegExp(`\\b${brand}\\b`, 'i');
+        if (brandPattern.test(produktNameForCompat)) {
+          extractedBrand = brand;
+          console.log(`🏷️ [COMPAT] Marke aus Produktname extrahiert: ${brand}`);
+          break;
+        }
+      }
+      
+      // Wenn Marke gefunden und Modelle keine Marke enthalten, hinzufügen
+      if (extractedBrand) {
+        const brandLower = extractedBrand.toLowerCase();
+        rawModels = rawModels.map((model: string) => {
+          const modelLower = model.toLowerCase();
+          // Prüfen ob Modell bereits eine Marke enthält
+          const hasAnyBrand = knownBrands.some(b => modelLower.includes(b.toLowerCase()));
+          if (!hasAnyBrand) {
+            // Marke dem Modell voranstellen: "AXIM X50" → "Dell AXIM X50"
+            return `${extractedBrand} ${model}`;
+          }
+          return model;
+        });
+        console.log(`🏷️ [COMPAT] Marke "${extractedBrand}" zu ${rawModels.length} Modellen hinzugefügt`);
+      }
+      
       kompatibleModelle = groupByProductFamily(rawModels);
       console.log(`📋 [COMPAT] Verwende ${kompatibleModelle.length} gruppierte Modelle aus CSV-Beschreibung (${rawModels.length} roh)`);
     } else {
