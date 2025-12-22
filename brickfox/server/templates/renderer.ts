@@ -739,49 +739,58 @@ function removeBrandFromModel(model: string, brand: string): string {
 function groupModelsByPrefix(models: string[]): string {
   const groups = new Map<string, string[]>();
   const noPrefix: string[] = [];
-  const seenModels = new Set<string>();
+  const seenModelNums = new Set<string>();
   
   for (const model of models) {
     const trimmed = model.trim();
     if (!trimmed) continue;
     
-    // Duplikate überspringen (case-insensitive)
-    const normalized = trimmed.toLowerCase();
-    if (seenModels.has(normalized)) continue;
-    seenModels.add(normalized);
-    
-    const colonMatch = trimmed.match(/^([A-Za-z0-9!'\-]+)\s*:\s*(.+)$/);
+    // Pattern: "PREFIX: MODELL" oder "PREFIX SERIE: MODELL" (z.B. "THINKPAD: R50", "IBM THINKPAD: R51")
+    const colonMatch = trimmed.match(/^([A-Za-z0-9!\s'\-]+)\s*:\s*(.+)$/);
     if (colonMatch) {
-      const prefix = colonMatch[1];
+      const prefix = colonMatch[1].trim().toUpperCase();
       const modelNum = colonMatch[2].trim();
+      
+      // Duplikat-Check auf Modellnummer (nicht auf ganzen String)
+      const modelKey = modelNum.toLowerCase();
+      if (seenModelNums.has(modelKey)) continue;
+      seenModelNums.add(modelKey);
       
       // Rein numerische Modelle (z.B. "2000", "2446") → ohne Prefix
       if (/^\d+$/.test(modelNum)) {
         noPrefix.push(modelNum);
       } else {
-        // Alphanumerische Modelle behalten Prefix
-        if (!groups.has(prefix)) {
-          groups.set(prefix, []);
+        // Alphanumerische Modelle - gruppiere nach letztem Wort im Prefix
+        // "IBM THINKPAD" und "THINKPAD" → beide unter "THINKPAD"
+        const prefixWords = prefix.split(/\s+/);
+        const lastWord = prefixWords[prefixWords.length - 1];
+        
+        if (!groups.has(lastWord)) {
+          groups.set(lastWord, []);
         }
-        groups.get(prefix)!.push(modelNum);
+        groups.get(lastWord)!.push(modelNum);
       }
     } else {
+      const modelKey = trimmed.toLowerCase();
+      if (seenModelNums.has(modelKey)) continue;
+      seenModelNums.add(modelKey);
       noPrefix.push(trimmed);
     }
   }
   
   const parts: string[] = [];
   
-  // Erst gruppierte Serien mit alphanumerischen Modellen
+  // Erst gruppierte Serien - OHNE Doppelpunkt
   Array.from(groups.entries()).forEach(([prefix, modelNums]) => {
-    // Duplikate innerhalb der Gruppe entfernen
     const uniqueNums = Array.from(new Set(modelNums));
-    parts.push(`${prefix}: ${uniqueNums.join(', ')}`);
+    uniqueNums.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+    parts.push(`${prefix} ${uniqueNums.join(', ')}`);
   });
   
   // Dann ungegruppierte Modelle (numerische + andere)
   if (noPrefix.length > 0) {
     const uniqueNoPrefix = Array.from(new Set(noPrefix));
+    uniqueNoPrefix.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
     parts.push(uniqueNoPrefix.join(', '));
   }
   
