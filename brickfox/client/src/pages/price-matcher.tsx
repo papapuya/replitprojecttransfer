@@ -60,8 +60,23 @@ export default function PriceMatcher() {
         return { headers: [], rows: [] };
       }
       
-      const headerRow = jsonData[0] as any[];
-      if (!headerRow || headerRow.length === 0) {
+      let headerRowIndex = 0;
+      let headerRow: any[] = [];
+      
+      for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
+        const row = jsonData[i] as any[];
+        if (row && row.length > 0) {
+          const nonEmptyCount = row.filter(cell => cell !== '' && cell !== undefined && cell !== null).length;
+          if (nonEmptyCount >= 2) {
+            headerRow = row;
+            headerRowIndex = i;
+            console.log(`XLSX: Header in Zeile ${i + 1} gefunden`);
+            break;
+          }
+        }
+      }
+      
+      if (headerRow.length === 0) {
         console.log('XLSX: Keine Header gefunden');
         return { headers: [], rows: [] };
       }
@@ -69,13 +84,14 @@ export default function PriceMatcher() {
       const headers = headerRow.map((h, idx) => {
         const val = String(h ?? '').trim();
         return val || `Spalte_${idx + 1}`;
-      }).filter(h => h.length > 0);
+      });
       
-      console.log('XLSX Headers:', headers);
+      const nonEmptyHeaders = headers.filter(h => !h.startsWith('Spalte_'));
+      console.log('XLSX Headers:', headers.slice(0, 10), `... (${headers.length} gesamt, ${nonEmptyHeaders.length} mit Namen)`);
       
       const rows: CSVRow[] = [];
       
-      for (let i = 1; i < jsonData.length; i++) {
+      for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
         const values = jsonData[i] as any[];
         if (values && values.some(v => v !== '' && v !== undefined && v !== null)) {
           const row: CSVRow = {};
