@@ -1065,9 +1065,11 @@ function renderMediaMarktLayout(data: {
   let teilenummerHtml = '';
   if (data.apnSatz && data.apnSatz.trim()) {
     // Extrahiere die APN-Nummern aus dem Satz
-    const apnMatch = data.apnSatz.match(/(\d{3}-\d{4}[\d\s,\-]*)/);
+    // Pattern erfasst alphanumerische Teilenummern nach "APN):" oder am Ende
+    // z.B. "310-5964, 35h00056-00, HC03U, T4676, T6845"
+    const apnMatch = data.apnSatz.match(/(?:APN\)?:?\s*)([A-Z0-9][A-Z0-9\-,\s]+)$/i);
     if (apnMatch) {
-      const apnValue = apnMatch[0].replace(/,\s*/g, ', ').trim();
+      const apnValue = apnMatch[1].replace(/,\s*/g, ', ').replace(/\s+/g, ' ').trim();
       teilenummerHtml = `<p style="margin-top: 1em;"><strong>Teilenummer (APN):</strong> ${e(apnValue)}</p>`;
     }
   }
