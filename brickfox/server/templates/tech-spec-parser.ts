@@ -553,7 +553,9 @@ export function groupByProductFamily(models: string[]): string[] {
   });
   
   // Gruppiere nach Serie (dynamisch erkannt)
+  // Speichere Modelle und die erste gefundene Marke pro Serie
   const groups: Map<string, string[]> = new Map();
+  const brandForSeries: Map<string, string> = new Map(); // Speichert die Marke für jede Serie
   
   // Bekannte Serien für Gruppierung
   const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'Thinkpad', 'THINKPAD', 'ThinkCentre', 'MacBook Pro', 'MacBook Air', 'MacBook', 'MACBOOK', 'iPhone', 'iPad', 'Galaxy', 'Pixel', 'IdeaPad', 'Ideapad', 'EliteBook', 'ProBook', 'ZBook', 'Spectre', 'Envy', 'Omen', 'AXIM', 'Axim', 'Vostro', 'Precision', 'OptiPlex', 'PowerEdge', 'Alienware', 'G Series', 'Chromebook', 'Satellite', 'Tecra', 'Portege', 'Dynabook', 'LifeBook', 'Stylistic', 'Esprimo', 'Celsius', 'Amilo', 'Vaio', 'Xperia', 'Aspire', 'Swift', 'Nitro', 'Predator', 'TravelMate', 'Extensa', 'Spin', 'ROG', 'TUF', 'VivoBook', 'ZenBook', 'ExpertBook'];
@@ -589,6 +591,10 @@ export function groupByProductFamily(models: string[]): string[] {
         
         if (!groups.has(familyKey)) {
           groups.set(familyKey, []);
+          // Speichere die Marke nur beim ersten Match (wenn vorhanden)
+          if (brandPart) {
+            brandForSeries.set(familyKey, brandPart);
+          }
         }
         groups.get(familyKey)!.push(modelNum);
         
@@ -634,8 +640,12 @@ export function groupByProductFamily(models: string[]): string[] {
     const uniqueModels = Array.from(new Set(modelNumbers));
     uniqueModels.sort((a: string, b: string) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
     
-    // Format: "HP ProLiant ML350, ML370" (ohne Doppelpunkt)
-    seriesResults.push(`${family} ${uniqueModels.join(', ')}`);
+    // Hole die Marke für diese Serie (falls vorhanden)
+    const brand = brandForSeries.get(family);
+    
+    // Format: "Dell AXIM X50, X50V" (mit Marke wenn vorhanden, ohne Doppelpunkt)
+    const prefix = brand ? `${brand} ${family}` : family;
+    seriesResults.push(`${prefix} ${uniqueModels.join(', ')}`);
   });
   
   // Füge nicht-gruppierte Modelle (Teilenummern nach "wie") hinzu - AM ENDE
