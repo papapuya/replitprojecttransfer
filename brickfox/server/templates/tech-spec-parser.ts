@@ -540,7 +540,7 @@ function normalizeCompatibilityModels(rawModels: string[]): { compatible: string
  * "DELL: XPS: M1720, DELL: XPS: M1730" → "DELL XPS: M1720, M1730"
  * "HP ProLiant ML350, HP ProLiant ML370" → "HP ProLiant ML350, ML370"
  */
-function groupByProductFamily(models: string[]): string[] {
+export function groupByProductFamily(models: string[]): string[] {
   if (models.length === 0) return [];
   
   // Pre-Processing: ALLE Doppelpunkte in Leerzeichen umwandeln für konsistente Verarbeitung

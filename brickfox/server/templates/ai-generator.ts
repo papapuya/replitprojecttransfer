@@ -4,7 +4,7 @@ import { ProductCategoryConfig } from './category-config';
 import { createOrchestrator } from '../prompts/orchestrator';
 import type { PromptContext } from '../prompts/types';
 import { processProductCopy } from './post-processor';
-import { extractTechSpecs1to1 } from './tech-spec-parser';
+import { extractTechSpecs1to1, groupByProductFamily } from './tech-spec-parser';
 
 export async function generateProductCopy(
   productData: any,
@@ -1005,8 +1005,11 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
       kompatibleModelle = [];
     } else if (extractedTechSpecs['Kompatibilität'] && extractedTechSpecs['Kompatibilität'].length > 0) {
       // Kompatibilität ist ein String mit komma-getrennten Modellen
-      kompatibleModelle = extractedTechSpecs['Kompatibilität'].split(', ').map((m: string) => m.trim()).filter((m: string) => m.length > 0);
-      console.log(`📋 [COMPAT] Verwende ${kompatibleModelle.length} Modelle aus CSV-Beschreibung`);
+      // WICHTIG: Nach dem Split mit Kontext-Carry erneut gruppieren, damit 
+      // "THINKPAD R50, R51, R52" nicht als separate Einträge ohne Serie erscheinen
+      const rawModels = extractedTechSpecs['Kompatibilität'].split(', ').map((m: string) => m.trim()).filter((m: string) => m.length > 0);
+      kompatibleModelle = groupByProductFamily(rawModels);
+      console.log(`📋 [COMPAT] Verwende ${kompatibleModelle.length} gruppierte Modelle aus CSV-Beschreibung (${rawModels.length} roh)`);
     } else {
       // Fallback: AI-generierte Kompatibilität
       kompatibleModelle = parsedContent.kompatibilitaet || parsedContent.kompatibleModelle || [];
