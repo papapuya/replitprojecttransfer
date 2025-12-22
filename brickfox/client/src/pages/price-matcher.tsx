@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Download, FileSpreadsheet, ArrowRight, Check, AlertCircle } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface CSVRow {
   [key: string]: string;
@@ -39,6 +40,31 @@ export default function PriceMatcher() {
   const [results, setResults] = useState<MatchResult[]>([]);
   const [unmatchedProducts, setUnmatchedProducts] = useState<CSVRow[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const parseXLSX = (data: ArrayBuffer): { headers: string[], rows: CSVRow[] } => {
+    const workbook = XLSX.read(data, { type: 'array' });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    const jsonData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
+    
+    if (jsonData.length === 0) return { headers: [], rows: [] };
+    
+    const headers = (jsonData[0] as string[]).map(h => String(h || '').trim());
+    const rows: CSVRow[] = [];
+    
+    for (let i = 1; i < jsonData.length; i++) {
+      const values = jsonData[i] as string[];
+      if (values && values.length > 0) {
+        const row: CSVRow = {};
+        headers.forEach((header, idx) => {
+          row[header] = String(values[idx] ?? '').trim();
+        });
+        rows.push(row);
+      }
+    }
+    
+    return { headers, rows };
+  };
 
   const parseCSV = (text: string): { headers: string[], rows: CSVRow[] } => {
     const lines = text.split('\n').filter(line => line.trim());
@@ -102,39 +128,95 @@ export default function PriceMatcher() {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
     const reader = new FileReader();
+    
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      const { headers, rows } = parseCSV(text);
-      setSupplierHeaders(headers);
-      setSupplierCSV(rows);
-      setSupplierMatchKey("");
-      setEkColumn("");
-      toast({
-        title: "Lieferanten-CSV geladen",
-        description: `${rows.length} Zeilen, ${headers.length} Spalten erkannt`,
-      });
+      try {
+        let headers: string[];
+        let rows: CSVRow[];
+        
+        if (isExcel) {
+          const data = event.target?.result as ArrayBuffer;
+          const result = parseXLSX(data);
+          headers = result.headers;
+          rows = result.rows;
+        } else {
+          const text = event.target?.result as string;
+          const result = parseCSV(text);
+          headers = result.headers;
+          rows = result.rows;
+        }
+        
+        setSupplierHeaders(headers);
+        setSupplierCSV(rows);
+        setSupplierMatchKey("");
+        setEkColumn("");
+        toast({
+          title: `Lieferanten-${isExcel ? 'Excel' : 'CSV'} geladen`,
+          description: `${rows.length} Zeilen, ${headers.length} Spalten erkannt`,
+        });
+      } catch (error) {
+        toast({
+          title: "Fehler beim Laden",
+          description: "Die Datei konnte nicht gelesen werden.",
+          variant: "destructive",
+        });
+      }
     };
-    reader.readAsText(file);
+    
+    if (isExcel) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
   };
 
   const handlePimUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
     const reader = new FileReader();
+    
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      const { headers, rows } = parseCSV(text);
-      setPimHeaders(headers);
-      setPimCSV(rows);
-      setPimMatchKey("");
-      toast({
-        title: "PIM-CSV geladen",
-        description: `${rows.length} Zeilen, ${headers.length} Spalten erkannt`,
-      });
+      try {
+        let headers: string[];
+        let rows: CSVRow[];
+        
+        if (isExcel) {
+          const data = event.target?.result as ArrayBuffer;
+          const result = parseXLSX(data);
+          headers = result.headers;
+          rows = result.rows;
+        } else {
+          const text = event.target?.result as string;
+          const result = parseCSV(text);
+          headers = result.headers;
+          rows = result.rows;
+        }
+        
+        setPimHeaders(headers);
+        setPimCSV(rows);
+        setPimMatchKey("");
+        toast({
+          title: `PIM-${isExcel ? 'Excel' : 'CSV'} geladen`,
+          description: `${rows.length} Zeilen, ${headers.length} Spalten erkannt`,
+        });
+      } catch (error) {
+        toast({
+          title: "Fehler beim Laden",
+          description: "Die Datei konnte nicht gelesen werden.",
+          variant: "destructive",
+        });
+      }
     };
-    reader.readAsText(file);
+    
+    if (isExcel) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
   };
 
   const convertToPimFormat = (euroValue: number): string => {
@@ -328,11 +410,11 @@ export default function PriceMatcher() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="supplier-upload">CSV-Datei</Label>
+              <Label htmlFor="supplier-upload">CSV oder Excel-Datei</Label>
               <Input
                 id="supplier-upload"
                 type="file"
-                accept=".csv,.txt"
+                accept=".csv,.txt,.xlsx,.xls"
                 onChange={handleSupplierUpload}
                 className="mt-1"
               />
@@ -388,11 +470,11 @@ export default function PriceMatcher() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="pim-upload">CSV-Datei</Label>
+              <Label htmlFor="pim-upload">CSV oder Excel-Datei</Label>
               <Input
                 id="pim-upload"
                 type="file"
-                accept=".csv,.txt"
+                accept=".csv,.txt,.xlsx,.xls"
                 onChange={handlePimUpload}
                 className="mt-1"
               />
