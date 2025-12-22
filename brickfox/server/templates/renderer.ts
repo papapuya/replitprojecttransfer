@@ -198,10 +198,13 @@ function filterFarbeBullets(bullets: string[]): string[] {
 function extractApnFromText(text: string): string | null {
   if (!text) return null;
   
+  // WICHTIG: Zuerst alle Zeilenumbrüche und Tabs in Leerzeichen umwandeln
+  // Das verhindert dass das Regex bei Newlines stoppt
+  const normalizedText = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ');
+  
   // Pattern für "wie" im Produktnamen - erfasst ALLES nach "wie" bis zum Ende
   // z.B. "wie 310-5964, 35h00056-00, HC03U, T4676, T6845"
-  // Greedy matching: erfasst alle alphanumerischen Codes mit Bindestrichen und Kommas
-  const wieMatch = text.match(/,?\s*wie\s+(.+)$/i);
+  const wieMatch = normalizedText.match(/,?\s*wie\s+(.+)$/i);
   if (wieMatch) {
     let apn = wieMatch[1].trim();
     
@@ -211,6 +214,9 @@ function extractApnFromText(text: string): string | null {
     apn = apn.replace(/,?\s*(Li-Ion|Li-Polymer|Li-Po|NiMH|NiCd|Lithium|Alkaline)\b.*$/i, '');
     // Trailing comma und Leerzeichen entfernen
     apn = apn.trim().replace(/,\s*$/, '');
+    
+    // Normalisiere die Ausgabe: einzelne Leerzeichen, saubere Kommas
+    apn = apn.replace(/\s+/g, ' ').replace(/,\s*/g, ', ').trim();
     
     if (apn && apn.length > 2) {
       console.log(`🔢 APN aus "wie" extrahiert: ${apn}`);
@@ -226,7 +232,7 @@ function extractApnFromText(text: string): string | null {
   ];
   
   for (const pattern of apnPatterns) {
-    const match = text.match(pattern);
+    const match = normalizedText.match(pattern);
     if (match) {
       const apn = match[1].trim().replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
       console.log(`🔢 APN extrahiert: ${apn}`);
