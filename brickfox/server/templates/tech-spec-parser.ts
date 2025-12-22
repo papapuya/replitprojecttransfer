@@ -630,8 +630,12 @@ export function groupByProductFamily(models: string[]): string[] {
   }
   
   // Baue gruppierte Ausgabe - Serien zuerst, Teilenummern (ungrouped) am Ende
-  const seriesResults: string[] = [];
-  const partNumberResults: string[] = [];
+  // WICHTIG: Gleiche Marke nur EINMAL am Anfang, dann alle Serien dahinter
+  // z.B. "Dell INSPIRON 500, 510, LATITUDE D500, D505, PRECISION M20"
+  
+  // Gruppiere Serien nach Marke
+  const seriesByBrand: Map<string, string[]> = new Map();
+  const seriesWithoutBrand: string[] = [];
   
   groups.forEach((modelNumbers: string[], family: string) => {
     if (family === '_ungrouped_') return; // Später als Teilenummern hinzufügen
@@ -643,21 +647,44 @@ export function groupByProductFamily(models: string[]): string[] {
     // Hole die Marke für diese Serie (falls vorhanden)
     const brand = brandForSeries.get(family);
     
-    // Format: "Dell AXIM X50, X50V" (mit Marke wenn vorhanden, ohne Doppelpunkt)
-    const prefix = brand ? `${brand} ${family}` : family;
-    seriesResults.push(`${prefix} ${uniqueModels.join(', ')}`);
+    // Format: "SERIE Modell1, Modell2" (ohne Marke - wird später hinzugefügt)
+    const seriesEntry = `${family} ${uniqueModels.join(', ')}`;
+    
+    if (brand) {
+      if (!seriesByBrand.has(brand)) {
+        seriesByBrand.set(brand, []);
+      }
+      seriesByBrand.get(brand)!.push(seriesEntry);
+    } else {
+      seriesWithoutBrand.push(seriesEntry);
+    }
   });
   
+  // Baue finale Ausgabe: Marke + alle ihre Serien zusammen
+  const seriesResults: string[] = [];
+  
+  seriesByBrand.forEach((series: string[], brand: string) => {
+    // Sortiere Serien alphabetisch
+    series.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+    // Format: "Dell INSPIRON 500, 510, LATITUDE D500, D505" (Marke nur einmal)
+    seriesResults.push(`${brand} ${series.join(', ')}`);
+  });
+  
+  // Serien ohne Marke hinzufügen
+  seriesWithoutBrand.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  seriesResults.push(...seriesWithoutBrand);
+  
+  // Sortiere finale Ergebnisse
+  seriesResults.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  
   // Füge nicht-gruppierte Modelle (Teilenummern nach "wie") hinzu - AM ENDE
+  const partNumberResults: string[] = [];
   const ungrouped = groups.get('_ungrouped_') || [];
   if (ungrouped.length > 0) {
     const uniqueUngrouped = Array.from(new Set(ungrouped));
     // Teilenummern in Original-Reihenfolge behalten (nicht sortieren)
     partNumberResults.push(...uniqueUngrouped);
   }
-  
-  // Sortiere nur die Serien alphabetisch, Teilenummern bleiben am Ende
-  seriesResults.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
   
   // Kombiniere: Serien zuerst, dann Teilenummern
   return [...seriesResults, ...partNumberResults];
