@@ -1017,40 +1017,11 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
     }
     
     // ═══════════════════════════════════════════════════════════════
-    // GLOBAL: Typencodes aus Produktnamen IMMER extrahieren und hinzufügen
-    // z.B. "Akku für XY, wie 824, E92, LR03N" → [824, E92, LR03N]
-    // Diese werden ZUSÄTZLICH zu bereits gefundenen Modellen hinzugefügt
+    // HINWEIS: Teilenummern nach "wie" (z.B. "wie 310-5964, 35h00056-00")
+    // werden NICHT zur Kompatibilität hinzugefügt! Sie gehören NUR in
+    // das "Teilenummer (APN)" Feld und werden dort separat extrahiert.
     // ═══════════════════════════════════════════════════════════════
-    if (!shouldSkipCompatibility) {
-      // Extrahiere Typencodes aus Produktnamen (nach "wie", "ersetzt", "entspricht", "als")
-      console.log(`🔍 [COMPAT] Suche "wie" in Produktname: "${produktNameForCompat.substring(0, 80)}..."`);
-      
-      // Verbessertes Regex: Erfasst alles nach "wie" bis zum Ende oder bis zu bekannten Stoppwörtern
-      const wieMatch = produktNameForCompat.match(/(?:wie|ersetzt|entspricht|als)\s+([A-Z0-9][A-Z0-9,\s\-\/\.]+)/i);
-      if (wieMatch) {
-        console.log(`✅ [COMPAT] "wie" Match gefunden: "${wieMatch[1]}"`);
-        const codes = wieMatch[1].split(/[,\s]+/)
-          .map((c: string) => c.replace(/^-+/, '').trim()) // Führende Minuszeichen entfernen
-          .filter((c: string) => {
-            // Mindestlänge und alphanumerisch
-            if (c.length < 2 || !/[A-Z0-9]/i.test(c)) return false;
-            // KEINE technischen Werte: Volt, mAh, Wh, etc.
-            if (/^\d+[\.,]?\d*\s*V$/i.test(c)) return false;        // "3.7V", "3,7 V"
-            if (/^\d+[\.,]?\d*\s*mAh$/i.test(c)) return false;      // "2100mAh", "2100 mAh"
-            if (/^\d+[\.,]?\d*\s*Wh$/i.test(c)) return false;       // "10Wh", "10.5 Wh"
-            if (/^\d+[\.,]?\d*\s*Ah$/i.test(c)) return false;       // "2.1Ah"
-            if (/^[\d\.,]+$/i.test(c)) return false;                // Reine Zahlen wie "3.7"
-            return true;
-          });
-        if (codes.length > 0) {
-          // MERGE: Füge Typencodes zu bestehenden Modellen hinzu (nicht ersetzen!)
-          kompatibleModelle = [...kompatibleModelle, ...codes];
-          console.log(`🔧 [COMPAT] Typencodes aus Produktname hinzugefügt: ${codes.join(', ')}`);
-        }
-      } else {
-        console.log(`❌ [COMPAT] Kein "wie" Match in Produktname`);
-      }
-    }
+    console.log(`📋 [COMPAT] Teilenummern nach "wie" werden separat als APN behandelt, nicht in Kompatibilität`);
     
     // ═══════════════════════════════════════════════════════════════
     // ROBUSTE FILTERLOGIK: NUR Marken und Modelle durchlassen
