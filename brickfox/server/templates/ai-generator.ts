@@ -1027,20 +1027,28 @@ Wichtig: Schreibe im Stil "${styleVariant}" wie in den Stil-Anweisungen beschrie
         }
       }
       
-      // Wenn Marke gefunden und Modelle keine Marke enthalten, hinzufügen
+      // Wenn Marke gefunden, NUR bei Modellen mit bekannter Serie hinzufügen
+      // Alleinstehende Nummern wie "510", "600", "D505" bleiben ohne Marke
+      // Diese werden später mit ihrer Serie gruppiert
+      const knownSeries = ['AXIM', 'Axim', 'INSPIRON', 'Inspiron', 'LATITUDE', 'Latitude', 'PRECISION', 'Precision', 'VOSTRO', 'Vostro', 'XPS', 'THINKPAD', 'ThinkPad', 'Thinkpad', 'IDEAPAD', 'IdeaPad', 'Ideapad', 'PROBOOK', 'ProBook', 'ELITEBOOK', 'EliteBook', 'ZBOOK', 'ZBook', 'PAVILION', 'Pavilion', 'ENVY', 'Envy', 'SPECTRE', 'Spectre', 'MACBOOK', 'MacBook', 'IPHONE', 'iPhone', 'IPAD', 'iPad', 'GALAXY', 'Galaxy', 'PIXEL', 'Pixel'];
+      
       if (extractedBrand) {
-        const brandLower = extractedBrand.toLowerCase();
         rawModels = rawModels.map((model: string) => {
           const modelLower = model.toLowerCase();
           // Prüfen ob Modell bereits eine Marke enthält
           const hasAnyBrand = knownBrands.some(b => modelLower.includes(b.toLowerCase()));
-          if (!hasAnyBrand) {
-            // Marke dem Modell voranstellen: "AXIM X50" → "Dell AXIM X50"
+          // Prüfen ob Modell eine bekannte Serie enthält
+          const hasSeries = knownSeries.some(s => modelLower.includes(s.toLowerCase()));
+          
+          // NUR Marke hinzufügen wenn:
+          // 1. Noch keine Marke vorhanden UND
+          // 2. Eine bekannte Serie enthalten ist (z.B. "AXIM X50", nicht "510")
+          if (!hasAnyBrand && hasSeries) {
             return `${extractedBrand} ${model}`;
           }
           return model;
         });
-        console.log(`🏷️ [COMPAT] Marke "${extractedBrand}" zu ${rawModels.length} Modellen hinzugefügt`);
+        console.log(`🏷️ [COMPAT] Marke "${extractedBrand}" nur bei Serien-Modellen hinzugefügt`);
       }
       
       kompatibleModelle = groupByProductFamily(rawModels);
