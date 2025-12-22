@@ -344,7 +344,8 @@ export default function PriceMatcher() {
 
       if (supplierRow) {
         const ekEuro = parseEuroValue(supplierRow[ekColumn]);
-        const vkEuro = ekEuro * 2 * 1.19;
+        const vkRaw = ekEuro * 2 * 1.19;
+        const vkEuro = Math.floor(vkRaw) + 0.95;
         
         const ekPim = convertToPimFormat(ekEuro);
         const vkPim = convertToPimFormat(vkEuro);
