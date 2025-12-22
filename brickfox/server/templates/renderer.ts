@@ -198,15 +198,20 @@ function filterFarbeBullets(bullets: string[]): string[] {
 function extractApnFromText(text: string): string | null {
   if (!text) return null;
   
-  // Pattern für "wie" im Produktnamen - erfasst ALLES nach "wie" bis zum Ende oder Kapazitätsangaben
+  // Pattern für "wie" im Produktnamen - erfasst ALLES nach "wie" bis zum Ende
   // z.B. "wie 310-5964, 35h00056-00, HC03U, T4676, T6845"
-  const wieMatch = text.match(/,?\s*wie\s+([A-Z0-9][A-Z0-9\-,\s]+?)(?:,?\s*\d+[.,]?\d*\s*(?:mAh|Ah|Wh|V|Volt)\b|$)/i);
+  // Greedy matching: erfasst alle alphanumerischen Codes mit Bindestrichen und Kommas
+  const wieMatch = text.match(/,?\s*wie\s+(.+)$/i);
   if (wieMatch) {
     let apn = wieMatch[1].trim();
-    // Entferne technische Einheiten die versehentlich erfasst wurden
-    apn = apn.replace(/,?\s*(Li-Ion|Li-Polymer|Li-Po|NiMH|NiCd|Lithium|Alkaline)\b.*/i, '');
-    apn = apn.replace(/,?\s*\d+[.,]?\d*\s*(V|mAh|Ah|Wh|W)\b.*/i, '');
-    apn = apn.trim().replace(/,\s*$/, ''); // Trailing comma entfernen
+    
+    // Entferne Kapazitäts-/Spannungsangaben am Ende (z.B. "4.400 mAh", "3,7 V")
+    apn = apn.replace(/,?\s*\d+[.,]?\d*\s*(mAh|Ah|Wh|V|Volt|W)\b.*$/i, '');
+    // Entferne Akkuchemie am Ende
+    apn = apn.replace(/,?\s*(Li-Ion|Li-Polymer|Li-Po|NiMH|NiCd|Lithium|Alkaline)\b.*$/i, '');
+    // Trailing comma und Leerzeichen entfernen
+    apn = apn.trim().replace(/,\s*$/, '');
+    
     if (apn && apn.length > 2) {
       console.log(`🔢 APN aus "wie" extrahiert: ${apn}`);
       return apn;
