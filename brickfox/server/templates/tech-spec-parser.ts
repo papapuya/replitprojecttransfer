@@ -547,8 +547,24 @@ function groupByProductFamily(models: string[]): string[] {
   const groups: Map<string, string[]> = new Map();
   
   for (const model of models) {
+    let matched = false;
+    
+    // Pattern 0: "PRODUKT GRÖSSE": MODELL" (z.B. "MACBOOK PRO 15.4": A1286", "MACBOOK PRO 15": Core i7")
+    // Erkennt Produktnamen mit Größenangabe und Doppelpunkt vor Modellnummer
+    const productSizeMatch = model.match(/^([A-Z][A-Z\s]+\d+(?:\.\d+)?(?:"|'')?)\s*:\s*(.+)$/i);
+    if (productSizeMatch) {
+      const productFamily = productSizeMatch[1].trim().toUpperCase();
+      const modelNum = productSizeMatch[2].trim();
+      
+      if (!groups.has(productFamily)) {
+        groups.set(productFamily, []);
+      }
+      groups.get(productFamily)!.push(modelNum);
+      continue;
+    }
+    
     // Pattern 1: "SERIE: MODELL" (z.B. "SF: 150-A", "DA: 390DW", "ML: 700")
-    // Nur kurze Serien-Präfixe (2-4 Buchstaben) mit Doppelpunkt
+    // Kurze Serien-Präfixe (2-4 Buchstaben) mit Doppelpunkt
     const seriesColonMatch = model.match(/^([A-Z]{2,4}):\s*(.+)$/i);
     if (seriesColonMatch) {
       const series = seriesColonMatch[1].trim().toUpperCase();
@@ -561,9 +577,21 @@ function groupByProductFamily(models: string[]): string[] {
       continue;
     }
     
+    // Pattern 1b: Längere bekannte Marken mit Doppelpunkt (z.B. "APPLE: iPhone 12", "SAMSUNG: Galaxy S21")
+    const brandColonMatch = model.match(/^(APPLE|SAMSUNG|DELL|HP|LENOVO|ASUS|ACER|SONY|LG|MOTOROLA|NOKIA|HUAWEI|XIAOMI|GOOGLE|MICROSOFT|TOSHIBA|FUJITSU|PANASONIC|PHILIPS):\s*(.+)$/i);
+    if (brandColonMatch) {
+      const brand = brandColonMatch[1].trim().toUpperCase();
+      const modelNum = brandColonMatch[2].trim();
+      
+      if (!groups.has(brand)) {
+        groups.set(brand, []);
+      }
+      groups.get(brand)!.push(modelNum);
+      continue;
+    }
+    
     // Pattern 2: "MARKE SERIE MODELL" (z.B. "HP ProLiant ML350")
-    const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'ThinkCentre'];
-    let matched = false;
+    const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'ThinkCentre', 'MacBook Pro', 'MacBook Air', 'MacBook', 'iPhone', 'iPad', 'Galaxy', 'Pixel'];
     
     for (const series of knownSeries) {
       const seriesPattern = new RegExp(`^([A-Z][A-Z\\-\\s]*?)\\s+(${series})\\s+(.+)$`, 'i');
