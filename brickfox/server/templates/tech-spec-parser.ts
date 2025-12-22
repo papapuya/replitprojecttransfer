@@ -629,32 +629,34 @@ export function groupByProductFamily(models: string[]): string[] {
     }
   }
   
-  // Baue gruppierte Ausgabe
-  const result: string[] = [];
+  // Baue gruppierte Ausgabe - Serien zuerst, Teilenummern (ungrouped) am Ende
+  const seriesResults: string[] = [];
+  const partNumberResults: string[] = [];
   
   groups.forEach((modelNumbers: string[], family: string) => {
-    if (family === '_ungrouped_') return; // Später hinzufügen
+    if (family === '_ungrouped_') return; // Später als Teilenummern hinzufügen
     
     // Sortiere und dedupliziere Modellnummern
     const uniqueModels = Array.from(new Set(modelNumbers));
     uniqueModels.sort((a: string, b: string) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
     
     // Format: "HP ProLiant ML350, ML370" (ohne Doppelpunkt)
-    result.push(`${family} ${uniqueModels.join(', ')}`);
+    seriesResults.push(`${family} ${uniqueModels.join(', ')}`);
   });
   
-  // Füge nicht-gruppierte Modelle hinzu
+  // Füge nicht-gruppierte Modelle (Teilenummern nach "wie") hinzu - AM ENDE
   const ungrouped = groups.get('_ungrouped_') || [];
   if (ungrouped.length > 0) {
     const uniqueUngrouped = Array.from(new Set(ungrouped));
-    uniqueUngrouped.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
-    result.push(...uniqueUngrouped);
+    // Teilenummern in Original-Reihenfolge behalten (nicht sortieren)
+    partNumberResults.push(...uniqueUngrouped);
   }
   
-  // Sortiere Ergebnis
-  result.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  // Sortiere nur die Serien alphabetisch, Teilenummern bleiben am Ende
+  seriesResults.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
   
-  return result;
+  // Kombiniere: Serien zuerst, dann Teilenummern
+  return [...seriesResults, ...partNumberResults];
 }
 
 /**
