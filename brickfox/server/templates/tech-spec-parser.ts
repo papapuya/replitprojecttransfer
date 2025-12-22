@@ -604,11 +604,12 @@ function groupByProductFamily(models: string[]): string[] {
       continue;
     }
     
-    // Pattern 2: "MARKE SERIE MODELL" (z.B. "HP ProLiant ML350")
-    const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'ThinkCentre', 'MacBook Pro', 'MacBook Air', 'MacBook', 'iPhone', 'iPad', 'Galaxy', 'Pixel'];
+    // Pattern 2: "MARKE SERIE MODELL" (z.B. "HP ProLiant ML350", "Lenovo IBM Thinkpad R50")
+    const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'Thinkpad', 'ThinkCentre', 'MacBook Pro', 'MacBook Air', 'MacBook', 'iPhone', 'iPad', 'Galaxy', 'Pixel', 'IdeaPad', 'Ideapad', 'EliteBook', 'ProBook', 'ZBook', 'Spectre', 'Envy', 'Omen'];
     
     for (const series of knownSeries) {
-      const seriesPattern = new RegExp(`^([A-Z][A-Z\\-\\s]*?)\\s+(${series})\\s+(.+)$`, 'i');
+      // Erweitert: Erlaubt auch Markennamen mit Zahlen (z.B. "Lenovo IBM")
+      const seriesPattern = new RegExp(`^([A-Za-z][A-Za-z0-9\\-\\s]*?)\\s+(${series})\\s+(.+)$`, 'i');
       const seriesMatch = model.match(seriesPattern);
       if (seriesMatch) {
         const brand = seriesMatch[1].trim();
