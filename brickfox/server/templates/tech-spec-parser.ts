@@ -604,8 +604,8 @@ function groupByProductFamily(models: string[]): string[] {
       continue;
     }
     
-    // Pattern 2: "MARKE SERIE MODELL" (z.B. "HP ProLiant ML350", "Lenovo IBM Thinkpad R50")
-    const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'Thinkpad', 'ThinkCentre', 'MacBook Pro', 'MacBook Air', 'MacBook', 'iPhone', 'iPad', 'Galaxy', 'Pixel', 'IdeaPad', 'Ideapad', 'EliteBook', 'ProBook', 'ZBook', 'Spectre', 'Envy', 'Omen'];
+    // Pattern 2: "MARKE SERIE MODELL" (z.B. "HP ProLiant ML350", "Lenovo IBM Thinkpad R50", "Dell AXIM X50")
+    const knownSeries = ['ProLiant', 'Smart Array', 'StorageWorks', 'MSA', 'NAS', 'PAVILION', 'PRESARIO', 'XPS', 'Latitude', 'Inspiron', 'ThinkPad', 'Thinkpad', 'ThinkCentre', 'MacBook Pro', 'MacBook Air', 'MacBook', 'iPhone', 'iPad', 'Galaxy', 'Pixel', 'IdeaPad', 'Ideapad', 'EliteBook', 'ProBook', 'ZBook', 'Spectre', 'Envy', 'Omen', 'AXIM', 'Axim', 'Vostro', 'Precision', 'OptiPlex', 'PowerEdge', 'Alienware', 'G Series', 'Chromebook', 'Satellite', 'Tecra', 'Portege', 'Dynabook', 'LifeBook', 'Stylistic', 'Esprimo', 'Celsius', 'Amilo', 'Vaio', 'Xperia', 'Aspire', 'Swift', 'Nitro', 'Predator', 'TravelMate', 'Extensa', 'Spin', 'ROG', 'TUF', 'VivoBook', 'ZenBook', 'ExpertBook'];
     
     for (const series of knownSeries) {
       // Erweitert: Erlaubt auch Markennamen mit Zahlen (z.B. "Lenovo IBM")
