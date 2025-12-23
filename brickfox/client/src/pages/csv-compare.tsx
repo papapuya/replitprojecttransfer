@@ -236,7 +236,15 @@ export default function CSVCompare() {
   const exportMissingToCSV = () => {
     if (!result?.missing.length) return;
     
-    const csvContent = "Fehlt im Shop\n" + result.missing.join("\n");
+    // Header-Zeile
+    const headers = ['v_manufacturers_item_number', 'v_price[Eur]', 'v_purchase_price'];
+    
+    // Daten-Zeilen - Preise bleiben leer da Produkte nicht in PIM
+    const rows = result.missing.map(item => {
+      return `"${item}";"";""`;
+    });
+    
+    const csvContent = headers.join(';') + '\n' + rows.join('\n');
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
