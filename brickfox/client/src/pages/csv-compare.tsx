@@ -328,6 +328,36 @@ export default function CSVCompare() {
     link.click();
   };
 
+  const exportMatchedToCSV = () => {
+    if (!result?.matched.length || !pimCSV) return;
+    
+    // Finde die PIM-Zeilen für gefundene Produkte
+    const matchedNormalized = new Set(result.matched.map(m => normalizeText(m.pim)));
+    const matchedRows = pimCSV.rows.filter(row => {
+      const colValue = normalizeText(String(row[pimColumn] || ''));
+      const itemNumber = normalizeText(String(row['p_item_number'] || ''));
+      return matchedNormalized.has(colValue) || matchedNormalized.has(itemNumber);
+    });
+    
+    // Header-Zeile aus ausgewählten Spalten
+    const headers = selectedExportColumns;
+    
+    // Daten-Zeilen mit allen ausgewählten Spalten
+    const rows = matchedRows.map(row => {
+      return headers.map(col => {
+        const value = String(row[col] || '').replace(/"/g, '""');
+        return `"${value}"`;
+      }).join(';');
+    });
+    
+    const csvContent = headers.join(';') + '\n' + rows.join('\n');
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'gefundene_produkte.csv';
+    link.click();
+  };
+
   const toggleExportColumn = (column: string) => {
     setSelectedExportColumns(prev => 
       prev.includes(column) 
@@ -519,11 +549,7 @@ export default function CSVCompare() {
                 onClick={() => setShowColumnSelector(!showColumnSelector)}
               >
                 <Settings2 className="h-4 w-4 mr-2" />
-                Spalten auswählen
-              </Button>
-              <Button variant="default" size="sm" onClick={exportNoManufacturerToCSV}>
-                <Download className="h-4 w-4 mr-2" />
-                CSV Export
+                Spalten für Export
               </Button>
             </div>
             
@@ -604,10 +630,16 @@ export default function CSVCompare() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="h-5 w-5" />
-                  Gefunden ({filteredMatched.length})
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="h-5 w-5" />
+                    Gefunden ({filteredMatched.length})
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={exportMatchedToCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    CSV Export
+                  </Button>
+                </div>
                 <CardDescription>Diese Produkte sind bereits im Shop</CardDescription>
               </CardHeader>
               <CardContent>
@@ -626,10 +658,16 @@ export default function CSVCompare() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-600">
-                  <AlertTriangle className="h-5 w-5" />
-                  Ohne Hersteller-Nr. ({filteredNoManufacturer.length})
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-orange-600">
+                    <AlertTriangle className="h-5 w-5" />
+                    Ohne Hersteller-Nr. ({filteredNoManufacturer.length})
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={exportNoManufacturerToCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    CSV Export
+                  </Button>
+                </div>
                 <CardDescription>PIM-Produkte ohne v_manufacturers_item_number</CardDescription>
               </CardHeader>
               <CardContent>
