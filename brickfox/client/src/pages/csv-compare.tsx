@@ -218,9 +218,10 @@ export default function CSVCompare() {
     const missing: string[] = [];
     const matchedPimNormalized = new Set<string>();
 
-    // Debug: Log erste paar PIM-Werte
-    console.log('PIM Werte (erste 5):', pimValues.slice(0, 5).map(v => `"${v}" -> "${normalizeText(v)}"`));
-    console.log('Supplier Werte (erste 5):', supplierValues.slice(0, 5).map(v => `"${v}" -> "${normalizeText(v)}"`));
+    // Debug: Log PIM-Werte
+    console.log('Alle PIM Werte (count):', pimValues.length);
+    console.log('PIM Werte mit ST:', pimValues.filter(v => v.toUpperCase().includes('ST')).slice(0, 20));
+    console.log('Supplier Werte mit ST:', supplierValues.filter(v => v.toUpperCase().includes('ST')).slice(0, 20));
 
     for (const supplierVal of supplierValues) {
       const normalized = normalizeText(supplierVal);
