@@ -366,6 +366,14 @@ export default function CSVCompare() {
     // Header
     rows.push('"Aktion";"Artikelnummer";"Produktname";"Lieferanten-Nr."');
     
+    // Gefundene Produkte
+    for (const item of result.matched) {
+      const value = String(item.supplier || '').trim().replace(/"/g, '""');
+      if (value) {
+        rows.push(`"GEFUNDEN";"";"";${JSON.stringify(value)}`);
+      }
+    }
+    
     // Fehlende Produkte - neu anlegen (nur nicht-leere)
     for (const item of result.missing) {
       const value = String(item || '').trim();
