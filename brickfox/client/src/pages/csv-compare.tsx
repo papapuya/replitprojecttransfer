@@ -448,7 +448,6 @@ export default function CSVCompare() {
                   {filteredMatched.map((item, i) => (
                     <div key={i} className="p-2 bg-green-50 rounded text-sm">
                       <div className="font-medium">{item.supplier}</div>
-                      <div className="text-xs text-muted-foreground">→ {item.pim}</div>
                     </div>
                   ))}
                   {filteredMatched.length === 0 && (
