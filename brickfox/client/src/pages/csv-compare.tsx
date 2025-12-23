@@ -218,6 +218,10 @@ export default function CSVCompare() {
     const missing: string[] = [];
     const matchedPimNormalized = new Set<string>();
 
+    // Debug: Log erste paar PIM-Werte
+    console.log('PIM Werte (erste 5):', pimValues.slice(0, 5).map(v => `"${v}" -> "${normalizeText(v)}"`));
+    console.log('Supplier Werte (erste 5):', supplierValues.slice(0, 5).map(v => `"${v}" -> "${normalizeText(v)}"`));
+
     for (const supplierVal of supplierValues) {
       const normalized = normalizeText(supplierVal);
       
@@ -226,6 +230,11 @@ export default function CSVCompare() {
         matched.push({ pim: pimOriginal, supplier: supplierVal });
         matchedPimNormalized.add(normalized);
       } else {
+        // Debug: Log warum nicht gefunden
+        if (supplierVal.toUpperCase().includes('FATEX')) {
+          console.log(`FATEX nicht gefunden: "${supplierVal}" -> "${normalized}"`);
+          console.log('PIM Set enthält:', Array.from(pimSet).filter(v => v.includes('fatex')));
+        }
         missing.push(supplierVal);
       }
     }
