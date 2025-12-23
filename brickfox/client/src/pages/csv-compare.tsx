@@ -366,11 +366,18 @@ export default function CSVCompare() {
     // Header
     rows.push('"Aktion";"Artikelnummer";"Produktname";"Lieferanten-Nr."');
     
-    // Gefundene Produkte
+    // Gefundene Produkte - p_item_number aus PIM nachschlagen
     for (const item of result.matched) {
       const value = String(item.supplier || '').trim().replace(/"/g, '""');
-      if (value) {
-        rows.push(`"GEFUNDEN";"";"";${JSON.stringify(value)}`);
+      if (value && pimCSV) {
+        // Finde die PIM-Zeile für dieses Produkt
+        const normalizedSupplier = normalizeText(value);
+        const pimRow = pimCSV.rows.find(row => 
+          normalizeText(String(row[pimColumn] || '')) === normalizedSupplier ||
+          normalizeText(String(row['p_item_number'] || '')) === normalizedSupplier
+        );
+        const pItemNumber = pimRow ? String(pimRow['p_item_number'] || '').replace(/"/g, '""') : '';
+        rows.push(`"GEFUNDEN";"${pItemNumber}";"";${JSON.stringify(value)}`);
       }
     }
     
