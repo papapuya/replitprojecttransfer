@@ -187,16 +187,28 @@ export default function CSVCompare() {
     if (text === null || text === undefined) return '';
     return String(text)
       .toLowerCase()
-      .replace(/[^\w\s]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '') // Diakritische Zeichen entfernen
+      .replace(/[^a-z0-9]/g, ''); // Nur Buchstaben und Zahlen behalten
   };
 
   const runComparison = () => {
     if (!pimCSV || !supplierCSV || !pimColumn || !supplierColumn) return;
 
-    const pimValues = pimCSV.rows.map(row => String(row[pimColumn] || '')).filter(Boolean);
-    const supplierValues = supplierCSV.rows.map(row => String(row[supplierColumn] || '')).filter(Boolean);
+    // Header-Namen ausschließen
+    const isHeader = (val: string) => {
+      const lower = val.toLowerCase().trim();
+      return headerKeywords.some(kw => lower === kw) || 
+             lower === pimColumn.toLowerCase() || 
+             lower === supplierColumn.toLowerCase();
+    };
+
+    const pimValues = pimCSV.rows
+      .map(row => String(row[pimColumn] || ''))
+      .filter(v => v && !isHeader(v));
+    const supplierValues = supplierCSV.rows
+      .map(row => String(row[supplierColumn] || ''))
+      .filter(v => v && !isHeader(v));
 
     // Normalisierte PIM-Werte in Set für schnellen Lookup
     const pimSet = new Set(pimValues.map(v => normalizeText(v)));
