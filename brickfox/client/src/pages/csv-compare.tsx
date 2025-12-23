@@ -21,7 +21,6 @@ interface CompareResult {
   missing: string[];
   matched: { pim: string; supplier: string }[];
   noManufacturerNumber: { p_item_number: string; p_name: string }[];
-  unverifiable: string[]; // Lieferanten-Produkte die nicht verifiziert werden können wegen fehlender PIM-Daten
 }
 
 export default function CSVCompare() {
@@ -221,7 +220,6 @@ export default function CSVCompare() {
 
     // PIM-Produkte ohne Hersteller-Artikelnummer ermitteln
     const hasManufacturerColumn = pimCSV.headers.includes('v_manufacturers_item_number');
-    const pimProductsWithoutManufacturer = new Set<string>();
     const noManufacturerNumber: { p_item_number: string; p_name: string }[] = [];
     
     if (hasManufacturerColumn) {
@@ -232,18 +230,12 @@ export default function CSVCompare() {
             p_item_number: String(row['p_item_number'] || row['p_id'] || ''),
             p_name: String(row['p_name[de]'] || row['p_name'] || '')
           });
-          // Merke alle anderen Identifier dieses Produkts für späteren Abgleich
-          const pItemNum = String(row['p_item_number'] || '').trim();
-          const pName = String(row['p_name[de]'] || row['p_name'] || '').trim();
-          if (pItemNum) pimProductsWithoutManufacturer.add(normalizeText(pItemNum));
-          if (pName) pimProductsWithoutManufacturer.add(normalizeText(pName));
         }
       }
     }
 
     const matched: { pim: string; supplier: string }[] = [];
     const missing: string[] = [];
-    const unverifiable: string[] = [];
     const matchedPimNormalized = new Set<string>();
 
     for (const supplierVal of supplierValues) {
@@ -254,21 +246,14 @@ export default function CSVCompare() {
         matched.push({ pim: pimOriginal, supplier: supplierVal });
         matchedPimNormalized.add(normalized);
       } else {
-        // Prüfen ob dieses Produkt möglicherweise zu einem PIM-Produkt ohne Hersteller-Nr gehört
-        if (hasManufacturerColumn && noManufacturerNumber.length > 0) {
-          // Es gibt PIM-Produkte ohne gepflegte Hersteller-Nr → nicht verifizierbar
-          unverifiable.push(supplierVal);
-        } else {
-          // Kein Problem mit fehlenden Hersteller-Nummern → wirklich fehlend
-          missing.push(supplierVal);
-        }
+        missing.push(supplierVal);
       }
     }
 
     // PIM-Produkte die nicht beim Lieferanten sind
     const inPIM = pimValues.filter(v => !matchedPimNormalized.has(normalizeText(v)));
 
-    setResult({ inPIM, missing, matched, noManufacturerNumber, unverifiable });
+    setResult({ inPIM, missing, matched, noManufacturerNumber });
   };
 
   const filteredMissing = result?.missing.filter(item => 
@@ -283,10 +268,6 @@ export default function CSVCompare() {
   const filteredMatched = result?.matched.filter(item => 
     String(item.pim || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     String(item.supplier || '').toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
-
-  const filteredUnverifiable = result?.unverifiable.filter(item => 
-    String(item || '').toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const exportMissingToCSV = () => {
@@ -469,7 +450,7 @@ export default function CSVCompare() {
 
       {result && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -489,17 +470,6 @@ export default function CSVCompare() {
                     <p className="text-2xl font-bold text-red-600">{result.missing.length}</p>
                   </div>
                   <XCircle className="h-8 w-8 text-red-600" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Nicht verifizierbar</p>
-                    <p className="text-2xl font-bold text-yellow-600">{result.unverifiable.length}</p>
-                  </div>
-                  <AlertTriangle className="h-8 w-8 text-yellow-600" />
                 </div>
               </CardContent>
             </Card>
@@ -587,29 +557,30 @@ export default function CSVCompare() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-red-600 text-base">
+                  <CardTitle className="flex items-center gap-2 text-red-600">
                     <XCircle className="h-5 w-5" />
                     Fehlt im Shop ({filteredMissing.length})
                   </CardTitle>
                   <Button variant="outline" size="sm" onClick={exportMissingToCSV}>
-                    <Download className="h-4 w-4" />
+                    <Download className="h-4 w-4 mr-2" />
+                    CSV Export
                   </Button>
                 </div>
-                <CardDescription className="text-xs">Produkte vom Lieferanten fehlen im Shop</CardDescription>
+                <CardDescription>Diese Produkte vom Lieferanten fehlen noch im Shop</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="max-h-80 overflow-y-auto space-y-1">
+                <div className="max-h-96 overflow-y-auto space-y-1">
                   {filteredMissing.map((item, i) => (
-                    <div key={i} className="p-2 bg-red-50 rounded text-xs">
+                    <div key={i} className="p-2 bg-red-50 rounded text-sm">
                       {item}
                     </div>
                   ))}
                   {filteredMissing.length === 0 && (
-                    <p className="text-muted-foreground text-xs">Keine fehlenden Produkte</p>
+                    <p className="text-muted-foreground text-sm">Keine fehlenden Produkte</p>
                   )}
                 </div>
               </CardContent>
@@ -617,21 +588,21 @@ export default function CSVCompare() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-600 text-base">
+                <CardTitle className="flex items-center gap-2 text-green-600">
                   <CheckCircle className="h-5 w-5" />
                   Gefunden ({filteredMatched.length})
                 </CardTitle>
-                <CardDescription className="text-xs">Diese Produkte sind bereits im Shop</CardDescription>
+                <CardDescription>Diese Produkte sind bereits im Shop</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="max-h-80 overflow-y-auto space-y-1">
+                <div className="max-h-96 overflow-y-auto space-y-1">
                   {filteredMatched.map((item, i) => (
-                    <div key={i} className="p-2 bg-green-50 rounded text-xs">
+                    <div key={i} className="p-2 bg-green-50 rounded text-sm">
                       <div className="font-medium">{item.supplier}</div>
                     </div>
                   ))}
                   {filteredMatched.length === 0 && (
-                    <p className="text-muted-foreground text-xs">Keine Treffer</p>
+                    <p className="text-muted-foreground text-sm">Keine Treffer</p>
                   )}
                 </div>
               </CardContent>
@@ -639,44 +610,22 @@ export default function CSVCompare() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-yellow-600 text-base">
-                  <AlertTriangle className="h-5 w-5" />
-                  Nicht verifizierbar ({filteredUnverifiable.length})
-                </CardTitle>
-                <CardDescription className="text-xs">Wegen fehlender PIM-Daten nicht prüfbar</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="max-h-80 overflow-y-auto space-y-1">
-                  {filteredUnverifiable.map((item, i) => (
-                    <div key={i} className="p-2 bg-yellow-50 rounded text-xs">
-                      {item}
-                    </div>
-                  ))}
-                  {filteredUnverifiable.length === 0 && (
-                    <p className="text-muted-foreground text-xs">Alle Produkte verifizierbar</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-600 text-base">
+                <CardTitle className="flex items-center gap-2 text-orange-600">
                   <AlertTriangle className="h-5 w-5" />
                   Ohne Hersteller-Nr. ({filteredNoManufacturer.length})
                 </CardTitle>
-                <CardDescription className="text-xs">PIM-Produkte ohne v_manufacturers_item_number</CardDescription>
+                <CardDescription>PIM-Produkte ohne v_manufacturers_item_number</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="max-h-80 overflow-y-auto space-y-1">
+                <div className="max-h-96 overflow-y-auto space-y-1">
                   {filteredNoManufacturer.map((item, i) => (
-                    <div key={i} className="p-2 bg-orange-50 rounded text-xs">
+                    <div key={i} className="p-2 bg-orange-50 rounded text-sm">
                       <div className="font-medium">{item.p_item_number}</div>
                       <div className="text-xs text-muted-foreground truncate">{item.p_name}</div>
                     </div>
                   ))}
                   {filteredNoManufacturer.length === 0 && (
-                    <p className="text-muted-foreground text-xs">Alle Produkte haben Hersteller-Nr.</p>
+                    <p className="text-muted-foreground text-sm">Alle Produkte haben Hersteller-Nr.</p>
                   )}
                 </div>
               </CardContent>
