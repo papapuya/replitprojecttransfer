@@ -214,9 +214,16 @@ export default function CSVCompare() {
       .map(row => String(row[supplierColumn] || ''))
       .filter(v => v && !isHeader(v));
 
-    // Normalisierte PIM-Werte in Set für schnellen Lookup
+    // Normalisierte PIM-Werte in Set für schnellen Lookup (ausgewählte Spalte)
     const pimSet = new Set(pimValues.map(v => normalizeText(v)));
     const pimMap = new Map(pimValues.map(v => [normalizeText(v), v]));
+    
+    // Zusätzlich p_item_number als Fallback-Vergleich
+    const pimItemNumberSet = new Set(
+      pimCSV.rows
+        .map(row => normalizeText(String(row['p_item_number'] || '')))
+        .filter(v => v)
+    );
 
     // PIM-Produkte ohne Hersteller-Artikelnummer ermitteln
     const hasManufacturerColumn = pimCSV.headers.includes('v_manufacturers_item_number');
@@ -242,9 +249,13 @@ export default function CSVCompare() {
       const normalized = normalizeText(supplierVal);
       
       if (pimSet.has(normalized)) {
+        // Gefunden in ausgewählter Spalte
         const pimOriginal = pimMap.get(normalized) || normalized;
         matched.push({ pim: pimOriginal, supplier: supplierVal });
         matchedPimNormalized.add(normalized);
+      } else if (pimItemNumberSet.has(normalized)) {
+        // Gefunden in p_item_number (Fallback)
+        matched.push({ pim: supplierVal, supplier: supplierVal });
       } else {
         missing.push(supplierVal);
       }
