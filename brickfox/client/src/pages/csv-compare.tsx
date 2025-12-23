@@ -36,6 +36,39 @@ export default function CSVCompare() {
   const pimInputRef = useRef<HTMLInputElement>(null);
   const supplierInputRef = useRef<HTMLInputElement>(null);
 
+  const headerKeywords = ['barcode', 'ean', 'produktcode', 'artikelnummer', 'artikel', 'sku', 'produktname', 
+    'name', 'bezeichnung', 'beschreibung', 'preis', 'ek', 'vk', 'uvp', 'price', 'menge', 'bestand',
+    'hersteller', 'marke', 'brand', 'lieferant', 'supplier', 'kategorie', 'gewicht', 'verpackung',
+    'typ', 'type', 'model', 'modell', 'serie', 'p_id', 'p_name'];
+
+  const findHeaderRow = (rawData: string[][]): number => {
+    // Erst nach Keyword-Match suchen
+    for (let i = 0; i < Math.min(rawData.length, 50); i++) {
+      const row = rawData[i];
+      if (!row) continue;
+      const nonEmptyCount = row.filter(cell => cell && String(cell).trim() !== '').length;
+      if (nonEmptyCount >= 3) {
+        const rowText = row.map(c => String(c || '').toLowerCase()).join(' ');
+        const hasHeaderKeyword = headerKeywords.some(kw => rowText.includes(kw));
+        if (hasHeaderKeyword) {
+          console.log(`Header in Zeile ${i + 1} gefunden (Keyword-Match)`);
+          return i;
+        }
+      }
+    }
+    // Fallback: Erste Zeile mit 3+ nicht-leeren Zellen
+    for (let i = 0; i < Math.min(rawData.length, 50); i++) {
+      const row = rawData[i];
+      if (!row) continue;
+      const nonEmptyCount = row.filter(cell => cell && String(cell).trim() !== '').length;
+      if (nonEmptyCount >= 3) {
+        console.log(`Header in Zeile ${i + 1} gefunden (Fallback)`);
+        return i;
+      }
+    }
+    return 0;
+  };
+
   const parseFile = (file: File, callback: (data: CSVData) => void) => {
     const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
     
@@ -47,28 +80,15 @@ export default function CSVCompare() {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         
-        // Erst als Array parsen um Header-Zeile zu finden
         const rawData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1, defval: '' });
+        const headerRowIndex = findHeaderRow(rawData);
         
-        // Finde erste Zeile mit echten Daten (nicht leer)
-        let headerRowIndex = 0;
-        for (let i = 0; i < Math.min(rawData.length, 10); i++) {
-          const row = rawData[i];
-          const nonEmptyCount = row.filter(cell => cell && String(cell).trim() !== '').length;
-          if (nonEmptyCount >= 3) {
-            headerRowIndex = i;
-            break;
-          }
-        }
-        
-        // Parse mit korrektem Header
         const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { 
           defval: '',
           range: headerRowIndex 
         });
         
         if (jsonData.length > 0) {
-          // Filtere leere Spalten raus
           const allHeaders = Object.keys(jsonData[0]);
           const validHeaders = allHeaders.filter(h => 
             !h.startsWith('__EMPTY') && 
@@ -137,19 +157,7 @@ export default function CSVCompare() {
     const worksheet = workbook.Sheets[sheetName];
     
     const rawData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1, defval: '' });
-    
-    let headerRowIndex = 0;
-    for (let i = 0; i < Math.min(rawData.length, 30); i++) {
-      const row = rawData[i];
-      if (row.some(cell => String(cell).toLowerCase() === 'typ')) {
-        headerRowIndex = i;
-        break;
-      }
-      const nonEmptyCount = row.filter(cell => cell && String(cell).trim() !== '').length;
-      if (nonEmptyCount >= 3) {
-        headerRowIndex = i;
-      }
-    }
+    const headerRowIndex = findHeaderRow(rawData);
     
     const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { 
       defval: '',
@@ -165,8 +173,6 @@ export default function CSVCompare() {
       );
       
       setSupplierCSV({ headers: validHeaders.length > 0 ? validHeaders : allHeaders, rows: jsonData });
-      const typCol = validHeaders.find(h => h.toLowerCase() === 'typ');
-      if (typCol) setSupplierColumn(typCol);
     }
   };
   
