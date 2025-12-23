@@ -372,18 +372,23 @@ export default function CSVCompare() {
             </Button>
             
             {pimCSV && (
-              <div className="space-y-2">
-                <Label>Vergleichsspalte (p_name[de])</Label>
-                <Select value={pimColumn} onValueChange={setPimColumn}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Spalte auswählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pimCSV.headers.map(header => (
-                      <SelectItem key={header} value={header}>{header}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Vergleichsspalte 1 (Primär)</Label>
+                  <Select value={pimColumn} onValueChange={setPimColumn}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Spalte auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pimCSV.headers.map(header => (
+                        <SelectItem key={header} value={header}>{header}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="p-2 bg-blue-50 rounded text-xs text-blue-700">
+                  <strong>+ Fallback:</strong> p_item_number wird automatisch als 2. Vergleichsspalte geprüft
+                </div>
               </div>
             )}
           </CardContent>
