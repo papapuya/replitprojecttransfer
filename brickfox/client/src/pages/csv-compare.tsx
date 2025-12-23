@@ -237,9 +237,11 @@ export default function CSVCompare() {
     // PIM-Produkte die nicht beim Lieferanten sind
     const inPIM = pimValues.filter(v => !matchedPimNormalized.has(normalizeText(v)));
 
-    // PIM-Produkte ohne Hersteller-Artikelnummer
+    // PIM-Produkte ohne Hersteller-Artikelnummer - nur wenn Spalte existiert
     const noManufacturerNumber: { p_item_number: string; p_name: string }[] = [];
-    if (pimCSV) {
+    const hasManufacturerColumn = pimCSV.headers.includes('v_manufacturers_item_number');
+    
+    if (hasManufacturerColumn) {
       for (const row of pimCSV.rows) {
         const manufacturerNum = String(row['v_manufacturers_item_number'] || '').trim();
         if (!manufacturerNum) {
