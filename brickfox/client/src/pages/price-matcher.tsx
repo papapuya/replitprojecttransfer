@@ -268,6 +268,13 @@ export default function PriceMatcher() {
         setPimHeaders(headers);
         setPimCSV(rows);
         setPimMatchKey("");
+        
+        // Automatisch EK/VK Spalten erkennen (case-insensitive)
+        const ekCol = headers.find(h => h.toLowerCase() === 'v_purchase_price');
+        const vkCol = headers.find(h => h.toLowerCase() === 'v_price[eur]');
+        if (ekCol) setPimEkColumn(ekCol);
+        if (vkCol) setPimVkColumn(vkCol);
+        
         toast({
           title: `PIM-${isExcel ? 'Excel' : 'CSV'} geladen`,
           description: `${rows.length} Zeilen, ${headers.length} Spalten erkannt`,
