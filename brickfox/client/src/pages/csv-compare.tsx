@@ -367,8 +367,8 @@ export default function CSVCompare() {
     const standardCols = ['p_id', 'p_name[de]', 'p_item_number', 'v_manufacturers_item_number'];
     const extraCols = selectedExportColumns.filter(col => !standardCols.includes(col));
     
-    // Header mit zusätzlichen Spalten
-    const headerCols = ['Aktion', 'Artikelnummer', 'Produktname', 'Lieferanten-Nr.', ...extraCols];
+    // Header mit Original-Spaltennamen
+    const headerCols = ['Aktion', 'p_item_number', 'p_name[de]', 'v_manufacturers_item_number', ...extraCols];
     rows.push(headerCols.map(h => `"${h}"`).join(';'));
     
     // Gefundene Produkte - p_item_number und p_name aus PIM nachschlagen
