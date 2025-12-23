@@ -358,6 +358,34 @@ export default function CSVCompare() {
     link.click();
   };
 
+  const exportTodoListToCSV = () => {
+    if (!result) return;
+    
+    const rows: string[] = [];
+    
+    // Header
+    rows.push('"Aktion";"Artikelnummer";"Produktname";"Lieferanten-Nr."');
+    
+    // Fehlende Produkte - neu anlegen
+    for (const item of result.missing) {
+      rows.push(`"NEU ANLEGEN";"";"";${JSON.stringify(item)}`);
+    }
+    
+    // Produkte ohne Hersteller-Nr - nachpflegen
+    for (const item of result.noManufacturerNumber) {
+      const name = String(item.p_name || '').replace(/"/g, '""');
+      const itemNum = String(item.p_item_number || '').replace(/"/g, '""');
+      rows.push(`"HERSTELLER-NR. NACHPFLEGEN";"${itemNum}";"${name}";"-"`);
+    }
+    
+    const csvContent = rows.join('\n');
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'aufgabenliste.csv';
+    link.click();
+  };
+
   const toggleExportColumn = (column: string) => {
     setSelectedExportColumns(prev => 
       prev.includes(column) 
@@ -550,6 +578,15 @@ export default function CSVCompare() {
               >
                 <Settings2 className="h-4 w-4 mr-2" />
                 Spalten für Export
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={exportTodoListToCSV}
+                disabled={!result?.missing.length && !result?.noManufacturerNumber.length}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Aufgabenliste Export
               </Button>
             </div>
             
