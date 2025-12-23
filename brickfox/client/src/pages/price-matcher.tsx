@@ -344,16 +344,26 @@ export default function PriceMatcher() {
 
       if (supplierRow) {
         const ekEuro = parseEuroValue(supplierRow[ekColumn]);
-        const vkRaw = ekEuro * 2 * 1.19;
-        const vkEuro = Math.floor(vkRaw) + 0.95;
-        
-        const ekPim = convertToPimFormat(ekEuro);
-        const vkPim = convertToPimFormat(vkEuro);
-        
-        const updatedRow = { ...pimRow };
         const oldEK = pimRow[pimEkColumn] || '';
         const oldVK = pimRow[pimVkColumn] || '';
         
+        // Wenn Lieferant keinen EK hat (0), aktuellen PIM-EK beibehalten
+        let ekPim: string;
+        let vkPim: string;
+        
+        if (ekEuro === 0 || !ekEuro) {
+          // Kein EK vom Lieferanten - aktuelle Werte beibehalten
+          ekPim = oldEK;
+          vkPim = oldVK;
+        } else {
+          // Neuen EK und VK berechnen
+          const vkRaw = ekEuro * 2 * 1.19;
+          const vkEuro = Math.floor(vkRaw) + 0.95;
+          ekPim = convertToPimFormat(ekEuro);
+          vkPim = convertToPimFormat(vkEuro);
+        }
+        
+        const updatedRow = { ...pimRow };
         updatedRow[pimEkColumn] = ekPim;
         updatedRow[pimVkColumn] = vkPim;
 
