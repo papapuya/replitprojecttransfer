@@ -198,27 +198,28 @@ export default function CSVCompare() {
     const pimValues = pimCSV.rows.map(row => String(row[pimColumn] || '')).filter(Boolean);
     const supplierValues = supplierCSV.rows.map(row => String(row[supplierColumn] || '')).filter(Boolean);
 
-    const normalizedPIM = pimValues.map(v => ({ original: v, normalized: normalizeText(v) }));
-    const normalizedSupplier = supplierValues.map(v => ({ original: v, normalized: normalizeText(v) }));
+    // Normalisierte PIM-Werte in Set für schnellen Lookup
+    const pimSet = new Set(pimValues.map(v => normalizeText(v)));
+    const pimMap = new Map(pimValues.map(v => [normalizeText(v), v]));
 
     const matched: { pim: string; supplier: string }[] = [];
     const missing: string[] = [];
+    const matchedPimNormalized = new Set<string>();
 
-    for (const supplier of normalizedSupplier) {
-      const match = normalizedPIM.find(pim => 
-        pim.normalized.includes(supplier.normalized) || 
-        supplier.normalized.includes(pim.normalized)
-      );
+    for (const supplierVal of supplierValues) {
+      const normalized = normalizeText(supplierVal);
       
-      if (match) {
-        matched.push({ pim: String(match.original), supplier: String(supplier.original) });
+      if (pimSet.has(normalized)) {
+        const pimOriginal = pimMap.get(normalized) || normalized;
+        matched.push({ pim: pimOriginal, supplier: supplierVal });
+        matchedPimNormalized.add(normalized);
       } else {
-        missing.push(String(supplier.original));
+        missing.push(supplierVal);
       }
     }
 
-    const matchedPIMValues = matched.map(m => m.pim);
-    const inPIM = pimValues.filter(v => !matchedPIMValues.includes(v));
+    // PIM-Produkte die nicht beim Lieferanten sind
+    const inPIM = pimValues.filter(v => !matchedPimNormalized.has(normalizeText(v)));
 
     setResult({ inPIM, missing, matched });
   };
