@@ -366,9 +366,12 @@ export default function CSVCompare() {
     // Header
     rows.push('"Aktion";"Artikelnummer";"Produktname";"Lieferanten-Nr."');
     
-    // Fehlende Produkte - neu anlegen
+    // Fehlende Produkte - neu anlegen (nur nicht-leere)
     for (const item of result.missing) {
-      rows.push(`"NEU ANLEGEN";"";"";${JSON.stringify(item)}`);
+      const value = String(item || '').trim();
+      if (value) {
+        rows.push(`"NEU ANLEGEN";"";"";${JSON.stringify(value)}`);
+      }
     }
     
     // Produkte ohne Hersteller-Nr - nachpflegen
