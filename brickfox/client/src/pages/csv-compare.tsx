@@ -366,7 +366,7 @@ export default function CSVCompare() {
     // Header
     rows.push('"Aktion";"Artikelnummer";"Produktname";"Lieferanten-Nr."');
     
-    // Gefundene Produkte - p_item_number aus PIM nachschlagen
+    // Gefundene Produkte - p_item_number und p_name aus PIM nachschlagen
     for (const item of result.matched) {
       const value = String(item.supplier || '').trim().replace(/"/g, '""');
       if (value && pimCSV) {
@@ -377,7 +377,8 @@ export default function CSVCompare() {
           normalizeText(String(row['p_item_number'] || '')) === normalizedSupplier
         );
         const pItemNumber = pimRow ? String(pimRow['p_item_number'] || '').replace(/"/g, '""') : '';
-        rows.push(`"GEFUNDEN";"${pItemNumber}";"";${JSON.stringify(value)}`);
+        const pName = pimRow ? String(pimRow['p_name[de]'] || pimRow['p_name'] || '').replace(/"/g, '""') : '';
+        rows.push(`"GEFUNDEN";"${pItemNumber}";"${pName}";${JSON.stringify(value)}`);
       }
     }
     
