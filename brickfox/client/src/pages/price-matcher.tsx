@@ -37,7 +37,7 @@ export default function PriceMatcher() {
   const [pimMatchKey, setPimMatchKey] = useState<string>("");
   const [ekColumn, setEkColumn] = useState<string>("");
   const [pimEkColumn, setPimEkColumn] = useState<string>("v_purchase_price");
-  const [pimVkColumn, setPimVkColumn] = useState<string>("v_price[eur]");
+  const [pimVkColumn, setPimVkColumn] = useState<string>("v_price[Eur]");
   
   const [results, setResults] = useState<MatchResult[]>([]);
   const [unmatchedProducts, setUnmatchedProducts] = useState<CSVRow[]>([]);
