@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, CheckCircle, XCircle, Search, Download, AlertTriangle } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, XCircle, Search, Download, AlertTriangle, Settings2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
@@ -34,6 +35,7 @@ export default function CSVCompare() {
   const [supplierSheets, setSupplierSheets] = useState<string[]>([]);
   const [selectedSheet, setSelectedSheet] = useState<string>("");
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(['p_item_number', 'p_name[de]', 'v_manufacturers_item_number']);
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
   
   const pimInputRef = useRef<HTMLInputElement>(null);
   const supplierInputRef = useRef<HTMLInputElement>(null);
@@ -552,31 +554,68 @@ export default function CSVCompare() {
                     <AlertTriangle className="h-5 w-5" />
                     Ohne Hersteller-Nr. ({filteredNoManufacturer.length})
                   </CardTitle>
-                  <Button variant="outline" size="sm" onClick={exportNoManufacturerToCSV}>
-                    <Download className="h-4 w-4 mr-2" />
-                    CSV Export
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowColumnSelector(!showColumnSelector)}
+                    >
+                      <Settings2 className="h-4 w-4 mr-2" />
+                      Spalten auswählen
+                    </Button>
+                    <Button variant="default" size="sm" onClick={exportNoManufacturerToCSV}>
+                      <Download className="h-4 w-4 mr-2" />
+                      CSV Export
+                    </Button>
+                  </div>
                 </div>
                 <CardDescription>PIM-Produkte ohne v_manufacturers_item_number</CardDescription>
-                {pimCSV && pimCSV.headers.length > 0 && (
-                  <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-                    <p className="text-xs font-medium mb-2">Export-Spalten auswählen:</p>
-                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                      {pimCSV.headers.map(col => (
-                        <Badge 
-                          key={col}
-                          variant={selectedExportColumns.includes(col) ? "default" : "outline"}
-                          className="cursor-pointer text-xs"
-                          onClick={() => toggleExportColumn(col)}
-                        >
-                          {col}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardHeader>
               <CardContent>
+                {showColumnSelector && pimCSV && pimCSV.headers.length > 0 && (
+                  <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold">Spalten für Export auswählen</h4>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedExportColumns([...pimCSV.headers])}
+                        >
+                          Alle auswählen
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedExportColumns([])}
+                        >
+                          Alle abwählen
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                      {pimCSV.headers.map(col => (
+                        <div key={col} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`col-${col}`}
+                            checked={selectedExportColumns.includes(col)}
+                            onCheckedChange={() => toggleExportColumn(col)}
+                          />
+                          <Label
+                            htmlFor={`col-${col}`}
+                            className="text-xs font-medium cursor-pointer truncate"
+                            title={col}
+                          >
+                            {col}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {selectedExportColumns.length} Spalten ausgewählt
+                    </p>
+                  </div>
+                )}
                 <div className="max-h-96 overflow-y-auto space-y-1">
                   {filteredNoManufacturer.map((item, i) => (
                     <div key={i} className="p-2 bg-orange-50 rounded text-sm">
