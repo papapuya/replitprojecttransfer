@@ -33,6 +33,7 @@ export default function CSVCompare() {
   const [supplierWorkbook, setSupplierWorkbook] = useState<XLSX.WorkBook | null>(null);
   const [supplierSheets, setSupplierSheets] = useState<string[]>([]);
   const [selectedSheet, setSelectedSheet] = useState<string>("");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(['p_item_number', 'p_name[de]', 'v_manufacturers_item_number']);
   
   const pimInputRef = useRef<HTMLInputElement>(null);
   const supplierInputRef = useRef<HTMLInputElement>(null);
@@ -285,16 +286,23 @@ export default function CSVCompare() {
   };
 
   const exportNoManufacturerToCSV = () => {
-    if (!result?.noManufacturerNumber.length) return;
+    if (!result?.noManufacturerNumber.length || !pimCSV) return;
     
-    // Header-Zeile
-    const headers = ['p_item_number', 'p_name[de]', 'v_manufacturers_item_number'];
+    // Finde die PIM-Zeilen für Produkte ohne Hersteller-Nr
+    const noManufacturerRows = pimCSV.rows.filter(row => {
+      const manufacturerNum = String(row['v_manufacturers_item_number'] || '').trim();
+      return !manufacturerNum;
+    });
     
-    // Daten-Zeilen
-    const rows = result.noManufacturerNumber.map(item => {
-      const pItemNumber = item.p_item_number.replace(/"/g, '""');
-      const pName = item.p_name.replace(/"/g, '""');
-      return `"${pItemNumber}";"${pName}";""`;
+    // Header-Zeile aus ausgewählten Spalten
+    const headers = selectedExportColumns;
+    
+    // Daten-Zeilen mit allen ausgewählten Spalten
+    const rows = noManufacturerRows.map(row => {
+      return headers.map(col => {
+        const value = String(row[col] || '').replace(/"/g, '""');
+        return `"${value}"`;
+      }).join(';');
     });
     
     const csvContent = headers.join(';') + '\n' + rows.join('\n');
@@ -303,6 +311,14 @@ export default function CSVCompare() {
     link.href = URL.createObjectURL(blob);
     link.download = 'ohne_hersteller_artikelnummer.csv';
     link.click();
+  };
+
+  const toggleExportColumn = (column: string) => {
+    setSelectedExportColumns(prev => 
+      prev.includes(column) 
+        ? prev.filter(c => c !== column)
+        : [...prev, column]
+    );
   };
 
   return (
@@ -542,6 +558,23 @@ export default function CSVCompare() {
                   </Button>
                 </div>
                 <CardDescription>PIM-Produkte ohne v_manufacturers_item_number</CardDescription>
+                {pimCSV && pimCSV.headers.length > 0 && (
+                  <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs font-medium mb-2">Export-Spalten auswählen:</p>
+                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                      {pimCSV.headers.map(col => (
+                        <Badge 
+                          key={col}
+                          variant={selectedExportColumns.includes(col) ? "default" : "outline"}
+                          className="cursor-pointer text-xs"
+                          onClick={() => toggleExportColumn(col)}
+                        >
+                          {col}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="max-h-96 overflow-y-auto space-y-1">
