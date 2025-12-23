@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, CheckCircle, XCircle, Search, Download } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, XCircle, Search, Download, AlertTriangle } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
@@ -19,6 +19,7 @@ interface CompareResult {
   inPIM: string[];
   missing: string[];
   matched: { pim: string; supplier: string }[];
+  noManufacturerNumber: { p_item_number: string; p_name: string }[];
 }
 
 export default function CSVCompare() {
@@ -218,11 +219,6 @@ export default function CSVCompare() {
     const missing: string[] = [];
     const matchedPimNormalized = new Set<string>();
 
-    // Debug: Log PIM-Werte
-    console.log('Alle PIM Werte (count):', pimValues.length);
-    console.log('PIM Werte mit ST:', pimValues.filter(v => v.toUpperCase().includes('ST')).slice(0, 20));
-    console.log('Supplier Werte mit ST:', supplierValues.filter(v => v.toUpperCase().includes('ST')).slice(0, 20));
-
     for (const supplierVal of supplierValues) {
       const normalized = normalizeText(supplierVal);
       
@@ -231,11 +227,6 @@ export default function CSVCompare() {
         matched.push({ pim: pimOriginal, supplier: supplierVal });
         matchedPimNormalized.add(normalized);
       } else {
-        // Debug: Log warum nicht gefunden
-        if (supplierVal.toUpperCase().includes('FATEX')) {
-          console.log(`FATEX nicht gefunden: "${supplierVal}" -> "${normalized}"`);
-          console.log('PIM Set enthält:', Array.from(pimSet).filter(v => v.includes('fatex')));
-        }
         missing.push(supplierVal);
       }
     }
@@ -243,11 +234,30 @@ export default function CSVCompare() {
     // PIM-Produkte die nicht beim Lieferanten sind
     const inPIM = pimValues.filter(v => !matchedPimNormalized.has(normalizeText(v)));
 
-    setResult({ inPIM, missing, matched });
+    // PIM-Produkte ohne Hersteller-Artikelnummer
+    const noManufacturerNumber: { p_item_number: string; p_name: string }[] = [];
+    if (pimCSV) {
+      for (const row of pimCSV.rows) {
+        const manufacturerNum = String(row['v_manufacturers_item_number'] || '').trim();
+        if (!manufacturerNum) {
+          noManufacturerNumber.push({
+            p_item_number: String(row['p_item_number'] || row['p_id'] || ''),
+            p_name: String(row['p_name[de]'] || row['p_name'] || '')
+          });
+        }
+      }
+    }
+
+    setResult({ inPIM, missing, matched, noManufacturerNumber });
   };
 
   const filteredMissing = result?.missing.filter(item => 
     String(item || '').toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  const filteredNoManufacturer = result?.noManufacturerNumber.filter(item => 
+    String(item.p_item_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    String(item.p_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const filteredMatched = result?.matched.filter(item => 
@@ -271,6 +281,27 @@ export default function CSVCompare() {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'fehlende_produkte.csv';
+    link.click();
+  };
+
+  const exportNoManufacturerToCSV = () => {
+    if (!result?.noManufacturerNumber.length) return;
+    
+    // Header-Zeile
+    const headers = ['p_item_number', 'p_name[de]', 'v_manufacturers_item_number'];
+    
+    // Daten-Zeilen
+    const rows = result.noManufacturerNumber.map(item => {
+      const pItemNumber = item.p_item_number.replace(/"/g, '""');
+      const pName = item.p_name.replace(/"/g, '""');
+      return `"${pItemNumber}";"${pName}";""`;
+    });
+    
+    const csvContent = headers.join(';') + '\n' + rows.join('\n');
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'ohne_hersteller_artikelnummer.csv';
     link.click();
   };
 
@@ -399,7 +430,7 @@ export default function CSVCompare() {
 
       {result && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -422,6 +453,17 @@ export default function CSVCompare() {
                 </div>
               </CardContent>
             </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ohne Hersteller-Nr.</p>
+                    <p className="text-2xl font-bold text-orange-600">{result.noManufacturerNumber.length}</p>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-orange-600" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="flex items-center gap-4">
@@ -436,7 +478,7 @@ export default function CSVCompare() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -482,6 +524,35 @@ export default function CSVCompare() {
                   ))}
                   {filteredMatched.length === 0 && (
                     <p className="text-muted-foreground text-sm">Keine Treffer</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-orange-600">
+                    <AlertTriangle className="h-5 w-5" />
+                    Ohne Hersteller-Nr. ({filteredNoManufacturer.length})
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={exportNoManufacturerToCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    CSV Export
+                  </Button>
+                </div>
+                <CardDescription>PIM-Produkte ohne v_manufacturers_item_number</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-96 overflow-y-auto space-y-1">
+                  {filteredNoManufacturer.map((item, i) => (
+                    <div key={i} className="p-2 bg-orange-50 rounded text-sm">
+                      <div className="font-medium">{item.p_item_number}</div>
+                      <div className="text-xs text-muted-foreground truncate">{item.p_name}</div>
+                    </div>
+                  ))}
+                  {filteredNoManufacturer.length === 0 && (
+                    <p className="text-muted-foreground text-sm">Alle Produkte haben Hersteller-Nr.</p>
                   )}
                 </div>
               </CardContent>
