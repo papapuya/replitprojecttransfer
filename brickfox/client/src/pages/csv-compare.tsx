@@ -363,8 +363,13 @@ export default function CSVCompare() {
     
     const rows: string[] = [];
     
-    // Header
-    rows.push('"Aktion";"Artikelnummer";"Produktname";"Lieferanten-Nr."');
+    // Zusätzliche Spalten aus Auswahl (ohne die Standard-Spalten)
+    const standardCols = ['p_id', 'p_name[de]', 'p_item_number', 'v_manufacturers_item_number'];
+    const extraCols = selectedExportColumns.filter(col => !standardCols.includes(col));
+    
+    // Header mit zusätzlichen Spalten
+    const headerCols = ['Aktion', 'Artikelnummer', 'Produktname', 'Lieferanten-Nr.', ...extraCols];
+    rows.push(headerCols.map(h => `"${h}"`).join(';'));
     
     // Gefundene Produkte - p_item_number und p_name aus PIM nachschlagen
     for (const item of result.matched) {
@@ -378,7 +383,15 @@ export default function CSVCompare() {
         );
         const pItemNumber = pimRow ? String(pimRow['p_item_number'] || '').replace(/"/g, '""') : '';
         const pName = pimRow ? String(pimRow['p_name[de]'] || pimRow['p_name'] || '').replace(/"/g, '""') : '';
-        rows.push(`"GEFUNDEN";"${pItemNumber}";"${pName}";${JSON.stringify(value)}`);
+        
+        // Extra Spalten-Werte
+        const extraValues = extraCols.map(col => {
+          const val = pimRow ? String(pimRow[col] || '').replace(/"/g, '""') : '';
+          return `"${val}"`;
+        }).join(';');
+        
+        const baseRow = `"GEFUNDEN";"${pItemNumber}";"${pName}";${JSON.stringify(value)}`;
+        rows.push(extraCols.length > 0 ? `${baseRow};${extraValues}` : baseRow);
       }
     }
     
@@ -386,15 +399,31 @@ export default function CSVCompare() {
     for (const item of result.missing) {
       const value = String(item || '').trim();
       if (value) {
-        rows.push(`"NEU ANLEGEN";"";"";${JSON.stringify(value)}`);
+        const emptyExtras = extraCols.map(() => '""').join(';');
+        const baseRow = `"NEU ANLEGEN";"";"";${JSON.stringify(value)}`;
+        rows.push(extraCols.length > 0 ? `${baseRow};${emptyExtras}` : baseRow);
       }
     }
     
     // Produkte ohne Hersteller-Nr - nachpflegen
     for (const item of result.noManufacturerNumber) {
+      if (!pimCSV) continue;
       const name = String(item.p_name || '').replace(/"/g, '""');
       const itemNum = String(item.p_item_number || '').replace(/"/g, '""');
-      rows.push(`"HERSTELLER-NR. NACHPFLEGEN";"${itemNum}";"${name}";"-"`);
+      
+      // Finde die PIM-Zeile
+      const pimRow = pimCSV.rows.find(row => 
+        String(row['p_item_number'] || '') === item.p_item_number
+      );
+      
+      // Extra Spalten-Werte
+      const extraValues = extraCols.map(col => {
+        const val = pimRow ? String(pimRow[col] || '').replace(/"/g, '""') : '';
+        return `"${val}"`;
+      }).join(';');
+      
+      const baseRow = `"HERSTELLER-NR. NACHPFLEGEN";"${itemNum}";"${name}";"-"`;
+      rows.push(extraCols.length > 0 ? `${baseRow};${extraValues}` : baseRow);
     }
     
     const csvContent = rows.join('\n');
