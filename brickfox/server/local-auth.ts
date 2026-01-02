@@ -177,6 +177,16 @@ export function deleteSession(token: string): void {
   sessions.delete(token);
 }
 
+export function deleteAllUserSessions(userId: string): void {
+  const tokensToDelete: string[] = [];
+  sessions.forEach((session, token) => {
+    if (session.userId === userId) {
+      tokensToDelete.push(token);
+    }
+  });
+  tokensToDelete.forEach(token => sessions.delete(token));
+}
+
 export function localAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   

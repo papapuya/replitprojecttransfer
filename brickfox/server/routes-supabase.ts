@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { supabase, supabaseAdmin } from './supabase';
 import { supabaseStorage } from './supabase-storage';
-import { loginUser, createLocalUser, getUserById, createSession, getSession, deleteSession, createAdminUser } from './local-auth';
+import { loginUser, createLocalUser, getUserById, createSession, getSession, deleteSession, createAdminUser, deleteAllUserSessions } from './local-auth';
 import { registerUserSchema, loginUserSchema } from '@shared/schema';
 import { db as heliumDb } from './db';
 import { sql, eq, and, isNotNull } from 'drizzle-orm';
@@ -550,9 +550,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/users', requireSuperAdmin, async (req, res) => {
     try {
       const users = await supabaseStorage.getAllUsers();
-      res.json(users);
+      
+      // Get stats for each user
+      const usersWithStats = await Promise.all(
+        users.map(async (user: any) => {
+          const projects = await supabaseStorage.getProjectsByUserId(user.id);
+          let totalProducts = 0;
+          for (const project of projects) {
+            const products = await supabaseStorage.getProducts(project.id);
+            totalProducts += products.length;
+          }
+          
+          return {
+            ...user,
+            projectCount: projects.length,
+            productCount: totalProducts,
+          };
+        })
+      );
+      
+      res.json({ success: true, users: usersWithStats });
     } catch (error) {
+      console.error('Admin users error:', error);
       res.status(500).json({ error: 'Fehler beim Laden der Benutzer' });
+    }
+  });
+
+  // Update user (admin only)
+  app.patch('/api/admin/users/:id', requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { email, username, isAdmin } = req.body;
+      
+      const updateData: any = {};
+      if (email !== undefined) updateData.email = email;
+      if (username !== undefined) updateData.username = username;
+      if (isAdmin !== undefined) updateData.isAdmin = isAdmin;
+      
+      const [updatedUser] = await heliumDb
+        .update(usersTable)
+        .set(updateData)
+        .where(eq(usersTable.id, id))
+        .returning();
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+      }
+      
+      res.json({ success: true, user: updatedUser });
+    } catch (error: any) {
+      console.error('Update user error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete user (admin only)
+  app.delete('/api/admin/users/:id', requireSuperAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Don't allow deleting yourself
+      if (req.user.id === id) {
+        return res.status(400).json({ error: 'Sie können sich nicht selbst löschen' });
+      }
+      
+      await heliumDb.delete(usersTable).where(eq(usersTable.id, id));
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Delete user error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reset user password (admin only)
+  app.post('/api/admin/users/:id/reset-password', requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { newPassword } = req.body;
+      
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ error: 'Passwort muss mindestens 6 Zeichen haben' });
+      }
+      
+      const bcrypt = await import('bcryptjs');
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      
+      const [updatedUser] = await heliumDb
+        .update(usersTable)
+        .set({ passwordHash })
+        .where(eq(usersTable.id, id))
+        .returning();
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+      }
+      
+      // Invalidate all sessions for this user
+      deleteAllUserSessions(id);
+      
+      res.json({ success: true, message: 'Passwort wurde zurückgesetzt' });
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 

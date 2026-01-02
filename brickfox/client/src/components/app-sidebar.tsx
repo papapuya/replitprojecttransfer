@@ -246,6 +246,33 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Admin */}
+        {user?.isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-indigo-600 font-bold">Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === '/admin/dashboard'} className="hover:bg-primary/10 hover:text-primary">
+                    <Link href="/admin/dashboard" className="text-indigo-600">
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>Admin Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === '/admin/users'} className="hover:bg-primary/10 hover:text-primary">
+                    <Link href="/admin/users" className="text-indigo-600">
+                      <User className="w-4 h-4" />
+                      <span>Mitarbeiter</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {/* Account */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-blue-600 font-bold">Konto</SidebarGroupLabel>
