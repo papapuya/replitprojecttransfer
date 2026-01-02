@@ -364,6 +364,17 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+// App usage tracking for admin statistics
+export const appUsage = pgTable("app_usage", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  appName: text("app_name").notNull(), // 'csv-bulk', 'price-matcher', 'csv-compare', etc.
+  action: text("action").notNull(), // 'generate', 'export', 'upload', etc.
+  count: integer("count").default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 // Permissions table for granular RBAC
 export const permissions = pgTable("permissions", {
   id: uuid("id").primaryKey().defaultRandom(),
