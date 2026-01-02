@@ -37,6 +37,7 @@ export default function AdminDashboard() {
       }
       return res.json();
     },
+    refetchInterval: 30000,
   });
 
   const stats = data?.stats;
