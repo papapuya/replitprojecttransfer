@@ -1363,11 +1363,12 @@ export default function CSVBulkDescription() {
 
             {/* CSV Rohdaten Vorschau mit KI-Feldern */}
             <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">
-                  CSV Vorschau ({rawData.length} Zeilen) + KI-Felder {processing && '🔄'}
-                </h3>
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-4 mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <h3 className="text-lg font-semibold text-foreground whitespace-nowrap">
+                    CSV Vorschau ({rawData.length} Zeilen) + KI-Felder {processing && '🔄'}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
                   <Button
                     onClick={() => setShowSaveDialog(true)}
                     disabled={rawData.length === 0}
@@ -1553,6 +1554,7 @@ export default function CSVBulkDescription() {
                       }).length} gefunden
                     </span>
                   )}
+                  </div>
                 </div>
               </div>
 
