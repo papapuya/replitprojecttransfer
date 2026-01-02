@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, FileSpreadsheet, Globe, FolderOpen, Zap, Building2, User, LayoutDashboard, GitCompare, LogOut, ShoppingCart, Scale, Bot, ChevronDown, ChevronRight, Store, Wrench, FileCode, DollarSign } from "lucide-react";
+import { Home, FileSpreadsheet, Globe, FolderOpen, Zap, Building2, User, LayoutDashboard, GitCompare, LogOut, ShoppingCart, Scale, ChevronDown, ChevronRight, Store, Wrench, FileCode, DollarSign } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -62,7 +62,6 @@ const toolsMenuItems = [
   { title: "Pixi Vergleich", url: "/pixi-compare", icon: GitCompare, feature: "pixiIntegration" },
   { title: "MediaMarkt Generator", url: "/mediamarkt-generator", icon: ShoppingCart },
   { title: "Gewichte-Generator", url: "/weight-generator", icon: Scale },
-  { title: "Prompt-Assistent", url: "/prompt-assistant", icon: Bot },
   { title: "Text/Bild zu HTML", url: "/html-generator", icon: FileCode },
   { title: "Preisabgleich", url: "/price-matcher", icon: DollarSign },
 ];
