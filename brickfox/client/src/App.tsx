@@ -9,7 +9,6 @@ import { AuthProvider } from "@/lib/auth-context";
 import { TenantProvider } from "@/lib/tenant-context";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AdminProtectedRoute } from "@/components/admin-protected-route";
-import { SubscriptionBadge } from "@/components/subscription-badge";
 import { TenantSwitcher } from "@/components/tenant-switcher";
 import { useAuth } from "@/lib/auth-context";
 import Landing from "@/pages/landing";
@@ -221,7 +220,6 @@ function AppContent() {
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-4">
               {user?.isAdmin && <TenantSwitcher />}
-              <SubscriptionBadge />
             </div>
           </header>
           <main className="flex-1 overflow-auto">
