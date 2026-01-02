@@ -43,5 +43,5 @@ SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["npm", "run", "start"]
-build = ["npm", "run", "build"]
+run = ["sh", "-c", "cd brickfox && npm run start"]
+build = ["bash", "-c", "cd brickfox && npm run build"]
