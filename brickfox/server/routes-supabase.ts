@@ -8,6 +8,7 @@ import { db as heliumDb } from './db';
 import { sql, eq, and, isNotNull } from 'drizzle-orm';
 import { 
   productsInProjects as productsInProjectsTable, 
+  projects as projectsTable,
   suppliers as suppliersTable,
   scrapeSession as scrapeSessionTable,
   users as usersTable,
@@ -741,6 +742,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, message: 'Admin-Benutzer erstellt' });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin Stats Endpoint
+  app.get('/api/admin/stats', requireSuperAdmin, async (req, res) => {
+    try {
+      const usersResult = await heliumDb.select({ count: sql<number>`count(*)` }).from(usersTable);
+      const projectsResult = await heliumDb.select({ count: sql<number>`count(*)` }).from(projectsTable);
+      const productsResult = await heliumDb.select({ count: sql<number>`count(*)` }).from(productsInProjectsTable);
+      
+      res.json({
+        success: true,
+        stats: {
+          totalUsers: Number(usersResult[0]?.count || 0),
+          totalProjects: Number(projectsResult[0]?.count || 0),
+          totalProducts: Number(productsResult[0]?.count || 0),
+          aiTextsToday: 0,
+        },
+      });
+    } catch (error) {
+      console.error('Admin stats error:', error);
+      res.status(500).json({ error: 'Fehler beim Laden der Statistiken' });
     }
   });
 
