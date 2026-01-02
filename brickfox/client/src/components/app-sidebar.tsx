@@ -137,13 +137,13 @@ export function AppSidebar() {
       <SidebarContent>
         {/* General Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-blue-600 font-bold">Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-indigo-600 font-bold">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {generalMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-primary/10 hover:text-primary">
-                    <Link href={item.url} className="text-blue-600">
+                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-indigo-50 hover:text-indigo-600">
+                    <Link href={item.url} className="text-gray-700">
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -156,7 +156,7 @@ export function AppSidebar() {
 
         {/* Shops with Dropdowns */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-blue-600 font-bold">Shops</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-indigo-600 font-bold">Shops</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {shopMenus.map((shop) => (
@@ -167,7 +167,7 @@ export function AppSidebar() {
                 >
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton className="w-full justify-between text-blue-600 hover:bg-primary/10 hover:text-primary">
+                      <SidebarMenuButton className="w-full justify-between text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
                         <div className="flex items-center gap-2">
                           <shop.icon className="w-4 h-4" />
                           <span>{shop.title}</span>
@@ -195,7 +195,7 @@ export function AppSidebar() {
                                   <SidebarMenuSubButton
                                     asChild
                                     isActive={location === item.url || location === item.projectsUrl}
-                                    className={item.indent ? "pl-6 text-blue-600 hover:bg-primary/10 hover:text-primary" : "text-blue-600 hover:bg-primary/10 hover:text-primary"}
+                                    className={item.indent ? "pl-6 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600" : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"}
                                   >
                                     <Link href={item.url}>
                                       <item.icon className="w-4 h-4" />
@@ -229,13 +229,13 @@ export function AppSidebar() {
 
         {/* Tools */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-blue-600 font-bold">Werkzeuge</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-indigo-600 font-bold">Werkzeuge</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredTools.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-primary/10 hover:text-primary">
-                    <Link href={item.url} className="text-blue-600">
+                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-indigo-50 hover:text-indigo-600">
+                    <Link href={item.url} className="text-gray-700">
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -253,16 +253,16 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === '/admin/dashboard'} className="hover:bg-primary/10 hover:text-primary">
-                    <Link href="/admin/dashboard" className="text-indigo-600">
+                  <SidebarMenuButton asChild isActive={location === '/admin/dashboard'} className="hover:bg-indigo-50 hover:text-indigo-600">
+                    <Link href="/admin/dashboard" className="text-gray-700">
                       <LayoutDashboard className="w-4 h-4" />
                       <span>Admin Dashboard</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === '/admin/users'} className="hover:bg-primary/10 hover:text-primary">
-                    <Link href="/admin/users" className="text-indigo-600">
+                  <SidebarMenuButton asChild isActive={location === '/admin/users'} className="hover:bg-indigo-50 hover:text-indigo-600">
+                    <Link href="/admin/users" className="text-gray-700">
                       <User className="w-4 h-4" />
                       <span>Mitarbeiter</span>
                     </Link>
@@ -275,13 +275,13 @@ export function AppSidebar() {
 
         {/* Account */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-blue-600 font-bold">Konto</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-indigo-600 font-bold">Konto</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {accountMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-primary/10 hover:text-primary">
-                    <Link href={item.url} className="text-blue-600">
+                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-indigo-50 hover:text-indigo-600">
+                    <Link href={item.url} className="text-gray-700">
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>

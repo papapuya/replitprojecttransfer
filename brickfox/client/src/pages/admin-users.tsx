@@ -207,7 +207,7 @@ export default function AdminUsers() {
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent mb-2">
+        <h1 className="text-4xl font-bold text-indigo-600 mb-2">
           Mitarbeiter-Verwaltung
         </h1>
         <p className="text-gray-600">Alle registrierten Mitarbeiter mit Statistiken</p>
@@ -224,25 +224,25 @@ export default function AdminUsers() {
           </CardContent>
         </Card>
 
-        <Card className="border-violet-100">
+        <Card className="border-indigo-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Gesamt Projekte</CardTitle>
-            <FolderOpen className="h-5 w-5 text-violet-600" />
+            <FolderOpen className="h-5 w-5 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-violet-600">
+            <div className="text-3xl font-bold text-indigo-600">
               {users.reduce((sum, u) => sum + u.projectCount, 0)}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-green-100">
+        <Card className="border-indigo-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Gesamt Produkte</CardTitle>
-            <Package className="h-5 w-5 text-green-600" />
+            <Package className="h-5 w-5 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">
+            <div className="text-3xl font-bold text-indigo-600">
               {users.reduce((sum, u) => sum + u.productCount, 0)}
             </div>
           </CardContent>

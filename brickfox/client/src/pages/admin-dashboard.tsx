@@ -46,8 +46,8 @@ export default function AdminDashboard() {
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <Crown className="h-8 w-8 text-amber-500" />
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+          <Crown className="h-8 w-8 text-indigo-600" />
+          <h1 className="text-4xl font-bold text-indigo-600">
             Admin Dashboard
           </h1>
         </div>
@@ -61,39 +61,39 @@ export default function AdminDashboard() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <Card className="border-blue-100 hover:shadow-lg transition-shadow">
+            <Card className="border-indigo-100 hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Mitarbeiter</CardTitle>
-                <Users className="h-5 w-5 text-blue-600" />
+                <Users className="h-5 w-5 text-indigo-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-600">
+                <div className="text-3xl font-bold text-indigo-600">
                   {stats?.totalUsers || 0}
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Registrierte Benutzer</p>
               </CardContent>
             </Card>
 
-            <Card className="border-green-100 hover:shadow-lg transition-shadow">
+            <Card className="border-indigo-100 hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Projekte</CardTitle>
-                <FolderOpen className="h-5 w-5 text-green-600" />
+                <FolderOpen className="h-5 w-5 text-indigo-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">
+                <div className="text-3xl font-bold text-indigo-600">
                   {stats?.totalProjects || 0}
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Gesamt</p>
               </CardContent>
             </Card>
 
-            <Card className="border-amber-100 hover:shadow-lg transition-shadow">
+            <Card className="border-indigo-100 hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Produkte</CardTitle>
-                <Package className="h-5 w-5 text-amber-600" />
+                <Package className="h-5 w-5 text-indigo-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-amber-600">
+                <div className="text-3xl font-bold text-indigo-600">
                   {stats?.totalProducts || 0}
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Verarbeitet</p>
@@ -114,9 +114,9 @@ export default function AdminDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link href="/admin/users">
-              <Card className="hover:shadow-lg transition-all cursor-pointer border-blue-100 hover:border-blue-300">
+              <Card className="hover:shadow-lg transition-all cursor-pointer border-indigo-100 hover:border-indigo-300">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-blue-700">
+                  <CardTitle className="flex items-center gap-2 text-indigo-600">
                     <Users className="h-5 w-5" />
                     Mitarbeiterverwaltung
                   </CardTitle>
