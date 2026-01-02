@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, FileSpreadsheet, Globe, FolderOpen, Settings, Zap, Building2, User, CreditCard, LayoutDashboard, GitCompare, LogOut, ShoppingCart, Scale, Bot, ChevronDown, ChevronRight, Store, Wrench, FileCode, DollarSign } from "lucide-react";
+import { Home, FileSpreadsheet, Globe, FolderOpen, Zap, Building2, User, LayoutDashboard, GitCompare, LogOut, ShoppingCart, Scale, Bot, ChevronDown, ChevronRight, Store, Wrench, FileCode, DollarSign } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -70,8 +70,6 @@ const toolsMenuItems = [
 // Account menu items
 const accountMenuItems = [
   { title: "Mein Account", url: "/account", icon: User },
-  { title: "Abonnement", url: "/pricing", icon: CreditCard, hideForAdmin: true },
-  { title: "API Credentials", url: "/credentials", icon: Settings, hideForAdmin: true },
 ];
 
 export function AppSidebar() {
@@ -94,16 +92,8 @@ export function AppSidebar() {
     return true;
   };
 
-  // Helper to check if admin-only item should be hidden
-  const shouldHideForAdmin = (hideForAdmin?: boolean) => {
-    return hideForAdmin && user?.isAdmin;
-  };
-
   // Filter tools based on features
   const filteredTools = toolsMenuItems.filter(item => isFeatureEnabled(item.feature));
-
-  // Filter account items based on admin status
-  const filteredAccountItems = accountMenuItems.filter(item => !shouldHideForAdmin(item.hideForAdmin));
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -262,7 +252,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-blue-600 font-bold">Konto</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredAccountItems.map((item) => (
+              {accountMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-primary/10 hover:text-primary">
                     <Link href={item.url} className="text-blue-600">

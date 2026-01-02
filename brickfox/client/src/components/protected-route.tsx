@@ -30,15 +30,5 @@ export function ProtectedRoute({ children, requireSubscription = false }: Protec
     return null;
   }
 
-  if (requireSubscription) {
-    if (!user?.subscriptionStatus || user.subscriptionStatus === 'canceled') {
-      return <UpgradePrompt reason="no_subscription" />;
-    }
-
-    if (user.subscriptionStatus === 'past_due') {
-      return <UpgradePrompt reason="past_due" />;
-    }
-  }
-
   return <>{children}</>;
 }
