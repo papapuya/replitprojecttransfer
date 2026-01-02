@@ -56,14 +56,8 @@ export default function Landing() {
                 )}
               </div>
 
-              <Link href="/pricing">
-                <span className="text-gray-700 hover:text-indigo-600 font-medium transition-colors cursor-pointer">
-                  Tarife
-                </span>
-              </Link>
-              
-              <a href="#" className="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
-                Über uns
+              <a href="#features" className="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
+                Features
               </a>
               
               <Link href="/contact">
@@ -82,7 +76,7 @@ export default function Landing() {
               </Link>
               <Link href="/register">
                 <Button asChild className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-md">
-                  <span>Demo anfordern</span>
+                  <span>Registrieren</span>
                 </Button>
               </Link>
             </div>
@@ -103,9 +97,9 @@ export default function Landing() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <Link href="/pricing">
+              <Link href="/register">
                 <Button asChild size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl shadow-lg">
-                  <span>Kostenlos starten</span>
+                  <span>Jetzt registrieren</span>
                 </Button>
               </Link>
               <a href="#features">
@@ -221,9 +215,9 @@ export default function Landing() {
                 </div>
               </li>
             </ul>
-            <Link href="/pricing">
+            <Link href="/register">
               <Button size="lg" className="mt-4 bg-indigo-600 hover:bg-indigo-700">
-                Mehr über Anpassungen
+                Jetzt loslegen
               </Button>
             </Link>
           </div>
@@ -299,9 +293,9 @@ export default function Landing() {
           <p className="text-xl text-white mb-12">
             Vereinbaren Sie jetzt einen unverbindlichen 30-Minuten-Termin
           </p>
-          <Link href="/pricing">
+          <Link href="/register">
             <Button size="lg" className="text-lg px-10 py-6 bg-white text-indigo-600 hover:bg-gray-100 rounded-lg shadow-xl">
-              Jetzt 30-Minuten-Termin vereinbaren
+              Jetzt registrieren
             </Button>
           </Link>
         </div>
@@ -351,14 +345,12 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Tarife - 2 columns */}
+            {/* Schnellstart - 2 columns */}
             <div className="md:col-span-2">
-              <h4 className="font-semibold mb-4 text-white text-sm uppercase tracking-wider">Tarife</h4>
+              <h4 className="font-semibold mb-4 text-white text-sm uppercase tracking-wider">Schnellstart</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">Starter</Link></li>
-                <li><Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">Professional</Link></li>
-                <li><Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">Enterprise</Link></li>
-                <li><Link href="/register" className="text-gray-400 hover:text-white transition-colors">Kostenlos testen</Link></li>
+                <li><Link href="/login" className="text-gray-400 hover:text-white transition-colors">Einloggen</Link></li>
+                <li><Link href="/register" className="text-gray-400 hover:text-white transition-colors">Registrieren</Link></li>
               </ul>
             </div>
 
