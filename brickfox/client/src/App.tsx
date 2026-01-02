@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth-context";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminUsers from "@/pages/admin-users";
 import AdminBackups from "@/pages/admin-backups";
 import AdminPermissions from "@/pages/admin-permissions";
 import AdminAuditLogs from "@/pages/admin-audit-logs";
@@ -63,6 +64,11 @@ function Router() {
       <Route path="/admin/dashboard">
         <AdminProtectedRoute>
           <AdminDashboard />
+        </AdminProtectedRoute>
+      </Route>
+      <Route path="/admin/users">
+        <AdminProtectedRoute>
+          <AdminUsers />
         </AdminProtectedRoute>
       </Route>
       <Route path="/admin/backups">
