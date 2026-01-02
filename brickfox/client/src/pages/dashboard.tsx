@@ -1,13 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'wouter';
 import {
-  BarChart,
   FileText,
   Package,
-  Zap,
   Plus,
   Upload,
   Link as LinkIcon,
@@ -17,21 +14,12 @@ import {
 interface DashboardStats {
   projectCount: number;
   productCount: number;
-  apiCallsUsed: number;
-  apiCallsLimit: number;
-  planId: string;
-  subscriptionStatus: string;
 }
 
 interface Project {
   id: string;
   name: string;
   createdAt: string;
-}
-
-interface DashboardData {
-  stats: DashboardStats;
-  recentProjects: Project[];
 }
 
 export default function Dashboard() {
@@ -50,11 +38,9 @@ export default function Dashboard() {
 
   const stats = data?.stats;
   const recentProjects = data?.recentProjects || [];
-  const usagePercentage = stats ? (stats.apiCallsUsed / stats.apiCallsLimit) * 100 : 0;
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent mb-2">
           Dashboard
@@ -68,9 +54,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {/* Projects Card */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <Card className="border-indigo-100 hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Projekte</CardTitle>
@@ -82,7 +66,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Products Card */}
             <Card className="border-violet-100 hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Produkte</CardTitle>
@@ -93,42 +76,9 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-500 mt-1">Generierte Beschreibungen</p>
               </CardContent>
             </Card>
-
-            {/* API Usage Card */}
-            <Card className="border-indigo-100 hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">AI-Generierungen</CardTitle>
-                <Zap className="h-4 w-4 text-indigo-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-indigo-600">
-                  {stats?.apiCallsUsed || 0}
-                  <span className="text-lg text-gray-400">/{stats?.apiCallsLimit || 500}</span>
-                </div>
-                <Progress value={usagePercentage} className="mt-2" />
-                <p className="text-xs text-gray-500 mt-1">{usagePercentage.toFixed(0)}% genutzt</p>
-              </CardContent>
-            </Card>
-
-            {/* Plan Card */}
-            <Card className="border-violet-100 hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Aktueller Plan</CardTitle>
-                <BarChart className="h-4 w-4 text-violet-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold capitalize text-violet-600">
-                  {stats?.planId === 'trial' ? 'Trial' : stats?.planId || 'Free'}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Status: {stats?.subscriptionStatus === 'active' ? 'Aktiv' : stats?.subscriptionStatus || 'Trial'}
-                </p>
-              </CardContent>
-            </Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Quick Actions */}
             <Card className="lg:col-span-1">
               <CardHeader>
                 <CardTitle className="text-lg">Schnellzugriff</CardTitle>
@@ -161,7 +111,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Recent Projects */}
             <Card className="lg:col-span-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
