@@ -15,18 +15,6 @@ export default defineConfig({
   plugins: [
     react(),
     runtimeErrorOverlay(),
-    // Remove console.log in production builds
-    {
-      name: 'remove-console-logs',
-      transform(code, id) {
-        if (process.env.NODE_ENV === 'production' && id.endsWith('.tsx')) {
-          return {
-            code: code.replace(/console\.log\([^)]*\);?/g, ''),
-            map: null
-          };
-        }
-      }
-    },
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
