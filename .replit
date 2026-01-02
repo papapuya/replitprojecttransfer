@@ -40,3 +40,8 @@ externalPort = 80
 [userenv.shared]
 SUPABASE_URL = "https://lxemqwvdaxzeldpjmxoc.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZW1xd3ZkYXh6ZWxkcGpteG9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTM3MDgsImV4cCI6MjA3NzM4OTcwOH0.Skn1wZFzXEIbYi-CEE7VxJfL2zzkuHjAoSC6eRmM6Ts"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["bash", "-c", "cd brickfox && npm run start"]
+build = ["bash", "-c", "cd brickfox && npm run build"]
