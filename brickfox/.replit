@@ -117,5 +117,4 @@ NODE_ENV = "development"
 DEBUG_MODE = "false"
 
 [userenv.production]
-PROD_DATABASE_URL = "postgresql://postgres.lxemqwvdaxzeldpjmxoc:Schneekoenigin1978#@db.lxemqwvdaxzeldpjmxoc.supabase.co:6543/postgres?sslmode=require"
 NODE_ENV = "production"

@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes-supabase";
 import { setupVite, serveStatic, log } from "./vite";
+import { createAdminUser } from "./local-auth";
 import fs from 'fs';
 import path from 'path';
 
@@ -104,8 +105,20 @@ app.use((req, res, next) => {
   server.listen({
     port,
     host,
-  }, () => {
+  }, async () => {
     const nodeEnv = process.env.NODE_ENV || 'development';
     log(`serving on port ${port} (${nodeEnv} mode on ${host})`);
+    
+    // Auto-create admin user if ADMIN_EMAIL and ADMIN_PASSWORD are set
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (adminEmail && adminPassword) {
+      try {
+        await createAdminUser(adminEmail, adminPassword);
+        log(`Admin user ensured: ${adminEmail}`);
+      } catch (error: any) {
+        log(`Admin setup: ${error.message}`);
+      }
+    }
   });
 })();
