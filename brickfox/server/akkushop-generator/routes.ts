@@ -86,10 +86,12 @@ router.post('/download', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Keine Daten zum Exportieren' });
     }
 
-    const exportRows = rows.map((row: any) => {
-      const { _status, ...rest } = row;
-      return rest;
-    });
+    // Nur die drei Pflichtspalten exportieren
+    const exportRows = rows.map((row: any) => ({
+      'p_item_number': row['p_item_number'] || '',
+      'p_name[de]': row['p_name[de]'] || '',
+      'p_description[de]': row['p_description[de]'] || '',
+    }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
