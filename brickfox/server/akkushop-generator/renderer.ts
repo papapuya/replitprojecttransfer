@@ -1,4 +1,42 @@
 import { ParsedProduct } from './parser';
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
+
+export async function searchCompatibility(productName: string, productType: string): Promise<string> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `Du bist ein Experte für Notbeleuchtung und Akkus. Finde passende Geräte/Hersteller für den genannten Akku. Antworte NUR mit einer kommagetrennten Liste von Herstellern/Modellen (max 5). Keine Erklärungen.`
+        },
+        {
+          role: 'user',
+          content: `Für welche Notleuchten/Geräte ist dieser Akku kompatibel: "${productName}"? Produkttyp: ${productType}`
+        }
+      ],
+      max_tokens: 100,
+      temperature: 0.3,
+    });
+    
+    return response.choices[0]?.message?.content?.trim() || '';
+  } catch (error) {
+    console.error('[Compatibility Search] Error:', error);
+    return '';
+  }
+}
+
+export function calculateEnergyContent(voltage: string, capacity: string): string {
+  const voltageNum = parseFloat(voltage.replace(',', '.').replace(/[^0-9.]/g, ''));
+  const capacityNum = parseFloat(capacity.replace(',', '.').replace(/[^0-9.]/g, ''));
+  
+  if (isNaN(voltageNum) || isNaN(capacityNum)) return '';
+  
+  const wh = (voltageNum * capacityNum) / 1000;
+  return wh.toFixed(2).replace('.', ',') + ' Wh';
+}
 
 const TEXT_VARIANTS = {
   A: {
@@ -88,11 +126,11 @@ function isRoundCell(parsed: ParsedProduct): boolean {
   return !!(parsed.durchmesser && parsed.laenge && !parsed.breite && !parsed.hoehe);
 }
 
-export function renderAkkuHtml(
+export async function renderAkkuHtml(
   productName: string,
   parsed: ParsedProduct,
   rowIndex: number
-): RenderResult {
+): Promise<RenderResult> {
   const variant = getVariant(rowIndex);
   const texts = TEXT_VARIANTS[variant];
   const usps = USP_VARIANTS[variant];
@@ -118,6 +156,19 @@ export function renderAkkuHtml(
     ? `\n<tr><td>Kabellänge</td><td>${parsed.kabellaenge}</td></tr>` 
     : '';
 
+  let energiegehalt = parsed.energiegehalt;
+  if (!energiegehalt && parsed.spannung && parsed.kapazitaet) {
+    energiegehalt = calculateEnergyContent(parsed.spannung, parsed.kapazitaet);
+  }
+
+  let kompatibilitaet = parsed.kompatibilitaet;
+  if (!kompatibilitaet || kompatibilitaet === 'undefined' || kompatibilitaet === '-') {
+    kompatibilitaet = await searchCompatibility(productName, parsed.produkttyp || 'Akku');
+    if (!kompatibilitaet) {
+      kompatibilitaet = 'Diverse Notleuchten';
+    }
+  }
+
   const html = `<h2>${productName}</h2>
 
 <p>${texts.absatz1}</p>
@@ -138,9 +189,9 @@ export function renderAkkuHtml(
 <tr><td>Chemisches System</td><td>${parsed.type}</td></tr>
 <tr><td>Spannung</td><td>${parsed.spannung}</td></tr>
 <tr><td>Kapazität</td><td>${parsed.kapazitaet}</td></tr>
-<tr><td>Energiegehalt</td><td>${parsed.energiegehalt || '-'}</td></tr>${dimensionRows}
-<tr><td>Gewicht</td><td>${parsed.gewicht}</td></tr>${kabellaengeRow}
-<tr><td>Kompatibilität</td><td>${parsed.kompatibilitaet}</td></tr>
+<tr><td>Energiegehalt</td><td>${energiegehalt || '-'}</td></tr>${dimensionRows}
+<tr><td>Gewicht</td><td>${parsed.gewicht || '-'}</td></tr>${kabellaengeRow}
+<tr><td>Kompatibilität</td><td>${kompatibilitaet}</td></tr>
 </table>
 
 <p><br /><br /><br /></p>
@@ -151,8 +202,8 @@ export function renderAkkuHtml(
 </ul>`;
 
   const bullet1 = productName;
-  const bullet2 = `${parsed.spannung}, ${parsed.kapazitaet}${parsed.energiegehalt ? ', ' + parsed.energiegehalt : ''}`;
-  const bullet3 = `${parsed.produkttyp || 'Akku'} für ${parsed.kompatibilitaet}`;
+  const bullet2 = `${parsed.spannung}, ${parsed.kapazitaet}${energiegehalt ? ', ' + energiegehalt : ''}`;
+  const bullet3 = `${parsed.produkttyp || 'Akku'} für ${kompatibilitaet}`;
 
   return {
     success: true,
