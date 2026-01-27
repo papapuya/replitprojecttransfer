@@ -64,6 +64,7 @@ const toolsMenuItems = [
   { title: "Gewichte-Generator", url: "/weight-generator", icon: Scale },
   { title: "Text/Bild zu HTML", url: "/html-generator", icon: FileCode },
   { title: "Preisabgleich", url: "/price-matcher", icon: DollarSign },
+  { title: "Akkushop Generator", url: "/akkushop-generator", icon: Zap },
 ];
 
 // Account menu items

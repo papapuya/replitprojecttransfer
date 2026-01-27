@@ -61,6 +61,7 @@ const upload = multer({
 import { apiKeyManager } from './api-key-manager';
 import webhooksRouter from './webhooks-supabase';
 import mappingRouter from './routes-mapping';
+import akkushopGeneratorRouter from './akkushop-generator/routes';
 import { pdfParserService } from './services/pdf-parser';
 import { deeplService } from './services/deepl-service';
 
@@ -3554,6 +3555,9 @@ Beispiel Antwort:
 
   // Mount mapping routes
   app.use('/api', mappingRouter);
+
+  // Akkushop Description Generator
+  app.use('/api/akkushop-generator', akkushopGeneratorRouter);
 
   // Weight estimation endpoint
   app.post('/api/estimate-weight', requireAuth, async (req, res) => {
