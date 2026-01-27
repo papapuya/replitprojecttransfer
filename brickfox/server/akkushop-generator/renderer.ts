@@ -180,6 +180,13 @@ export async function renderAkkuHtml(
       .replace(/^Passend für\s*/i, '')
       .replace(/^Geeignet für\s*/i, '')
       .replace(/^Kompatibel mit\s*/i, '')
+      .replace(/Technische Daten[:\s].*$/gi, '')
+      .replace(/chemisches System.*$/gi, '')
+      .replace(/Spannung.*$/gi, '')
+      .replace(/Kapazität.*$/gi, '')
+      .replace(/Energiegehalt.*$/gi, '')
+      .replace(/Gewicht.*$/gi, '')
+      .replace(/\s*\/\s*$/, '')
       .trim();
   }
 
