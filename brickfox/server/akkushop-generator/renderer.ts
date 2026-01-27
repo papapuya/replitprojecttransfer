@@ -198,9 +198,9 @@ export async function renderAkkuHtml(
 
 <h3>Produkteigenschaften</h3>
 <p>
-✅ ${usps[0]}<br />
-✅ ${usps[1]}<br />
-✅ ${usps[2]}<br />
+✅ ${usps[0]}<br>
+✅ ${usps[1]}<br>
+✅ ${usps[2]}<br>
 ✅ ${usps[3]}
 </p>
 
