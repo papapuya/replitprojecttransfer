@@ -88,12 +88,21 @@ router.post('/download', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Keine Daten zum Exportieren' });
     }
 
-    // Nur die drei Pflichtspalten exportieren (✅ Emojis bleiben erhalten)
-    const exportRows = rows.map((row: any) => ({
-      'p_item_number': row['p_item_number'] || '',
-      'p_name[de]': row['p_name[de]'] || '',
-      'p_description[de]': row['p_description[de]'] || '',
-    }));
+    // Export-Spalten: Pflichtspalten + Bulletpoints
+    const exportRows = rows.map((row: any) => {
+      const result: any = {
+        'p_item_number': row['p_item_number'] || '',
+        'p_name[de]': row['p_name[de]'] || '',
+        'p_description[de]': row['p_description[de]'] || '',
+        'p_description_bullet[de][0]': row['bullet_1'] || '',
+        'p_description_bullet[de][1]': row['bullet_2'] || '',
+      };
+      // Bullet 3 nur wenn vorhanden
+      if (row['bullet_3']) {
+        result['p_description_bullet[de][2]'] = row['bullet_3'];
+      }
+      return result;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
@@ -101,7 +110,16 @@ router.post('/download', async (req: Request, res: Response) => {
 
     if (format === 'csv') {
       // CSV manuell generieren mit Semikolon-Trennzeichen (UTF-8 ohne BOM)
-      const headers = ['p_item_number', 'p_name[de]', 'p_description[de]'];
+      // Prüfen ob irgendeine Zeile einen 3. Bulletpoint hat
+      const hasBullet3 = exportRows.some((row: any) => row['p_description_bullet[de][2]']);
+      const headers = [
+        'p_item_number', 
+        'p_name[de]', 
+        'p_description[de]',
+        'p_description_bullet[de][0]',
+        'p_description_bullet[de][1]',
+        ...(hasBullet3 ? ['p_description_bullet[de][2]'] : [])
+      ];
       const csvLines = [headers.join(';')];
       for (const row of exportRows) {
         const values = headers.map(h => {
