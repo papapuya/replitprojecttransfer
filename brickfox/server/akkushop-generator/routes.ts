@@ -48,22 +48,30 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
       const sheet = workbook.Sheets[sheetName];
       rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
     } else if (fileName.endsWith('.csv')) {
-      // CSV manuell parsen um Bindestrich-Probleme zu vermeiden
+      // CSV mit XLSX parsen, aber alle Zellen als Text behandeln
       const csvString = req.file.buffer.toString('utf-8');
-      const lines = csvString.split(/\r?\n/).filter(l => l.trim());
-      if (lines.length > 0) {
-        // Separator erkennen (Semikolon oder Komma)
-        const separator = lines[0].includes(';') ? ';' : ',';
-        const headers = parseCSVLine(lines[0], separator);
-        rows = lines.slice(1).map(line => {
-          const values = parseCSVLine(line, separator);
-          const row: Record<string, string> = {};
-          headers.forEach((header, i) => {
-            row[header] = values[i] || '';
-          });
-          return row as ProductRow;
-        });
+      const workbook = XLSX.read(csvString, { 
+        type: 'string', 
+        raw: false,
+        codepage: 65001 // UTF-8
+      });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      
+      // Alle Zellen explizit als Text lesen
+      const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+      for (let R = range.s.r; R <= range.e.r; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = sheet[addr];
+          if (cell && cell.v !== undefined) {
+            cell.t = 's'; // Als String behandeln
+            cell.w = String(cell.v); // Formatierter Wert = Rohwert
+          }
+        }
       }
+      
+      rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
     } else {
       return res.status(400).json({ error: 'Ungültiges Dateiformat. Nur .xlsx, .xls oder .csv erlaubt.' });
     }
