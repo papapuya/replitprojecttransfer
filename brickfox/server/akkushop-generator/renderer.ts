@@ -206,12 +206,12 @@ export async function renderAkkuHtml(
 
 <h3>Technische Daten</h3>
 <table>
-<tr><td>Produkttyp</td><td>${parsed.produkttyp || 'Akku'}</td></tr>${teilenummerRow}
-<tr><td>Chemisches System</td><td>${parsed.type}</td></tr>
-<tr><td>Spannung</td><td>${parsed.spannung}</td></tr>
-<tr><td>Kapazität</td><td>${parsed.kapazitaet}</td></tr>
-<tr><td>Energiegehalt</td><td>${energiegehalt || '-'}</td></tr>${dimensionRows}
-<tr><td>Gewicht</td><td>${parsed.gewicht || '-'}</td></tr>${kabellaengeRow}${kompatibilitaet ? `
+${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>` : ''}${teilenummerRow}${parsed.type ? `
+<tr><td>Chemisches System</td><td>${parsed.type}</td></tr>` : ''}${parsed.spannung ? `
+<tr><td>Spannung</td><td>${parsed.spannung}</td></tr>` : ''}${parsed.kapazitaet ? `
+<tr><td>Kapazität</td><td>${parsed.kapazitaet}</td></tr>` : ''}${energiegehalt ? `
+<tr><td>Energiegehalt</td><td>${energiegehalt}</td></tr>` : ''}${dimensionRows}${parsed.gewicht ? `
+<tr><td>Gewicht</td><td>${parsed.gewicht}</td></tr>` : ''}${kabellaengeRow}${kompatibilitaet ? `
 <tr><td>Kompatibilität</td><td>${kompatibilitaet}</td></tr>` : ''}
 </table>
 
