@@ -263,6 +263,7 @@ export default function AkkushopGenerator() {
                     <TableHead>Status</TableHead>
                     <TableHead>Artikelnummer</TableHead>
                     <TableHead>Produktname</TableHead>
+                    <TableHead>Fehler</TableHead>
                     <TableHead className="w-24">Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -274,6 +275,9 @@ export default function AkkushopGenerator() {
                       <TableCell className="font-mono text-sm">{row.p_item_number || '-'}</TableCell>
                       <TableCell className="max-w-xs truncate" title={row['p_name[de]']}>
                         {row['p_name[de]']}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate text-sm text-red-600" title={row.error || ''}>
+                        {row.error || '-'}
                       </TableCell>
                       <TableCell>
                         <Button
