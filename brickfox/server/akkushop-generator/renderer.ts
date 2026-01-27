@@ -176,6 +176,11 @@ export async function renderAkkuHtml(
       kompatibilitaet = 'Diverse Notleuchten';
     }
   }
+  kompatibilitaet = kompatibilitaet
+    .replace(/^Passend für\s*/i, '')
+    .replace(/^Geeignet für\s*/i, '')
+    .replace(/^Kompatibel mit\s*/i, '')
+    .trim();
 
   const html = `<h2>${productName}</h2>
 
