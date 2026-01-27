@@ -71,28 +71,28 @@ const TEXT_VARIANTS = {
 
 const USP_VARIANTS = {
   A: [
-    'Spezifizierte elektrische Parameter gemäß Datenblatt',
-    'Geringe Selbstentladung und stabiler Innenwiderstand',
-    'Thermisch stabile Zellchemie',
-    'Standardisierte Bauform und Anschlüsse',
+    'Zuverlässige Energieversorgung im Not- und Bereitschaftsbetrieb',
+    'Bewährte Zelltechnologie für konstante Leistung',
+    'Direkter Ersatz für den Originalakku',
+    'Einfache Integration in bestehende Systeme',
   ],
   B: [
-    'Entwickelt für sicherheitsrelevante Anwendungen',
-    'Zuverlässige Energieversorgung in kritischen Situationen',
-    'Optimale Lebensdauer bei korrekter Handhabung',
-    'Sichere Anschlüsse und robuste Bauweise',
+    'Entwickelt für sicherheitsrelevante Dauereinsätze',
+    'Langlebige Zellen für maximale Betriebssicherheit',
+    'Passgenauer Austausch ohne Anpassungen',
+    'Robuste Bauweise für zuverlässigen Betrieb',
   ],
   C: [
-    'Direkter Ersatz für den Originalakku',
-    'Gleichwertige oder bessere Leistung',
-    'Schneller Austausch ohne Spezialwerkzeug',
-    'Sofort einsatzbereit nach dem Einbau',
+    'Sofort einsatzbereit als Ersatzakku',
+    'Hochwertige Zelltechnologie für lange Lebensdauer',
+    'Schneller Wechsel ohne Spezialwerkzeug',
+    'Optimale Passform für problemlose Montage',
   ],
   D: [
-    'Hochwertig und passgenau',
-    'Langlebig und zuverlässig',
-    'Einfache Montage',
-    'Sofort einsatzbereit',
+    'Zuverlässig im Bereitschafts- und Notbetrieb',
+    'Bewährte Akkutechnologie für den Dauereinsatz',
+    'Idealer Ersatz für verschlissene Originalakkus',
+    'Unkomplizierter Einbau in wenigen Minuten',
   ],
 };
 
