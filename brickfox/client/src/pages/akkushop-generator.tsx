@@ -340,8 +340,20 @@ export default function AkkushopGenerator() {
             </div>
 
             <div>
-              <h4 className="font-semibold mb-2">Raw HTML:</h4>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto max-h-48">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold">Raw HTML-Code:</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(previewRow?.['p_description[de]'] || '');
+                    toast({ title: 'Kopiert!', description: 'HTML-Code in Zwischenablage kopiert.' });
+                  }}
+                >
+                  Kopieren
+                </Button>
+              </div>
+              <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto max-h-64 whitespace-pre-wrap">
                 {previewRow?.['p_description[de]']}
               </pre>
             </div>
