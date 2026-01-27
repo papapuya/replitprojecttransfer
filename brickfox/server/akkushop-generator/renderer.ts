@@ -223,10 +223,13 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
 </ul>`;
 
   const bullet1 = productName;
-  const bullet2 = `${parsed.spannung}, ${parsed.kapazitaet}${energiegehalt ? ', ' + energiegehalt : ''}`;
+  // Bullet 2: "Ersatzakku" oder "Akku" + technische Daten
+  const produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
+  const bullet2 = `${produktLabel} ${parsed.spannung}, ${parsed.kapazitaet}${energiegehalt ? ', ' + energiegehalt : ''}`;
+  // Bullet 3: Nur wenn Kompatibilität vorhanden, sonst weglassen
   const bullet3 = kompatibilitaet 
     ? `${parsed.produkttyp || 'Akku'} für ${kompatibilitaet}`
-    : `${parsed.produkttyp || 'Akku'}`;
+    : undefined;
 
   return {
     success: true,
