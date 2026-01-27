@@ -49,12 +49,24 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
       const sheet = workbook.Sheets[sheetName];
       rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
     } else if (fileName.endsWith('.csv')) {
-      // CSV mit XLSX parsen, aber alle Zellen als Text behandeln
-      const csvString = req.file.buffer.toString('utf-8');
+      // CSV dekodieren - versuche zuerst Latin-1 (Brickfox Standard), dann UTF-8
+      let csvString: string;
+      const buffer = req.file.buffer;
+      
+      // Prüfe auf UTF-8 BOM
+      const hasUtf8Bom = buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF;
+      
+      if (hasUtf8Bom) {
+        // UTF-8 mit BOM
+        csvString = buffer.toString('utf-8').substring(1); // BOM entfernen
+      } else {
+        // Versuche Latin-1 (ISO-8859-1) - Standard für Brickfox
+        csvString = iconv.decode(buffer, 'ISO-8859-1');
+      }
+      
       const workbook = XLSX.read(csvString, { 
         type: 'string', 
-        raw: false,
-        codepage: 65001 // UTF-8
+        raw: false
       });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
