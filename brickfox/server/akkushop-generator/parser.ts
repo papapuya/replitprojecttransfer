@@ -135,7 +135,7 @@ export function extractProductTypeFromName(name: string): string {
     { pattern: /Taschenlampe/i, value: 'Taschenlampen' },
     { pattern: /Handlampe/i, value: 'Handlampen' },
     { pattern: /Stirnlampe/i, value: 'Stirnlampen' },
-    { pattern: /Werkzeug|Werzeuge/i, value: 'Werkzeuge' },
+    { pattern: /Werkzeug|Werkzeuge/i, value: 'Werkzeuge' },
     { pattern: /Rasenmäher/i, value: 'Rasenmäher' },
     { pattern: /Staubsauger/i, value: 'Staubsauger' },
     { pattern: /Telefon/i, value: 'Telefone' },
