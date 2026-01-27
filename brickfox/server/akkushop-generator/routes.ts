@@ -98,8 +98,23 @@ router.post('/download', async (req: Request, res: Response) => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Produkte');
 
     if (format === 'csv') {
-      const csvBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'csv' });
-      res.setHeader('Content-Type', 'text/csv');
+      // CSV manuell generieren mit Semikolon-Trennzeichen (UTF-8 ohne BOM)
+      const headers = ['p_item_number', 'p_name[de]', 'p_description[de]'];
+      const csvLines = [headers.join(';')];
+      for (const row of exportRows) {
+        const values = headers.map(h => {
+          const val = String((row as any)[h] || '');
+          // Werte mit Semikolon, Anführungszeichen oder Zeilenumbruch in Anführungszeichen setzen
+          if (val.includes(';') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
+            return '"' + val.replace(/"/g, '""') + '"';
+          }
+          return val;
+        });
+        csvLines.push(values.join(';'));
+      }
+      const csvContent = csvLines.join('\r\n');
+      const csvBuffer = Buffer.from(csvContent, 'utf-8');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename="akkushop_generated.csv"');
       res.send(csvBuffer);
     } else {
