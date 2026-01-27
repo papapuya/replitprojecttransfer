@@ -120,6 +120,9 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
 
     const result: GenerationResult = await processProducts(normalizedRows);
 
+    // Debug: Erste 3 Ergebnis-Artikelnummern loggen
+    console.log('[Result Debug] Erste 3 p_item_number:', result.rows.slice(0, 3).map(r => r['p_item_number']));
+
     res.json({
       success: true,
       summary: result.summary,
