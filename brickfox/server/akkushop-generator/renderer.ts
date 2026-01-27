@@ -6,19 +6,27 @@ const openai = new OpenAI();
 export async function searchCompatibility(productName: string, productType: string): Promise<string> {
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: `Du bist ein Experte für Notbeleuchtung und Akkus. Finde passende Geräte/Hersteller für den genannten Akku. Antworte NUR mit einer kommagetrennten Liste von Herstellern/Modellen (max 5). Keine Erklärungen.`
+          content: `Du bist ein Experte für Notbeleuchtung, Akkus und Ersatzteile. Analysiere den Produktnamen und finde heraus, für welche Geräte/Systeme dieser Akku passend ist.
+
+Achte besonders auf:
+- Herstellernamen im Produktnamen (z.B. Olympia, Beghelli, Saft, Ceag)
+- Teilenummern oder Modellnummern
+- Zellformat-Angaben (z.B. Sub-C, AA, etc.)
+
+Antworte im Format: "Passend für [Hersteller]-[Systemtyp]" oder nur "[Hersteller], [Hersteller2]" wenn mehrere.
+Keine langen Erklärungen, nur die Kompatibilitätsangabe.`
         },
         {
           role: 'user',
-          content: `Für welche Notleuchten/Geräte ist dieser Akku kompatibel: "${productName}"? Produkttyp: ${productType}`
+          content: `Produktname: "${productName}"\nProdukttyp: ${productType}\n\nFür welche Notleuchten/Geräte ist dieser Akku kompatibel?`
         }
       ],
-      max_tokens: 100,
-      temperature: 0.3,
+      max_tokens: 150,
+      temperature: 0.2,
     });
     
     return response.choices[0]?.message?.content?.trim() || '';
