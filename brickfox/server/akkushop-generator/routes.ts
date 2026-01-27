@@ -134,7 +134,8 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
           normalized['p_item_number'] = String(value || '');
         } else if (key.toLowerCase().includes('p_name') && key.toLowerCase().includes('[de]')) {
           normalized['p_name[de]'] = String(value || '');
-        } else if (key.toLowerCase().includes('p_description') && key.toLowerCase().includes('[de]')) {
+        } else if (key.toLowerCase() === 'p_description[de]' || (key.toLowerCase().includes('p_description') && key.toLowerCase().includes('[de]') && !key.toLowerCase().includes('bullet'))) {
+          // Nur die Hauptbeschreibung, nicht die Bulletpoints
           normalized['p_description[de]'] = String(value || '');
         } else {
           normalized[key] = value;
