@@ -121,13 +121,16 @@ export default function AkkushopGenerator() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
+      a.style.display = 'none';
       const suffix = withBom ? '_excel' : '';
       const baseName = errorsOnly ? 'akkushop_fehler' : (downloadFilename || 'akkushop_generated');
       a.download = `${baseName}${suffix}.${format}`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast({ title: 'Download gestartet', description: `Datei wird als ${format.toUpperCase()} heruntergeladen.` });
+      toast({ title: 'Download gestartet', description: `Datei "${a.download}" wird heruntergeladen.` });
     } catch (error: any) {
       toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
     }
