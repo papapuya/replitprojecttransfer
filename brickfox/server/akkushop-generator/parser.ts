@@ -13,6 +13,7 @@ export interface ParsedProduct {
   kabellaenge?: string;
   kompatibilitaet?: string;
   rawFields: Record<string, string>;
+  originalHtml?: string;
 }
 
 export interface ParseResult {
@@ -25,19 +26,28 @@ export interface ParseResult {
 const FIELD_MAPPINGS: Record<string, keyof ParsedProduct> = {
   'produkttyp': 'produkttyp',
   'product type': 'produkttyp',
+  'typ': 'produkttyp',
   'teilenummer': 'teilenummer',
   'part number': 'teilenummer',
+  'article number': 'teilenummer',
+  'artikelnummer': 'teilenummer',
   'type': 'type',
   'chemie': 'type',
   'chemisches system': 'type',
+  'zelltyp': 'type',
+  'akkutyp': 'type',
+  'batterietyp': 'type',
   'spannung': 'spannung',
   'voltage': 'spannung',
+  'nennspannung': 'spannung',
   'kapazität': 'kapazitaet',
   'kapazitaet': 'kapazitaet',
   'capacity': 'kapazitaet',
+  'nennkapazität': 'kapazitaet',
   'energiegehalt': 'energiegehalt',
   'energy': 'energiegehalt',
   'wh': 'energiegehalt',
+  'energie': 'energiegehalt',
   'länge': 'laenge',
   'laenge': 'laenge',
   'length': 'laenge',
@@ -58,6 +68,8 @@ const FIELD_MAPPINGS: Record<string, keyof ParsedProduct> = {
   'compatibility': 'kompatibilitaet',
   'passend für': 'kompatibilitaet',
   'passend fuer': 'kompatibilitaet',
+  'ersetzt': 'kompatibilitaet',
+  'geeignet für': 'kompatibilitaet',
 };
 
 export function stripHtmlTags(text: string): string {
@@ -67,50 +79,152 @@ export function stripHtmlTags(text: string): string {
     .replace(/<\/p>/gi, '\n')
     .replace(/<\/div>/gi, '\n')
     .replace(/<\/li>/gi, '\n')
+    .replace(/<\/td>/gi, ' | ')
+    .replace(/<\/tr>/gi, '\n')
     .replace(/<[^>]*>/g, '')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
-export function parseDescription(description: string): ParseResult {
+function extractFromHtmlTable(html: string): Record<string, string> {
+  const fields: Record<string, string> = {};
+  
+  const tableRowRegex = /<tr[^>]*>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<\/tr>/gi;
+  let match;
+  
+  while ((match = tableRowRegex.exec(html)) !== null) {
+    const key = stripHtmlTags(match[1]).toLowerCase().replace(/[:\s]+$/, '').trim();
+    const value = stripHtmlTags(match[2]).trim();
+    
+    if (key && value && value !== '-' && value !== '–') {
+      fields[key] = value;
+    }
+  }
+  
+  return fields;
+}
+
+function extractFromText(text: string): Record<string, string> {
+  const fields: Record<string, string> = {};
+  const lines = text.split(/[\n|]+/).map(l => l.trim()).filter(l => l.length > 0);
+  
+  for (const line of lines) {
+    const colonIndex = line.indexOf(':');
+    if (colonIndex === -1 || colonIndex < 2) continue;
+    
+    const key = line.substring(0, colonIndex).trim().toLowerCase();
+    const value = line.substring(colonIndex + 1).trim();
+    
+    if (key && value && value.length > 0 && value !== '-' && value !== '–') {
+      fields[key] = value;
+    }
+  }
+  
+  return fields;
+}
+
+function extractFromProductName(name: string): Partial<ParsedProduct> {
+  const result: Partial<ParsedProduct> = {};
+  
+  const voltageMatch = name.match(/(\d+[,.]?\d*)\s*V\b/i);
+  if (voltageMatch) {
+    result.spannung = voltageMatch[1].replace(',', '.') + 'V';
+  }
+  
+  const capacityMatch = name.match(/(\d+)\s*mAh/i);
+  if (capacityMatch) {
+    result.kapazitaet = capacityMatch[1] + 'mAh';
+  }
+  
+  const whMatch = name.match(/(\d+[,.]?\d*)\s*Wh/i);
+  if (whMatch) {
+    result.energiegehalt = whMatch[1].replace(',', '.') + 'Wh';
+  }
+  
+  if (/NiMH|Nickel.?Metall.?Hydrid/i.test(name)) {
+    result.type = 'NiMH';
+  } else if (/NiCd|Nickel.?Cadmium/i.test(name)) {
+    result.type = 'NiCd';
+  } else if (/Li-?Ion|Lithium/i.test(name)) {
+    result.type = 'Li-Ion';
+  }
+  
+  return result;
+}
+
+export function parseDescription(description: string, productName?: string): ParseResult {
   if (!description || description.trim().length === 0) {
     return { success: false, error: 'Leere Beschreibung' };
   }
 
-  const cleanText = stripHtmlTags(description);
-  const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
   const rawFields: Record<string, string> = {};
-  const parsed: Partial<ParsedProduct> = { rawFields };
+  const parsed: Partial<ParsedProduct> = { rawFields, originalHtml: description };
 
-  for (const line of lines) {
-    const colonIndex = line.indexOf(':');
-    if (colonIndex === -1) continue;
+  const tableFields = extractFromHtmlTable(description);
+  Object.assign(rawFields, tableFields);
 
-    const key = line.substring(0, colonIndex).trim().toLowerCase();
-    const value = line.substring(colonIndex + 1).trim();
-
-    if (!value) continue;
-
-    rawFields[key] = value;
-
-    const mappedKey = FIELD_MAPPINGS[key];
-    if (mappedKey && mappedKey !== 'rawFields') {
-      (parsed as any)[mappedKey] = value;
+  const cleanText = stripHtmlTags(description);
+  const textFields = extractFromText(cleanText);
+  
+  for (const [key, value] of Object.entries(textFields)) {
+    if (!rawFields[key]) {
+      rawFields[key] = value;
     }
   }
 
-  const requiredFields: (keyof ParsedProduct)[] = ['type', 'spannung', 'kapazitaet', 'gewicht', 'kompatibilitaet'];
+  for (const [rawKey, value] of Object.entries(rawFields)) {
+    const normalizedKey = rawKey.toLowerCase().trim();
+    for (const [pattern, field] of Object.entries(FIELD_MAPPINGS)) {
+      if (normalizedKey.includes(pattern) || pattern.includes(normalizedKey)) {
+        if (field !== 'rawFields' && field !== 'originalHtml') {
+          if (!(parsed as any)[field]) {
+            (parsed as any)[field] = value;
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  if (productName) {
+    const nameExtracted = extractFromProductName(productName);
+    for (const [key, value] of Object.entries(nameExtracted)) {
+      if (!(parsed as any)[key] && value) {
+        (parsed as any)[key] = value;
+      }
+    }
+  }
+
+  if (!parsed.produkttyp) {
+    if (/notleuchte/i.test(productName || '')) {
+      parsed.produkttyp = 'Notleuchtenakku';
+    } else if (/akku/i.test(productName || '')) {
+      parsed.produkttyp = 'Akku';
+    } else {
+      parsed.produkttyp = 'Akku';
+    }
+  }
+
+  const requiredFields: (keyof ParsedProduct)[] = ['spannung', 'kapazitaet'];
   const missingFields: string[] = [];
 
   for (const field of requiredFields) {
     if (!parsed[field]) {
       missingFields.push(field);
     }
+  }
+
+  if (missingFields.length > 0) {
+    return { 
+      success: false, 
+      error: `Pflichtfelder fehlen: ${missingFields.join(', ')}. Gefundene Felder: ${Object.keys(rawFields).join(', ')}`,
+      missingFields 
+    };
   }
 
   const hasLaengeBreiteHoehe = parsed.laenge && parsed.breite && parsed.hoehe;
@@ -122,19 +236,6 @@ export function parseDescription(description: string): ParseResult {
     return { 
       success: false, 
       error: 'Maßsystem gemischt (Durchmesser + Breite/Höhe)',
-      missingFields 
-    };
-  }
-
-  if (!hasLaengeBreiteHoehe && !hasLaengeDurchmesser) {
-    if (!parsed.laenge) missingFields.push('laenge');
-    if (!parsed.durchmesser && !parsed.breite) missingFields.push('breite oder durchmesser');
-  }
-
-  if (missingFields.length > 0) {
-    return { 
-      success: false, 
-      error: `Pflichtfelder fehlen: ${missingFields.join(', ')}`,
       missingFields 
     };
   }
