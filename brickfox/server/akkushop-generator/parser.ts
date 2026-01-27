@@ -128,6 +128,44 @@ function extractFromText(text: string): Record<string, string> {
   return fields;
 }
 
+export function extractProductTypeFromName(name: string): string {
+  const productTypes = [
+    { pattern: /Notleuchtenakku/i, value: 'Notleuchten' },
+    { pattern: /Notleuchte/i, value: 'Notleuchten' },
+    { pattern: /Notbeleuchtung/i, value: 'Notbeleuchtung' },
+    { pattern: /Taschenlampe/i, value: 'Taschenlampen' },
+    { pattern: /Handlampe/i, value: 'Handlampen' },
+    { pattern: /Stirnlampe/i, value: 'Stirnlampen' },
+    { pattern: /Werkzeugakku/i, value: 'Elektrowerkzeuge' },
+    { pattern: /Rasenmäher/i, value: 'Rasenmäher' },
+    { pattern: /Staubsauger/i, value: 'Staubsauger' },
+    { pattern: /Telefon/i, value: 'Telefone' },
+    { pattern: /Handy/i, value: 'Handys' },
+    { pattern: /Laptop/i, value: 'Laptops' },
+    { pattern: /Notebook/i, value: 'Notebooks' },
+    { pattern: /Kamera/i, value: 'Kameras' },
+    { pattern: /Camcorder/i, value: 'Camcorder' },
+    { pattern: /Funkgerät/i, value: 'Funkgeräte' },
+    { pattern: /Walkie/i, value: 'Funkgeräte' },
+    { pattern: /E-Bike/i, value: 'E-Bikes' },
+    { pattern: /Fahrrad/i, value: 'Fahrräder' },
+    { pattern: /Modellbau/i, value: 'Modellbau' },
+    { pattern: /RC[-\s]/i, value: 'RC-Modelle' },
+    { pattern: /Spielzeug/i, value: 'Spielzeug' },
+    { pattern: /Alarm/i, value: 'Alarmanlagen' },
+    { pattern: /USV/i, value: 'USV-Anlagen' },
+    { pattern: /Solar/i, value: 'Solaranlagen' },
+  ];
+  
+  for (const { pattern, value } of productTypes) {
+    if (pattern.test(name)) {
+      return value;
+    }
+  }
+  
+  return '';
+}
+
 function extractCompatibilityFromText(text: string): string {
   const patterns = [
     /passend\s+(?:für|fuer)\s+([A-Za-zÄÖÜäöüß]+-?(?:Notbeleuchtung|Notleuchte|Leuchten?))/i,
