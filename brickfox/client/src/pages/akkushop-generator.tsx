@@ -118,19 +118,33 @@ export default function AkkushopGenerator() {
       }
 
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.style.display = 'none';
       const suffix = withBom ? '_excel' : '';
       const baseName = errorsOnly ? 'akkushop_fehler' : (downloadFilename || 'akkushop_generated');
-      a.download = `${baseName}${suffix}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const filename = `${baseName}${suffix}.${format}`;
+      
+      // Methode 1: window.open für bessere Kompatibilität
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      
+      // Simuliere echten Klick
+      const clickEvent = new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: false
+      });
+      link.dispatchEvent(clickEvent);
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
 
-      toast({ title: 'Download gestartet', description: `Datei "${a.download}" wird heruntergeladen.` });
+      toast({ title: 'Download gestartet', description: `Datei "${filename}" wird heruntergeladen.` });
     } catch (error: any) {
       toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
     }
