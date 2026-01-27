@@ -285,35 +285,8 @@ export function parseDescription(description: string, productName?: string, csvR
     }
   }
 
-  const requiredFields: (keyof ParsedProduct)[] = ['spannung', 'kapazitaet'];
-  const missingFields: string[] = [];
-
-  for (const field of requiredFields) {
-    if (!parsed[field]) {
-      missingFields.push(field);
-    }
-  }
-
-  if (missingFields.length > 0) {
-    return { 
-      success: false, 
-      error: `Pflichtfelder fehlen: ${missingFields.join(', ')}. Gefundene Felder: ${Object.keys(rawFields).join(', ')}`,
-      missingFields 
-    };
-  }
-
-  const hasLaengeBreiteHoehe = parsed.laenge && parsed.breite && parsed.hoehe;
-  const hasLaengeDurchmesser = parsed.laenge && parsed.durchmesser;
-  const hasMixed = (parsed.durchmesser && (parsed.breite || parsed.hoehe)) || 
-                   (hasLaengeBreiteHoehe && parsed.durchmesser);
-
-  if (hasMixed) {
-    return { 
-      success: false, 
-      error: 'Maßsystem gemischt (Durchmesser + Breite/Höhe)',
-      missingFields 
-    };
-  }
+  // Keine Pflichtfeld-Prüfung mehr - wenn Beschreibung vorhanden ist, immer weitermachen
+  // Fehlende technische Daten werden im Rendering als optionale Felder behandelt
 
   return { 
     success: true, 

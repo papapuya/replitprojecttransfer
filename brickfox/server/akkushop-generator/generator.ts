@@ -39,40 +39,20 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     const productName = row['p_name[de]'] || '';
     const description = row['p_description[de]'] || '';
 
-    if (!productName) {
+    // Einfache Logik: Beschreibung vorhanden = Erfolg möglich, keine Beschreibung = Fehler
+    if (!productName || !description || description.trim().length === 0) {
       results.push({
         ...row,
         original_description: description,
-        error: 'Fehlende Pflichtspalte: p_name[de]',
+        error: !productName ? 'Fehlende Pflichtspalte: p_name[de]' : 'Keine Produktbeschreibung vorhanden',
         _status: 'error',
       });
       errorCount++;
       continue;
     }
 
+    // Produkttyp erkennen (nur für interne Logik, kein Überspringen mehr)
     const productType: ProductType = detectProductType(productName, description);
-
-    if (productType === 'unknown') {
-      results.push({
-        ...row,
-        original_description: description,
-        error: 'Produkttyp unklar (weder Akku noch Lampe erkannt)',
-        _status: 'skipped',
-      });
-      skippedCount++;
-      continue;
-    }
-
-    if (productType === 'lampe') {
-      results.push({
-        ...row,
-        original_description: description,
-        error: 'Lampen-Generierung noch nicht implementiert',
-        _status: 'skipped',
-      });
-      skippedCount++;
-      continue;
-    }
 
     const parseResult: ParseResult = parseDescription(description, productName);
 
