@@ -172,15 +172,28 @@ export async function renderAkkuHtml(
   let kompatibilitaet = parsed.kompatibilitaet;
   if (!kompatibilitaet || kompatibilitaet === 'undefined' || kompatibilitaet === '-') {
     kompatibilitaet = await searchCompatibility(productName, parsed.produkttyp || 'Akku');
-    if (!kompatibilitaet) {
-      kompatibilitaet = 'Diverse Notleuchten';
+  }
+  
+  if (kompatibilitaet) {
+    kompatibilitaet = kompatibilitaet
+      .replace(/^Passend für\s*/i, '')
+      .replace(/^Geeignet für\s*/i, '')
+      .replace(/^Kompatibel mit\s*/i, '')
+      .trim();
+    
+    const genericPhrases = [
+      'allgemein verwendbar',
+      'keine spezifischen',
+      'keine herstellerangaben',
+      'universell',
+      'diverse',
+      'verschiedene'
+    ];
+    const lower = kompatibilitaet.toLowerCase();
+    if (genericPhrases.some(phrase => lower.includes(phrase))) {
+      kompatibilitaet = '';
     }
   }
-  kompatibilitaet = kompatibilitaet
-    .replace(/^Passend für\s*/i, '')
-    .replace(/^Geeignet für\s*/i, '')
-    .replace(/^Kompatibel mit\s*/i, '')
-    .trim();
 
   const html = `<h2>${productName}</h2>
 
@@ -203,8 +216,8 @@ export async function renderAkkuHtml(
 <tr><td>Spannung</td><td>${parsed.spannung}</td></tr>
 <tr><td>Kapazität</td><td>${parsed.kapazitaet}</td></tr>
 <tr><td>Energiegehalt</td><td>${energiegehalt || '-'}</td></tr>${dimensionRows}
-<tr><td>Gewicht</td><td>${parsed.gewicht || '-'}</td></tr>${kabellaengeRow}
-<tr><td>Kompatibilität</td><td>${kompatibilitaet}</td></tr>
+<tr><td>Gewicht</td><td>${parsed.gewicht || '-'}</td></tr>${kabellaengeRow}${kompatibilitaet ? `
+<tr><td>Kompatibilität</td><td>${kompatibilitaet}</td></tr>` : ''}
 </table>
 
 <p><br /><br /><br /></p>
@@ -216,7 +229,9 @@ export async function renderAkkuHtml(
 
   const bullet1 = productName;
   const bullet2 = `${parsed.spannung}, ${parsed.kapazitaet}${energiegehalt ? ', ' + energiegehalt : ''}`;
-  const bullet3 = `${parsed.produkttyp || 'Akku'} für ${kompatibilitaet}`;
+  const bullet3 = kompatibilitaet 
+    ? `${parsed.produkttyp || 'Akku'} für ${kompatibilitaet}`
+    : `${parsed.produkttyp || 'Akku'}`;
 
   return {
     success: true,
