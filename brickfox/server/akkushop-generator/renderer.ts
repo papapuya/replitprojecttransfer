@@ -222,13 +222,25 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
 <li>${parsed.produkttyp || 'Akku'} ${parsed.type}, ${parsed.spannung}, ${parsed.kapazitaet}</li>
 </ul>`;
 
-  const bullet1 = productName;
+  // Bulletpoints auf maximal 60 Zeichen begrenzen
+  const truncateBullet = (text: string, maxLength: number = 60): string => {
+    if (text.length <= maxLength) return text;
+    // Am letzten Leerzeichen vor dem Limit abschneiden
+    const truncated = text.substring(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > maxLength - 15) {
+      return truncated.substring(0, lastSpace);
+    }
+    return truncated;
+  };
+
+  const bullet1 = truncateBullet(productName);
   // Bullet 2: "Ersatzakku" oder "Akku" + technische Daten
   const produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
-  const bullet2 = `${produktLabel} ${parsed.spannung}, ${parsed.kapazitaet}${energiegehalt ? ', ' + energiegehalt : ''}`;
+  const bullet2 = truncateBullet(`${produktLabel} ${parsed.spannung}, ${parsed.kapazitaet}${energiegehalt ? ', ' + energiegehalt : ''}`);
   // Bullet 3: Nur wenn Kompatibilität vorhanden, sonst weglassen
   const bullet3 = kompatibilitaet 
-    ? `${parsed.produkttyp || 'Akku'} für ${kompatibilitaet}`
+    ? truncateBullet(`${parsed.produkttyp || 'Akku'} für ${kompatibilitaet}`)
     : undefined;
 
   return {
