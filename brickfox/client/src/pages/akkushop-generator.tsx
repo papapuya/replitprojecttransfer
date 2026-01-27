@@ -9,10 +9,9 @@ import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle,
 import { useToast } from '@/hooks/use-toast';
 
 interface GeneratedRow {
+  p_item_number?: string;
   'p_name[de]': string;
   'p_description[de]': string;
-  un_number?: string;
-  hs_code?: string;
   bullet_1?: string;
   bullet_2?: string;
   bullet_3?: string;
@@ -262,10 +261,8 @@ export default function AkkushopGenerator() {
                   <TableRow className="bg-gray-50">
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Artikelnummer</TableHead>
                     <TableHead>Produktname</TableHead>
-                    <TableHead>UN-Nummer</TableHead>
-                    <TableHead>HS-Code</TableHead>
-                    <TableHead>Fehler/Info</TableHead>
                     <TableHead className="w-24">Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -274,13 +271,9 @@ export default function AkkushopGenerator() {
                     <TableRow key={index} className={row._status === 'error' ? 'bg-red-50' : row._status === 'skipped' ? 'bg-amber-50' : ''}>
                       <TableCell className="font-mono text-sm">{index + 1}</TableCell>
                       <TableCell>{getStatusBadge(row._status)}</TableCell>
+                      <TableCell className="font-mono text-sm">{row.p_item_number || '-'}</TableCell>
                       <TableCell className="max-w-xs truncate" title={row['p_name[de]']}>
                         {row['p_name[de]']}
-                      </TableCell>
-                      <TableCell>{row.un_number || '-'}</TableCell>
-                      <TableCell>{row.hs_code || '-'}</TableCell>
-                      <TableCell className="max-w-xs truncate text-sm text-gray-600" title={row.error}>
-                        {row.error || '-'}
                       </TableCell>
                       <TableCell>
                         <Button
@@ -319,15 +312,6 @@ export default function AkkushopGenerator() {
                 className="border rounded-lg p-4 bg-white prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: previewRow?.['p_description[de]'] || '' }}
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <strong>UN-Nummer:</strong> {previewRow?.un_number || '-'}
-              </div>
-              <div>
-                <strong>HS-Code:</strong> {previewRow?.hs_code || '-'}
-              </div>
             </div>
 
             <div>
