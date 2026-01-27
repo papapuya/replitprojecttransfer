@@ -71,7 +71,7 @@ export function processProducts(rows: ProductRow[]): GenerationResult {
       continue;
     }
 
-    const parseResult: ParseResult = parseDescription(description);
+    const parseResult: ParseResult = parseDescription(description, productName);
 
     if (!parseResult.success || !parseResult.data) {
       results.push({
