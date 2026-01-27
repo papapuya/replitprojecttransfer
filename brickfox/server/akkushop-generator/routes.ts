@@ -49,7 +49,7 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
       const sheet = workbook.Sheets[sheetName];
       rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
     } else if (fileName.endsWith('.csv')) {
-      // CSV dekodieren - versuche zuerst Latin-1 (Brickfox Standard), dann UTF-8
+      // CSV dekodieren - intelligente Encoding-Erkennung
       let csvString: string;
       const buffer = req.file.buffer;
       
@@ -57,11 +57,24 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
       const hasUtf8Bom = buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF;
       
       if (hasUtf8Bom) {
-        // UTF-8 mit BOM
-        csvString = buffer.toString('utf-8').substring(1); // BOM entfernen
+        // UTF-8 mit BOM - BOM überspringen (3 Bytes)
+        csvString = buffer.slice(3).toString('utf-8');
+        console.log('[CSV] Encoding: UTF-8 mit BOM erkannt');
       } else {
-        // Versuche Latin-1 (ISO-8859-1) - Standard für Brickfox
-        csvString = iconv.decode(buffer, 'ISO-8859-1');
+        // Versuche zuerst UTF-8, dann Latin-1
+        const utf8String = buffer.toString('utf-8');
+        // Prüfe auf typische UTF-8 Fehler (Replacement Character oder ungültige Sequenzen)
+        const hasUtf8Errors = utf8String.includes('\uFFFD') || /Ã[¤ö¼ß]/.test(utf8String);
+        
+        if (!hasUtf8Errors && /[äöüÄÖÜß]/.test(utf8String)) {
+          // Gültige UTF-8 mit deutschen Umlauten
+          csvString = utf8String;
+          console.log('[CSV] Encoding: UTF-8 ohne BOM erkannt');
+        } else {
+          // Latin-1 (ISO-8859-1) - Standard für Brickfox-Exporte
+          csvString = iconv.decode(buffer, 'ISO-8859-1');
+          console.log('[CSV] Encoding: ISO-8859-1 (Latin-1) verwendet');
+        }
       }
       
       const workbook = XLSX.read(csvString, { 
