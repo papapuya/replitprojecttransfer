@@ -175,29 +175,12 @@ export async function renderAkkuHtml(
     kompatibilitaet = extractProductTypeFromName(productName);
   }
   
-  if (!kompatibilitaet) {
-    kompatibilitaet = await searchCompatibility(productName, parsed.produkttyp || 'Akku');
-  }
-  
   if (kompatibilitaet) {
     kompatibilitaet = kompatibilitaet
       .replace(/^Passend für\s*/i, '')
       .replace(/^Geeignet für\s*/i, '')
       .replace(/^Kompatibel mit\s*/i, '')
       .trim();
-    
-    const genericPhrases = [
-      'allgemein verwendbar',
-      'keine spezifischen',
-      'keine herstellerangaben',
-      'universell',
-      'diverse',
-      'verschiedene'
-    ];
-    const lower = kompatibilitaet.toLowerCase();
-    if (genericPhrases.some(phrase => lower.includes(phrase))) {
-      kompatibilitaet = '';
-    }
   }
 
   const html = `<h2>${productName}</h2>
