@@ -108,6 +108,7 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
 
     results.push({
       ...row,
+      original_description: description,
       'p_description[de]': renderResult.html,
       bullet_1: renderResult.bullet1,
       bullet_2: renderResult.bullet2,
