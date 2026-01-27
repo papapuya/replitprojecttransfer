@@ -130,13 +130,12 @@ function extractFromText(text: string): Record<string, string> {
 
 export function extractProductTypeFromName(name: string): string {
   const productTypes = [
-    { pattern: /Notleuchtenakku/i, value: 'Notleuchten' },
-    { pattern: /Notleuchte/i, value: 'Notleuchten' },
+    { pattern: /Notleuchtenakku|Notleuchte/i, value: 'Notleuchten' },
     { pattern: /Notbeleuchtung/i, value: 'Notbeleuchtung' },
     { pattern: /Taschenlampe/i, value: 'Taschenlampen' },
     { pattern: /Handlampe/i, value: 'Handlampen' },
     { pattern: /Stirnlampe/i, value: 'Stirnlampen' },
-    { pattern: /Werkzeugakku/i, value: 'Elektrowerkzeuge' },
+    { pattern: /Werkzeug|Werzeuge/i, value: 'Werkzeuge' },
     { pattern: /Rasenmäher/i, value: 'Rasenmäher' },
     { pattern: /Staubsauger/i, value: 'Staubsauger' },
     { pattern: /Telefon/i, value: 'Telefone' },
@@ -157,13 +156,14 @@ export function extractProductTypeFromName(name: string): string {
     { pattern: /Solar/i, value: 'Solaranlagen' },
   ];
   
+  const found: string[] = [];
   for (const { pattern, value } of productTypes) {
-    if (pattern.test(name)) {
-      return value;
+    if (pattern.test(name) && !found.includes(value)) {
+      found.push(value);
     }
   }
   
-  return '';
+  return found.join(', ');
 }
 
 function extractCompatibilityFromText(text: string): string {
