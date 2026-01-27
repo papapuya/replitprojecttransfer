@@ -136,7 +136,7 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
 
 router.post('/download', async (req: Request, res: Response) => {
   try {
-    const { rows, format = 'xlsx', errorsOnly = false } = req.body;
+    const { rows, format = 'xlsx', errorsOnly = false, withBom = false } = req.body;
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return res.status(400).json({ error: 'Keine Daten zum Exportieren' });
@@ -208,9 +208,14 @@ router.post('/download', async (req: Request, res: Response) => {
         csvLines.push(values.join(';'));
       }
       const csvContent = csvLines.join('\r\n');
-      // UTF-8 BOM für korrekte Umlaut-Anzeige in Excel
-      const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
-      const csvBuffer = Buffer.concat([bom, Buffer.from(csvContent, 'utf-8')]);
+      // UTF-8 BOM nur für Excel hinzufügen, für Brickfox ohne BOM
+      let csvBuffer: Buffer;
+      if (withBom) {
+        const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
+        csvBuffer = Buffer.concat([bom, Buffer.from(csvContent, 'utf-8')]);
+      } else {
+        csvBuffer = Buffer.from(csvContent, 'utf-8');
+      }
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       const filename = errorsOnly ? 'akkushop_fehler.csv' : 'akkushop_generated.csv';
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

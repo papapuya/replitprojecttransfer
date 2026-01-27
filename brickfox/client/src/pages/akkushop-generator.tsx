@@ -93,7 +93,7 @@ export default function AkkushopGenerator() {
     }
   };
 
-  const handleDownload = async (format: 'xlsx' | 'csv', errorsOnly: boolean = false) => {
+  const handleDownload = async (format: 'xlsx' | 'csv', errorsOnly: boolean = false, withBom: boolean = false) => {
     if (!result?.rows) return;
 
     const rowsToDownload = errorsOnly 
@@ -109,7 +109,7 @@ export default function AkkushopGenerator() {
       const response = await fetch('/api/akkushop-generator/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: rowsToDownload, format, errorsOnly }),
+        body: JSON.stringify({ rows: rowsToDownload, format, errorsOnly, withBom }),
       });
 
       if (!response.ok) {
@@ -120,7 +120,8 @@ export default function AkkushopGenerator() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = errorsOnly ? `akkushop_fehler.${format}` : `akkushop_generated.${format}`;
+      const suffix = withBom ? '_excel' : '';
+      a.download = errorsOnly ? `akkushop_fehler${suffix}.${format}` : `akkushop_generated${suffix}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -244,13 +245,22 @@ export default function AkkushopGenerator() {
                   Erfolge als Excel (.xlsx)
                 </Button>
                 <Button
-                  onClick={() => handleDownload('csv', false)}
+                  onClick={() => handleDownload('csv', false, false)}
                   variant="outline"
                   className="w-full"
                   disabled={result.summary.success === 0}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Erfolge als CSV
+                  CSV für Brickfox
+                </Button>
+                <Button
+                  onClick={() => handleDownload('csv', false, true)}
+                  variant="outline"
+                  className="w-full"
+                  disabled={result.summary.success === 0}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  CSV für Excel
                 </Button>
                 {(result.summary.errors > 0 || result.summary.skipped > 0) && (
                   <Button
