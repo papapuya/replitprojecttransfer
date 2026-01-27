@@ -36,6 +36,7 @@ export default function AkkushopGenerator() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [previewRow, setPreviewRow] = useState<GeneratedRow | null>(null);
+  const [downloadFilename, setDownloadFilename] = useState('akkushop_generated');
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +122,8 @@ export default function AkkushopGenerator() {
       const a = document.createElement('a');
       a.href = url;
       const suffix = withBom ? '_excel' : '';
-      a.download = errorsOnly ? `akkushop_fehler${suffix}.${format}` : `akkushop_generated${suffix}.${format}`;
+      const baseName = errorsOnly ? 'akkushop_fehler' : (downloadFilename || 'akkushop_generated');
+      a.download = `${baseName}${suffix}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -236,6 +238,16 @@ export default function AkkushopGenerator() {
               </div>
 
               <div className="pt-4 space-y-2">
+                <div className="pb-2">
+                  <label className="text-sm text-gray-600 block mb-1">Dateiname</label>
+                  <input
+                    type="text"
+                    value={downloadFilename}
+                    onChange={(e) => setDownloadFilename(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="akkushop_generated"
+                  />
+                </div>
                 <Button
                   onClick={() => handleDownload('xlsx', false)}
                   className="w-full bg-indigo-600 hover:bg-indigo-700"
