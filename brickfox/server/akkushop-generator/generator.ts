@@ -2,6 +2,7 @@ import { parseDescription, detectProductType, ParseResult, ProductType } from '.
 import { renderAkkuHtml, validateRenderedHtml, RenderResult } from './renderer';
 
 export interface ProductRow {
+  'p_item_number': string;
   'p_name[de]': string;
   'p_description[de]': string;
   [key: string]: any;

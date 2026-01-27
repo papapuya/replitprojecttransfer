@@ -34,20 +34,27 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     }
 
     const firstRow = rows[0];
+    const hasItemNumber = 'p_item_number' in firstRow || Object.keys(firstRow).some(k => k.toLowerCase().includes('p_item_number') || k.toLowerCase().includes('item_number'));
     const hasNameColumn = 'p_name[de]' in firstRow || Object.keys(firstRow).some(k => k.toLowerCase().includes('p_name'));
     const hasDescColumn = 'p_description[de]' in firstRow || Object.keys(firstRow).some(k => k.toLowerCase().includes('p_description'));
 
-    if (!hasNameColumn || !hasDescColumn) {
+    if (!hasItemNumber || !hasNameColumn || !hasDescColumn) {
+      const missing = [];
+      if (!hasItemNumber) missing.push('p_item_number');
+      if (!hasNameColumn) missing.push('p_name[de]');
+      if (!hasDescColumn) missing.push('p_description[de]');
       return res.status(400).json({ 
-        error: 'Pflichtspalten fehlen. Benötigt: p_name[de], p_description[de]',
+        error: `Pflichtspalten fehlen: ${missing.join(', ')}`,
         foundColumns: Object.keys(firstRow)
       });
     }
 
     const normalizedRows = rows.map(row => {
-      const normalized: ProductRow = { 'p_name[de]': '', 'p_description[de]': '' };
+      const normalized: ProductRow = { 'p_item_number': '', 'p_name[de]': '', 'p_description[de]': '' };
       for (const [key, value] of Object.entries(row)) {
-        if (key.toLowerCase().includes('p_name') && key.toLowerCase().includes('[de]')) {
+        if (key.toLowerCase().includes('p_item_number') || key.toLowerCase().includes('item_number')) {
+          normalized['p_item_number'] = String(value || '');
+        } else if (key.toLowerCase().includes('p_name') && key.toLowerCase().includes('[de]')) {
           normalized['p_name[de]'] = String(value || '');
         } else if (key.toLowerCase().includes('p_description') && key.toLowerCase().includes('[de]')) {
           normalized['p_description[de]'] = String(value || '');
