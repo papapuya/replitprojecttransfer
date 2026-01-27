@@ -130,12 +130,10 @@ function extractFromText(text: string): Record<string, string> {
 
 function extractCompatibilityFromText(text: string): string {
   const patterns = [
-    /passend\s+(?:für|fuer)\s+([^,.\n]+(?:Notbeleuchtung|Notleuchte|Leuchte)[^,.\n]*)/i,
-    /passend\s+(?:für|fuer)\s+([^,.\n]+)/i,
-    /kompatibel\s+(?:mit|zu)\s+([^,.\n]+)/i,
-    /geeignet\s+(?:für|fuer)\s+([^,.\n]+)/i,
-    /ersetzt\s+([^,.\n]+)/i,
-    /für\s+([A-Z][a-zA-Z]+(?:-?Notbeleuchtung|-?Notleuchte)[^,.\n]*)/i,
+    /passend\s+(?:für|fuer)\s+([A-Za-zÄÖÜäöüß]+-?(?:Notbeleuchtung|Notleuchte|Leuchten?))/i,
+    /(?:für|fuer)\s+([A-Za-zÄÖÜäöüß]+-?(?:Notbeleuchtung|Notleuchte))/i,
+    /([A-Z][a-zA-ZÄÖÜäöüß]+-Notbeleuchtung)/,
+    /([A-Z][a-zA-ZÄÖÜäöüß]+-Notleuchte)/,
   ];
   
   for (const pattern of patterns) {
