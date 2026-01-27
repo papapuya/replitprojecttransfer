@@ -209,12 +209,11 @@ router.post('/download', async (req: Request, res: Response) => {
         csvLines.push(values.join(';'));
       }
       const csvContent = csvLines.join('\r\n');
-      // Brickfox: ISO-8859-1 (Latin-1), Excel: UTF-8 mit BOM
+      // Brickfox: ISO-8859-1 (Latin-1), Excel: UTF-8 ohne BOM
       let csvBuffer: Buffer;
       if (withBom) {
-        // Excel: UTF-8 mit BOM für korrekte Umlaut-Anzeige
-        const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
-        csvBuffer = Buffer.concat([bom, Buffer.from(csvContent, 'utf-8')]);
+        // Excel: UTF-8 ohne BOM
+        csvBuffer = Buffer.from(csvContent, 'utf-8');
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       } else {
         // Brickfox: ISO-8859-1 (Latin-1) Encoding
