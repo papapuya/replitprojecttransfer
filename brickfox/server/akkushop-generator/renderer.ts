@@ -1,4 +1,4 @@
-import { ParsedProduct } from './parser';
+import { ParsedProduct, extractProductTypeFromName } from './parser';
 import OpenAI from 'openai';
 
 const openai = new OpenAI();
@@ -170,7 +170,12 @@ export async function renderAkkuHtml(
   }
 
   let kompatibilitaet = parsed.kompatibilitaet;
+  
   if (!kompatibilitaet || kompatibilitaet === 'undefined' || kompatibilitaet === '-') {
+    kompatibilitaet = extractProductTypeFromName(productName);
+  }
+  
+  if (!kompatibilitaet) {
     kompatibilitaet = await searchCompatibility(productName, parsed.produkttyp || 'Akku');
   }
   
