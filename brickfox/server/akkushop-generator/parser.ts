@@ -218,13 +218,20 @@ function extractFromProductName(name: string): Partial<ParsedProduct> {
   return result;
 }
 
-export function parseDescription(description: string, productName?: string): ParseResult {
-  if (!description || description.trim().length === 0) {
-    return { success: false, error: 'Leere Beschreibung' };
-  }
-
+export function parseDescription(description: string, productName?: string, csvRow?: Record<string, any>): ParseResult {
   const rawFields: Record<string, string> = {};
-  const parsed: Partial<ParsedProduct> = { rawFields, originalHtml: description };
+  const parsed: Partial<ParsedProduct> = { rawFields, originalHtml: description || '' };
+
+  if (csvRow) {
+    if (csvRow.spannung || csvRow.voltage) parsed.spannung = csvRow.spannung || csvRow.voltage;
+    if (csvRow.kapazitaet || csvRow.kapazität || csvRow.capacity) parsed.kapazitaet = csvRow.kapazitaet || csvRow.kapazität || csvRow.capacity;
+    if (csvRow.gewicht || csvRow.weight) parsed.gewicht = csvRow.gewicht || csvRow.weight;
+    if (csvRow.type || csvRow.typ || csvRow.chemie) parsed.type = csvRow.type || csvRow.typ || csvRow.chemie;
+    if (csvRow.produkttyp || csvRow.product_type) parsed.produkttyp = csvRow.produkttyp || csvRow.product_type;
+    if (csvRow.laenge || csvRow.länge) parsed.laenge = csvRow.laenge || csvRow.länge;
+    if (csvRow.breite) parsed.breite = csvRow.breite;
+    if (csvRow.hoehe || csvRow.höhe) parsed.hoehe = csvRow.hoehe || csvRow.höhe;
+  }
 
   const tableFields = extractFromHtmlTable(description);
   Object.assign(rawFields, tableFields);

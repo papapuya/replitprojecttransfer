@@ -39,10 +39,10 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     const productName = row['p_name[de]'] || '';
     const description = row['p_description[de]'] || '';
 
-    if (!productName || !description) {
+    if (!productName) {
       results.push({
         ...row,
-        error: 'Fehlende Pflichtspalten (p_name[de] oder p_description[de])',
+        error: 'Fehlende Pflichtspalte: p_name[de]',
         _status: 'error',
       });
       errorCount++;
