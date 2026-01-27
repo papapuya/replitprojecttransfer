@@ -269,15 +269,6 @@ export default function AkkushopGenerator() {
                   <Download className="w-4 h-4 mr-2" />
                   CSV für Brickfox
                 </Button>
-                <Button
-                  onClick={() => handleDownload('csv', false, true)}
-                  variant="outline"
-                  className="w-full"
-                  disabled={result.summary.success === 0}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  CSV für Excel
-                </Button>
                 {(result.summary.errors > 0 || result.summary.skipped > 0) && (
                   <Button
                     onClick={() => handleDownload('xlsx', true)}
