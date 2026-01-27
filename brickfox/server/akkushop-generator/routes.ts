@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
+import * as iconv from 'iconv-lite';
 import { processProducts, ProductRow, GenerationResult } from './generator';
 
 const router = Router();
@@ -217,7 +218,6 @@ router.post('/download', async (req: Request, res: Response) => {
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       } else {
         // Brickfox: ISO-8859-1 (Latin-1) Encoding
-        const iconv = await import('iconv-lite');
         csvBuffer = iconv.encode(csvContent, 'ISO-8859-1');
         res.setHeader('Content-Type', 'text/csv; charset=iso-8859-1');
       }
