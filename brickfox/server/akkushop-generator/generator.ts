@@ -109,8 +109,6 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     results.push({
       ...row,
       'p_description[de]': renderResult.html,
-      un_number: renderResult.unNumber,
-      hs_code: renderResult.hsCode,
       bullet_1: renderResult.bullet1,
       bullet_2: renderResult.bullet2,
       bullet_3: renderResult.bullet3,
