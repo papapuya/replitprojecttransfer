@@ -198,10 +198,10 @@ export async function renderAkkuHtml(
 
 <h3>Produkteigenschaften</h3>
 <p>
-&#10004; ${usps[0]}<br>
-&#10004; ${usps[1]}<br>
-&#10004; ${usps[2]}<br>
-&#10004; ${usps[3]}
+✅ ${usps[0]}<br>
+✅ ${usps[1]}<br>
+✅ ${usps[2]}<br>
+✅ ${usps[3]}
 </p>
 
 <h3>Technische Daten</h3>
@@ -273,7 +273,7 @@ export function validateRenderedHtml(html: string): { valid: boolean; error?: st
   const paragraphsMatch = textBeforeTable.match(/<p>[^<]*<\/p>/g);
   if (paragraphsMatch) {
     for (const p of paragraphsMatch) {
-      if (p.includes('&#10004;')) continue;
+      if (p.includes('✅')) continue;
       if (/\d/.test(p)) {
         return { valid: false, error: 'Regelverstoß: technische Werte (Zahlen) in Fließtext-Absätzen' };
       }
