@@ -122,29 +122,16 @@ export default function AkkushopGenerator() {
       const baseName = errorsOnly ? 'akkushop_fehler' : (downloadFilename || 'akkushop_generated');
       const filename = `${baseName}${suffix}.${format}`;
       
-      // Methode 1: window.open für bessere Kompatibilität
+      // Neues Fenster mit Download öffnen
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.style.display = 'none';
-      link.target = '_blank';
-      document.body.appendChild(link);
+      window.open(url, '_blank');
       
-      // Simuliere echten Klick
-      const clickEvent = new MouseEvent('click', {
-        view: window,
-        bubbles: true,
-        cancelable: false
-      });
-      link.dispatchEvent(clickEvent);
-      
+      // Cleanup nach kurzer Verzögerung
       setTimeout(() => {
-        document.body.removeChild(link);
         URL.revokeObjectURL(url);
-      }, 100);
+      }, 1000);
 
-      toast({ title: 'Download gestartet', description: `Datei "${filename}" wird heruntergeladen.` });
+      toast({ title: 'Download gestartet', description: `Datei "${filename}" öffnet sich in neuem Tab. Bitte speichern mit Strg+S.` });
     } catch (error: any) {
       toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
     }
