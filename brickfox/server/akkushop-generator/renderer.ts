@@ -1,4 +1,5 @@
 import { ParsedProduct, extractProductTypeFromName } from './parser';
+import { detectProductCategory, getCategoryTextBlocks, ProductCategory } from './category-detection';
 import OpenAI from 'openai';
 
 const openai = new OpenAI();
@@ -65,55 +66,7 @@ export function calculateEnergyContent(voltage: string, capacity: string): strin
   return wh.toFixed(2).replace('.', ',') + ' Wh';
 }
 
-const TEXT_VARIANTS = {
-  A: {
-    absatz1: 'Dieser Akku basiert auf bewährter Zelltechnologie und liefert die spezifizierten elektrischen Werte konstant über die gesamte Lebensdauer. Die technischen Parameter entsprechen den Herstellervorgaben.',
-    absatz2: 'Die Zellen sind thermisch stabil und weisen eine geringe Selbstentladung auf. Der Innenwiderstand bleibt auch nach vielen Ladezyklen im optimalen Bereich für eine zuverlässige Leistungsabgabe.',
-    absatz3: 'Die Bauform und Anschlusskonfiguration entsprechen den gängigen Industriestandards. Die elektrischen Verbindungen sind für den vorgesehenen Stromfluss dimensioniert.',
-  },
-  B: {
-    absatz1: 'Dieser Akku wurde für sicherheitsrelevante Anwendungen entwickelt, bei denen Zuverlässigkeit an erster Stelle steht. Er gewährleistet die Energieversorgung auch in kritischen Situationen.',
-    absatz2: 'Bei korrekter Anwendung und Lagerung erreicht dieser Akku seine maximale Lebensdauer. Vermeiden Sie Tiefentladung und extreme Temperaturen für beste Ergebnisse.',
-    absatz3: 'Der Einbau sollte gemäß den Herstellerangaben des Geräts erfolgen. Achten Sie auf korrekte Polarität und sichere Befestigung der Anschlüsse.',
-  },
-  C: {
-    absatz1: 'Der perfekte Ersatz für Ihren verschlissenen Originalakku. Dieser Akku bietet gleichwertige oder bessere Leistung und ist sofort einsatzbereit.',
-    absatz2: 'Ein Akkutausch lohnt sich: Statt teurer Neuanschaffung bringt ein frischer Akku Ihr Gerät wieder auf volle Leistung. Die Investition macht sich schnell bezahlt.',
-    absatz3: 'Der Wechsel ist unkompliziert und in wenigen Minuten erledigt. Kein Spezialwerkzeug erforderlich – einfach den alten Akku entfernen und den neuen einsetzen.',
-  },
-  D: {
-    absatz1: 'Hochwertiger Ersatzakku mit optimaler Leistung. Passend und sofort einsatzbereit.',
-    absatz2: 'Langlebig und zuverlässig. Viele Ladezyklen bei gleichbleibender Kapazität.',
-    absatz3: 'Schneller Austausch, einfache Montage. Originale Passform garantiert.',
-  },
-};
-
-const USP_VARIANTS = {
-  A: [
-    'Zuverlässige Energieversorgung im Not- und Bereitschaftsbetrieb',
-    'Bewährte Zelltechnologie für konstante Leistung',
-    'Direkter Ersatz für den Originalakku',
-    'Einfache Integration in bestehende Systeme',
-  ],
-  B: [
-    'Entwickelt für sicherheitsrelevante Dauereinsätze',
-    'Langlebige Zellen für maximale Betriebssicherheit',
-    'Passgenauer Austausch ohne Anpassungen',
-    'Robuste Bauweise für zuverlässigen Betrieb',
-  ],
-  C: [
-    'Sofort einsatzbereit als Ersatzakku',
-    'Hochwertige Zelltechnologie für lange Lebensdauer',
-    'Schneller Wechsel ohne Spezialwerkzeug',
-    'Optimale Passform für problemlose Montage',
-  ],
-  D: [
-    'Zuverlässig im Bereitschafts- und Notbetrieb',
-    'Bewährte Akkutechnologie für den Dauereinsatz',
-    'Idealer Ersatz für verschlissene Originalakkus',
-    'Unkomplizierter Einbau in wenigen Minuten',
-  ],
-};
+// Legacy-Varianten entfernt - jetzt kategoriespezifisch in category-detection.ts
 
 export interface RenderResult {
   success: boolean;
@@ -159,8 +112,16 @@ export async function renderAkkuHtml(
   rowIndex: number
 ): Promise<RenderResult> {
   const variant = getVariant(rowIndex);
-  const texts = TEXT_VARIANTS[variant];
-  const usps = USP_VARIANTS[variant];
+  
+  // Kontextbasierte Produktausrichtung: Kategorie erkennen und passende Textbausteine laden
+  const category = detectProductCategory(productName, parsed.originalHtml || '');
+  const categoryTexts = getCategoryTextBlocks(category, variant);
+  const texts = {
+    absatz1: categoryTexts.absatz1,
+    absatz2: categoryTexts.absatz2,
+    absatz3: categoryTexts.absatz3,
+  };
+  const usps = categoryTexts.usps;
 
   const { unNumber, hsCode } = determineUnHs(parsed.type || '');
 
