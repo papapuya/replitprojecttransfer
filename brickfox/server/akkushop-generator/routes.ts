@@ -208,15 +208,19 @@ router.post('/download', async (req: Request, res: Response) => {
         csvLines.push(values.join(';'));
       }
       const csvContent = csvLines.join('\r\n');
-      // UTF-8 BOM nur für Excel hinzufügen, für Brickfox ohne BOM
+      // Brickfox: ISO-8859-1 (Latin-1), Excel: UTF-8 mit BOM
       let csvBuffer: Buffer;
       if (withBom) {
+        // Excel: UTF-8 mit BOM für korrekte Umlaut-Anzeige
         const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
         csvBuffer = Buffer.concat([bom, Buffer.from(csvContent, 'utf-8')]);
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       } else {
-        csvBuffer = Buffer.from(csvContent, 'utf-8');
+        // Brickfox: ISO-8859-1 (Latin-1) Encoding
+        const iconv = await import('iconv-lite');
+        csvBuffer = iconv.encode(csvContent, 'ISO-8859-1');
+        res.setHeader('Content-Type', 'text/csv; charset=iso-8859-1');
       }
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       const filename = errorsOnly ? 'akkushop_fehler.csv' : 'akkushop_generated.csv';
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(csvBuffer);
