@@ -12,6 +12,7 @@ interface GeneratedRow {
   p_item_number?: string;
   'p_name[de]': string;
   'p_description[de]': string;
+  original_description?: string;
   bullet_1?: string;
   bullet_2?: string;
   bullet_3?: string;
@@ -310,6 +311,14 @@ export default function AkkushopGenerator() {
             <DialogDescription>{previewRow?.['p_name[de]']}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <h4 className="font-semibold mb-2">Original-Beschreibung (aus CSV):</h4>
+              <div 
+                className="border rounded-lg p-4 bg-gray-50 prose prose-sm max-w-none max-h-48 overflow-y-auto"
+                dangerouslySetInnerHTML={{ __html: previewRow?.original_description || '-' }}
+              />
+            </div>
+
             <div>
               <h4 className="font-semibold mb-2">Generierte HTML-Beschreibung:</h4>
               <div 
