@@ -99,8 +99,10 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
       
       rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
       
-      // Debug: Erste 3 Artikelnummern loggen
+      // Debug: Spalten und erste Werte loggen
+      console.log('[CSV Debug] Spalten:', Object.keys(rows[0] || {}));
       console.log('[CSV Debug] Erste 3 p_item_number:', rows.slice(0, 3).map((r: any) => r['p_item_number'] || r.p_item_number));
+      console.log('[CSV Debug] Erste p_description[de]:', (rows[0] as any)?.['p_description[de]']?.substring(0, 50));
     } else {
       return res.status(400).json({ error: 'Ungültiges Dateiformat. Nur .xlsx, .xls oder .csv erlaubt.' });
     }
