@@ -21,7 +21,9 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
       const sheet = workbook.Sheets[sheetName];
       rows = XLSX.utils.sheet_to_json(sheet) as ProductRow[];
     } else if (fileName.endsWith('.csv')) {
-      const workbook = XLSX.read(req.file.buffer, { type: 'buffer', codepage: 65001 });
+      // CSV als UTF-8 String dekodieren und dann parsen
+      const csvString = req.file.buffer.toString('utf-8');
+      const workbook = XLSX.read(csvString, { type: 'string' });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       rows = XLSX.utils.sheet_to_json(sheet) as ProductRow[];
