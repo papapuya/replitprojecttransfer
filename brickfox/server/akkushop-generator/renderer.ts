@@ -48,51 +48,51 @@ export function calculateEnergyContent(voltage: string, capacity: string): strin
 
 const TEXT_VARIANTS = {
   A: {
-    absatz1: 'Dieser hochwertige Ersatzakku wurde speziell für den professionellen Einsatz in Notbeleuchtungssystemen entwickelt. Er bietet zuverlässige Leistung und gewährleistet die Sicherheit in kritischen Situationen.',
-    absatz2: 'Dank der bewährten Zelltechnologie liefert dieser Akku eine konstante und langanhaltende Energieversorgung. Die robuste Bauweise garantiert eine lange Lebensdauer auch bei häufigem Gebrauch.',
-    absatz3: 'Der Akku lässt sich problemlos in bestehende Systeme integrieren. Die kompakten Abmessungen und die standardisierten Anschlüsse ermöglichen einen schnellen und unkomplizierten Austausch.',
+    absatz1: 'Dieser Akku basiert auf bewährter Zelltechnologie und liefert die spezifizierten elektrischen Werte konstant über die gesamte Lebensdauer. Die technischen Parameter entsprechen den Herstellervorgaben.',
+    absatz2: 'Die Zellen sind thermisch stabil und weisen eine geringe Selbstentladung auf. Der Innenwiderstand bleibt auch nach vielen Ladezyklen im optimalen Bereich für eine zuverlässige Leistungsabgabe.',
+    absatz3: 'Die Bauform und Anschlusskonfiguration entsprechen den gängigen Industriestandards. Die elektrischen Verbindungen sind für den vorgesehenen Stromfluss dimensioniert.',
   },
   B: {
-    absatz1: 'Ein zuverlässiger Energiespeicher für anspruchsvolle Anwendungen in der Notbeleuchtung. Dieser Akku erfüllt höchste Qualitätsstandards und ist für den dauerhaften Betrieb ausgelegt.',
-    absatz2: 'Die verwendete Zelltechnologie zeichnet sich durch ihre Zuverlässigkeit und Langlebigkeit aus. Dieser Akku behält auch nach vielen Ladezyklen seine volle Kapazität.',
-    absatz3: 'Durch die durchdachte Konstruktion gestaltet sich der Einbau besonders einfach. Die mitgelieferten Anschlüsse passen zu gängigen Notleuchten-Systemen.',
+    absatz1: 'Dieser Akku wurde für sicherheitsrelevante Anwendungen entwickelt, bei denen Zuverlässigkeit an erster Stelle steht. Er gewährleistet die Energieversorgung auch in kritischen Situationen.',
+    absatz2: 'Bei korrekter Anwendung und Lagerung erreicht dieser Akku seine maximale Lebensdauer. Vermeiden Sie Tiefentladung und extreme Temperaturen für beste Ergebnisse.',
+    absatz3: 'Der Einbau sollte gemäß den Herstellerangaben des Geräts erfolgen. Achten Sie auf korrekte Polarität und sichere Befestigung der Anschlüsse.',
   },
   C: {
-    absatz1: 'Dieser Notleuchtenakku ist die ideale Wahl für sicherheitsrelevante Anwendungen. Er liefert zuverlässig Energie, wenn sie am dringendsten benötigt wird.',
-    absatz2: 'Gefertigt nach strengen Qualitätsvorgaben überzeugt dieser Akku durch seine Beständigkeit und gleichbleibende Leistung. Die moderne Zelltechnologie sorgt für optimale Ergebnisse.',
-    absatz3: 'Der Austausch ist schnell erledigt und erfordert kein Spezialwerkzeug. Die Bauform entspricht den gängigen Standards für Notbeleuchtungssysteme.',
+    absatz1: 'Der perfekte Ersatz für Ihren verschlissenen Originalakku. Dieser Akku bietet gleichwertige oder bessere Leistung und ist sofort einsatzbereit.',
+    absatz2: 'Ein Akkutausch lohnt sich: Statt teurer Neuanschaffung bringt ein frischer Akku Ihr Gerät wieder auf volle Leistung. Die Investition macht sich schnell bezahlt.',
+    absatz3: 'Der Wechsel ist unkompliziert und in wenigen Minuten erledigt. Kein Spezialwerkzeug erforderlich – einfach den alten Akku entfernen und den neuen einsetzen.',
   },
   D: {
-    absatz1: 'Für den Einsatz in Notbeleuchtungsanlagen konzipiert, bietet dieser Akku maximale Zuverlässigkeit. Er ist die optimale Lösung für den professionellen Bereich.',
-    absatz2: 'Die hochwertige Zelltechnologie garantiert eine stabile Energieabgabe über die gesamte Lebensdauer. Selbst unter anspruchsvollen Bedingungen liefert dieser Akku konstante Leistung.',
-    absatz3: 'Der Akku fügt sich nahtlos in vorhandene Installationen ein. Die standardkonforme Ausführung vereinfacht den Einbau erheblich.',
+    absatz1: 'Hochwertiger Ersatzakku mit optimaler Leistung. Passend und sofort einsatzbereit.',
+    absatz2: 'Langlebig und zuverlässig. Viele Ladezyklen bei gleichbleibender Kapazität.',
+    absatz3: 'Schneller Austausch, einfache Montage. Originale Passform garantiert.',
   },
 };
 
 const USP_VARIANTS = {
   A: [
-    'Zuverlässige Energieversorgung für Notbeleuchtungssysteme',
-    'Langlebige Zelltechnologie für dauerhaften Einsatz',
-    'Kompatibel mit gängigen Notleuchten-Systemen',
-    'Einfacher Austausch ohne Spezialwerkzeug',
+    'Spezifizierte elektrische Parameter gemäß Datenblatt',
+    'Geringe Selbstentladung und stabiler Innenwiderstand',
+    'Thermisch stabile Zellchemie',
+    'Standardisierte Bauform und Anschlüsse',
   ],
   B: [
-    'Optimiert für sicherheitsrelevante Anwendungen',
-    'Konstante Leistung über viele Ladezyklen',
-    'Passend für standardisierte Notbeleuchtung',
-    'Kompakte Bauform für flexible Installation',
+    'Entwickelt für sicherheitsrelevante Anwendungen',
+    'Zuverlässige Energieversorgung in kritischen Situationen',
+    'Optimale Lebensdauer bei korrekter Handhabung',
+    'Sichere Anschlüsse und robuste Bauweise',
   ],
   C: [
-    'Hohe Kapazität für lange Betriebszeiten',
-    'Robuste Konstruktion für den Dauereinsatz',
-    'Universelle Kompatibilität mit vielen Systemen',
-    'Schneller und unkomplizierter Wechsel',
+    'Direkter Ersatz für den Originalakku',
+    'Gleichwertige oder bessere Leistung',
+    'Schneller Austausch ohne Spezialwerkzeug',
+    'Sofort einsatzbereit nach dem Einbau',
   ],
   D: [
-    'Professionelle Qualität für kritische Anwendungen',
-    'Bewährte Technologie für maximale Zuverlässigkeit',
-    'Breite Kompatibilität mit Notleuchten',
-    'Werkzeugfreie Montage möglich',
+    'Hochwertig und passgenau',
+    'Langlebig und zuverlässig',
+    'Einfache Montage',
+    'Sofort einsatzbereit',
   ],
 };
 
