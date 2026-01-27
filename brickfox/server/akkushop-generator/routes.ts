@@ -116,7 +116,12 @@ router.post('/download', async (req: Request, res: Response) => {
       });
     }
 
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    // Header für XLSX definieren
+    const xlsxHeaders = errorsOnly 
+      ? ['p_item_number', 'p_name[de]', 'p_description[de]', 'Fehler']
+      : Object.keys(exportRows[0] || {});
+    
+    const worksheet = XLSX.utils.json_to_sheet(exportRows, { header: xlsxHeaders, skipHeader: false });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Produkte');
 
