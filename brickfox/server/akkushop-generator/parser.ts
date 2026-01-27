@@ -128,6 +128,26 @@ function extractFromText(text: string): Record<string, string> {
   return fields;
 }
 
+function extractCompatibilityFromText(text: string): string {
+  const patterns = [
+    /passend\s+(?:für|fuer)\s+([^,.\n]+(?:Notbeleuchtung|Notleuchte|Leuchte)[^,.\n]*)/i,
+    /passend\s+(?:für|fuer)\s+([^,.\n]+)/i,
+    /kompatibel\s+(?:mit|zu)\s+([^,.\n]+)/i,
+    /geeignet\s+(?:für|fuer)\s+([^,.\n]+)/i,
+    /ersetzt\s+([^,.\n]+)/i,
+    /für\s+([A-Z][a-zA-Z]+(?:-?Notbeleuchtung|-?Notleuchte)[^,.\n]*)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+  
+  return '';
+}
+
 function extractFromProductName(name: string): Partial<ParsedProduct> {
   const result: Partial<ParsedProduct> = {};
   
@@ -154,6 +174,11 @@ function extractFromProductName(name: string): Partial<ParsedProduct> {
     result.type = 'Li-Ion';
   }
   
+  const compat = extractCompatibilityFromText(name);
+  if (compat) {
+    result.kompatibilitaet = compat;
+  }
+  
   return result;
 }
 
@@ -174,6 +199,13 @@ export function parseDescription(description: string, productName?: string): Par
   for (const [key, value] of Object.entries(textFields)) {
     if (!rawFields[key]) {
       rawFields[key] = value;
+    }
+  }
+
+  if (!rawFields['kompatibilität'] && !rawFields['kompatibilitaet']) {
+    const compatFromDesc = extractCompatibilityFromText(cleanText);
+    if (compatFromDesc) {
+      rawFields['kompatibilität'] = compatFromDesc;
     }
   }
 
