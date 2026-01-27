@@ -16,17 +16,17 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     let rows: ProductRow[] = [];
 
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-      const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer', raw: true });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
-      rows = XLSX.utils.sheet_to_json(sheet) as ProductRow[];
+      rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
     } else if (fileName.endsWith('.csv')) {
       // CSV als UTF-8 String dekodieren und dann parsen
       const csvString = req.file.buffer.toString('utf-8');
-      const workbook = XLSX.read(csvString, { type: 'string' });
+      const workbook = XLSX.read(csvString, { type: 'string', raw: true });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
-      rows = XLSX.utils.sheet_to_json(sheet) as ProductRow[];
+      rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
     } else {
       return res.status(400).json({ error: 'Ungültiges Dateiformat. Nur .xlsx, .xls oder .csv erlaubt.' });
     }
