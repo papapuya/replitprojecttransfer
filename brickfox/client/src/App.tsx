@@ -43,6 +43,7 @@ import CSVCompare from "@/pages/csv-compare";
 import AttributeFiller from "@/pages/attribute-filler";
 import HtmlGenerator from "@/pages/html-generator";
 import PriceMatcher from "@/pages/price-matcher";
+import AkkushopGenerator from "@/pages/akkushop-generator";
 
 function Router() {
   return (
@@ -179,6 +180,11 @@ function Router() {
       <Route path="/price-matcher">
         <ProtectedRoute>
           <PriceMatcher />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/akkushop-generator">
+        <ProtectedRoute>
+          <AkkushopGenerator />
         </ProtectedRoute>
       </Route>
       
