@@ -285,7 +285,6 @@ export default function AkkushopGenerator() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setPreviewRow(row)}
-                          disabled={row._status !== 'success'}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
