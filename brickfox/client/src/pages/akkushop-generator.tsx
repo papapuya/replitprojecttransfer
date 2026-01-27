@@ -93,14 +93,23 @@ export default function AkkushopGenerator() {
     }
   };
 
-  const handleDownload = async (format: 'xlsx' | 'csv') => {
+  const handleDownload = async (format: 'xlsx' | 'csv', errorsOnly: boolean = false) => {
     if (!result?.rows) return;
+
+    const rowsToDownload = errorsOnly 
+      ? result.rows.filter(r => r._status === 'error' || r._status === 'skipped')
+      : result.rows.filter(r => r._status === 'success');
+
+    if (rowsToDownload.length === 0) {
+      toast({ title: 'Keine Daten', description: 'Keine passenden Produkte zum Download.', variant: 'destructive' });
+      return;
+    }
 
     try {
       const response = await fetch('/api/akkushop-generator/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: result.rows, format }),
+        body: JSON.stringify({ rows: rowsToDownload, format, errorsOnly }),
       });
 
       if (!response.ok) {
@@ -111,7 +120,7 @@ export default function AkkushopGenerator() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `akkushop_generated.${format}`;
+      a.download = errorsOnly ? `akkushop_fehler.${format}` : `akkushop_generated.${format}`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -227,22 +236,32 @@ export default function AkkushopGenerator() {
 
               <div className="pt-4 space-y-2">
                 <Button
-                  onClick={() => handleDownload('xlsx')}
+                  onClick={() => handleDownload('xlsx', false)}
                   className="w-full bg-indigo-600 hover:bg-indigo-700"
                   disabled={result.summary.success === 0}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Als Excel (.xlsx)
+                  Erfolge als Excel (.xlsx)
                 </Button>
                 <Button
-                  onClick={() => handleDownload('csv')}
+                  onClick={() => handleDownload('csv', false)}
                   variant="outline"
                   className="w-full"
                   disabled={result.summary.success === 0}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Als CSV
+                  Erfolge als CSV
                 </Button>
+                {(result.summary.errors > 0 || result.summary.skipped > 0) && (
+                  <Button
+                    onClick={() => handleDownload('xlsx', true)}
+                    variant="outline"
+                    className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Fehler als Excel (.xlsx)
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

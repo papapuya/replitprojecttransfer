@@ -82,27 +82,39 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
 
 router.post('/download', async (req: Request, res: Response) => {
   try {
-    const { rows, format = 'xlsx' } = req.body;
+    const { rows, format = 'xlsx', errorsOnly = false } = req.body;
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return res.status(400).json({ error: 'Keine Daten zum Exportieren' });
     }
 
-    // Export-Spalten: Pflichtspalten + Bulletpoints
-    const exportRows = rows.map((row: any) => {
-      const result: any = {
+    let exportRows: any[];
+
+    if (errorsOnly) {
+      // Fehler-Export: Original-Daten + Fehler-Spalte
+      exportRows = rows.map((row: any) => ({
         'p_item_number': row['p_item_number'] || '',
         'p_name[de]': row['p_name[de]'] || '',
-        'p_description[de]': row['p_description[de]'] || '',
-        'p_description_bullet[de][0]': row['bullet_1'] || '',
-        'p_description_bullet[de][1]': row['bullet_2'] || '',
-      };
-      // Bullet 3 nur wenn vorhanden
-      if (row['bullet_3']) {
-        result['p_description_bullet[de][2]'] = row['bullet_3'];
-      }
-      return result;
-    });
+        'p_description[de]': row['original_description'] || row['p_description[de]'] || '',
+        'Fehler': row['error'] || '',
+      }));
+    } else {
+      // Erfolg-Export: Generierte Daten + Bulletpoints
+      exportRows = rows.map((row: any) => {
+        const result: any = {
+          'p_item_number': row['p_item_number'] || '',
+          'p_name[de]': row['p_name[de]'] || '',
+          'p_description[de]': row['p_description[de]'] || '',
+          'p_description_bullet[de][0]': row['bullet_1'] || '',
+          'p_description_bullet[de][1]': row['bullet_2'] || '',
+        };
+        // Bullet 3 nur wenn vorhanden
+        if (row['bullet_3']) {
+          result['p_description_bullet[de][2]'] = row['bullet_3'];
+        }
+        return result;
+      });
+    }
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
@@ -110,16 +122,20 @@ router.post('/download', async (req: Request, res: Response) => {
 
     if (format === 'csv') {
       // CSV manuell generieren mit Semikolon-Trennzeichen (UTF-8 ohne BOM)
-      // Prüfen ob irgendeine Zeile einen 3. Bulletpoint hat
-      const hasBullet3 = exportRows.some((row: any) => row['p_description_bullet[de][2]']);
-      const headers = [
-        'p_item_number', 
-        'p_name[de]', 
-        'p_description[de]',
-        'p_description_bullet[de][0]',
-        'p_description_bullet[de][1]',
-        ...(hasBullet3 ? ['p_description_bullet[de][2]'] : [])
-      ];
+      let headers: string[];
+      if (errorsOnly) {
+        headers = ['p_item_number', 'p_name[de]', 'p_description[de]', 'Fehler'];
+      } else {
+        const hasBullet3 = exportRows.some((row: any) => row['p_description_bullet[de][2]']);
+        headers = [
+          'p_item_number', 
+          'p_name[de]', 
+          'p_description[de]',
+          'p_description_bullet[de][0]',
+          'p_description_bullet[de][1]',
+          ...(hasBullet3 ? ['p_description_bullet[de][2]'] : [])
+        ];
+      }
       const csvLines = [headers.join(';')];
       for (const row of exportRows) {
         const values = headers.map(h => {
@@ -135,12 +151,14 @@ router.post('/download', async (req: Request, res: Response) => {
       const csvContent = csvLines.join('\r\n');
       const csvBuffer = Buffer.from(csvContent, 'utf-8');
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', 'attachment; filename="akkushop_generated.csv"');
+      const filename = errorsOnly ? 'akkushop_fehler.csv' : 'akkushop_generated.csv';
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(csvBuffer);
     } else {
       const xlsxBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename="akkushop_generated.xlsx"');
+      const filename = errorsOnly ? 'akkushop_fehler.xlsx' : 'akkushop_generated.xlsx';
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(xlsxBuffer);
     }
   } catch (error: any) {
