@@ -292,9 +292,9 @@ export default function AkkushopGenerator() {
             <CardDescription>Klicken Sie auf "Vorschau" um die generierte HTML-Beschreibung anzuzeigen.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[600px] border rounded-lg">
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 bg-white z-10">
                   <TableRow className="bg-gray-50">
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Status</TableHead>
@@ -305,7 +305,7 @@ export default function AkkushopGenerator() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {result.rows.slice(0, 100).map((row, index) => (
+                  {result.rows.map((row, index) => (
                     <TableRow key={index} className={row._status === 'error' ? 'bg-red-50' : row._status === 'skipped' ? 'bg-amber-50' : ''}>
                       <TableCell className="font-mono text-sm">{index + 1}</TableCell>
                       <TableCell>{getStatusBadge(row._status)}</TableCell>
@@ -329,11 +329,6 @@ export default function AkkushopGenerator() {
                   ))}
                 </TableBody>
               </Table>
-              {result.rows.length > 100 && (
-                <p className="text-sm text-gray-500 mt-4 text-center">
-                  Zeigt die ersten 100 von {result.rows.length} Ergebnissen.
-                </p>
-              )}
             </div>
           </CardContent>
         </Card>
