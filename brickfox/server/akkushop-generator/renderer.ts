@@ -222,16 +222,21 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
 <li>${parsed.produkttyp || 'Akku'} ${parsed.type}, ${parsed.spannung}, ${parsed.kapazitaet}</li>
 </ul>`;
 
-  // Bulletpoints auf maximal 60 Zeichen begrenzen
+  // Bulletpoints auf maximal 60 Zeichen begrenzen und Satzzeichen am Ende entfernen
   const truncateBullet = (text: string, maxLength: number = 60): string => {
-    if (text.length <= maxLength) return text;
-    // Am letzten Leerzeichen vor dem Limit abschneiden
-    const truncated = text.substring(0, maxLength);
-    const lastSpace = truncated.lastIndexOf(' ');
-    if (lastSpace > maxLength - 15) {
-      return truncated.substring(0, lastSpace);
+    let result = text;
+    if (result.length > maxLength) {
+      // Am letzten Leerzeichen vor dem Limit abschneiden
+      const truncated = result.substring(0, maxLength);
+      const lastSpace = truncated.lastIndexOf(' ');
+      if (lastSpace > maxLength - 15) {
+        result = truncated.substring(0, lastSpace);
+      } else {
+        result = truncated;
+      }
     }
-    return truncated;
+    // Satzzeichen am Ende entfernen
+    return result.replace(/[.,;:!?]+$/, '').trim();
   };
 
   const bullet1 = truncateBullet(productName);
