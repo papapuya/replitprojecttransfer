@@ -3,6 +3,25 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI();
 
+// Häufige Rechtschreibfehler korrigieren
+const SPELLING_CORRECTIONS: [RegExp, string][] = [
+  [/Werzeuge/gi, 'Werkzeuge'],
+  [/Werzeug([^e])/gi, 'Werkzeug$1'],
+  [/Akku's/gi, 'Akkus'],
+  [/Batterie's/gi, 'Batterien'],
+  [/Taschelampe/gi, 'Taschenlampe'],
+  [/Notleuchteakku/gi, 'Notleuchtenakku'],
+  [/Ersatzakku's/gi, 'Ersatzakkus'],
+];
+
+function correctSpelling(text: string): string {
+  let result = text;
+  for (const [pattern, replacement] of SPELLING_CORRECTIONS) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+}
+
 export async function searchCompatibility(productName: string, productType: string): Promise<string> {
   try {
     const response = await openai.chat.completions.create({
@@ -250,12 +269,12 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
 
   return {
     success: true,
-    html,
+    html: correctSpelling(html),
     unNumber,
     hsCode,
-    bullet1,
-    bullet2,
-    bullet3,
+    bullet1: correctSpelling(bullet1),
+    bullet2: correctSpelling(bullet2),
+    bullet3: bullet3 ? correctSpelling(bullet3) : undefined,
   };
 }
 
