@@ -6,6 +6,33 @@ import { processProducts, ProductRow, GenerationResult } from './generator';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+// CSV-Zeile parsen mit Unterstützung für Anführungszeichen
+function parseCSVLine(line: string, separator: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+    
+    if (char === '"' && inQuotes && nextChar === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === separator && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  
+  return result;
+}
+
 router.post('/generate', upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
@@ -16,17 +43,27 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     let rows: ProductRow[] = [];
 
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-      const workbook = XLSX.read(req.file.buffer, { type: 'buffer', raw: true });
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer', cellText: true, cellDates: false });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
     } else if (fileName.endsWith('.csv')) {
-      // CSV als UTF-8 String dekodieren und dann parsen
+      // CSV manuell parsen um Bindestrich-Probleme zu vermeiden
       const csvString = req.file.buffer.toString('utf-8');
-      const workbook = XLSX.read(csvString, { type: 'string', raw: true });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
+      const lines = csvString.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length > 0) {
+        // Separator erkennen (Semikolon oder Komma)
+        const separator = lines[0].includes(';') ? ';' : ',';
+        const headers = parseCSVLine(lines[0], separator);
+        rows = lines.slice(1).map(line => {
+          const values = parseCSVLine(line, separator);
+          const row: Record<string, string> = {};
+          headers.forEach((header, i) => {
+            row[header] = values[i] || '';
+          });
+          return row as ProductRow;
+        });
+      }
     } else {
       return res.status(400).json({ error: 'Ungültiges Dateiformat. Nur .xlsx, .xls oder .csv erlaubt.' });
     }
