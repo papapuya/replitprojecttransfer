@@ -28,7 +28,7 @@ export interface GenerationResult {
   };
 }
 
-export function processProducts(rows: ProductRow[]): GenerationResult {
+export async function processProducts(rows: ProductRow[]): Promise<GenerationResult> {
   const results: GeneratedRow[] = [];
   let successCount = 0;
   let errorCount = 0;
@@ -83,7 +83,7 @@ export function processProducts(rows: ProductRow[]): GenerationResult {
       continue;
     }
 
-    const renderResult: RenderResult = renderAkkuHtml(productName, parseResult.data, i);
+    const renderResult: RenderResult = await renderAkkuHtml(productName, parseResult.data, i);
 
     if (!renderResult.success || !renderResult.html) {
       results.push({

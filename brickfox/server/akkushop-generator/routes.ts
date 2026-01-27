@@ -58,7 +58,7 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
       return normalized;
     });
 
-    const result: GenerationResult = processProducts(normalizedRows);
+    const result: GenerationResult = await processProducts(normalizedRows);
 
     res.json({
       success: true,
