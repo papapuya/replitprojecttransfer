@@ -89,10 +89,11 @@ router.post('/download', async (req: Request, res: Response) => {
     }
 
     // Nur die drei Pflichtspalten exportieren
+    // HTML-Beschreibung: Zeilenumbrüche entfernen für einzeilige CSV-Zellen
     const exportRows = rows.map((row: any) => ({
       'p_item_number': row['p_item_number'] || '',
       'p_name[de]': row['p_name[de]'] || '',
-      'p_description[de]': row['p_description[de]'] || '',
+      'p_description[de]': (row['p_description[de]'] || '').replace(/[\r\n]+/g, ''),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
