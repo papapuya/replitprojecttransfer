@@ -141,8 +141,9 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
       return normalized;
     });
     
-    // Debug: Erste 3 normalisierte Artikelnummern loggen
+    // Debug: Erste 3 normalisierte Zeilen loggen
     console.log('[Normalized Debug] Erste 3 p_item_number:', normalizedRows.slice(0, 3).map(r => r['p_item_number']));
+    console.log('[Normalized Debug] Erste Beschreibung (100 Zeichen):', normalizedRows[0]?.['p_description[de]']?.substring(0, 100));
 
     const result: GenerationResult = await processProducts(normalizedRows);
 
