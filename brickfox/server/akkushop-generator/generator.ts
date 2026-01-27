@@ -42,6 +42,7 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     if (!productName) {
       results.push({
         ...row,
+        original_description: description,
         error: 'Fehlende Pflichtspalte: p_name[de]',
         _status: 'error',
       });
@@ -54,6 +55,7 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     if (productType === 'unknown') {
       results.push({
         ...row,
+        original_description: description,
         error: 'Produkttyp unklar (weder Akku noch Lampe erkannt)',
         _status: 'skipped',
       });
@@ -64,6 +66,7 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     if (productType === 'lampe') {
       results.push({
         ...row,
+        original_description: description,
         error: 'Lampen-Generierung noch nicht implementiert',
         _status: 'skipped',
       });
@@ -76,6 +79,7 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     if (!parseResult.success || !parseResult.data) {
       results.push({
         ...row,
+        original_description: description,
         error: parseResult.error || 'Parsing fehlgeschlagen',
         _status: 'error',
       });
@@ -88,6 +92,7 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     if (!renderResult.success || !renderResult.html) {
       results.push({
         ...row,
+        original_description: description,
         error: renderResult.error || 'Rendering fehlgeschlagen',
         _status: 'error',
       });
@@ -99,6 +104,7 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     if (!validation.valid) {
       results.push({
         ...row,
+        original_description: description,
         error: validation.error,
         _status: 'error',
       });
