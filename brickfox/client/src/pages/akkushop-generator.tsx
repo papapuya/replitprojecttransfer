@@ -331,7 +331,7 @@ export default function AkkushopGenerator() {
               <ul className="list-disc list-inside text-sm space-y-1">
                 <li>{previewRow?.bullet_1 || '-'}</li>
                 <li>{previewRow?.bullet_2 || '-'}</li>
-                <li>{previewRow?.bullet_3 || '-'}</li>
+                {previewRow?.bullet_3 && <li>{previewRow.bullet_3}</li>}
               </ul>
             </div>
 
