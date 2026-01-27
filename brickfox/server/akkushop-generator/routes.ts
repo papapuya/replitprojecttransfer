@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
-import * as iconv from 'iconv-lite';
+import iconv from 'iconv-lite';
 import { processProducts, ProductRow, GenerationResult } from './generator';
 
 const router = Router();
