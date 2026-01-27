@@ -88,12 +88,11 @@ router.post('/download', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Keine Daten zum Exportieren' });
     }
 
-    // Nur die drei Pflichtspalten exportieren
-    // HTML-Beschreibung: Zeilenumbrüche entfernen für einzeilige CSV-Zellen
+    // Nur die drei Pflichtspalten exportieren (✅ Emojis bleiben erhalten)
     const exportRows = rows.map((row: any) => ({
       'p_item_number': row['p_item_number'] || '',
       'p_name[de]': row['p_name[de]'] || '',
-      'p_description[de]': (row['p_description[de]'] || '').replace(/[\r\n]+/g, ''),
+      'p_description[de]': row['p_description[de]'] || '',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
