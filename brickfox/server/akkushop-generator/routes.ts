@@ -312,6 +312,13 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
       emitter.emit('complete', { summary: result.summary });
     }
 
+    // Debug: Prüfen ob Beschreibungen in der Response enthalten sind
+    if (result.rows.length > 0) {
+      const firstRow = result.rows[0];
+      console.log(`[Categorize Response] Erste Zeile Keys:`, Object.keys(firstRow));
+      console.log(`[Categorize Response] Erste Zeile p_description[de]: Länge=${firstRow['p_description[de]']?.length || 0}`);
+    }
+
     res.json({
       success: true,
       summary: result.summary,
