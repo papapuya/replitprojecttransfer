@@ -290,11 +290,19 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
       return normalized;
     });
 
+    // Leere Zeilen filtern (nur Produkte mit Namen behalten)
+    const validRows = normalizedRows.filter(row => {
+      const name = row['p_name[de]']?.trim();
+      return name && name.length > 0;
+    });
+
+    console.log(`[AkkushopGenerator] Gefiltert: ${normalizedRows.length} → ${validRows.length} gültige Zeilen`);
+
     const onProgress = emitter ? (current: number, total: number, productName: string) => {
       emitter.emit('progress', { current, total, productName });
     } : undefined;
 
-    const result = await categorizeProducts(normalizedRows, onProgress);
+    const result = await categorizeProducts(validRows, onProgress);
 
     if (emitter) {
       emitter.emit('complete', { summary: result.summary });
