@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import Papa from 'papaparse';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -277,18 +278,27 @@ export default function AkkushopGenerator() {
     }
   };
 
-  const handleDownload = async (format: 'xlsx' | 'csv', errorsOnly: boolean = false, withBom: boolean = false) => {
+  const handleDownload = async (format: 'xlsx' | 'csv', filter: 'success' | 'errors' | 'generisch' = 'success', withBom: boolean = false) => {
     if (!generatedResult?.rows) return;
 
     try {
-      const filteredRows = errorsOnly
-        ? generatedResult.rows.filter(r => r._status === 'error' || r._status === 'skipped')
-        : generatedResult.rows.filter(r => r._status === 'success');
+      let filteredRows;
+      let suffix = '';
+      
+      if (filter === 'errors') {
+        filteredRows = generatedResult.rows.filter(r => r._status === 'error' || r._status === 'skipped');
+        suffix = '_fehler';
+      } else if (filter === 'generisch') {
+        filteredRows = generatedResult.rows.filter(r => r._category === 'GENERISCH');
+        suffix = '_generisch';
+      } else {
+        filteredRows = generatedResult.rows.filter(r => r._status === 'success');
+      }
 
       const response = await fetch('/api/akkushop-generator/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: filteredRows, format, errorsOnly, withBom }),
+        body: JSON.stringify({ rows: filteredRows, format, errorsOnly: filter === 'errors', withBom }),
       });
 
       if (!response.ok) throw new Error('Download fehlgeschlagen');
@@ -297,7 +307,7 @@ export default function AkkushopGenerator() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${downloadFilename}${errorsOnly ? '_errors' : ''}.${format}`;
+      a.download = `${downloadFilename}${suffix}.${format}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -551,7 +561,7 @@ export default function AkkushopGenerator() {
                     />
                   </div>
                   <Button
-                    onClick={() => handleDownload('xlsx', false)}
+                    onClick={() => handleDownload('xlsx', 'success')}
                     className="w-full bg-indigo-600 hover:bg-indigo-700"
                     disabled={generatedResult.summary.success === 0}
                   >
@@ -559,7 +569,7 @@ export default function AkkushopGenerator() {
                     Erfolge als Excel (.xlsx)
                   </Button>
                   <Button
-                    onClick={() => handleDownload('csv', false, false)}
+                    onClick={() => handleDownload('csv', 'success', false)}
                     variant="outline"
                     className="w-full"
                     disabled={generatedResult.summary.success === 0}
@@ -569,12 +579,22 @@ export default function AkkushopGenerator() {
                   </Button>
                   {generatedResult.summary.errors > 0 && (
                     <Button
-                      onClick={() => handleDownload('xlsx', true)}
+                      onClick={() => handleDownload('xlsx', 'errors')}
                       variant="outline"
                       className="w-full border-red-300 text-red-600 hover:bg-red-50"
                     >
                       <XCircle className="w-4 h-4 mr-2" />
                       Fehler als Excel (.xlsx)
+                    </Button>
+                  )}
+                  {generatedResult.rows.some(r => r._category === 'GENERISCH') && (
+                    <Button
+                      onClick={() => handleDownload('xlsx', 'generisch')}
+                      variant="outline"
+                      className="w-full border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+                    >
+                      <AlertTriangle className="w-4 h-4 mr-2" />
+                      Generisch als Excel (.xlsx)
                     </Button>
                   )}
                 </>
@@ -593,21 +613,77 @@ export default function AkkushopGenerator() {
                 <CardTitle>Kategorisierte Produkte ({categorizedRows.length})</CardTitle>
                 <CardDescription>Prüfen Sie die Kategorien. Bei GENERISCH können Sie manuell eine bessere Kategorie wählen.</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Filter:</span>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle ({categorizedRows.length})</SelectItem>
-                    {Object.entries(categoryStats).sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat} ({count})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Filter:</span>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle ({categorizedRows.length})</SelectItem>
+                      {Object.entries(categoryStats).sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat} ({count})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  {categoryStats['GENERISCH'] > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+                      onClick={() => {
+                        const generischRows = categorizedRows.filter(r => r._category === 'GENERISCH');
+                        const csvContent = Papa.unparse(generischRows.map(r => ({
+                          p_item_number: r.p_item_number,
+                          'p_name[de]': r['p_name[de]'],
+                          'p_description[de]': r['p_description[de]'],
+                          _category: r._category,
+                        })), { delimiter: ';' });
+                        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'generisch_produkte.csv';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      <AlertTriangle className="w-4 h-4 mr-1" />
+                      Generisch ({categoryStats['GENERISCH']})
+                    </Button>
+                  )}
+                  {categorizedRows.some(r => r._status === 'error') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-300 text-red-600 hover:bg-red-50"
+                      onClick={() => {
+                        const errorRows = categorizedRows.filter(r => r._status === 'error');
+                        const csvContent = Papa.unparse(errorRows.map(r => ({
+                          p_item_number: r.p_item_number,
+                          'p_name[de]': r['p_name[de]'],
+                          'p_description[de]': r['p_description[de]'],
+                          _error: r._error,
+                        })), { delimiter: ';' });
+                        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'fehler_produkte.csv';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Fehler ({categorizedRows.filter(r => r._status === 'error').length})
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
