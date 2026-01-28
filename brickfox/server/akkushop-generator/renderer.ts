@@ -146,6 +146,8 @@ function buildLieferumfang(parsed: ParsedProduct, category: ProductCategory): st
     produktLabel = '1x Kamera-Akku';
   } else if (category === 'HAUSHALT') {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Geräteakku';
+  } else if (category === 'MEDIZIN') {
+    produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Messgeräteakku';
   } else {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Akku';
   }
@@ -298,6 +300,8 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     produktLabel = 'Kamera-Akku';
   } else if (category === 'HAUSHALT') {
     produktLabel = parsed.produkttyp || 'Geräteakku';
+  } else if (category === 'MEDIZIN') {
+    produktLabel = parsed.produkttyp || 'Messgeräteakku';
   } else {
     produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
   }
