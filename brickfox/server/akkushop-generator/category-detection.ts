@@ -6,6 +6,7 @@ export type ProductCategory =
   | 'MEDIZIN'
   | 'KAMERAAKKU'
   | 'POWERBANK'
+  | 'HAUSHALT'
   | 'GENERISCH';
 
 const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
@@ -87,16 +88,35 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
   POWERBANK: [
     /powerbank/i,
     /power\s*bank/i,
-    /mobil(e|er)?\s*(akku|lader)/i,
-    /externer?\s*akku/i,
-    /zusatzakku/i,
-    /reise(akku|ladegerät)/i,
-    /usb[-\s]?(c[-\s]?)?(akku|lader|charger)/i,
-    /tragbar(e|er)?\s*(akku|lader)/i,
-    /portable\s*(charger|battery)/i,
-    /anker/i,
-    /intenso/i,
-    /\d+\.?\d*\s*mah\s*(power|akku|lader)/i,
+    /mobil(e|er)?\s*lader/i,
+    /externer?\s*akku\s*(pack)?$/i,
+    /usb[-\s]?lader/i,
+    /portable\s*charger/i,
+  ],
+  HAUSHALT: [
+    /staubsauger/i,
+    /handstaubsauger/i,
+    /saugroboter/i,
+    /reinigungsgerät/i,
+    /bodenstaubsauger/i,
+    /akkusauger/i,
+    /kirby/i,
+    /dyson/i,
+    /vorwerk/i,
+    /miele.*sauger/i,
+    /roomba/i,
+    /irobot/i,
+    /fensterreiniger/i,
+    /wischroboter/i,
+    /rasierapparat/i,
+    /rasierer/i,
+    /haarschneider/i,
+    /trimmer/i,
+    /zahnbürste/i,
+    /oral[-\s]?b/i,
+    /philips\s*(sonicare|rasierer)/i,
+    /braun\s*(series|rasierer)/i,
+    /remington/i,
   ],
   GENERISCH: [],
 };
@@ -112,6 +132,7 @@ export function detectProductCategory(productName: string, description: string):
     MEDIZIN: 0,
     KAMERAAKKU: 0,
     POWERBANK: 0,
+    HAUSHALT: 0,
     GENERISCH: 0,
   };
 
@@ -465,6 +486,52 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C' | 'D'
         'Hohe Kapazität für mehrere Ladungen',
         'Schnellladefunktion',
         'Universell kompatibel',
+      ],
+    },
+  },
+  HAUSHALT: {
+    A: {
+      absatz1: 'Dieser Akku wurde speziell für den Einsatz in Haushaltsgeräten entwickelt und liefert zuverlässige Leistung für den täglichen Gebrauch.',
+      absatz2: 'Die Zelltechnologie ist auf häufige Ladezyklen und konstante Leistungsabgabe ausgelegt. Auch bei regelmäßiger Nutzung bleibt die volle Kapazität über lange Zeit erhalten.',
+      absatz3: 'Die Bauform entspricht den Spezifikationen des Geräteherstellers. Der Akku lässt sich problemlos gegen den Originalakku austauschen.',
+      usps: [
+        'Speziell für Haushaltsgeräte entwickelt',
+        'Zuverlässige Leistung im täglichen Gebrauch',
+        'Hochwertiger Ersatz für den Originalakku',
+        'Passgenau für das jeweilige Gerät',
+      ],
+    },
+    B: {
+      absatz1: 'Dieser Ersatzakku bringt Ihr Haushaltsgerät wieder auf volle Leistung und sorgt für unterbrechungsfreien Betrieb.',
+      absatz2: 'Die robuste Zelltechnologie ist auf Langlebigkeit und häufige Nutzung ausgelegt. Die Kapazität bleibt auch nach vielen Ladezyklen konstant.',
+      absatz3: 'Der Einbau erfolgt einfach durch Austausch des alten Akkus. Bitte beachten Sie die Hinweise des Geräteherstellers.',
+      usps: [
+        'Bringt Ihr Gerät wieder auf volle Leistung',
+        'Langlebige Zellen für häufige Nutzung',
+        'Einfacher Austausch des alten Akkus',
+        'Passgenau für Ihr Gerät',
+      ],
+    },
+    C: {
+      absatz1: 'Hochwertiger Ersatzakku passend für Ihr Haushaltsgerät. Zuverlässig und langlebig.',
+      absatz2: 'Die bewährte Zelltechnologie sorgt für konstante Leistung bei jeder Anwendung. Ideal für den regelmäßigen Einsatz im Haushalt.',
+      absatz3: 'Der Akkuwechsel ist schnell erledigt – einfach den alten Akku entnehmen und den neuen einsetzen.',
+      usps: [
+        'Passend für Ihr Gerät',
+        'Zuverlässig im täglichen Einsatz',
+        'Schneller Akkuwechsel',
+        'Bewährte Zelltechnologie',
+      ],
+    },
+    D: {
+      absatz1: 'Ersatzakku für Haushaltsgeräte. Passend und sofort einsatzbereit.',
+      absatz2: 'Langlebig und leistungsstark für den täglichen Gebrauch.',
+      absatz3: 'Einfacher Austausch, originale Passform.',
+      usps: [
+        'Passend für Ihr Gerät',
+        'Langlebig und zuverlässig',
+        'Einfacher Akkuwechsel',
+        'Originale Passform',
       ],
     },
   },
