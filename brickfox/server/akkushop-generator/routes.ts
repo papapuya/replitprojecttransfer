@@ -327,6 +327,15 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
 router.post('/generate-from-categorized', async (req: Request, res: Response) => {
   try {
     const { rows } = req.body;
+    
+    // Debug: Was kommt an?
+    console.log(`[GenerateFromCategorized] Empfangen: ${rows?.length || 0} Zeilen`);
+    if (rows && rows.length > 0) {
+      const firstRow = rows[0];
+      const keys = Object.keys(firstRow);
+      console.log(`[GenerateFromCategorized] Erste Zeile Keys:`, keys);
+      console.log(`[GenerateFromCategorized] Erste Zeile p_description[de]: Länge=${firstRow['p_description[de]']?.length || 0}`);
+    }
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return res.status(400).json({ error: 'Keine Daten zum Generieren' });
