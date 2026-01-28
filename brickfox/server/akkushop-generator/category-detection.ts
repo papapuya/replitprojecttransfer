@@ -410,6 +410,34 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
   GENERISCH: [],
 };
 
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
+
+const CATEGORY_DESCRIPTIONS: Record<ProductCategory, string> = {
+  NOTLEUCHTE: 'Akkus für Notbeleuchtung, Sicherheitsbeleuchtung, Rettungszeichenleuchten, Fluchtwegleuchten',
+  FUNKAKKU: 'Akkus für Funkgeräte, Walkie-Talkies, BOS-Funk, Betriebsfunk (Motorola, Kenwood, Hytera)',
+  WERKZEUGAKKU: 'Akkus für Elektrowerkzeuge, Akkuschrauber, Bohrmaschinen (Bosch, Makita, DeWalt)',
+  TELEFON: 'Akkus für schnurlose Telefone, DECT-Telefone, Haustelefone',
+  MEDIZIN: 'Akkus für medizinische Geräte, Rollstühle, Patientenlifter, Reha-Geräte, Pflegebetten',
+  KAMERAAKKU: 'Akkus für Digitalkameras, Camcorder, Videokameras (Canon, Sony, Nikon)',
+  POWERBANK: 'Mobile Powerbanks, externe Akkupacks für USB-Geräte',
+  HAUSHALT: 'Akkus für Staubsauger, Saugroboter, Zahnbürsten (Dyson, Vorwerk, Oral-B)',
+  AIRSOFT: 'Akkupacks für Airsoft-Gewehre, AEG-Systeme, Softair',
+  GARTEN: 'Akkus für Gartengeräte, Rasenmäher, Heckenscheren, Laubbläser',
+  MOTORRAD: 'Starterbatterien für Motorräder, Roller, Quad, Schneemobile (YTX, CTX, GTX)',
+  KRANAKKU: 'Akkus für Kranfernsteuerungen, industrielle Funksteuerungen (Autec, HBC, Hetronic)',
+  SPEICHERBATTERIE: 'Speicherbatterien für SPS, Industriesteuerungen (Siemens, Omron, Mitsubishi)',
+  BLEIAKKU: 'Bleiakkus AGM/Gel für USV-Anlagen, Solaranlagen, stationäre Anwendungen',
+  TUERSTEURUNG: 'Akkus für automatische Türsteuerungen, Automatiktüren (Besam, Dorma, Record)',
+  PUFFERBATTERIE: 'Pufferbatterien für Alarmanlagen, Sicherheitssysteme (Daitem, Elkron)',
+  FAHRRAD: 'Akkus für E-Bikes, Pedelecs, Elektrofahrräder (Bosch, Shimano)',
+  RASIERER: 'Akkus für elektrische Rasierer, Haarschneider (Braun, Philips, Wella)',
+  HANDLEUCHTE: 'Akkus für professionelle Handleuchten, Arbeitsleuchten, Taschenlampen (Streamlight, Acculux)',
+  ZELLENTAUSCH: 'Zellentausch-Sets, Akkupacks zum Einbau in Originalgehäuse, Reparatur-Akkus, Startkoffer',
+  GENERISCH: 'Allgemeine Akkus ohne spezifische Kategorie',
+};
+
 export function detectProductCategory(productName: string, description: string): ProductCategory {
   const combined = `${productName} ${description}`.toLowerCase();
   
@@ -458,6 +486,67 @@ export function detectProductCategory(productName: string, description: string):
   }
 
   return maxCategory;
+}
+
+export async function detectProductCategoryWithAI(productName: string, description: string): Promise<ProductCategory> {
+  const keywordCategory = detectProductCategory(productName, description);
+  
+  if (keywordCategory !== 'GENERISCH') {
+    const combined = `${productName} ${description}`.toLowerCase();
+    const hasZellentausch = /zellentausch|zellenwechsel|akkupack.*passend|startkoffer/i.test(combined);
+    const hasHandleuchte = /handleuchte|taschenlampe|arbeitsleuchte|streamlight|acculux/i.test(combined);
+    
+    if (hasZellentausch && hasHandleuchte) {
+      return 'HANDLEUCHTE';
+    }
+    if (hasZellentausch && keywordCategory !== 'ZELLENTAUSCH') {
+      return keywordCategory;
+    }
+  }
+  
+  try {
+    const categoryList = Object.entries(CATEGORY_DESCRIPTIONS)
+      .map(([cat, desc]) => `- ${cat}: ${desc}`)
+      .join('\n');
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `Du bist ein Experte für Akkus und Batterien. Analysiere den Produktnamen und bestimme die passende Kategorie.
+
+Verfügbare Kategorien:
+${categoryList}
+
+WICHTIGE REGELN:
+1. Wähle die Kategorie basierend auf dem HAUPTZWECK des Akkus (für welches Gerät ist er gedacht?)
+2. Bei "Zellentausch" Produkten: Wähle die Kategorie des ZIELGERÄTS, nicht ZELLENTAUSCH
+   - "Zellentausch für Handleuchte" → HANDLEUCHTE
+   - "Zellentausch für Rasierer" → RASIERER
+   - "Zellentausch Startkoffer" → ZELLENTAUSCH (nur wenn kein spezifisches Gerät genannt)
+3. MEDIZIN nur für echte Medizingeräte (Rollstühle, Patientenlifter, OP-Geräte)
+4. Antworte NUR mit dem Kategorienamen in Großbuchstaben, nichts anderes.`
+        },
+        {
+          role: 'user',
+          content: `Produktname: "${productName}"\n${description ? `Beschreibung: "${description}"` : ''}\n\nWelche Kategorie?`
+        }
+      ],
+      max_tokens: 20,
+      temperature: 0,
+    });
+
+    const result = response.choices[0]?.message?.content?.trim().toUpperCase() as ProductCategory;
+    
+    if (result && Object.keys(CATEGORY_DESCRIPTIONS).includes(result)) {
+      return result;
+    }
+  } catch (error) {
+    console.error('[AI Category Detection] Error:', error);
+  }
+  
+  return keywordCategory;
 }
 
 export interface CategoryTextBlocks {
