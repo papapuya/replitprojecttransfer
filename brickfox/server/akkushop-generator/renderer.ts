@@ -147,7 +147,7 @@ function buildLieferumfang(parsed: ParsedProduct, category: ProductCategory): st
   } else if (category === 'HAUSHALT') {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Geräteakku';
   } else if (category === 'MEDIZIN') {
-    produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Messgeräteakku';
+    produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Medizinakku';
   } else if (category === 'AIRSOFT') {
     produktLabel = '1x Airsoft-Akkupack';
   } else {
@@ -319,7 +319,7 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
   } else if (category === 'HAUSHALT') {
     produktLabel = parsed.produkttyp || 'Geräteakku';
   } else if (category === 'MEDIZIN') {
-    produktLabel = parsed.produkttyp || 'Messgeräteakku';
+    produktLabel = parsed.produkttyp || 'Medizinakku';
   } else if (category === 'AIRSOFT') {
     produktLabel = 'Airsoft-Akkupack';
   } else {
