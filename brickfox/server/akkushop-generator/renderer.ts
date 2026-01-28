@@ -204,6 +204,17 @@ export async function renderAkkuHtml(
   
   // KI-gestützte Produktkategorisierung für bessere Genauigkeit
   const category = await detectProductCategoryWithAI(productName, parsed.originalHtml || '');
+  return renderAkkuHtmlWithCategory(productName, parsed, rowIndex, category);
+}
+
+// Render mit vorgegebener Kategorie (für 2-Stufen-Prozess)
+export async function renderAkkuHtmlWithCategory(
+  productName: string,
+  parsed: ParsedProduct,
+  rowIndex: number,
+  category: ProductCategory
+): Promise<RenderResult> {
+  const variant = getVariant(rowIndex);
   const categoryTexts = getCategoryTextBlocks(category, variant);
   const texts = {
     absatz1: categoryTexts.absatz1,
