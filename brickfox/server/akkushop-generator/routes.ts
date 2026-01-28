@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
 import iconv from 'iconv-lite';
-import { processProducts, ProductRow, GenerationResult } from './generator';
+import { processProducts, ProductRow, GenerationResult, categorizeProducts, CategorizedRow, generateFromCategorized } from './generator';
 import { EventEmitter } from 'events';
 
 const router = Router();
@@ -211,6 +211,135 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     if (emitter) {
       emitter.emit('error', error);
     }
+    res.status(500).json({ error: error.message || 'Interner Serverfehler' });
+  }
+});
+
+// Schritt 1: Nur Kategorisierung
+router.post('/categorize', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+    }
+
+    const sessionId = req.headers['x-session-id'] as string;
+    const emitter = sessionId ? progressEmitters.get(sessionId) : null;
+
+    const fileName = req.file.originalname.toLowerCase();
+    let rows: ProductRow[] = [];
+
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer', cellText: true, cellDates: false });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      rows = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' }) as ProductRow[];
+    } else if (fileName.endsWith('.csv')) {
+      let csvString: string;
+      const buffer = req.file.buffer;
+      const hasUtf8Bom = buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF;
+      
+      if (hasUtf8Bom) {
+        csvString = buffer.slice(3).toString('utf-8');
+      } else {
+        csvString = iconv.decode(buffer, 'win1252');
+      }
+
+      const lines = csvString.split(/\r?\n/).filter(line => line.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ error: 'CSV-Datei enthält keine Daten' });
+      }
+
+      const separator = lines[0].includes(';') ? ';' : ',';
+      const headers = parseCSVLine(lines[0], separator);
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i], separator);
+        const row: any = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        rows.push(row);
+      }
+    } else {
+      return res.status(400).json({ error: 'Nicht unterstütztes Dateiformat. Bitte .xlsx, .xls oder .csv verwenden.' });
+    }
+
+    // Spalten normalisieren
+    const normalizedRows = rows.map(row => {
+      const normalized: ProductRow = {
+        'p_item_number': '',
+        'p_name[de]': '',
+        'p_description[de]': '',
+      };
+      
+      for (const [key, value] of Object.entries(row)) {
+        const cleanKey = key.replace(/^\uFEFF/, '').trim();
+        normalized[cleanKey] = value;
+        
+        if (cleanKey.toLowerCase().includes('item') && cleanKey.toLowerCase().includes('number')) {
+          normalized['p_item_number'] = value as string;
+        }
+        if (cleanKey.toLowerCase().includes('name') && cleanKey.toLowerCase().includes('de')) {
+          normalized['p_name[de]'] = value as string;
+        }
+        if (cleanKey.toLowerCase().includes('description') && cleanKey.toLowerCase().includes('de')) {
+          normalized['p_description[de]'] = value as string;
+        }
+      }
+      
+      return normalized;
+    });
+
+    const onProgress = emitter ? (current: number, total: number, productName: string) => {
+      emitter.emit('progress', { current, total, productName });
+    } : undefined;
+
+    const result = await categorizeProducts(normalizedRows, onProgress);
+
+    if (emitter) {
+      emitter.emit('complete', { summary: result.summary });
+    }
+
+    res.json({
+      success: true,
+      summary: result.summary,
+      rows: result.rows,
+    });
+  } catch (error: any) {
+    console.error('[AkkushopGenerator] Categorize Error:', error);
+    res.status(500).json({ error: error.message || 'Interner Serverfehler' });
+  }
+});
+
+// Schritt 2: Generierung mit vorgegebenen Kategorien
+router.post('/generate-from-categorized', async (req: Request, res: Response) => {
+  try {
+    const { rows } = req.body;
+
+    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'Keine Daten zum Generieren' });
+    }
+
+    const sessionId = req.headers['x-session-id'] as string;
+    const emitter = sessionId ? progressEmitters.get(sessionId) : null;
+
+    const onProgress = emitter ? (current: number, total: number, productName: string) => {
+      emitter.emit('progress', { current, total, productName });
+    } : undefined;
+
+    const result = await generateFromCategorized(rows as CategorizedRow[], onProgress);
+
+    if (emitter) {
+      emitter.emit('complete', { summary: result.summary });
+    }
+
+    res.json({
+      success: true,
+      summary: result.summary,
+      rows: result.rows,
+    });
+  } catch (error: any) {
+    console.error('[AkkushopGenerator] Generate Error:', error);
     res.status(500).json({ error: error.message || 'Interner Serverfehler' });
   }
 });
