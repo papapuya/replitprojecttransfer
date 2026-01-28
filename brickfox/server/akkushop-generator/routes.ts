@@ -225,7 +225,8 @@ router.post('/download', async (req: Request, res: Response) => {
           ...(hasBullet3 ? ['p_description_bullet[de][2]'] : [])
         ];
       }
-      const csvLines = [headers.join(';')];
+      // Brickfox-CSV: Keine Header-Zeile, nur Daten
+      const csvLines: string[] = [];
       for (const row of exportRows) {
         const values = headers.map(h => {
           const val = String((row as any)[h] || '');
