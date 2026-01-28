@@ -69,12 +69,12 @@ export async function categorizeProducts(
       onProgress(i + 1, rows.length, productName.substring(0, 50));
     }
 
-    if (!productName || !description || description.trim().length === 0) {
+    if (!productName) {
       results.push({
         ...row,
         _category: '-',
         _rowIndex: i,
-        error: !productName ? 'Fehlende Pflichtspalte: p_name[de]' : 'Keine Produktbeschreibung vorhanden',
+        error: 'Fehlende Pflichtspalte: p_name[de]',
         _status: 'error',
       });
       errorCount++;
