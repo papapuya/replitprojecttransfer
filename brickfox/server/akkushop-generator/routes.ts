@@ -259,6 +259,9 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
 
       rows = parseResult.data as ProductRow[];
       console.log(`[AkkushopGenerator] CSV: ${rows.length} Produkte mit PapaParse geparst`);
+      console.log(`[AkkushopGenerator] CSV Headers:`, Object.keys(rows[0] || {}));
+      console.log(`[AkkushopGenerator] Erste Zeile p_name[de]:`, (rows[0] as any)?.['p_name[de]']?.substring(0, 50));
+      console.log(`[AkkushopGenerator] Erste Zeile p_description[de] Länge:`, (rows[0] as any)?.['p_description[de]']?.length);
     } else {
       return res.status(400).json({ error: 'Nicht unterstütztes Dateiformat. Bitte .xlsx, .xls oder .csv verwenden.' });
     }
