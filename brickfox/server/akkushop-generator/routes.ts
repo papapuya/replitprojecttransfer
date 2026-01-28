@@ -245,12 +245,16 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
       }
 
       const lines = csvString.split(/\r?\n/).filter(line => line.trim());
+      console.log(`[AkkushopGenerator] CSV: ${lines.length} Zeilen nach Split`);
+      
       if (lines.length < 2) {
         return res.status(400).json({ error: 'CSV-Datei enthält keine Daten' });
       }
 
       const separator = lines[0].includes(';') ? ';' : ',';
       const headers = parseCSVLine(lines[0], separator);
+      console.log(`[AkkushopGenerator] CSV: ${headers.length} Spalten, Separator: "${separator}"`);
+      console.log(`[AkkushopGenerator] CSV Headers: ${headers.slice(0, 5).join(', ')}...`);
 
       for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i], separator);
@@ -260,6 +264,7 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
         });
         rows.push(row);
       }
+      console.log(`[AkkushopGenerator] CSV: ${rows.length} Datenzeilen geparst`);
     } else {
       return res.status(400).json({ error: 'Nicht unterstütztes Dateiformat. Bitte .xlsx, .xls oder .csv verwenden.' });
     }
