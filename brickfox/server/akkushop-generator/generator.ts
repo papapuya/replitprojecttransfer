@@ -17,6 +17,7 @@ export interface GeneratedRow extends ProductRow {
   bullet_3?: string;
   error?: string;
   _status: 'success' | 'error' | 'skipped';
+  _category?: string;
 }
 
 export interface GenerationResult {
@@ -110,6 +111,7 @@ export async function processProducts(
       bullet_2: renderResult.bullet2,
       bullet_3: renderResult.bullet3,
       _status: 'success',
+      _category: renderResult.category,
     });
     successCount++;
   }

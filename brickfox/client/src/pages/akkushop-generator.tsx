@@ -19,6 +19,7 @@ interface GeneratedRow {
   bullet_3?: string;
   error?: string;
   _status: 'success' | 'error' | 'skipped';
+  _category?: string;
 }
 
 interface GenerationResult {
@@ -371,6 +372,7 @@ export default function AkkushopGenerator() {
                     <TableHead>Status</TableHead>
                     <TableHead>Artikelnummer</TableHead>
                     <TableHead>Produktname</TableHead>
+                    <TableHead>Kategorie</TableHead>
                     <TableHead>Fehler</TableHead>
                     <TableHead className="w-24">Aktionen</TableHead>
                   </TableRow>
@@ -396,6 +398,15 @@ export default function AkkushopGenerator() {
                             </PopoverContent>
                           </Popover>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {row._category ? (
+                          <Badge variant="outline" className="text-xs font-normal bg-indigo-50 text-indigo-700 border-indigo-200">
+                            {row._category}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="max-w-xs truncate text-sm text-red-600" title={row.error || ''}>
                         {row.error || '-'}

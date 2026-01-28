@@ -108,6 +108,7 @@ export interface RenderResult {
   bullet1?: string;
   bullet2?: string;
   bullet3?: string;
+  category?: string;
 }
 
 function getVariant(rowIndex: number): 'A' | 'B' | 'C' | 'D' {
@@ -426,6 +427,7 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     bullet1: correctSpelling(bullet1),
     bullet2: correctSpelling(bullet2),
     bullet3: bullet3 ? correctSpelling(bullet3) : undefined,
+    category,
   };
 }
 
