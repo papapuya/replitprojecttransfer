@@ -106,6 +106,35 @@ function isRoundCell(parsed: ParsedProduct): boolean {
   return !!(parsed.durchmesser && parsed.laenge && !parsed.breite && !parsed.hoehe);
 }
 
+function buildLieferumfang(parsed: ParsedProduct, category: ProductCategory): string {
+  // Produktbezeichnung je nach Kategorie
+  let produktLabel: string;
+  if (category === 'POWERBANK') {
+    produktLabel = '1x Powerbank';
+  } else if (category === 'KAMERAAKKU') {
+    produktLabel = '1x Kamera-Akku';
+  } else {
+    produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Akku';
+  }
+  
+  // Technische Details sammeln (nur wenn vorhanden)
+  const details: string[] = [];
+  if (parsed.type && parsed.type !== 'undefined') {
+    details.push(parsed.type);
+  }
+  if (parsed.spannung && parsed.spannung !== 'undefined') {
+    details.push(parsed.spannung);
+  }
+  if (parsed.kapazitaet && parsed.kapazitaet !== 'undefined') {
+    details.push(parsed.kapazitaet);
+  }
+  
+  if (details.length > 0) {
+    return `${produktLabel} ${details.join(', ')}`;
+  }
+  return produktLabel;
+}
+
 export async function renderAkkuHtml(
   productName: string,
   parsed: ParsedProduct,
@@ -207,7 +236,7 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
 
 <h3>Lieferumfang</h3>
 <ul>
-<li>${parsed.produkttyp || 'Akku'} ${parsed.type}, ${parsed.spannung}, ${parsed.kapazitaet}</li>
+<li>${buildLieferumfang(parsed, category)}</li>
 </ul>`;
 
   // Bulletpoints auf maximal 60 Zeichen begrenzen und Satzzeichen am Ende entfernen
@@ -228,12 +257,33 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
   };
 
   const bullet1 = truncateBullet(productName);
-  // Bullet 2: "Ersatzakku" oder "Akku" + technische Daten
-  const produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
-  const bullet2 = truncateBullet(`${produktLabel} ${parsed.spannung}, ${parsed.kapazitaet}${energiegehalt ? ', ' + energiegehalt : ''}`);
+  // Bullet 2: Produktlabel basierend auf Kategorie
+  let produktLabel: string;
+  if (category === 'POWERBANK') {
+    produktLabel = 'Powerbank';
+  } else if (category === 'KAMERAAKKU') {
+    produktLabel = 'Kamera-Akku';
+  } else {
+    produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
+  }
+  
+  // Bullet 2 zusammenstellen (nur vorhandene Werte)
+  const bullet2Parts: string[] = [produktLabel];
+  if (parsed.spannung && parsed.spannung !== 'undefined') {
+    bullet2Parts.push(parsed.spannung);
+  }
+  if (parsed.kapazitaet && parsed.kapazitaet !== 'undefined') {
+    bullet2Parts.push(parsed.kapazitaet);
+  }
+  if (energiegehalt) {
+    bullet2Parts.push(energiegehalt);
+  }
+  const bullet2 = truncateBullet(bullet2Parts.join(', ').replace(/,\s*,/g, ','));
+  
   // Bullet 3: Nur wenn Kompatibilität vorhanden, sonst weglassen
+  const bullet3Label = category === 'POWERBANK' ? 'Powerbank' : (parsed.produkttyp || 'Akku');
   const bullet3 = kompatibilitaet 
-    ? truncateBullet(`${parsed.produkttyp || 'Akku'} für ${kompatibilitaet}`)
+    ? truncateBullet(`${bullet3Label} für ${kompatibilitaet}`)
     : undefined;
 
   return {
