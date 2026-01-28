@@ -152,6 +152,8 @@ function buildLieferumfang(parsed: ParsedProduct, category: ProductCategory): st
     produktLabel = '1x Airsoft-Akkupack';
   } else if (category === 'GARTEN') {
     produktLabel = '1x Gartengeräteakku';
+  } else if (category === 'MOTORRAD') {
+    produktLabel = '1x Motorrad-Starterbatterie';
   } else {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Akku';
   }
@@ -326,6 +328,8 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     produktLabel = 'Airsoft-Akkupack';
   } else if (category === 'GARTEN') {
     produktLabel = 'Gartengeräteakku';
+  } else if (category === 'MOTORRAD') {
+    produktLabel = 'Motorrad-Starterbatterie';
   } else {
     produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
   }
@@ -351,6 +355,8 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     bullet3Label = 'Airsoft-Akkupack';
   } else if (category === 'GARTEN') {
     bullet3Label = 'Gartengeräteakku';
+  } else if (category === 'MOTORRAD') {
+    bullet3Label = 'Motorrad-Starterbatterie';
   } else {
     bullet3Label = parsed.produkttyp || 'Akku';
   }

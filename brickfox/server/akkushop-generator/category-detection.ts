@@ -9,6 +9,7 @@ export type ProductCategory =
   | 'HAUSHALT'
   | 'AIRSOFT'
   | 'GARTEN'
+  | 'MOTORRAD'
   | 'GENERISCH';
 
 const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
@@ -200,6 +201,50 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
     /automower/i,
     /mähroboter/i,
   ],
+  MOTORRAD: [
+    /motorrad/i,
+    /motorradbatterie/i,
+    /roller/i,
+    /rollerbatterie/i,
+    /quad/i,
+    /atv/i,
+    /schneemobil/i,
+    /jetski/i,
+    /starterbatterie/i,
+    /blei[-\s]?gel/i,
+    /gel[-\s]?akku/i,
+    /gel[-\s]?batterie/i,
+    /agm[-\s]?batterie/i,
+    /agm[-\s]?akku/i,
+    /bleiakku/i,
+    /powersports/i,
+    /ytx\d+/i,
+    /ctx\d+/i,
+    /gtx\d+/i,
+    /yb\d+/i,
+    /cb\d+/i,
+    /12n\d+/i,
+    /din\s*\d{5}/i,
+    /etn\s*\d{3}/i,
+    /\d+a\s*\(en\)/i,
+    /kaltstartstrom/i,
+    /panther/i,
+    /yuasa/i,
+    /varta\s*powersports/i,
+    /banner/i,
+    /exide/i,
+    /intact/i,
+    /landport/i,
+    /bs[-\s]?battery/i,
+    /honda.*batterie/i,
+    /yamaha.*batterie/i,
+    /suzuki.*batterie/i,
+    /kawasaki.*batterie/i,
+    /bmw.*batterie/i,
+    /harley.*batterie/i,
+    /vespa.*batterie/i,
+    /piaggio.*batterie/i,
+  ],
   GENERISCH: [],
 };
 
@@ -217,6 +262,7 @@ export function detectProductCategory(productName: string, description: string):
     HAUSHALT: 0,
     AIRSOFT: 0,
     GARTEN: 0,
+    MOTORRAD: 0,
     GENERISCH: 0,
   };
 
@@ -708,6 +754,52 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C' | 'D'
         'Langlebig und zuverlässig',
         'Konstante Leistung',
         'Einfacher Akkuwechsel',
+      ],
+    },
+  },
+  MOTORRAD: {
+    A: {
+      absatz1: 'Diese Batterie basiert auf wartungsfreier Gel- bzw. AGM-Technologie und liefert zuverlässige Startleistung für Motorräder, Roller und weitere Powersports-Fahrzeuge.',
+      absatz2: 'Die Konstruktion ist auslaufsicher und vibrationsfest. Die geringe Selbstentladung ermöglicht auch nach längerer Standzeit einen sicheren Start.',
+      absatz3: 'Die Abmessungen und Polkonfiguration entsprechen den Originalspezifikationen. Der Einbau erfolgt als direkter Austausch.',
+      usps: [
+        'Wartungsfreie Gel/AGM-Technologie',
+        'Auslaufsicher und vibrationsfest',
+        'Zuverlässige Startleistung',
+        'Direkter Austausch gegen die Originalbatterie',
+      ],
+    },
+    B: {
+      absatz1: 'Diese Starterbatterie ist für den Einsatz in Motorrädern und Rollern ausgelegt und bietet zuverlässige Leistung.',
+      absatz2: 'Die wartungsfreie Technologie erfordert kein Nachfüllen von destilliertem Wasser. Die Batterie ist in jeder Einbaulage verwendbar.',
+      absatz3: 'Vor dem Einbau die Polkonfiguration und Abmessungen prüfen. Auf festen Sitz und korrekte Polanschlüsse achten.',
+      usps: [
+        'Wartungsfrei – kein Nachfüllen nötig',
+        'Lageunabhängiger Einbau möglich',
+        'Passgenauer Austausch',
+        'Robuste Konstruktion für Vibrationen',
+      ],
+    },
+    C: {
+      absatz1: 'Hochwertige Ersatzbatterie für Ihr Motorrad oder Ihren Roller. Sofort einbaubereit.',
+      absatz2: 'Eine frische Batterie sorgt für zuverlässigen Start – auch nach längerer Standzeit.',
+      absatz3: 'Der Wechsel ist schnell erledigt – einfach die alte Batterie ausbauen und die neue einsetzen.',
+      usps: [
+        'Sofort einsatzbereit als Ersatz',
+        'Zuverlässiger Start',
+        'Schneller Batteriewechsel',
+        'Passend für Ihr Fahrzeug',
+      ],
+    },
+    D: {
+      absatz1: 'Starterbatterie für Motorrad, Roller und Quad. Wartungsfrei und sofort einsatzbereit.',
+      absatz2: 'Zuverlässige Startleistung. Auslaufsicher und vibrationsfest.',
+      absatz3: 'Direkter Austausch, einfacher Einbau.',
+      usps: [
+        'Wartungsfreie Technologie',
+        'Zuverlässiger Start',
+        'Auslaufsicher',
+        'Direkter Austausch',
       ],
     },
   },
