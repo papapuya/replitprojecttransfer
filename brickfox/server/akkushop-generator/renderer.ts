@@ -148,6 +148,8 @@ function buildLieferumfang(parsed: ParsedProduct, category: ProductCategory): st
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Geräteakku';
   } else if (category === 'MEDIZIN') {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Messgeräteakku';
+  } else if (category === 'AIRSOFT') {
+    produktLabel = '1x Airsoft-Akkupack';
   } else {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Akku';
   }
@@ -318,6 +320,8 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     produktLabel = parsed.produkttyp || 'Geräteakku';
   } else if (category === 'MEDIZIN') {
     produktLabel = parsed.produkttyp || 'Messgeräteakku';
+  } else if (category === 'AIRSOFT') {
+    produktLabel = 'Airsoft-Akkupack';
   } else {
     produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
   }
@@ -336,7 +340,14 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
   const bullet2 = truncateBullet(bullet2Parts.join(', ').replace(/,\s*,/g, ','));
   
   // Bullet 3: Nur wenn Kompatibilität vorhanden, sonst weglassen
-  const bullet3Label = category === 'POWERBANK' ? 'Powerbank' : (parsed.produkttyp || 'Akku');
+  let bullet3Label: string;
+  if (category === 'POWERBANK') {
+    bullet3Label = 'Powerbank';
+  } else if (category === 'AIRSOFT') {
+    bullet3Label = 'Airsoft-Akkupack';
+  } else {
+    bullet3Label = parsed.produkttyp || 'Akku';
+  }
   const bullet3 = kompatibilitaet 
     ? truncateBullet(`${bullet3Label} für ${kompatibilitaet}`)
     : undefined;
