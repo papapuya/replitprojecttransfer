@@ -8,6 +8,7 @@ export type ProductCategory =
   | 'POWERBANK'
   | 'HAUSHALT'
   | 'AIRSOFT'
+  | 'GARTEN'
   | 'GENERISCH';
 
 const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
@@ -169,6 +170,36 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
     /dean.*stecker/i,
     /socom/i,
   ],
+  GARTEN: [
+    /gartengerät/i,
+    /gartengeräteakku/i,
+    /garten[-\s]?akku/i,
+    /rasenmäher/i,
+    /akkurasenmäher/i,
+    /heckenschere/i,
+    /akkuheckenschere/i,
+    /rasentrimmer/i,
+    /grasschere/i,
+    /laubbläser/i,
+    /laubsauger/i,
+    /astschere/i,
+    /kettensäge/i,
+    /akku[-\s]?säge/i,
+    /gardena/i,
+    /husqvarna/i,
+    /stihl/i,
+    /einhell/i,
+    /wolf[-\s]?garten/i,
+    /black\s*&?\s*decker/i,
+    /greenworks/i,
+    /worx/i,
+    /ryobi.*garten/i,
+    /al[-\s]?ko/i,
+    /bosch.*garten/i,
+    /robomow/i,
+    /automower/i,
+    /mähroboter/i,
+  ],
   GENERISCH: [],
 };
 
@@ -185,6 +216,7 @@ export function detectProductCategory(productName: string, description: string):
     POWERBANK: 0,
     HAUSHALT: 0,
     AIRSOFT: 0,
+    GARTEN: 0,
     GENERISCH: 0,
   };
 
@@ -630,6 +662,52 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C' | 'D'
         'Hohe Kapazität',
         'Konstante Leistung',
         'Robust und zuverlässig',
+      ],
+    },
+  },
+  GARTEN: {
+    A: {
+      absatz1: 'Dieser Akku wurde speziell für den Einsatz in Gartengeräten entwickelt und liefert zuverlässige Leistung für die Gartenpflege.',
+      absatz2: 'Die Zelltechnologie ist auf die Anforderungen von Akku-Gartengeräten abgestimmt und bietet konstante Leistung über die gesamte Laufzeit.',
+      absatz3: 'Die Bauform entspricht den Spezifikationen des Geräteherstellers. Der Akku lässt sich problemlos einsetzen.',
+      usps: [
+        'Speziell für Akku-Gartengeräte entwickelt',
+        'Konstante Leistung für die Gartenpflege',
+        'Direkter Austausch gegen den Originalakku',
+        'Passend für gängige Gartengeräte',
+      ],
+    },
+    B: {
+      absatz1: 'Dieser Ersatzakku ist für Akku-Gartengeräte konzipiert und bietet zuverlässige Leistung.',
+      absatz2: 'Die robuste Zelltechnologie ist auf häufige Nutzung ausgelegt und behält ihre Kapazität auch nach vielen Ladezyklen.',
+      absatz3: 'Der Einbau erfolgt gemäß den Vorgaben des Geräteherstellers. Auf korrekte Polarität achten.',
+      usps: [
+        'Zuverlässige Leistung für Gartengeräte',
+        'Langlebige Zellen für viele Ladezyklen',
+        'Passgenauer Austausch ohne Anpassungen',
+        'Robuste Ausführung für den Außeneinsatz',
+      ],
+    },
+    C: {
+      absatz1: 'Hochwertiger Ersatzakku für Ihr Gartengerät. Mit diesem Akku ist Ihr Gerät wieder einsatzbereit.',
+      absatz2: 'Ein frischer Akku bringt Ihr Gartengerät wieder auf volle Leistung.',
+      absatz3: 'Der Wechsel ist schnell erledigt – einfach den alten Akku entnehmen und den neuen einsetzen.',
+      usps: [
+        'Sofort einsatzbereit als Ersatzakku',
+        'Volle Leistung für Ihr Gartengerät',
+        'Schneller Akkuwechsel',
+        'Optimale Passform',
+      ],
+    },
+    D: {
+      absatz1: 'Ersatzakku für Gartengeräte. Passend und sofort einsatzbereit.',
+      absatz2: 'Langlebig und zuverlässig. Konstante Leistung.',
+      absatz3: 'Schneller Wechsel, einfache Handhabung.',
+      usps: [
+        'Passend für Ihr Gartengerät',
+        'Langlebig und zuverlässig',
+        'Konstante Leistung',
+        'Einfacher Akkuwechsel',
       ],
     },
   },
