@@ -275,15 +275,44 @@ export function parseDescription(description: string, productName?: string, csvR
     }
   }
 
-  if (!parsed.produkttyp) {
-    if (/notleuchte/i.test(productName || '')) {
-      parsed.produkttyp = 'Notleuchtenakku';
-    } else if (/akku/i.test(productName || '')) {
-      parsed.produkttyp = 'Akku';
-    } else {
-      parsed.produkttyp = 'Akku';
+  // Produkttyp normalisieren - saubere Werte statt langer Beschreibungen
+  const normalizeProdukttyp = (name: string, existingType?: string): string => {
+    const combined = `${name} ${existingType || ''}`.toLowerCase();
+    
+    if (/notleuchte|notbeleuchtung|sicherheitsbeleuchtung/i.test(combined)) {
+      return 'Notleuchtenakku';
     }
-  }
+    if (/funkakku|funkgerät|kenwood|motorola|icom|sepura|hytera/i.test(combined)) {
+      return 'Funkakku';
+    }
+    if (/werkzeugakku|akkuschrauber|bosch|makita|dewalt|milwaukee|metabo/i.test(combined)) {
+      return 'Werkzeugakku';
+    }
+    if (/telefon|dect|schnurlos/i.test(combined)) {
+      return 'Telefonakku';
+    }
+    if (/taschenlampe|handlampe|stirnlampe/i.test(combined)) {
+      return 'Lampenakku';
+    }
+    if (/laptop|notebook/i.test(combined)) {
+      return 'Notebookakku';
+    }
+    if (/kamera|camcorder/i.test(combined)) {
+      return 'Kameraakku';
+    }
+    if (/e-bike|fahrrad|pedelec/i.test(combined)) {
+      return 'E-Bike Akku';
+    }
+    if (/staubsauger/i.test(combined)) {
+      return 'Staubsaugerakku';
+    }
+    if (/rasenmäher|rasenroboter/i.test(combined)) {
+      return 'Gartengeräteakku';
+    }
+    return 'Akku';
+  };
+
+  parsed.produkttyp = normalizeProdukttyp(productName || '', parsed.produkttyp);
 
   // Keine Pflichtfeld-Prüfung mehr - wenn Beschreibung vorhanden ist, immer weitermachen
   // Fehlende technische Daten werden im Rendering als optionale Felder behandelt
