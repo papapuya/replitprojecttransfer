@@ -5,6 +5,7 @@ export type ProductCategory =
   | 'TELEFON'
   | 'MEDIZIN'
   | 'KAMERAAKKU'
+  | 'POWERBANK'
   | 'GENERISCH';
 
 const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
@@ -83,6 +84,20 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
     /ladeschale/i,
     /ladestation/i,
   ],
+  POWERBANK: [
+    /powerbank/i,
+    /power\s*bank/i,
+    /mobil(e|er)?\s*(akku|lader)/i,
+    /externer?\s*akku/i,
+    /zusatzakku/i,
+    /reise(akku|ladegerät)/i,
+    /usb[-\s]?(c[-\s]?)?(akku|lader|charger)/i,
+    /tragbar(e|er)?\s*(akku|lader)/i,
+    /portable\s*(charger|battery)/i,
+    /anker/i,
+    /intenso/i,
+    /\d+\.?\d*\s*mah\s*(power|akku|lader)/i,
+  ],
   GENERISCH: [],
 };
 
@@ -96,6 +111,7 @@ export function detectProductCategory(productName: string, description: string):
     TELEFON: 0,
     MEDIZIN: 0,
     KAMERAAKKU: 0,
+    POWERBANK: 0,
     GENERISCH: 0,
   };
 
@@ -403,6 +419,52 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C' | 'D'
         'Hochwertige Li-Ion-Technologie',
         'Direkter Ersatz für den Originalakku',
         'Unkomplizierter Akkuwechsel',
+      ],
+    },
+  },
+  POWERBANK: {
+    A: {
+      absatz1: 'Diese Powerbank ist Ihr zuverlässiger Begleiter für unterwegs und versorgt Smartphones, Tablets und andere USB-Geräte mit frischer Energie.',
+      absatz2: 'Die hochwertige Lithium-Ionen-Zelltechnologie bietet eine hohe Kapazität bei kompakten Abmessungen. Mehrere Ladezyklen für Ihr Smartphone sind problemlos möglich.',
+      absatz3: 'Die USB-Anschlüsse ermöglichen das gleichzeitige Laden mehrerer Geräte. Die LED-Anzeige informiert über den aktuellen Ladestand.',
+      usps: [
+        'Mobiler Energiespeicher für unterwegs',
+        'Hohe Kapazität bei kompakten Abmessungen',
+        'Mehrere USB-Anschlüsse für simultanes Laden',
+        'LED-Anzeige für den Ladestand',
+      ],
+    },
+    B: {
+      absatz1: 'Maximale Mobilität für Ihre Geräte: Diese Powerbank sorgt dafür, dass Smartphone, Tablet und Co. nie ohne Strom bleiben.',
+      absatz2: 'Ob auf Reisen, beim Camping oder im Alltag – der externe Akku ist schnell zur Hand und liefert zuverlässig Energie. Die robuste Bauweise macht die Powerbank zum idealen Reisebegleiter.',
+      absatz3: 'Einfach per USB anschließen und los geht das Laden. Kompatibel mit allen gängigen Smartphones und USB-Geräten.',
+      usps: [
+        'Ideal für Reisen, Camping und Alltag',
+        'Zuverlässige Energiereserve für alle USB-Geräte',
+        'Robuste Bauweise für unterwegs',
+        'Universell kompatibel mit Smartphones und Tablets',
+      ],
+    },
+    C: {
+      absatz1: 'Kompakte Powerbank mit hoher Kapazität für Ihre mobilen Geräte. Ideal für unterwegs und auf Reisen.',
+      absatz2: 'Schnelles Aufladen dank moderner Ladetechnologie. Kompatibel mit Smartphones, Tablets, Kameras und vielen weiteren USB-Geräten.',
+      absatz3: 'Handliches Design, passt in jede Tasche. Einfache Bedienung ohne komplizierte Einstellungen.',
+      usps: [
+        'Kompakt und handlich',
+        'Schnelles Aufladen für unterwegs',
+        'Universell einsetzbar für USB-Geräte',
+        'Einfache Bedienung',
+      ],
+    },
+    D: {
+      absatz1: 'Mobile Powerbank für Smartphones, Tablets und USB-Geräte. Kompakt und leistungsstark.',
+      absatz2: 'Hohe Kapazität für mehrere Ladezyklen. Schnellladefunktion für kurze Ladezeiten.',
+      absatz3: 'USB-Anschlüsse für simultanes Laden. LED-Anzeige zeigt Ladestand.',
+      usps: [
+        'Kompakt und leistungsstark',
+        'Hohe Kapazität für mehrere Ladungen',
+        'Schnellladefunktion',
+        'Universell kompatibel',
       ],
     },
   },
