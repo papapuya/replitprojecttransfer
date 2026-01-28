@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -380,8 +381,21 @@ export default function AkkushopGenerator() {
                       <TableCell className="font-mono text-sm">{index + 1}</TableCell>
                       <TableCell>{getStatusBadge(row._status)}</TableCell>
                       <TableCell className="font-mono text-sm">{row.p_item_number || '-'}</TableCell>
-                      <TableCell className="max-w-xs truncate" title={row['p_name[de]']}>
-                        {row['p_name[de]']}
+                      <TableCell className="max-w-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate flex-1">{row['p_name[de]']}</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0">
+                                <Eye className="w-3 h-3 text-gray-400 hover:text-indigo-600" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-96 max-h-48 overflow-y-auto">
+                              <p className="text-sm font-medium mb-1">Vollständiger Produktname:</p>
+                              <p className="text-sm text-gray-700 break-words">{row['p_name[de]']}</p>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       </TableCell>
                       <TableCell className="max-w-xs truncate text-sm text-red-600" title={row.error || ''}>
                         {row.error || '-'}
