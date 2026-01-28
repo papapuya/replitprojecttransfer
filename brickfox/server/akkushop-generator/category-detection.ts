@@ -530,10 +530,10 @@ export function detectProductCategory(productName: string, description: string):
 
 // Extrahiert das Gerät nach "passend für" aus dem Produktnamen
 export function extractDeviceFromProductName(productName: string): string | null {
-  // Patterns für "passend für [Gerät]"
+  // Patterns für "passend für [Gerät]" - inkl. kaputtes Encoding "fÃ¼r"
   const patterns = [
-    /passend\s+f[üu]r\s+(.+?)(?:\s*,\s*|\s*$)/i,
-    /f[üu]r\s+(.+?)(?:\s*,\s*|\s*$)/i,
+    /passend\s+(?:f[üu]r|fÃ¼r)\s+(.+?)(?:\s*,\s*|\s*$)/i,
+    /(?:f[üu]r|fÃ¼r)\s+(.+?)(?:\s*,\s*|\s*$)/i,
   ];
   
   for (const pattern of patterns) {
@@ -555,21 +555,17 @@ export function extractDeviceFromProductName(productName: string): string | null
 }
 
 export async function detectProductCategoryWithAI(productName: string, description: string): Promise<ProductCategory | string> {
-  // ZUERST: Prüfe ob "passend für [Gerät]" im Namen steht - dann das Gerät als Kategorie verwenden
-  const extractedDevice = extractDeviceFromProductName(productName);
-  if (extractedDevice) {
-    console.log(`[CategoryDetection] "${productName.substring(0, 60)}" → Gerät extrahiert: "${extractedDevice}"`);
-    return extractedDevice;
-  }
-  
   const keywordCategory = detectProductCategory(productName, description);
   
-  console.log(`[CategoryDetection] "${productName.substring(0, 60)}" → Keyword: ${keywordCategory}`);
+  // Prüfe ob "passend für [Gerät]" im Namen steht
+  const extractedDevice = extractDeviceFromProductName(productName);
   
-  // ZELLENTAUSCH vermeiden - stattdessen AI fragen für bessere Kategorie
-  if (keywordCategory === 'ZELLENTAUSCH') {
-    // AI soll das Zielgerät identifizieren
-  } else if (keywordCategory !== 'GENERISCH') {
+  console.log(`[CategoryDetection] "${productName.substring(0, 60)}" → Keyword: ${keywordCategory}${extractedDevice ? `, Gerät: "${extractedDevice}"` : ''}`);
+  
+  // ZELLENTAUSCH oder Gerät extrahiert: AI soll die richtige Kategorie bestimmen
+  const needsAI = keywordCategory === 'ZELLENTAUSCH' || extractedDevice;
+  
+  if (!needsAI && keywordCategory !== 'GENERISCH') {
     return keywordCategory;
   }
   
@@ -578,6 +574,8 @@ export async function detectProductCategoryWithAI(productName: string, descripti
       .map(([cat, desc]) => `- ${cat}: ${desc}`)
       .join('\n');
 
+    const deviceHint = extractedDevice ? `\nExtrahiertes Gerät: "${extractedDevice}"` : '';
+    
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -596,16 +594,18 @@ WICHTIGE REGELN:
    - "passend für Bose Acoustic Wave" → HAUSHALT (Audio-/Musiksystem = Haushalt)
    - "passend für Staubsauger" → HAUSHALT
    - "Zellentausch Startkoffer" → ZELLENTAUSCH (nur wenn KEIN spezifisches Gerät genannt)
-3. HAUSHALT für: Staubsauger, Reinigungsgeräte, Saugroboter, Zahnbürsten, Audio-/Musiksysteme (Bose, Sonos, etc.), Lautsprecher, Hi-Fi-Geräte
-4. MEDIZIN NUR für echte Medizingeräte: Rollstühle, Patientenlifter, Pflegebetten, Beatmungsgeräte
-5. FUNKAKKU für: Funkgeräte, Walkie-Talkies, CB-Funk (z.B. Albrecht MC-2)
-6. KAMERAAKKU für: Digitalkameras, Camcorder, Videokameras (Canon, Sony, Nikon)
-7. Wenn "passend für [Gerätename]" steht, identifiziere das Gerät und wähle die passende Kategorie!
-8. Antworte NUR mit dem Kategorienamen in Großbuchstaben, nichts anderes.`
+3. WERKZEUG für: Akkuschrauber, Bohrmaschinen, Elektrowerkzeuge, Marken wie Kress, Makita, Bosch, DeWalt, Metabo, AEG Werkzeug, Fein, Festool
+4. HAUSHALT für: Staubsauger, Reinigungsgeräte, Saugroboter, Zahnbürsten, Audio-/Musiksysteme (Bose, Sonos, etc.), Lautsprecher, Hi-Fi-Geräte
+5. MEDIZIN NUR für echte Medizingeräte: Rollstühle, Patientenlifter, Pflegebetten, Beatmungsgeräte
+6. FUNKAKKU für: Funkgeräte, Walkie-Talkies, CB-Funk (z.B. Albrecht MC-2)
+7. KAMERAAKKU für: Digitalkameras, Camcorder, Videokameras (Canon, Sony, Nikon)
+8. Wenn "passend für [Gerätename]" steht, identifiziere das Gerät und wähle die passende Kategorie!
+9. ZELLENTAUSCH NUR wenn kein spezifisches Gerät erkennbar ist (z.B. nur "Akkupack zum Selbsteinbau")
+10. Antworte NUR mit dem Kategorienamen in Großbuchstaben, nichts anderes.`
         },
         {
           role: 'user',
-          content: `Produktname: "${productName}"\n${description ? `Beschreibung: "${description}"` : ''}\n\nWelche Kategorie?`
+          content: `Produktname: "${productName}"${deviceHint}\n${description ? `Beschreibung: "${description}"` : ''}\n\nWelche Kategorie?`
         }
       ],
       max_tokens: 20,
