@@ -65,6 +65,7 @@ const toolsMenuItems = [
   { title: "Text/Bild zu HTML", url: "/html-generator", icon: FileCode },
   { title: "Preisabgleich", url: "/price-matcher", icon: DollarSign },
   { title: "Akkushop Generator", url: "/akkushop-generator", icon: Zap },
+  { title: "Beschreibungs-Analyse", url: "/description-analyzer", icon: FileSpreadsheet },
 ];
 
 // Account menu items
