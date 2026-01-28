@@ -4,6 +4,7 @@ export type ProductCategory =
   | 'WERKZEUGAKKU'
   | 'TELEFON'
   | 'MEDIZIN'
+  | 'KAMERAAKKU'
   | 'GENERISCH';
 
 const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
@@ -59,6 +60,29 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
     /monitoring/i,
     /diagnose/i,
   ],
+  KAMERAAKKU: [
+    /kamera/i,
+    /camera/i,
+    /foto/i,
+    /camcorder/i,
+    /canon\s*(eos|powershot)?/i,
+    /nikon\s*(d\d|z\d|coolpix)?/i,
+    /sony\s*(alpha|a\d|nex)?/i,
+    /fuji(film)?\s*(x-|np-)?/i,
+    /panasonic\s*(lumix|dmw)?/i,
+    /olympus/i,
+    /pentax/i,
+    /gopro/i,
+    /np-f/i,
+    /np-w/i,
+    /lp-e/i,
+    /en-el/i,
+    /bp-\d/i,
+    /blc12/i,
+    /blf19/i,
+    /ladeschale/i,
+    /ladestation/i,
+  ],
   GENERISCH: [],
 };
 
@@ -71,6 +95,7 @@ export function detectProductCategory(productName: string, description: string):
     WERKZEUGAKKU: 0,
     TELEFON: 0,
     MEDIZIN: 0,
+    KAMERAAKKU: 0,
     GENERISCH: 0,
   };
 
@@ -331,6 +356,52 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C' | 'D'
         'Zuverlässig im Profieinsatz',
         'Bewährte Akkutechnologie',
         'Idealer Ersatz für den Originalakku',
+        'Unkomplizierter Akkuwechsel',
+      ],
+    },
+  },
+  KAMERAAKKU: {
+    A: {
+      absatz1: 'Dieser Akku ist die ideale Energiequelle für Ihre Kamera und bietet zuverlässige Leistung für ausgedehnte Fotosessions.',
+      absatz2: 'Die hochwertige Lithium-Ionen-Zelltechnologie sorgt für eine konstante Spannungsversorgung und eine lange Lebensdauer. Auch bei intensiver Nutzung bleibt die volle Kapazität über viele Ladezyklen erhalten.',
+      absatz3: 'Die Bauform entspricht exakt den Spezifikationen des Kameraherstellers. Der Akku rastet sicher ein und wird von der Kamera automatisch erkannt.',
+      usps: [
+        'Speziell für Digitalkameras und Camcorder entwickelt',
+        'Zuverlässige Leistung für ausgedehnte Fotosessions',
+        'Hochwertiger Ersatz für den Originalakku',
+        'Passgenau mit automatischer Erkennung',
+      ],
+    },
+    B: {
+      absatz1: 'Maximale Flexibilität für Ihre Kamera-Akkus: Dieser Ersatzakku ermöglicht Ihnen längere Aufnahmezeiten ohne Unterbrechung.',
+      absatz2: 'Ob im Studio, auf Reisen oder bei Outdoor-Shootings – dieser hochwertige Akku sorgt dafür, dass Ihre Kamera stets einsatzbereit ist. Die robuste Zelltechnologie verkraftet auch häufiges Laden und Entladen ohne Kapazitätsverlust.',
+      absatz3: 'Einfach den Akku in die Kamera einsetzen und loslegen. Der Ladezustand wird korrekt im Display angezeigt.',
+      usps: [
+        'Ideal für Reisen und Outdoor-Shootings',
+        'Lange Aufnahmezeiten ohne Unterbrechung',
+        'Passgenauer Austausch ohne Anpassungen',
+        'Korrekter Ladezustandsanzeige in der Kamera',
+      ],
+    },
+    C: {
+      absatz1: 'Hochwertiger Ersatzakku passend für Ihre Digitalkamera. Kompaktes Design, ideal für unterwegs.',
+      absatz2: 'Zuverlässiges Zubehör für Fotografen mit vielseitigen Einsatzmöglichkeiten. Die hochwertige Zelltechnologie sorgt für langanhaltende Leistung.',
+      absatz3: 'Der Wechsel ist schnell erledigt – einfach den alten Akku entnehmen und den neuen einsetzen.',
+      usps: [
+        'Kompaktes Design für unterwegs',
+        'Zuverlässiges Zubehör für Fotografen',
+        'Schneller Akkuwechsel ohne Werkzeug',
+        'Optimale Passform für problemloses Einsetzen',
+      ],
+    },
+    D: {
+      absatz1: 'Hochwertiger Ersatzakku für Digitalkameras und Camcorder. Passend und sofort einsatzbereit.',
+      absatz2: 'Langlebig und leistungsstark. Viele Ladezyklen bei voller Kapazität.',
+      absatz3: 'Schneller Wechsel, einfache Handhabung. Originale Passform garantiert.',
+      usps: [
+        'Zuverlässig für ausgedehnte Fotosessions',
+        'Hochwertige Li-Ion-Technologie',
+        'Direkter Ersatz für den Originalakku',
         'Unkomplizierter Akkuwechsel',
       ],
     },
