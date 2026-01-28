@@ -276,9 +276,29 @@ export function parseDescription(description: string, productName?: string, csvR
   }
 
   // Produkttyp normalisieren - saubere Werte statt langer Beschreibungen
+  // Unterscheidung: Ist es ein Akku FÜR ein Gerät oder das Gerät selbst?
   const normalizeProdukttyp = (name: string, existingType?: string): string => {
     const combined = `${name} ${existingType || ''}`.toLowerCase();
+    const nameLower = name.toLowerCase();
     
+    // Prüfen ob es ein Akku ist (enthält "akku" oder "batterie" im Namen)
+    const isAkku = /akku|batterie|battery|ersatz.*akku/i.test(nameLower);
+    
+    // Produkte selbst (keine Akkus)
+    if (!isAkku) {
+      if (/taschenlampe/i.test(nameLower)) return 'Taschenlampe';
+      if (/arbeitsleuchte/i.test(nameLower)) return 'Arbeitsleuchte';
+      if (/handlampe/i.test(nameLower)) return 'Handlampe';
+      if (/stirnlampe/i.test(nameLower)) return 'Stirnlampe';
+      if (/kopflampe/i.test(nameLower)) return 'Kopflampe';
+      if (/strahler/i.test(nameLower)) return 'Strahler';
+      if (/ladegerät/i.test(nameLower)) return 'Ladegerät';
+      if (/netzteil/i.test(nameLower)) return 'Netzteil';
+      if (/kabel/i.test(nameLower)) return 'Kabel';
+      if (/adapter/i.test(nameLower)) return 'Adapter';
+    }
+    
+    // Akkus für verschiedene Geräte
     if (/notleuchte|notbeleuchtung|sicherheitsbeleuchtung/i.test(combined)) {
       return 'Notleuchtenakku';
     }
@@ -291,7 +311,7 @@ export function parseDescription(description: string, productName?: string, csvR
     if (/telefon|dect|schnurlos/i.test(combined)) {
       return 'Telefonakku';
     }
-    if (/taschenlampe|handlampe|stirnlampe/i.test(combined)) {
+    if (/taschenlampe|handlampe|stirnlampe|arbeitsleuchte/i.test(combined)) {
       return 'Lampenakku';
     }
     if (/laptop|notebook/i.test(combined)) {
