@@ -15,11 +15,42 @@ const SPELLING_CORRECTIONS: [RegExp, string][] = [
   [/Ersatzakku's/gi, 'Ersatzakkus'],
 ];
 
+// Übertriebene Marketing-Phrasen entfernen
+const MARKETING_PHRASES_TO_REMOVE: RegExp[] = [
+  /aus frischer Fertigung,?\s*/gi,
+  /frische Fertigung,?\s*/gi,
+  /brandneu,?\s*/gi,
+  /nagelneu,?\s*/gi,
+  /Top[-\s]?Qualität!?\s*/gi,
+  /Premium[-\s]?Qualität!?\s*/gi,
+  /Beste Qualität!?\s*/gi,
+  /Höchste Qualität!?\s*/gi,
+  /unschlagbar(er)?\s*(Preis)?!?\s*/gi,
+  /Schnäppchen!?\s*/gi,
+  /Hammerpreis!?\s*/gi,
+  /Super[-\s]?Angebot!?\s*/gi,
+  /Wow!?\s*/gi,
+  /Wahnsinn!?\s*/gi,
+  /Sensationell!?\s*/gi,
+  /!{2,}/g, // Mehrfache Ausrufezeichen
+];
+
+function removeMarketingPhrases(text: string): string {
+  let result = text;
+  for (const pattern of MARKETING_PHRASES_TO_REMOVE) {
+    result = result.replace(pattern, '');
+  }
+  // Doppelte Leerzeichen entfernen
+  return result.replace(/\s{2,}/g, ' ').trim();
+}
+
 function correctSpelling(text: string): string {
   let result = text;
   for (const [pattern, replacement] of SPELLING_CORRECTIONS) {
     result = result.replace(pattern, replacement);
   }
+  // Auch Marketing-Phrasen entfernen
+  result = removeMarketingPhrases(result);
   return result;
 }
 
