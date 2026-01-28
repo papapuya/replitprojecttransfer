@@ -44,6 +44,7 @@ import AttributeFiller from "@/pages/attribute-filler";
 import HtmlGenerator from "@/pages/html-generator";
 import PriceMatcher from "@/pages/price-matcher";
 import AkkushopGenerator from "@/pages/akkushop-generator";
+import DescriptionAnalyzer from "@/pages/description-analyzer";
 
 function Router() {
   return (
@@ -185,6 +186,11 @@ function Router() {
       <Route path="/akkushop-generator">
         <ProtectedRoute>
           <AkkushopGenerator />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/description-analyzer">
+        <ProtectedRoute>
+          <DescriptionAnalyzer />
         </ProtectedRoute>
       </Route>
       
