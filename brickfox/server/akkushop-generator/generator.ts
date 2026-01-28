@@ -29,7 +29,12 @@ export interface GenerationResult {
   };
 }
 
-export async function processProducts(rows: ProductRow[]): Promise<GenerationResult> {
+export type ProgressCallback = (current: number, total: number, productName: string) => void;
+
+export async function processProducts(
+  rows: ProductRow[],
+  onProgress?: ProgressCallback
+): Promise<GenerationResult> {
   const results: GeneratedRow[] = [];
   let successCount = 0;
   let errorCount = 0;
@@ -39,6 +44,10 @@ export async function processProducts(rows: ProductRow[]): Promise<GenerationRes
     const row = rows[i];
     const productName = row['p_name[de]'] || '';
     const description = row['p_description[de]'] || '';
+
+    if (onProgress) {
+      onProgress(i + 1, rows.length, productName.substring(0, 50));
+    }
 
     // Einfache Logik: Beschreibung vorhanden = Erfolg möglich, keine Beschreibung = Fehler
     if (!productName || !description || description.trim().length === 0) {
