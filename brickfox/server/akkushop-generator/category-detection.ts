@@ -7,6 +7,7 @@ export type ProductCategory =
   | 'KAMERAAKKU'
   | 'POWERBANK'
   | 'HAUSHALT'
+  | 'AIRSOFT'
   | 'GENERISCH';
 
 const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
@@ -130,6 +131,32 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
     /braun\s*(series|rasierer)/i,
     /remington/i,
   ],
+  AIRSOFT: [
+    /airsoft/i,
+    /softair/i,
+    /aeg[-\s]?akku/i,
+    /classic\s*army/i,
+    /tokyo\s*marui/i,
+    /g&g\s*armament/i,
+    /ics\s*airsoft/i,
+    /krytac/i,
+    /vfc/i,
+    /cyma/i,
+    /jg\s*works/i,
+    /asg/i,
+    /umarex/i,
+    /gewehr[-\s]?akku/i,
+    /mp5[-\s]?akku/i,
+    /m4[-\s]?akku/i,
+    /ak47[-\s]?akku/i,
+    /akkupack.*l\d+x\d+/i,
+    /nimh.*gewehr/i,
+    /lipo.*airsoft/i,
+    /mini[-\s]?tamiya/i,
+    /large[-\s]?tamiya/i,
+    /dean.*stecker/i,
+    /socom/i,
+  ],
   GENERISCH: [],
 };
 
@@ -145,6 +172,7 @@ export function detectProductCategory(productName: string, description: string):
     KAMERAAKKU: 0,
     POWERBANK: 0,
     HAUSHALT: 0,
+    AIRSOFT: 0,
     GENERISCH: 0,
   };
 
@@ -544,6 +572,52 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C' | 'D'
         'Langlebig und zuverlässig',
         'Einfacher Akkuwechsel',
         'Originale Passform',
+      ],
+    },
+  },
+  AIRSOFT: {
+    A: {
+      absatz1: 'Dieser Akkupack wurde speziell für den Einsatz in elektrischen Airsoft-Gewehren (AEGs) entwickelt und liefert die nötige Leistung für intensive Gefechte.',
+      absatz2: 'Die Zelltechnologie ist auf hohe Entladeströme ausgelegt und bietet konstante Leistung auch bei Dauerfeuer. Die robuste Bauweise übersteht den harten Einsatz im Gelände.',
+      absatz3: 'Die Anschlusskonfiguration und Bauform sind auf die gängigen Airsoft-Systeme abgestimmt. Der Akkupack lässt sich problemlos in das Waffensystem integrieren.',
+      usps: [
+        'Speziell für elektrische Airsoft-Gewehre entwickelt',
+        'Hohe Entladeströme für kraftvolle Schussfolgen',
+        'Robuste Bauweise für den Geländeeinsatz',
+        'Passend für gängige AEG-Systeme',
+      ],
+    },
+    B: {
+      absatz1: 'Für den anspruchsvollen Airsoft-Spieler entwickelt, der auf maximale Feuerkraft und Zuverlässigkeit angewiesen ist.',
+      absatz2: 'Die hochwertige Zelltechnologie sorgt für gleichmäßige Schussfolgen und eine hohe Schusszahl pro Ladung. Auch bei langen Spieltagen bleibt die Leistung konstant.',
+      absatz3: 'Der Einbau erfolgt je nach Waffenmodell in Schulterstütze, Handschutz oder externem Akkufach. Auf korrekte Polarität achten.',
+      usps: [
+        'Maximale Feuerkraft für intensive Gefechte',
+        'Gleichmäßige Schussfolgen und hohe Schusszahl',
+        'Langlebige Zellen für ganztägige Einsätze',
+        'Passend für verschiedene AEG-Modelle',
+      ],
+    },
+    C: {
+      absatz1: 'Hochwertiger Ersatz-Akkupack für Ihr Airsoft-Gewehr. Mit diesem Akku sind Sie wieder voll einsatzbereit.',
+      absatz2: 'Ein frischer Akku bringt Ihre AEG wieder auf volle Leistung – höhere Feuerrate und mehr Schüsse pro Ladung.',
+      absatz3: 'Der Wechsel ist schnell erledigt – einfach den alten Akkupack entnehmen und den neuen einsetzen.',
+      usps: [
+        'Sofort einsatzbereit als Ersatz-Akkupack',
+        'Mehr Schüsse und höhere Feuerrate',
+        'Schneller Akkuwechsel im Feld',
+        'Optimale Passform für Ihre AEG',
+      ],
+    },
+    D: {
+      absatz1: 'Akkupack für elektrische Airsoft-Gewehre. Passend und sofort einsatzbereit.',
+      absatz2: 'Hohe Kapazität für lange Spieltage. Konstante Leistung für gleichmäßige Schussfolgen.',
+      absatz3: 'Robuste Bauweise für den Outdoor-Einsatz.',
+      usps: [
+        'Passend für gängige AEG-Systeme',
+        'Hohe Kapazität für lange Einsätze',
+        'Konstante Leistung',
+        'Robust und zuverlässig',
       ],
     },
   },
