@@ -183,9 +183,11 @@ router.post('/download', async (req: Request, res: Response) => {
         'Fehler': row['error'] || '',
       }));
     } else {
-      // Erfolg-Export: Generierte Daten + Bulletpoints
+      // Erfolg-Export: Generierte Daten + Bulletpoints + Original-IDs
       exportRows = rows.map((row: any) => {
         const result: any = {
+          'p_id': row['p_id'] || '',
+          'v_id': row['v_id'] || '',
           'p_item_number': row['p_item_number'] || '',
           'p_name[de]': row['p_name[de]'] || '',
           'p_description[de]': row['p_description[de]'] || '',
@@ -217,6 +219,8 @@ router.post('/download', async (req: Request, res: Response) => {
       } else {
         const hasBullet3 = exportRows.some((row: any) => row['p_description_bullet[de][2]']);
         headers = [
+          'p_id',
+          'v_id',
           'p_item_number', 
           'p_name[de]', 
           'p_description[de]',
