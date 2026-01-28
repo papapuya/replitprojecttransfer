@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
 import iconv from 'iconv-lite';
+import Papa from 'papaparse';
 import { processProducts, ProductRow, GenerationResult, categorizeProducts, CategorizedRow, generateFromCategorized } from './generator';
 import { EventEmitter } from 'events';
 
@@ -244,27 +245,20 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
         csvString = iconv.decode(buffer, 'win1252');
       }
 
-      const lines = csvString.split(/\r?\n/).filter(line => line.trim());
-      console.log(`[AkkushopGenerator] CSV: ${lines.length} Zeilen nach Split`);
-      
-      if (lines.length < 2) {
-        return res.status(400).json({ error: 'CSV-Datei enthält keine Daten' });
+      // PapaParse für korrekte Verarbeitung von mehrzeiligen Feldern
+      const parseResult = Papa.parse(csvString, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter: ';', // Semikolon als Standardtrennzeichen für deutsche CSVs
+        quoteChar: '"',
+      });
+
+      if (parseResult.errors.length > 0) {
+        console.log(`[AkkushopGenerator] CSV Parse Errors:`, parseResult.errors.slice(0, 5));
       }
 
-      const separator = lines[0].includes(';') ? ';' : ',';
-      const headers = parseCSVLine(lines[0], separator);
-      console.log(`[AkkushopGenerator] CSV: ${headers.length} Spalten, Separator: "${separator}"`);
-      console.log(`[AkkushopGenerator] CSV Headers: ${headers.slice(0, 5).join(', ')}...`);
-
-      for (let i = 1; i < lines.length; i++) {
-        const values = parseCSVLine(lines[i], separator);
-        const row: any = {};
-        headers.forEach((header, index) => {
-          row[header] = values[index] || '';
-        });
-        rows.push(row);
-      }
-      console.log(`[AkkushopGenerator] CSV: ${rows.length} Datenzeilen geparst`);
+      rows = parseResult.data as ProductRow[];
+      console.log(`[AkkushopGenerator] CSV: ${rows.length} Produkte mit PapaParse geparst`);
     } else {
       return res.status(400).json({ error: 'Nicht unterstütztes Dateiformat. Bitte .xlsx, .xls oder .csv verwenden.' });
     }
