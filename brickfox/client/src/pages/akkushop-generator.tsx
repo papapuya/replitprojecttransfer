@@ -31,12 +31,19 @@ interface GenerationResult {
   rows: GeneratedRow[];
 }
 
+interface ProgressState {
+  current: number;
+  total: number;
+  productName: string;
+}
+
 export default function AkkushopGenerator() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [previewRow, setPreviewRow] = useState<GeneratedRow | null>(null);
   const [downloadFilename, setDownloadFilename] = useState('akkushop_generated');
+  const [progress, setProgress] = useState<ProgressState | null>(null);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,6 +70,31 @@ export default function AkkushopGenerator() {
     }
 
     setIsProcessing(true);
+    setProgress(null);
+    
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const eventSource = new EventSource(`/api/akkushop-generator/progress/${sessionId}`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.current && data.total) {
+          setProgress({
+            current: data.current,
+            total: data.total,
+            productName: data.productName || '',
+          });
+        }
+      } catch (e) {
+        console.error('Progress parse error:', e);
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -70,7 +102,12 @@ export default function AkkushopGenerator() {
       const response = await fetch('/api/akkushop-generator/generate', {
         method: 'POST',
         body: formData,
+        headers: {
+          'X-Session-Id': sessionId,
+        },
       });
+
+      eventSource.close();
 
       const data = await response.json();
 
@@ -90,7 +127,9 @@ export default function AkkushopGenerator() {
         variant: 'destructive',
       });
     } finally {
+      eventSource.close();
       setIsProcessing(false);
+      setProgress(null);
     }
   };
 
@@ -210,10 +249,41 @@ export default function AkkushopGenerator() {
               </Button>
             </div>
 
-            {file && (
+            {file && !isProcessing && (
               <p className="text-sm text-gray-600">
                 Ausgewählte Datei: <strong>{file.name}</strong> ({(file.size / 1024).toFixed(1)} KB)
               </p>
+            )}
+
+            {isProcessing && progress && (
+              <div className="space-y-2 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                <div className="flex justify-between text-sm">
+                  <span className="text-indigo-700 font-medium">
+                    Generiere Beschreibungen...
+                  </span>
+                  <span className="text-indigo-600 font-semibold">
+                    {progress.current} / {progress.total} ({Math.round((progress.current / progress.total) * 100)}%)
+                  </span>
+                </div>
+                <div className="w-full bg-indigo-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-indigo-600 h-3 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-indigo-600 truncate">
+                  Aktuell: {progress.productName}...
+                </p>
+              </div>
+            )}
+
+            {isProcessing && !progress && (
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Datei wird verarbeitet...</span>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

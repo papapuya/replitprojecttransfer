@@ -3,9 +3,45 @@ import multer from 'multer';
 import * as XLSX from 'xlsx';
 import iconv from 'iconv-lite';
 import { processProducts, ProductRow, GenerationResult } from './generator';
+import { EventEmitter } from 'events';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+const progressEmitters = new Map<string, EventEmitter>();
+
+router.get('/progress/:sessionId', (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const emitter = new EventEmitter();
+  progressEmitters.set(sessionId, emitter);
+
+  emitter.on('progress', (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  });
+
+  emitter.on('complete', (data) => {
+    res.write(`data: ${JSON.stringify({ ...data, complete: true })}\n\n`);
+    progressEmitters.delete(sessionId);
+    res.end();
+  });
+
+  emitter.on('error', (error) => {
+    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+    progressEmitters.delete(sessionId);
+    res.end();
+  });
+
+  req.on('close', () => {
+    progressEmitters.delete(sessionId);
+  });
+});
 
 // CSV-Zeile parsen mit Unterstützung für Anführungszeichen
 function parseCSVLine(line: string, separator: string): string[] {
@@ -39,6 +75,9 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     if (!req.file) {
       return res.status(400).json({ error: 'Keine Datei hochgeladen' });
     }
+
+    const sessionId = req.headers['x-session-id'] as string;
+    const emitter = sessionId ? progressEmitters.get(sessionId) : null;
 
     const fileName = req.file.originalname.toLowerCase();
     let rows: ProductRow[] = [];
@@ -148,10 +187,17 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     console.log('[Normalized Debug] Erste 3 p_item_number:', normalizedRows.slice(0, 3).map(r => r['p_item_number']));
     console.log('[Normalized Debug] Erste Beschreibung (100 Zeichen):', normalizedRows[0]?.['p_description[de]']?.substring(0, 100));
 
-    const result: GenerationResult = await processProducts(normalizedRows);
+    const onProgress = emitter ? (current: number, total: number, productName: string) => {
+      emitter.emit('progress', { current, total, productName });
+    } : undefined;
 
-    // Debug: Erste 3 Ergebnis-Artikelnummern loggen
+    const result: GenerationResult = await processProducts(normalizedRows, onProgress);
+
     console.log('[Result Debug] Erste 3 p_item_number:', result.rows.slice(0, 3).map(r => r['p_item_number']));
+
+    if (emitter) {
+      emitter.emit('complete', { summary: result.summary });
+    }
 
     res.json({
       success: true,
@@ -160,6 +206,11 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     });
   } catch (error: any) {
     console.error('[AkkushopGenerator] Error:', error);
+    const sessionId = req.headers['x-session-id'] as string;
+    const emitter = sessionId ? progressEmitters.get(sessionId) : null;
+    if (emitter) {
+      emitter.emit('error', error);
+    }
     res.status(500).json({ error: error.message || 'Interner Serverfehler' });
   }
 });
