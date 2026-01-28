@@ -18,6 +18,7 @@ export type ProductCategory =
   | 'FAHRRAD'
   | 'RASIERER'
   | 'HANDLEUCHTE'
+  | 'ZELLENTAUSCH'
   | 'GENERISCH';
 
 const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
@@ -391,6 +392,21 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
     /atex.*lampe/i,
     /knicklampe/i,
   ],
+  ZELLENTAUSCH: [
+    /zellentausch/i,
+    /zellenwechsel/i,
+    /zellenersatz/i,
+    /akkupack.*passend/i,
+    /ersatz[-\s]?zellen/i,
+    /reparatur[-\s]?akku/i,
+    /selbsteinbau/i,
+    /zum\s*einbau/i,
+    /startkoffer/i,
+    /starthilfe.*akku/i,
+    /minibooster/i,
+    /booster.*akku/i,
+    /jumpstarter/i,
+  ],
   GENERISCH: [],
 };
 
@@ -417,6 +433,7 @@ export function detectProductCategory(productName: string, description: string):
     FAHRRAD: 0,
     RASIERER: 0,
     HANDLEUCHTE: 0,
+    ZELLENTAUSCH: 0,
     GENERISCH: 0,
   };
 
@@ -1322,6 +1339,52 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C' | 'D'
         'Lange Leuchtdauer',
         'Zuverlässig',
         'Direkter Austausch',
+      ],
+    },
+  },
+  ZELLENTAUSCH: {
+    A: {
+      absatz1: 'Dieses Akkupack-Set ist für den Einbau in das Gehäuse des Originalakkus vorgesehen und ermöglicht die Wiederherstellung der vollen Leistung.',
+      absatz2: 'Die neuen Zellen werden gegen die alten, verschlissenen Zellen im vorhandenen Akkugehäuse ausgetauscht. Die Zelltechnologie entspricht dem Original oder übertrifft dieses.',
+      absatz3: 'Der Zellentausch erfordert technisches Geschick und ggf. Lötkenntnisse. Alternativ kann ein entsprechender Reparaturservice in Anspruch genommen werden.',
+      usps: [
+        'Vorkonfektioniertes Akkupack zum Einbau',
+        'Kostengünstige Reparaturlösung',
+        'Passend für das Originalgehäuse',
+        'Verlängert die Lebensdauer des Geräts',
+      ],
+    },
+    B: {
+      absatz1: 'Mit diesem Zellentausch-Set können die alten Akkuzellen im Originalgehäuse durch neue, leistungsstarke Zellen ersetzt werden.',
+      absatz2: 'Statt einen komplett neuen, oft teuren Originalakku zu kaufen, bietet der Zellentausch eine wirtschaftliche Alternative.',
+      absatz3: 'Das Set ist für den Selbsteinbau konzipiert. Auf korrekte Polarität und fachgerechte Verbindung der Zellen achten.',
+      usps: [
+        'Wirtschaftliche Alternative zum Neukauf',
+        'Neue Zellen im bewährten Gehäuse',
+        'Für Selbsteinbau oder Reparaturservice',
+        'Originale Passform bleibt erhalten',
+      ],
+    },
+    C: {
+      absatz1: 'Dieses Zellentausch-Set ist die kostengünstige Lösung zur Wiederherstellung der Akkuleistung in Ihrem Gerät.',
+      absatz2: 'Die neuen Zellen ersetzen die erschöpften Originalzellen und bringen den Akku wieder auf volle Kapazität.',
+      absatz3: 'Der Austausch kann selbst durchgeführt oder von einem Fachmann erledigt werden.',
+      usps: [
+        'Kostengünstige Reparaturlösung',
+        'Volle Kapazität wie beim Neukauf',
+        'Passend für das Originalgehäuse',
+        'Verlängert die Gerätelebensdauer',
+      ],
+    },
+    D: {
+      absatz1: 'Zellentausch-Set zum Einbau in das Originalgehäuse. Ersetzt die erschöpften Zellen.',
+      absatz2: 'Kostengünstige Reparaturlösung statt teurem Neukauf.',
+      absatz3: 'Für Selbsteinbau oder Reparaturservice.',
+      usps: [
+        'Zellentausch-Set zum Einbau',
+        'Kostengünstige Reparatur',
+        'Für das Originalgehäuse',
+        'Volle Kapazität',
       ],
     },
   },
