@@ -155,6 +155,19 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
     /black\s*&?\s*decker.*reinig/i,
     /cv\s*\d{4}/i,
     /dustbuster/i,
+    /bose/i,
+    /acoustic\s*wave/i,
+    /music\s*system/i,
+    /soundlink/i,
+    /sounddock/i,
+    /sonos/i,
+    /jbl/i,
+    /harman[-\s]?kardon/i,
+    /bluetooth[-\s]?lautsprecher/i,
+    /lautsprecher[-\s]?akku/i,
+    /audio[-\s]?system/i,
+    /hi[-\s]?fi/i,
+    /musikanlage/i,
   ],
   AIRSOFT: [
     /airsoft/i,
@@ -548,15 +561,18 @@ ${categoryList}
 
 WICHTIGE REGELN:
 1. Wähle die Kategorie basierend auf dem HAUPTZWECK des Akkus (für welches Gerät ist er gedacht?)
-2. Bei "Zellentausch" Produkten: Wähle die Kategorie des ZIELGERÄTS, nicht ZELLENTAUSCH
+2. Bei "Zellentausch" oder "passend für" Produkten: Wähle die Kategorie des ZIELGERÄTS!
    - "Zellentausch für Handleuchte" → HANDLEUCHTE
    - "Zellentausch für Rasierer" → RASIERER
-   - "Zellentausch Startkoffer" → ZELLENTAUSCH (nur wenn kein spezifisches Gerät genannt)
-3. MEDIZIN NUR für echte Medizingeräte: Rollstühle, Patientenlifter, Pflegebetten, Beatmungsgeräte, Infusionspumpen. NICHT für Haushaltsgeräte!
-4. HAUSHALT für: Staubsauger, Handstaubsauger, Reinigungsgeräte, Saugroboter, Zahnbürsten (z.B. Black & Decker CV7205 = Handstaubsauger)
-5. FUNKAKKU für: Funkgeräte, Walkie-Talkies, CB-Funk (z.B. Albrecht MC-2 = Funkgerät)
-6. KAMERAAKKU für: Digitalkameras, Camcorder, Videokameras (Canon, Sony, Nikon, etc.)
-7. Antworte NUR mit dem Kategorienamen in Großbuchstaben, nichts anderes.`
+   - "passend für Bose Acoustic Wave" → HAUSHALT (Audio-/Musiksystem = Haushalt)
+   - "passend für Staubsauger" → HAUSHALT
+   - "Zellentausch Startkoffer" → ZELLENTAUSCH (nur wenn KEIN spezifisches Gerät genannt)
+3. HAUSHALT für: Staubsauger, Reinigungsgeräte, Saugroboter, Zahnbürsten, Audio-/Musiksysteme (Bose, Sonos, etc.), Lautsprecher, Hi-Fi-Geräte
+4. MEDIZIN NUR für echte Medizingeräte: Rollstühle, Patientenlifter, Pflegebetten, Beatmungsgeräte
+5. FUNKAKKU für: Funkgeräte, Walkie-Talkies, CB-Funk (z.B. Albrecht MC-2)
+6. KAMERAAKKU für: Digitalkameras, Camcorder, Videokameras (Canon, Sony, Nikon)
+7. Wenn "passend für [Gerätename]" steht, identifiziere das Gerät und wähle die passende Kategorie!
+8. Antworte NUR mit dem Kategorienamen in Großbuchstaben, nichts anderes.`
         },
         {
           role: 'user',
