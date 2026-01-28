@@ -67,6 +67,10 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
     /gigaset/i,
     /panasonic.*telefon/i,
     /siemens.*telefon/i,
+    /handyakku/i,
+    /handy[-\s]?akku/i,
+    /smartphone[-\s]?akku/i,
+    /mobiltelefon/i,
   ],
   MEDIZIN: [
     /medical/i,
@@ -109,6 +113,12 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, RegExp[]> = {
     /olympus/i,
     /pentax/i,
     /gopro/i,
+    /veracity/i,
+    /pointsource/i,
+    /vad[-\s]?ps[-\s]?bm/i,
+    /poe[-\s]?injector/i,
+    /ip[-\s]?kamera/i,
+    /überwachungskamera/i,
     /np-f/i,
     /np-w/i,
     /lp-e/i,
@@ -591,17 +601,24 @@ WICHTIGE REGELN:
 2. Bei "Zellentausch" oder "passend für" Produkten: Wähle die Kategorie des ZIELGERÄTS!
    - "Zellentausch für Handleuchte" → HANDLEUCHTE
    - "Zellentausch für Rasierer" → RASIERER
-   - "passend für Bose Acoustic Wave" → HAUSHALT (Audio-/Musiksystem = Haushalt)
+   - "passend für Bose Acoustic Wave" → HAUSHALT
    - "passend für Staubsauger" → HAUSHALT
-   - "Zellentausch Startkoffer" → ZELLENTAUSCH (nur wenn KEIN spezifisches Gerät genannt)
-3. WERKZEUG für: Akkuschrauber, Bohrmaschinen, Elektrowerkzeuge, Marken wie Kress, Makita, Bosch, DeWalt, Metabo, AEG Werkzeug, Fein, Festool
+   - "passend für Kress/Makita/Bosch" → WERKZEUGAKKU
+   - "passend für Veracity/Pointsource/IP-Kamera" → KAMERAAKKU
+   - "passend für Record/Besam/Dorma Türsteuerung" → TUERSTEURUNG
+   - "Kranakku/Fernsteuerung" → KRANAKKU
+   - "Zellentausch Startkoffer" → ZELLENTAUSCH (nur wenn KEIN Gerät)
+3. WERKZEUGAKKU für: Akkuschrauber, Bohrmaschinen, Elektrowerkzeuge, Marken wie Kress, Makita, Bosch, DeWalt, Metabo, AEG Werkzeug, Fein, Festool, Hilti
 4. HAUSHALT für: Staubsauger, Reinigungsgeräte, Saugroboter, Zahnbürsten, Audio-/Musiksysteme (Bose, Sonos, etc.), Lautsprecher, Hi-Fi-Geräte
 5. MEDIZIN NUR für echte Medizingeräte: Rollstühle, Patientenlifter, Pflegebetten, Beatmungsgeräte
 6. FUNKAKKU für: Funkgeräte, Walkie-Talkies, CB-Funk (z.B. Albrecht MC-2)
-7. KAMERAAKKU für: Digitalkameras, Camcorder, Videokameras (Canon, Sony, Nikon)
-8. Wenn "passend für [Gerätename]" steht, identifiziere das Gerät und wähle die passende Kategorie!
-9. ZELLENTAUSCH NUR wenn kein spezifisches Gerät erkennbar ist (z.B. nur "Akkupack zum Selbsteinbau")
-10. Antworte NUR mit dem Kategorienamen in Großbuchstaben, nichts anderes.`
+7. KAMERAAKKU für: Digitalkameras, Camcorder, Videokameras, IP-Kameras, Überwachungskameras, PoE-Injektoren (Veracity, Pointsource)
+8. TUERSTEURUNG für: Automatiktüren, Türsteuerungen (Record, Besam, Dorma, Geze)
+9. KRANAKKU für: Kranfernsteuerungen, industrielle Funksteuerungen (Autec, HBC, Hetronic)
+10. TELEFON für: Handyakku, Smartphone-Akku, DECT-Telefone, schnurlose Telefone
+11. Wenn "passend für [Gerätename]" steht, identifiziere das Gerät und wähle die passende Kategorie!
+12. ZELLENTAUSCH NUR wenn wirklich KEIN spezifisches Gerät erkennbar ist (z.B. nur "Akkupack zum Selbsteinbau")
+13. Antworte NUR mit dem Kategorienamen in Großbuchstaben, nichts anderes.`
         },
         {
           role: 'user',
