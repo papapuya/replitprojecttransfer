@@ -1,5 +1,5 @@
 import { ParsedProduct, extractProductTypeFromName } from './parser';
-import { detectProductCategory, getCategoryTextBlocks, ProductCategory } from './category-detection';
+import { detectProductCategoryWithAI, getCategoryTextBlocks, ProductCategory } from './category-detection';
 import OpenAI from 'openai';
 
 const openai = new OpenAI();
@@ -201,8 +201,8 @@ export async function renderAkkuHtml(
 ): Promise<RenderResult> {
   const variant = getVariant(rowIndex);
   
-  // Kontextbasierte Produktausrichtung: Kategorie erkennen und passende Textbausteine laden
-  const category = detectProductCategory(productName, parsed.originalHtml || '');
+  // KI-gestützte Produktkategorisierung für bessere Genauigkeit
+  const category = await detectProductCategoryWithAI(productName, parsed.originalHtml || '');
   const categoryTexts = getCategoryTextBlocks(category, variant);
   const texts = {
     absatz1: categoryTexts.absatz1,
