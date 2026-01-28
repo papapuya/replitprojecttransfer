@@ -144,6 +144,8 @@ function buildLieferumfang(parsed: ParsedProduct, category: ProductCategory): st
     produktLabel = '1x Powerbank';
   } else if (category === 'KAMERAAKKU') {
     produktLabel = '1x Kamera-Akku';
+  } else if (category === 'HAUSHALT') {
+    produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Geräteakku';
   } else {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Akku';
   }
@@ -294,6 +296,8 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     produktLabel = 'Powerbank';
   } else if (category === 'KAMERAAKKU') {
     produktLabel = 'Kamera-Akku';
+  } else if (category === 'HAUSHALT') {
+    produktLabel = parsed.produkttyp || 'Geräteakku';
   } else {
     produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
   }
