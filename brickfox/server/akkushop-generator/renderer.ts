@@ -154,6 +154,22 @@ function buildLieferumfang(parsed: ParsedProduct, category: ProductCategory): st
     produktLabel = '1x Gartengeräteakku';
   } else if (category === 'MOTORRAD') {
     produktLabel = '1x Motorrad-Starterbatterie';
+  } else if (category === 'KRANAKKU') {
+    produktLabel = '1x Kransteuerungsakku';
+  } else if (category === 'SPEICHERBATTERIE') {
+    produktLabel = '1x Speicherbatterie';
+  } else if (category === 'BLEIAKKU') {
+    produktLabel = '1x Bleiakku AGM/Gel';
+  } else if (category === 'TUERSTEURUNG') {
+    produktLabel = '1x Türsteuerungsakku';
+  } else if (category === 'PUFFERBATTERIE') {
+    produktLabel = '1x Pufferbatterie';
+  } else if (category === 'FAHRRAD') {
+    produktLabel = '1x E-Bike-Akku';
+  } else if (category === 'RASIERER') {
+    produktLabel = '1x Rasiererakku';
+  } else if (category === 'HANDLEUCHTE') {
+    produktLabel = '1x Handleuchtenakku';
   } else {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Akku';
   }
@@ -330,6 +346,22 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     produktLabel = 'Gartengeräteakku';
   } else if (category === 'MOTORRAD') {
     produktLabel = 'Motorrad-Starterbatterie';
+  } else if (category === 'KRANAKKU') {
+    produktLabel = 'Kransteuerungsakku';
+  } else if (category === 'SPEICHERBATTERIE') {
+    produktLabel = 'Speicherbatterie';
+  } else if (category === 'BLEIAKKU') {
+    produktLabel = 'Bleiakku';
+  } else if (category === 'TUERSTEURUNG') {
+    produktLabel = 'Türsteuerungsakku';
+  } else if (category === 'PUFFERBATTERIE') {
+    produktLabel = 'Pufferbatterie';
+  } else if (category === 'FAHRRAD') {
+    produktLabel = 'E-Bike-Akku';
+  } else if (category === 'RASIERER') {
+    produktLabel = 'Rasiererakku';
+  } else if (category === 'HANDLEUCHTE') {
+    produktLabel = 'Handleuchtenakku';
   } else {
     produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
   }
@@ -357,6 +389,22 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     bullet3Label = 'Gartengeräteakku';
   } else if (category === 'MOTORRAD') {
     bullet3Label = 'Motorrad-Starterbatterie';
+  } else if (category === 'KRANAKKU') {
+    bullet3Label = 'Kransteuerungsakku';
+  } else if (category === 'SPEICHERBATTERIE') {
+    bullet3Label = 'Speicherbatterie';
+  } else if (category === 'BLEIAKKU') {
+    bullet3Label = 'Bleiakku';
+  } else if (category === 'TUERSTEURUNG') {
+    bullet3Label = 'Türsteuerungsakku';
+  } else if (category === 'PUFFERBATTERIE') {
+    bullet3Label = 'Pufferbatterie';
+  } else if (category === 'FAHRRAD') {
+    bullet3Label = 'E-Bike-Akku';
+  } else if (category === 'RASIERER') {
+    bullet3Label = 'Rasiererakku';
+  } else if (category === 'HANDLEUCHTE') {
+    bullet3Label = 'Handleuchtenakku';
   } else {
     bullet3Label = parsed.produkttyp || 'Akku';
   }
