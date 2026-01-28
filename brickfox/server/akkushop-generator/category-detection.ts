@@ -528,22 +528,49 @@ export function detectProductCategory(productName: string, description: string):
   return maxCategory;
 }
 
-export async function detectProductCategoryWithAI(productName: string, description: string): Promise<ProductCategory> {
+// Extrahiert das Gerät nach "passend für" aus dem Produktnamen
+export function extractDeviceFromProductName(productName: string): string | null {
+  // Patterns für "passend für [Gerät]"
+  const patterns = [
+    /passend\s+f[üu]r\s+(.+?)(?:\s*,\s*|\s*$)/i,
+    /f[üu]r\s+(.+?)(?:\s*,\s*|\s*$)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = productName.match(pattern);
+    if (match && match[1]) {
+      // Bereinigen: Entferne führende/trailing Leerzeichen
+      let device = match[1].trim();
+      // Stoppe bei Komma oder "passend"
+      const commaIndex = device.indexOf(',');
+      if (commaIndex > 0) {
+        device = device.substring(0, commaIndex).trim();
+      }
+      if (device.length > 3) {
+        return device;
+      }
+    }
+  }
+  return null;
+}
+
+export async function detectProductCategoryWithAI(productName: string, description: string): Promise<ProductCategory | string> {
+  // ZUERST: Prüfe ob "passend für [Gerät]" im Namen steht - dann das Gerät als Kategorie verwenden
+  const extractedDevice = extractDeviceFromProductName(productName);
+  if (extractedDevice) {
+    console.log(`[CategoryDetection] "${productName.substring(0, 60)}" → Gerät extrahiert: "${extractedDevice}"`);
+    return extractedDevice;
+  }
+  
   const keywordCategory = detectProductCategory(productName, description);
   
   console.log(`[CategoryDetection] "${productName.substring(0, 60)}" → Keyword: ${keywordCategory}`);
   
-  if (keywordCategory !== 'GENERISCH') {
-    const combined = `${productName} ${description}`.toLowerCase();
-    const hasZellentausch = /zellentausch|zellenwechsel|akkupack.*passend|startkoffer/i.test(combined);
-    const hasHandleuchte = /handleuchte|taschenlampe|arbeitsleuchte|streamlight|acculux/i.test(combined);
-    
-    if (hasZellentausch && hasHandleuchte) {
-      return 'HANDLEUCHTE';
-    }
-    if (hasZellentausch && keywordCategory !== 'ZELLENTAUSCH') {
-      return keywordCategory;
-    }
+  // ZELLENTAUSCH vermeiden - stattdessen AI fragen für bessere Kategorie
+  if (keywordCategory === 'ZELLENTAUSCH') {
+    // AI soll das Zielgerät identifizieren
+  } else if (keywordCategory !== 'GENERISCH') {
+    return keywordCategory;
   }
   
   try {
