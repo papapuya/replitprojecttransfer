@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,9 +6,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Loader2, RefreshCw, Pencil, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+// Kategorisiertes Produkt (Schritt 1)
+interface CategorizedRow {
+  p_item_number?: string;
+  'p_name[de]': string;
+  'p_description[de]': string;
+  _category: string;
+  _rowIndex: number;
+  error?: string;
+  _status: 'ready' | 'error';
+  [key: string]: any;
+}
+
+// Generiertes Produkt (Schritt 2)
 interface GeneratedRow {
   p_item_number?: string;
   'p_name[de]': string;
@@ -20,6 +34,17 @@ interface GeneratedRow {
   error?: string;
   _status: 'success' | 'error' | 'skipped';
   _category?: string;
+}
+
+interface CategorizeResult {
+  success: boolean;
+  summary: {
+    total: number;
+    ready: number;
+    errors: number;
+    categories: Record<string, number>;
+  };
+  rows: CategorizedRow[];
 }
 
 interface GenerationResult {
@@ -39,14 +64,47 @@ interface ProgressState {
   productName: string;
 }
 
+const ALL_CATEGORIES = [
+  'NOTLEUCHTE', 'FUNKAKKU', 'WERKZEUGAKKU', 'TELEFON', 'MEDIZIN', 'KAMERAAKKU',
+  'POWERBANK', 'HAUSHALT', 'AIRSOFT', 'GARTEN', 'MOTORRAD', 'KRANAKKU',
+  'SPEICHERBATTERIE', 'BLEIAKKU', 'TUERSTEURUNG', 'PUFFERBATTERIE', 'FAHRRAD',
+  'RASIERER', 'HANDLEUCHTE', 'ZELLENTAUSCH', 'GENERISCH'
+];
+
 export default function AkkushopGenerator() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<GenerationResult | null>(null);
+  const [step, setStep] = useState<'upload' | 'categorized' | 'generated'>('upload');
+  
+  // Schritt 1: Kategorisierung
+  const [categorizedResult, setCategorizedResult] = useState<CategorizeResult | null>(null);
+  const [categorizedRows, setCategorizedRows] = useState<CategorizedRow[]>([]);
+  
+  // Schritt 2: Generierung
+  const [generatedResult, setGeneratedResult] = useState<GenerationResult | null>(null);
+  
   const [previewRow, setPreviewRow] = useState<GeneratedRow | null>(null);
   const [downloadFilename, setDownloadFilename] = useState('akkushop_generated');
   const [progress, setProgress] = useState<ProgressState | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [editingCategory, setEditingCategory] = useState<number | null>(null);
+  
   const { toast } = useToast();
+
+  // Gefilterte Zeilen basierend auf Kategorie-Filter
+  const filteredRows = useMemo(() => {
+    if (categoryFilter === 'all') return categorizedRows;
+    return categorizedRows.filter(row => row._category === categoryFilter);
+  }, [categorizedRows, categoryFilter]);
+
+  // Kategorie-Statistiken
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    categorizedRows.forEach(row => {
+      stats[row._category] = (stats[row._category] || 0) + 1;
+    });
+    return stats;
+  }, [categorizedRows]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -61,11 +119,15 @@ export default function AkkushopGenerator() {
         return;
       }
       setFile(selectedFile);
-      setResult(null);
+      setCategorizedResult(null);
+      setCategorizedRows([]);
+      setGeneratedResult(null);
+      setStep('upload');
     }
   };
 
-  const handleGenerate = async () => {
+  // Schritt 1: Kategorisierung
+  const handleCategorize = async () => {
     if (!file) {
       toast({ title: 'Keine Datei', description: 'Bitte wählen Sie eine Datei aus.', variant: 'destructive' });
       return;
@@ -75,7 +137,6 @@ export default function AkkushopGenerator() {
     setProgress(null);
     
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
     const eventSource = new EventSource(`/api/akkushop-generator/progress/${sessionId}`);
     
     eventSource.onmessage = (event) => {
@@ -101,7 +162,7 @@ export default function AkkushopGenerator() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/akkushop-generator/generate', {
+      const response = await fetch('/api/akkushop-generator/categorize', {
         method: 'POST',
         body: formData,
         headers: {
@@ -114,13 +175,94 @@ export default function AkkushopGenerator() {
       const data = await response.json();
 
       if (!response.ok) {
+        throw new Error(data.error || 'Kategorisierung fehlgeschlagen');
+      }
+
+      setCategorizedResult(data);
+      setCategorizedRows(data.rows);
+      setStep('categorized');
+      
+      toast({
+        title: 'Kategorisierung abgeschlossen',
+        description: `${data.summary.ready} von ${data.summary.total} Produkten kategorisiert.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Fehler',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      eventSource.close();
+      setIsProcessing(false);
+      setProgress(null);
+    }
+  };
+
+  // Kategorie manuell ändern
+  const handleCategoryChange = (rowIndex: number, newCategory: string) => {
+    setCategorizedRows(prev => prev.map((row, idx) => 
+      idx === rowIndex ? { ...row, _category: newCategory } : row
+    ));
+    setEditingCategory(null);
+  };
+
+  // Schritt 2: Beschreibungen generieren
+  const handleGenerate = async () => {
+    if (categorizedRows.length === 0) {
+      toast({ title: 'Keine Daten', description: 'Bitte zuerst kategorisieren.', variant: 'destructive' });
+      return;
+    }
+
+    setIsProcessing(true);
+    setProgress(null);
+    
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const eventSource = new EventSource(`/api/akkushop-generator/progress/${sessionId}`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.current && data.total) {
+          setProgress({
+            current: data.current,
+            total: data.total,
+            productName: data.productName || '',
+          });
+        }
+      } catch (e) {
+        console.error('Progress parse error:', e);
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+
+    try {
+      const response = await fetch('/api/akkushop-generator/generate-from-categorized', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Id': sessionId,
+        },
+        body: JSON.stringify({ rows: categorizedRows }),
+      });
+
+      eventSource.close();
+
+      const data = await response.json();
+
+      if (!response.ok) {
         throw new Error(data.error || 'Generierung fehlgeschlagen');
       }
 
-      setResult(data);
+      setGeneratedResult(data);
+      setStep('generated');
+      
       toast({
         title: 'Generierung abgeschlossen',
-        description: `${data.summary.success} von ${data.summary.total} Produkten erfolgreich generiert.`,
+        description: `${data.summary.success} von ${data.summary.total} Beschreibungen generiert.`,
       });
     } catch (error: any) {
       toast({
@@ -136,72 +278,65 @@ export default function AkkushopGenerator() {
   };
 
   const handleDownload = async (format: 'xlsx' | 'csv', errorsOnly: boolean = false, withBom: boolean = false) => {
-    if (!result?.rows) return;
-
-    const rowsToDownload = errorsOnly 
-      ? result.rows.filter(r => r._status === 'error' || r._status === 'skipped')
-      : result.rows.filter(r => r._status === 'success');
-
-    if (rowsToDownload.length === 0) {
-      toast({ title: 'Keine Daten', description: 'Keine passenden Produkte zum Download.', variant: 'destructive' });
-      return;
-    }
+    if (!generatedResult?.rows) return;
 
     try {
+      const filteredRows = errorsOnly
+        ? generatedResult.rows.filter(r => r._status === 'error' || r._status === 'skipped')
+        : generatedResult.rows.filter(r => r._status === 'success');
+
       const response = await fetch('/api/akkushop-generator/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: rowsToDownload, format, errorsOnly, withBom }),
+        body: JSON.stringify({ rows: filteredRows, format, errorsOnly, withBom }),
       });
 
-      if (!response.ok) {
-        throw new Error('Download fehlgeschlagen');
-      }
+      if (!response.ok) throw new Error('Download fehlgeschlagen');
 
       const blob = await response.blob();
-      const suffix = withBom ? '_excel' : '';
-      const baseName = errorsOnly ? 'akkushop_fehler' : (downloadFilename || 'akkushop_generated');
-      const filename = `${baseName}${suffix}.${format}`;
-      
-      // Neues Fenster mit Download öffnen
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      
-      // Cleanup nach kurzer Verzögerung
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 1000);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${downloadFilename}${errorsOnly ? '_errors' : ''}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-      toast({ title: 'Download gestartet', description: `Datei "${filename}" öffnet sich in neuem Tab. Bitte speichern mit Strg+S.` });
+      toast({
+        title: 'Download gestartet',
+        description: `${filteredRows.length} Zeilen werden heruntergeladen.`,
+      });
     } catch (error: any) {
-      toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'error':
-        return <XCircle className="w-4 h-4 text-red-600" />;
-      case 'skipped':
-        return <AlertTriangle className="w-4 h-4 text-amber-600" />;
-      default:
-        return null;
+      toast({
+        title: 'Download-Fehler',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Erfolg</Badge>;
+      case 'ready':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />OK</Badge>;
       case 'error':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Fehler</Badge>;
+        return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Fehler</Badge>;
       case 'skipped':
-        return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Übersprungen</Badge>;
+        return <Badge className="bg-amber-100 text-amber-800"><AlertTriangle className="w-3 h-3 mr-1" />Übersprungen</Badge>;
       default:
         return null;
     }
+  };
+
+  const resetToUpload = () => {
+    setFile(null);
+    setCategorizedResult(null);
+    setCategorizedRows([]);
+    setGeneratedResult(null);
+    setStep('upload');
+    setCategoryFilter('all');
   };
 
   return (
@@ -209,49 +344,116 @@ export default function AkkushopGenerator() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-indigo-600 mb-2">Akkushop Description Generator</h1>
         <p className="text-gray-600">
-          Generiert automatisch HTML-Produktbeschreibungen aus Excel/CSV-Dateien nach strengem Regelwerk.
+          2-Stufen-Prozess: Erst Kategorisierung prüfen, dann Beschreibungen generieren.
         </p>
       </div>
 
+      {/* Schritt-Anzeige */}
+      <div className="mb-6 flex items-center gap-4">
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${step === 'upload' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>
+          <span className="font-semibold">1.</span> Datei hochladen
+        </div>
+        <div className="text-gray-400">→</div>
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${step === 'categorized' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>
+          <span className="font-semibold">2.</span> Kategorien prüfen
+        </div>
+        <div className="text-gray-400">→</div>
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${step === 'generated' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>
+          <span className="font-semibold">3.</span> Beschreibungen
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Upload & Aktionen */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-indigo-600" />
-              Datei hochladen
+              {step === 'upload' ? 'Datei hochladen' : step === 'categorized' ? 'Kategorien prüfen' : 'Beschreibungen generiert'}
             </CardTitle>
             <CardDescription>
-              Laden Sie eine Excel (.xlsx) oder CSV-Datei mit den Spalten p_name[de] und p_description[de] hoch.
+              {step === 'upload' && 'Laden Sie eine Excel (.xlsx) oder CSV-Datei mit den Spalten p_name[de] und p_description[de] hoch.'}
+              {step === 'categorized' && 'Prüfen Sie die erkannten Kategorien und korrigieren Sie bei Bedarf.'}
+              {step === 'generated' && 'Die Beschreibungen wurden generiert. Sie können diese jetzt herunterladen.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileChange}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleGenerate}
-                disabled={!file || isProcessing}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generiere...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Generieren
-                  </>
-                )}
-              </Button>
-            </div>
+            {step === 'upload' && (
+              <div className="flex items-center gap-4">
+                <Input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileChange}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleCategorize}
+                  disabled={!file || isProcessing}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Kategorisiere...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Kategorisieren
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
 
-            {file && !isProcessing && (
+            {step === 'categorized' && (
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  onClick={resetToUpload}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Neue Datei
+                </Button>
+                <Button
+                  onClick={handleGenerate}
+                  disabled={isProcessing || categorizedRows.filter(r => r._status === 'ready').length === 0}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generiere...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Beschreibungen generieren ({categorizedRows.filter(r => r._status === 'ready').length})
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {step === 'generated' && (
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  onClick={resetToUpload}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Neue Datei
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('categorized')}
+                >
+                  Zurück zu Kategorien
+                </Button>
+              </div>
+            )}
+
+            {file && step === 'upload' && !isProcessing && (
               <p className="text-sm text-gray-600">
                 Ausgewählte Datei: <strong>{file.name}</strong> ({(file.size / 1024).toFixed(1)} KB)
               </p>
@@ -261,7 +463,7 @@ export default function AkkushopGenerator() {
               <div className="space-y-2 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
                 <div className="flex justify-between text-sm">
                   <span className="text-indigo-700 font-medium">
-                    Generiere Beschreibungen...
+                    {step === 'upload' ? 'Kategorisiere...' : 'Generiere Beschreibungen...'}
                   </span>
                   <span className="text-indigo-600 font-semibold">
                     {progress.current} / {progress.total} ({Math.round((progress.current / progress.total) * 100)}%)
@@ -290,78 +492,215 @@ export default function AkkushopGenerator() {
           </CardContent>
         </Card>
 
-        {result && (
+        {/* Zusammenfassung */}
+        {(categorizedResult || generatedResult) && (
           <Card>
             <CardHeader>
               <CardTitle>Zusammenfassung</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Gesamt:</span>
-                <span className="font-semibold">{result.summary.total}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-green-600">Erfolg:</span>
-                <span className="font-semibold text-green-600">{result.summary.success}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-red-600">Fehler:</span>
-                <span className="font-semibold text-red-600">{result.summary.errors}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-amber-600">Übersprungen:</span>
-                <span className="font-semibold text-amber-600">{result.summary.skipped}</span>
-              </div>
+              {step === 'categorized' && categorizedResult && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Gesamt:</span>
+                    <span className="font-semibold">{categorizedResult.summary.total}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-green-600">Bereit:</span>
+                    <span className="font-semibold text-green-600">{categorizedResult.summary.ready}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-red-600">Fehler:</span>
+                    <span className="font-semibold text-red-600">{categorizedResult.summary.errors}</span>
+                  </div>
+                  <hr className="my-2" />
+                  <p className="text-sm font-medium text-gray-700">Kategorien:</p>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {Object.entries(categoryStats).sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
+                      <div key={cat} className="flex justify-between text-sm">
+                        <span className={cat === 'GENERISCH' ? 'text-amber-600' : 'text-gray-600'}>{cat}:</span>
+                        <span className={cat === 'GENERISCH' ? 'font-semibold text-amber-600' : 'font-medium'}>{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
-              <div className="pt-4 space-y-2">
-                <div className="pb-2">
-                  <label className="text-sm text-gray-600 block mb-1">Dateiname</label>
-                  <input
-                    type="text"
-                    value={downloadFilename}
-                    onChange={(e) => setDownloadFilename(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="akkushop_generated"
-                  />
-                </div>
-                <Button
-                  onClick={() => handleDownload('xlsx', false)}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700"
-                  disabled={result.summary.success === 0}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Erfolge als Excel (.xlsx)
-                </Button>
-                <Button
-                  onClick={() => handleDownload('csv', false, false)}
-                  variant="outline"
-                  className="w-full"
-                  disabled={result.summary.success === 0}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  CSV für Brickfox
-                </Button>
-                {(result.summary.errors > 0 || result.summary.skipped > 0) && (
+              {step === 'generated' && generatedResult && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Gesamt:</span>
+                    <span className="font-semibold">{generatedResult.summary.total}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-green-600">Erfolg:</span>
+                    <span className="font-semibold text-green-600">{generatedResult.summary.success}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-red-600">Fehler:</span>
+                    <span className="font-semibold text-red-600">{generatedResult.summary.errors}</span>
+                  </div>
+                  <hr className="my-2" />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Dateiname:</label>
+                    <Input
+                      value={downloadFilename}
+                      onChange={(e) => setDownloadFilename(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="akkushop_generated"
+                    />
+                  </div>
                   <Button
-                    onClick={() => handleDownload('xlsx', true)}
-                    variant="outline"
-                    className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                    onClick={() => handleDownload('xlsx', false)}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700"
+                    disabled={generatedResult.summary.success === 0}
                   >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Fehler als Excel (.xlsx)
+                    <Download className="w-4 h-4 mr-2" />
+                    Erfolge als Excel (.xlsx)
                   </Button>
-                )}
-              </div>
+                  <Button
+                    onClick={() => handleDownload('csv', false, false)}
+                    variant="outline"
+                    className="w-full"
+                    disabled={generatedResult.summary.success === 0}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    CSV für Brickfox
+                  </Button>
+                  {generatedResult.summary.errors > 0 && (
+                    <Button
+                      onClick={() => handleDownload('xlsx', true)}
+                      variant="outline"
+                      className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Fehler als Excel (.xlsx)
+                    </Button>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         )}
       </div>
 
-      {result && result.rows.length > 0 && (
+      {/* Kategorisierte Produkte (Schritt 2) */}
+      {step === 'categorized' && categorizedRows.length > 0 && (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Ergebnisse ({result.rows.length} Produkte)</CardTitle>
-            <CardDescription>Klicken Sie auf "Vorschau" um die generierte HTML-Beschreibung anzuzeigen.</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Kategorisierte Produkte ({categorizedRows.length})</CardTitle>
+                <CardDescription>Prüfen Sie die Kategorien. Bei GENERISCH können Sie manuell eine bessere Kategorie wählen.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Filter:</span>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle ({categorizedRows.length})</SelectItem>
+                    {Object.entries(categoryStats).sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat} ({count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-auto max-h-[600px] border rounded-lg">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white z-10">
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Artikelnummer</TableHead>
+                    <TableHead>Produktname</TableHead>
+                    <TableHead>Kategorie</TableHead>
+                    <TableHead>Fehler</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRows.map((row, index) => {
+                    const originalIndex = categorizedRows.indexOf(row);
+                    return (
+                      <TableRow key={index} className={row._status === 'error' ? 'bg-red-50' : row._category === 'GENERISCH' ? 'bg-amber-50' : ''}>
+                        <TableCell className="font-mono text-sm">{row._rowIndex + 1}</TableCell>
+                        <TableCell>{getStatusBadge(row._status)}</TableCell>
+                        <TableCell className="font-mono text-sm">{row.p_item_number || '-'}</TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate flex-1">{row['p_name[de]']}</span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0">
+                                  <Eye className="w-3 h-3 text-gray-400 hover:text-indigo-600" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-96 max-h-48 overflow-y-auto">
+                                <p className="text-sm font-medium mb-1">Vollständiger Produktname:</p>
+                                <p className="text-sm text-gray-700 break-words">{row['p_name[de]']}</p>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {editingCategory === originalIndex ? (
+                            <Select 
+                              value={row._category} 
+                              onValueChange={(val) => handleCategoryChange(originalIndex, val)}
+                            >
+                              <SelectTrigger className="w-40">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ALL_CATEGORIES.map(cat => (
+                                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs font-normal ${row._category === 'GENERISCH' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}
+                              >
+                                {row._category}
+                              </Badge>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 w-6 p-0"
+                                onClick={() => setEditingCategory(originalIndex)}
+                              >
+                                <Pencil className="w-3 h-3 text-gray-400 hover:text-indigo-600" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate text-sm text-red-600" title={row.error || ''}>
+                          {row.error || '-'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Generierte Beschreibungen (Schritt 3) */}
+      {step === 'generated' && generatedResult && generatedResult.rows.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Ergebnisse ({generatedResult.rows.length} Produkte)</CardTitle>
+            <CardDescription>Klicken Sie auf das Auge-Icon um die generierte HTML-Beschreibung anzuzeigen.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-auto max-h-[600px] border rounded-lg">
@@ -378,7 +717,7 @@ export default function AkkushopGenerator() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {result.rows.map((row, index) => (
+                  {generatedResult.rows.map((row, index) => (
                     <TableRow key={index} className={row._status === 'error' ? 'bg-red-50' : row._status === 'skipped' ? 'bg-amber-50' : ''}>
                       <TableCell className="font-mono text-sm">{index + 1}</TableCell>
                       <TableCell>{getStatusBadge(row._status)}</TableCell>
@@ -416,6 +755,7 @@ export default function AkkushopGenerator() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setPreviewRow(row)}
+                          disabled={row._status !== 'success'}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -429,6 +769,7 @@ export default function AkkushopGenerator() {
         </Card>
       )}
 
+      {/* Vorschau-Dialog */}
       <Dialog open={!!previewRow} onOpenChange={() => setPreviewRow(null)}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -462,22 +803,10 @@ export default function AkkushopGenerator() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold">Raw HTML-Code:</h4>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(previewRow?.['p_description[de]'] || '');
-                    toast({ title: 'Kopiert!', description: 'HTML-Code in Zwischenablage kopiert.' });
-                  }}
-                >
-                  Kopieren
-                </Button>
-              </div>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto max-h-64 whitespace-pre-wrap">
-                {previewRow?.['p_description[de]']}
-              </pre>
+              <h4 className="font-semibold mb-2">Erkannte Kategorie:</h4>
+              <Badge variant="outline" className="text-sm bg-indigo-50 text-indigo-700 border-indigo-200">
+                {previewRow?._category || 'GENERISCH'}
+              </Badge>
             </div>
           </div>
         </DialogContent>
