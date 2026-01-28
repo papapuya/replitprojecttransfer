@@ -292,7 +292,8 @@ export default function AkkushopGenerator() {
         filteredRows = generatedResult.rows.filter(r => r._category === 'GENERISCH');
         suffix = '_generisch';
       } else {
-        filteredRows = generatedResult.rows.filter(r => r._status === 'success');
+        // Nur erfolgreiche UND nicht-generische Produkte
+        filteredRows = generatedResult.rows.filter(r => r._status === 'success' && r._category !== 'GENERISCH');
       }
 
       const response = await fetch('/api/akkushop-generator/download', {
