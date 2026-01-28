@@ -231,7 +231,23 @@ export async function renderAkkuHtml(
       .replace(/Energiegehalt.*$/gi, '')
       .replace(/Gewicht.*$/gi, '')
       .replace(/\s*\/\s*$/, '')
+      .replace(/Ersetzt:\s*/gi, ', ') // "Ersetzt:" durch Komma ersetzen
+      .replace(/([a-z])([A-Z])/g, '$1, $2') // "BoschBosch" -> "Bosch, Bosch"
       .trim();
+    
+    // Duplikate entfernen
+    const parts = kompatibilitaet.split(/[,\/]+/).map(p => p.trim()).filter(Boolean);
+    const seen = new Set<string>();
+    const unique: string[] = [];
+    for (const part of parts) {
+      // Normalisieren: Leerzeichen entfernen für Vergleich (z.B. "1 609 203 X10" vs "1609203X10")
+      const normalized = part.toLowerCase().replace(/\s+/g, '');
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        unique.push(part);
+      }
+    }
+    kompatibilitaet = unique.join(', ');
   }
 
   // Bei kurzen Absätzen (Variante D oder generell kurze Texte) in einem Block zusammenfassen
