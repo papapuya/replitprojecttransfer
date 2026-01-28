@@ -531,6 +531,8 @@ export function detectProductCategory(productName: string, description: string):
 export async function detectProductCategoryWithAI(productName: string, description: string): Promise<ProductCategory> {
   const keywordCategory = detectProductCategory(productName, description);
   
+  console.log(`[CategoryDetection] "${productName.substring(0, 60)}" → Keyword: ${keywordCategory}`);
+  
   if (keywordCategory !== 'GENERISCH') {
     const combined = `${productName} ${description}`.toLowerCase();
     const hasZellentausch = /zellentausch|zellenwechsel|akkupack.*passend|startkoffer/i.test(combined);
