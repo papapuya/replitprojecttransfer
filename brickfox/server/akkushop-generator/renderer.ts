@@ -170,6 +170,8 @@ function buildLieferumfang(parsed: ParsedProduct, category: ProductCategory): st
     produktLabel = '1x Rasiererakku';
   } else if (category === 'HANDLEUCHTE') {
     produktLabel = '1x Handleuchtenakku';
+  } else if (category === 'ZELLENTAUSCH') {
+    produktLabel = '1x Zellentausch-Set / Akkupack zum Einbau';
   } else {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Akku';
   }
@@ -362,6 +364,8 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     produktLabel = 'Rasiererakku';
   } else if (category === 'HANDLEUCHTE') {
     produktLabel = 'Handleuchtenakku';
+  } else if (category === 'ZELLENTAUSCH') {
+    produktLabel = 'Zellentausch-Set';
   } else {
     produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
   }
@@ -405,6 +409,8 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     bullet3Label = 'Rasiererakku';
   } else if (category === 'HANDLEUCHTE') {
     bullet3Label = 'Handleuchtenakku';
+  } else if (category === 'ZELLENTAUSCH') {
+    bullet3Label = 'Zellentausch-Set';
   } else {
     bullet3Label = parsed.produkttyp || 'Akku';
   }
