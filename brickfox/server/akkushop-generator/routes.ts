@@ -241,8 +241,30 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
       
       if (hasUtf8Bom) {
         csvString = buffer.slice(3).toString('utf-8');
+        console.log('[CSV] Encoding: UTF-8 mit BOM erkannt');
       } else {
-        csvString = iconv.decode(buffer, 'win1252');
+        // Versuche UTF-8 zuerst, prüfe auf gültige deutsche Umlaute
+        const utf8String = buffer.toString('utf-8');
+        
+        // Prüfe auf UTF-8-Fehler: "Ã¼" statt "ü", "Ã¶" statt "ö", etc.
+        const hasMojibake = /Ã[¤ö¼ßÄÖÜ]|â€"|â€™/.test(utf8String);
+        // Prüfe auf gültige deutsche Umlaute in UTF-8
+        const hasValidUmlauts = /[äöüÄÖÜß]/.test(utf8String);
+        
+        if (hasValidUmlauts && !hasMojibake) {
+          // Gültige UTF-8 mit korrekten Umlauten
+          csvString = utf8String;
+          console.log('[CSV] Encoding: UTF-8 ohne BOM erkannt');
+        } else if (hasMojibake) {
+          // Doppelt-kodiertes UTF-8 erkannt - bereits als UTF-8 lesen, da Mojibake schon im Buffer ist
+          // Das bedeutet: die Datei wurde als Windows-1252 gespeichert, aber enthält UTF-8-Bytes
+          csvString = iconv.decode(buffer, 'utf-8');
+          console.log('[CSV] Encoding: UTF-8 (Mojibake erkannt, korrigiert)');
+        } else {
+          // Wahrscheinlich Windows-1252
+          csvString = iconv.decode(buffer, 'win1252');
+          console.log('[CSV] Encoding: Windows-1252 verwendet');
+        }
       }
 
       // PapaParse für korrekte Verarbeitung von mehrzeiligen Feldern
