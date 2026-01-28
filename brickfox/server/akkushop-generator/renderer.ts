@@ -170,11 +170,19 @@ export async function renderAkkuHtml(
       .trim();
   }
 
+  // Bei kurzen Absätzen (Variante D oder generell kurze Texte) in einem Block zusammenfassen
+  const totalLength = texts.absatz1.length + texts.absatz2.length + texts.absatz3.length;
+  const isCompact = totalLength < 300 || variant === 'D';
+  
+  const textSection = isCompact
+    ? `<p>${texts.absatz1} ${texts.absatz2} ${texts.absatz3}</p>`
+    : `<p>${texts.absatz1}</p>
+<p>${texts.absatz2}</p>
+<p>${texts.absatz3}</p>`;
+
   const html = `<h2>${productName}</h2>
 
-<p>${texts.absatz1}</p>
-<p>${texts.absatz2}</p>
-<p>${texts.absatz3}</p>
+${textSection}
 
 <h3>Produkteigenschaften</h3>
 <p>
