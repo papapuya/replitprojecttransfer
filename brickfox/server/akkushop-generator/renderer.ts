@@ -150,6 +150,8 @@ function buildLieferumfang(parsed: ParsedProduct, category: ProductCategory): st
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Medizinakku';
   } else if (category === 'AIRSOFT') {
     produktLabel = '1x Airsoft-Akkupack';
+  } else if (category === 'GARTEN') {
+    produktLabel = '1x Gartengeräteakku';
   } else {
     produktLabel = parsed.produkttyp ? `1x ${parsed.produkttyp}` : '1x Akku';
   }
@@ -322,6 +324,8 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     produktLabel = parsed.produkttyp || 'Medizinakku';
   } else if (category === 'AIRSOFT') {
     produktLabel = 'Airsoft-Akkupack';
+  } else if (category === 'GARTEN') {
+    produktLabel = 'Gartengeräteakku';
   } else {
     produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
   }
@@ -345,6 +349,8 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     bullet3Label = 'Powerbank';
   } else if (category === 'AIRSOFT') {
     bullet3Label = 'Airsoft-Akkupack';
+  } else if (category === 'GARTEN') {
+    bullet3Label = 'Gartengeräteakku';
   } else {
     bullet3Label = parsed.produkttyp || 'Akku';
   }
