@@ -124,11 +124,17 @@ export async function generateFromCategorized(
   let successCount = 0;
   let errorCount = 0;
 
+  console.log(`[Generator] Starte Generierung für ${categorizedRows.length} Produkte`);
+
   for (let i = 0; i < categorizedRows.length; i++) {
     const row = categorizedRows[i];
     const productName = row['p_name[de]'] || '';
     const description = row['p_description[de]'] || '';
     const category = row._category as ProductCategory;
+
+    if (i < 5) {
+      console.log(`[Generator] Produkt ${i}: name="${productName.substring(0, 40)}", desc-length=${description.length}, status=${row._status}, cat=${category}`);
+    }
 
     if (onProgress) {
       onProgress(i + 1, categorizedRows.length, productName.substring(0, 50));
