@@ -269,7 +269,7 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
     }
 
     // Spalten normalisieren
-    const normalizedRows = rows.map(row => {
+    const normalizedRows = rows.map((row, idx) => {
       const normalized: ProductRow = {
         'p_item_number': '',
         'p_name[de]': '',
@@ -286,9 +286,16 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
         if (cleanKey.toLowerCase().includes('name') && cleanKey.toLowerCase().includes('de')) {
           normalized['p_name[de]'] = value as string;
         }
-        if (cleanKey.toLowerCase().includes('description') && cleanKey.toLowerCase().includes('de')) {
+        // NUR exakt p_description[de] matchen, NICHT p_description_bullet[de][0] etc.
+        if (cleanKey === 'p_description[de]' || cleanKey.toLowerCase() === 'p_description[de]') {
           normalized['p_description[de]'] = value as string;
         }
+      }
+      
+      // Debug: Prüfen ob Normalisierung funktioniert
+      if (idx === 0) {
+        console.log(`[Normalisierung] Erste Zeile Keys:`, Object.keys(normalized));
+        console.log(`[Normalisierung] Erste Zeile p_description[de]: Länge=${normalized['p_description[de]']?.length || 0}`);
       }
       
       return normalized;
