@@ -392,7 +392,7 @@ function renderZellentauschHtml(
 
 <h3>Lieferumfang</h3>
 <ul>
-<li>Zellentausch Service für ${deviceName}, Originalakku muss eingesendet werden</li>
+<li>Zellentausch Service für ${deviceName}, <strong>Originalakku muss eingesendet werden</strong></li>
 </ul>`;
 
   // Bullets für Zellentausch
