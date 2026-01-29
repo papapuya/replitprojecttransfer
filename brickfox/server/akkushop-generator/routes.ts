@@ -478,7 +478,6 @@ router.post('/download', async (req: Request, res: Response) => {
           'p_description[de]': row['p_description[de]'] || '',
           'p_description_bullet[de][0]': row['bullet_1'] || '',
           'p_description_bullet[de][1]': row['bullet_2'] || '',
-          'p_condition': 'ready',
         };
         // Bullet 3 nur wenn vorhanden
         if (row['bullet_3']) {
@@ -512,8 +511,7 @@ router.post('/download', async (req: Request, res: Response) => {
           'p_description[de]',
           'p_description_bullet[de][0]',
           'p_description_bullet[de][1]',
-          ...(hasBullet3 ? ['p_description_bullet[de][2]'] : []),
-          'p_condition'
+          ...(hasBullet3 ? ['p_description_bullet[de][2]'] : [])
         ];
       }
       // CSV mit Spaltenüberschriften
