@@ -107,27 +107,31 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     }
   }
   
-  // bpsDesc Format: pd-spec-name und pd-spec-value Klassen (auch mit escaped quotes "")
-  const bpsSpecRegex = /<td[^>]*class=[""]?[^"]*pd-spec-name[^"]*[""]?[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*class=[""]?[^"]*pd-spec-value[^"]*[""]?[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/gi;
+  // bpsDesc Format: pd-spec-name und pd-spec-value Klassen
+  // Format: <td class="pd-spec-name">Key</td> ... <td class="pd-spec-value"><span>Value</span></td>
+  const bpsSpecRegex = /<td[^>]*class=[^>]*pd-spec-name[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*class=[^>]*pd-spec-value[^>]*>([\s\S]*?)<\/td>/gi;
   
   while ((match = bpsSpecRegex.exec(html)) !== null) {
     const key = stripHtmlTags(match[1]).toLowerCase().replace(/[:\s]+$/, '').trim();
-    const value = stripHtmlTags(match[2]).trim();
+    // Value kann in <span> sein oder direkt
+    let value = stripHtmlTags(match[2]).trim();
     
     if (key && value && value !== '-' && value !== '–') {
+      console.log(`[Parser] bpsDesc extracted: ${key} = ${value}`);
       fields[key] = value;
     }
   }
   
-  // Alternative: Suche direkt nach dem Muster pd-spec-name...pd-spec-value
-  const altBpsRegex = /pd-spec-name[^>]*>([\s\S]*?)<\/td>[\s\S]*?pd-spec-value[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/gi;
-  
-  while ((match = altBpsRegex.exec(html)) !== null) {
-    const key = stripHtmlTags(match[1]).toLowerCase().replace(/[:\s]+$/, '').trim();
-    const value = stripHtmlTags(match[2]).trim();
-    
-    if (key && value && value !== '-' && value !== '–' && !fields[key]) {
-      fields[key] = value;
+  // Fallback: Einfachere Regex für pd-spec-name/value
+  if (Object.keys(fields).length === 0) {
+    const simpleRegex = /pd-spec-name[^>]*>([^<]+)<[\s\S]*?pd-spec-value[\s\S]*?<span[^>]*>([^<]+)</gi;
+    while ((match = simpleRegex.exec(html)) !== null) {
+      const key = match[1].toLowerCase().trim();
+      const value = match[2].trim();
+      if (key && value && value !== '-' && value !== '–') {
+        console.log(`[Parser] Simple regex extracted: ${key} = ${value}`);
+        fields[key] = value;
+      }
     }
   }
   
