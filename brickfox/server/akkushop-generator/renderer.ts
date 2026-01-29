@@ -476,7 +476,7 @@ ${textSection}
 <h3>Technische Daten</h3>
 <table>
 ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>` : ''}${teilenummerRow}${parsed.type ? `
-<tr><td>Chemisches System</td><td>${parsed.type}</td></tr>` : ''}${parsed.spannung ? `
+<tr><td>Chemisches System</td><td>${getChemicalSystemLongName(parsed.type)}</td></tr>` : ''}${parsed.spannung ? `
 <tr><td>Spannung</td><td>${parsed.spannung}</td></tr>` : ''}${parsed.kapazitaet ? `
 <tr><td>Kapazität</td><td>${parsed.kapazitaet}</td></tr>` : ''}${energiegehalt ? `
 <tr><td>Energiegehalt</td><td>${energiegehalt}</td></tr>` : ''}${dimensionRows}${parsed.gewicht ? `
