@@ -97,6 +97,13 @@ export default function AkkushopGenerator() {
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [originalDescPreview, setOriginalDescPreview] = useState<{name: string; desc: string} | null>(null);
   
+  // Generierungs-Optionen (Checkboxen)
+  const [genOptions, setGenOptions] = useState({
+    description: true,
+    bullets: false,
+    attributes: false,
+  });
+  
   const { toast } = useToast();
 
   // Gefilterte Zeilen basierend auf Kategorie-Filter
@@ -330,6 +337,116 @@ export default function AkkushopGenerator() {
     }
   };
 
+  // Kombinierte Generierung mit Checkbox-Optionen
+  const handleGenerateWithOptions = async () => {
+    const rowsToGenerate = categorizedRows.filter(r => selectedRows.has(r._rowIndex) && r._status === 'ready');
+    
+    if (rowsToGenerate.length === 0) {
+      toast({ title: 'Keine Auswahl', description: 'Bitte wählen Sie Produkte mit Status "bereit" aus.', variant: 'destructive' });
+      return;
+    }
+
+    if (!genOptions.description && !genOptions.bullets && !genOptions.attributes) {
+      toast({ title: 'Keine Option', description: 'Bitte wählen Sie mindestens eine Option.', variant: 'destructive' });
+      return;
+    }
+
+    setIsProcessing(true);
+    setProgress(null);
+    
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const eventSource = new EventSource(`/api/akkushop-generator/progress/${sessionId}`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.current && data.total) {
+          setProgress({
+            current: data.current,
+            total: data.total,
+            productName: data.productName || '',
+          });
+        }
+      } catch (e) {
+        console.error('Progress parse error:', e);
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+
+    try {
+      let resultRows = rowsToGenerate.map(r => ({ 
+        ...r, 
+        _status: 'success' as const,
+        original_description: r['p_description[de]'],
+      }));
+
+      // 1. Wenn Beschreibung gewählt, vollständige Generierung
+      if (genOptions.description) {
+        const response = await fetch('/api/akkushop-generator/generate-from-categorized', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
+          body: JSON.stringify({ rows: rowsToGenerate }),
+        });
+        const data = await response.json();
+        if (data.rows) {
+          resultRows = data.rows;
+        }
+      }
+
+      // 2. Wenn Bulletpoints gewählt (und keine Beschreibung), Bulletpoints extrahieren
+      if (genOptions.bullets && !genOptions.description) {
+        const response = await fetch('/api/akkushop-generator/generate-bullets-only', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: resultRows }),
+        });
+        const data = await response.json();
+        if (data.rows) {
+          resultRows = data.rows;
+        }
+      }
+
+      // 3. Wenn Attribute gewählt (und keine Beschreibung), Attribute extrahieren
+      if (genOptions.attributes && !genOptions.description) {
+        const response = await fetch('/api/akkushop-generator/extract-attributes-only', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: resultRows }),
+        });
+        const data = await response.json();
+        if (data.rows) {
+          resultRows = data.rows;
+        }
+      }
+
+      const successCount = resultRows.filter((r: any) => r._status === 'success').length;
+      const errorCount = resultRows.filter((r: any) => r._status === 'error').length;
+      
+      setGeneratedResult({
+        success: true,
+        summary: { total: resultRows.length, success: successCount, errors: errorCount, skipped: 0 },
+        rows: resultRows as any,
+      });
+      setStep('generated');
+      
+      const optionNames = [];
+      if (genOptions.description) optionNames.push('Beschreibungen');
+      if (genOptions.bullets) optionNames.push('Bulletpoints');
+      if (genOptions.attributes) optionNames.push('Attribute');
+      
+      toast({ title: 'Erfolgreich', description: `${optionNames.join(', ')} für ${resultRows.length} Produkte generiert.` });
+    } catch (error: any) {
+      toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
+    } finally {
+      eventSource.close();
+      setIsProcessing(false);
+      setProgress(null);
+    }
+  };
+
   const handleDownload = async (format: 'xlsx' | 'csv', filter: 'success' | 'errors' | 'generisch' = 'success', withBom: boolean = false) => {
     if (!generatedResult?.rows) return;
 
@@ -509,32 +626,38 @@ export default function AkkushopGenerator() {
                     Neue Datei
                   </Button>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-6">
+                  <div className="flex items-center gap-4 border rounded-lg px-4 py-2 bg-gray-50">
+                    <span className="text-sm font-medium text-gray-700">Optionen:</span>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={genOptions.description}
+                        onCheckedChange={(checked) => setGenOptions(prev => ({ ...prev, description: !!checked }))}
+                      />
+                      <span className="text-sm">Produktbeschreibung</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={genOptions.bullets}
+                        onCheckedChange={(checked) => setGenOptions(prev => ({ ...prev, bullets: !!checked }))}
+                      />
+                      <span className="text-sm">Bulletpoints</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={genOptions.attributes}
+                        onCheckedChange={(checked) => setGenOptions(prev => ({ ...prev, attributes: !!checked }))}
+                      />
+                      <span className="text-sm">Attribute</span>
+                    </label>
+                  </div>
                   <Button
-                    onClick={() => handleGenerateOption('bullets')}
-                    disabled={isProcessing || selectedRows.size === 0}
-                    variant="outline"
-                    className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                    onClick={() => handleGenerateWithOptions()}
+                    disabled={isProcessing || selectedRows.size === 0 || (!genOptions.description && !genOptions.bullets && !genOptions.attributes)}
+                    className="bg-indigo-600 hover:bg-indigo-700"
                   >
                     {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-                    1. Nur Bulletpoints ({selectedRows.size})
-                  </Button>
-                  <Button
-                    onClick={() => handleGenerateOption('attributes')}
-                    disabled={isProcessing || selectedRows.size === 0}
-                    variant="outline"
-                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                  >
-                    {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-                    2. Nur Attribute füllen ({selectedRows.size})
-                  </Button>
-                  <Button
-                    onClick={() => handleGenerateOption('full')}
-                    disabled={isProcessing || categorizedRows.filter(r => r._status === 'ready').length === 0}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-                    3. Beschreibungen generieren ({selectedRows.size})
+                    Generieren ({selectedRows.size})
                   </Button>
                 </div>
               </div>
