@@ -473,23 +473,10 @@ router.post('/generate-bullets-only', async (req: Request, res: Response) => {
     let successCount = 0;
     let errorCount = 0;
 
-    // Hilfsfunktion: Text auf max. Länge kürzen (nie mitten im Wort abschneiden)
-    const truncate = (text: string, maxLen: number = 60): string => {
+    // Hilfsfunktion: Text bereinigen (keine Kürzung mehr)
+    const cleanText = (text: string): string => {
       if (!text) return '';
-      text = text.trim();
-      if (text.length <= maxLen) return text;
-      // Am letzten Leerzeichen vor maxLen abschneiden
-      const cut = text.substring(0, maxLen);
-      const lastSpace = cut.lastIndexOf(' ');
-      if (lastSpace > 0) {
-        return cut.substring(0, lastSpace).trim();
-      }
-      // Falls kein Leerzeichen, am letzten sinnvollen Trennzeichen
-      const lastComma = cut.lastIndexOf(',');
-      if (lastComma > maxLen / 2) {
-        return cut.substring(0, lastComma).trim();
-      }
-      return cut.trim();
+      return text.trim();
     };
 
     for (const row of rows) {
@@ -502,8 +489,8 @@ router.post('/generate-bullets-only', async (req: Request, res: Response) => {
         continue;
       }
 
-      // Bullet 1: Produktname gekürzt (max 60 Zeichen)
-      const bullet1 = truncate(productName, 60);
+      // Bullet 1: Produktname (vollständig)
+      const bullet1 = cleanText(productName);
       
       // Bullet 2: Technische Daten aus Beschreibung extrahieren
       const spannungMatch = description.match(/<td>Spannung<\/td>\s*<td>([^<]+)<\/td>/i)
@@ -528,15 +515,15 @@ router.post('/generate-bullets-only', async (req: Request, res: Response) => {
       }
       
       const bullet2 = parts.length > 0 
-        ? truncate(`Akku ${parts.join(', ')}`, 60)
+        ? cleanText(`Akku, ${parts.join(', ')}`)
         : 'Hochwertiger Ersatzakku';
       
-      // Bullet 3: Kompatibilität aus Beschreibung
+      // Bullet 3: Kompatibilität/Anschluss aus Beschreibung
       const kompatMatch = description.match(/<td>Kompatibilität<\/td>\s*<td>([^<]+)<\/td>/i);
       const produkttyp = row._category || 'Akku';
       const bullet3 = kompatMatch && kompatMatch[1]
-        ? truncate(`${produkttyp} für ${kompatMatch[1].trim()}`, 60)
-        : truncate(`${produkttyp} Ersatz`, 60);
+        ? cleanText(`${produkttyp} für ${kompatMatch[1].trim()}`)
+        : cleanText(`${produkttyp} mit Kabel Stecker`);
 
       results.push({
         ...row,
