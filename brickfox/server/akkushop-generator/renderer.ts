@@ -658,8 +658,18 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
 
 export function validateRenderedHtml(html: string, category?: string): { valid: boolean; error?: string } {
   const h2Match = html.match(/<h2>[\s\S]*?<\/h2>/);
-  const h3Produkteigenschaften = html.indexOf('<h3>Produkteigenschaften</h3>');
   const h3TechnischeDaten = html.indexOf('<h3>Technische Daten</h3>');
+  const h3Lieferumfang = html.indexOf('<h3>Lieferumfang</h3>');
+
+  // SPEICHERBATTERIE: Nur Überschrift, Tabelle und Lieferumfang erforderlich
+  if (category === 'SPEICHERBATTERIE') {
+    if (!h2Match || h3TechnischeDaten === -1 || h3Lieferumfang === -1) {
+      return { valid: false, error: 'HTML-Struktur unvollständig' };
+    }
+    return { valid: true };
+  }
+
+  const h3Produkteigenschaften = html.indexOf('<h3>Produkteigenschaften</h3>');
 
   if (!h2Match || h3Produkteigenschaften === -1 || h3TechnischeDaten === -1) {
     return { valid: false, error: 'HTML-Struktur unvollständig' };
