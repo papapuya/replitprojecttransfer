@@ -197,6 +197,7 @@ function extractFromHtmlTable(html: string): Record<string, string> {
   // "Passend für:" Block suchen - verschiedene HTML-Formate
   const passendMatch = html.match(/Passend\s+für:\s*<\/(?:h2|h3|strong|b)>([\s\S]*?)(?:<hr|<h[234]|Ersetzt:|Technische|Lieferumfang|$)/i);
   if (passendMatch && passendMatch[1]) {
+    console.log(`[Parser] RAW Passend für HTML:`, passendMatch[1].substring(0, 500));
     const items = splitHtmlBlock(passendMatch[1]);
     const validItems = items.filter(isValidModel);
     compatModels.push(...validItems);
