@@ -424,8 +424,8 @@ export default function AkkushopGenerator() {
         }
       }
 
-      // 2. Wenn Bulletpoints gewählt (und keine Beschreibung), Bulletpoints extrahieren
-      if (genOptions.bullets && !genOptions.description) {
+      // 2. Wenn Bulletpoints gewählt, immer Bulletpoints generieren/ergänzen
+      if (genOptions.bullets) {
         const response = await fetch('/api/akkushop-generator/generate-bullets-only', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -433,12 +433,18 @@ export default function AkkushopGenerator() {
         });
         const data = await response.json();
         if (data.rows) {
-          resultRows = data.rows;
+          // Bulletpoints in bestehende Ergebnisse mergen
+          resultRows = resultRows.map((row: any, i: number) => ({
+            ...row,
+            bullet_1: data.rows[i]?.bullet_1 || row.bullet_1 || '',
+            bullet_2: data.rows[i]?.bullet_2 || row.bullet_2 || '',
+            bullet_3: data.rows[i]?.bullet_3 || row.bullet_3 || '',
+          }));
         }
       }
 
-      // 3. Wenn Attribute gewählt (und keine Beschreibung), Attribute extrahieren
-      if (genOptions.attributes && !genOptions.description) {
+      // 3. Wenn Attribute gewählt, immer Attribute extrahieren/ergänzen
+      if (genOptions.attributes) {
         const response = await fetch('/api/akkushop-generator/extract-attributes-only', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -446,7 +452,14 @@ export default function AkkushopGenerator() {
         });
         const data = await response.json();
         if (data.rows) {
-          resultRows = data.rows;
+          // Attribute in bestehende Ergebnisse mergen
+          resultRows = resultRows.map((row: any, i: number) => ({
+            ...row,
+            akku_v: data.rows[i]?.akku_v || row.akku_v || '',
+            akku_mah: data.rows[i]?.akku_mah || row.akku_mah || '',
+            akku_wh: data.rows[i]?.akku_wh || row.akku_wh || '',
+            akku_ch: data.rows[i]?.akku_ch || row.akku_ch || '',
+          }));
         }
       }
 
