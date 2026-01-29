@@ -340,17 +340,30 @@ export default function AkkushopGenerator() {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
+      const filename = `${downloadFilename}${suffix}.${format}`;
+      
+      // Versuche mehrere Download-Methoden
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${downloadFilename}${suffix}.${format}`;
+      a.download = filename;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
       a.style.display = 'none';
       document.body.appendChild(a);
-      a.click();
-      // Warten, damit der Browser den Download starten kann
+      
+      // Simuliere Mausklick für bessere Browser-Kompatibilität
+      const clickEvent = new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: true
+      });
+      a.dispatchEvent(clickEvent);
+      
+      // Cleanup nach Verzögerung
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }, 1000);
+        if (a.parentNode) document.body.removeChild(a);
+      }, 2000);
 
       toast({
         title: 'Download gestartet',
