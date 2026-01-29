@@ -47,15 +47,24 @@ function removeMarketingPhrases(text: string): string {
 // Anwendungsbereich aus Produktnamen extrahieren (z.B. "Speicherbatterie für Fernbedienungen" → "Fernbedienungen")
 function extractApplicationFromName(productName: string): string | null {
   // Muster: "für [Anwendung]" oder "passend für [Anwendung]"
-  const fuerMatch = productName.match(/(?:passend\s+)?für\s+([^,\d]+?)(?:\s*[-–,]|\s+\d|$)/i);
+  // Erweitert um Gerätenamen mit Modellnummern wie "Elster Modem FE230"
+  const fuerMatch = productName.match(/(?:passend\s+)?für\s+([^,]+?)(?:\s*[-–]\s*\d+\s*mAh|\s*[-–]\s*\d+[.,]\d+\s*V|$)/i);
   if (fuerMatch && fuerMatch[1]) {
     const application = fuerMatch[1].trim();
     // Nur zurückgeben wenn es nicht zu lang ist und kein technischer Wert
-    if (application.length > 3 && application.length < 60 && !/^\d/.test(application)) {
+    if (application.length > 3 && application.length < 80 && !/^\d/.test(application)) {
       return application;
     }
   }
   return null;
+}
+
+// Prüfen ob es sich um ein spezifisches Gerät handelt (nicht generisch wie "Fernbedienungen")
+function isSpecificDevice(application: string): boolean {
+  // Spezifische Geräte haben oft: Markenname + Modell, oder enthalten Buchstaben-Zahlen-Kombinationen
+  const hasModelNumber = /[A-Z]{1,3}[-]?\d{2,}|[A-Z]\d+[A-Z]|\d{3,}/i.test(application);
+  const hasKnownBrand = /(Elster|Siemens|Mitsubishi|Fanuc|Allen[-\s]?Bradley|Omron|Schneider|ABB|Bosch|Panasonic)/i.test(application);
+  return hasModelNumber || hasKnownBrand;
 }
 
 // Beschreibungstexte an den Anwendungsbereich anpassen
@@ -64,7 +73,16 @@ function adaptTextsToApplication(texts: { absatz1: string; absatz2: string; absa
   
   // Nur für bestimmte Kategorien anpassen
   if (category === 'SPEICHERBATTERIE' || category === 'PUFFERBATTERIE') {
-    // Generische Begriffe durch spezifischen Anwendungsbereich ersetzen
+    // Bei spezifischen Geräten komplett neue gerätespezifische Texte verwenden
+    if (isSpecificDevice(application)) {
+      return {
+        absatz1: `Diese Speicherbatterie ist speziell für den Einsatz im ${application} konzipiert.`,
+        absatz2: `Die Batterie dient zur Datensicherung und Pufferung im ${application}. Die Lithium-Technologie bietet eine hohe Energiedichte bei geringer Selbstentladung.`,
+        absatz3: 'Die Abmessungen entsprechen den Originalspezifikationen für einen direkten Austausch.',
+      };
+    }
+    
+    // Bei generischen Anwendungen (z.B. "Fernbedienungen") nur ersetzen
     return {
       absatz1: texts.absatz1
         .replace(/in der industriellen Automatisierung[^.]*\./i, `in ${application}.`)
