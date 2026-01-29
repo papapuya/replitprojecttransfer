@@ -180,7 +180,7 @@ export async function generateFromCategorized(
       continue;
     }
 
-    const validation = validateRenderedHtml(renderResult.html);
+    const validation = validateRenderedHtml(renderResult.html, category);
     if (!validation.valid) {
       results.push({
         ...row,
@@ -276,7 +276,7 @@ export async function processProducts(
       continue;
     }
 
-    const validation = validateRenderedHtml(renderResult.html);
+    const validation = validateRenderedHtml(renderResult.html, renderResult.category);
     if (!validation.valid) {
       results.push({
         ...row,
