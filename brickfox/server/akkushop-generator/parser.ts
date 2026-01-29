@@ -546,6 +546,35 @@ export function parseDescription(description: string, productName?: string, csvR
 
   parsed.produkttyp = normalizeProdukttyp(productName || '', parsed.produkttyp);
 
+  // Fallback: Kompatibilität aus Produktnamen extrahieren, wenn nicht aus HTML gefunden
+  if (!parsed.kompatibilitaet && productName) {
+    // "passend für X, Y, Z" aus Produktnamen extrahieren
+    const passendMatch = productName.match(/passend\s+für\s+(.+)$/i);
+    if (passendMatch && passendMatch[1]) {
+      let compat = passendMatch[1].trim();
+      // Technische Begriffe entfernen
+      compat = compat
+        .replace(/\bNiMH\b/gi, '')
+        .replace(/\bNiCd\b/gi, '')
+        .replace(/\bNi-MH\b/gi, '')
+        .replace(/\bNi-Cd\b/gi, '')
+        .replace(/\bLi-Ion\b/gi, '')
+        .replace(/\bBattery\s*Pack\b/gi, '')
+        .replace(/\bAkkupack\b/gi, '')
+        .replace(/\bErsatzakku\b/gi, '')
+        .replace(/\d+\.?\d*\s*V\b/gi, '') // Spannungsangaben entfernen
+        .replace(/\s*,\s*/g, ', ') // Kommas normalisieren
+        .replace(/\s+/g, ' ')
+        .replace(/^[\s,]+|[\s,]+$/g, '') // Führende/trailing Kommas entfernen
+        .trim();
+      
+      if (compat.length > 2) {
+        parsed.kompatibilitaet = compat;
+        console.log(`[Parser] Kompatibilität aus Produktnamen: "${compat}"`);
+      }
+    }
+  }
+
   // Gewicht normalisieren: "ca." entfernen, "Gramm" → "g", "Kilogramm" → "kg"
   if (parsed.gewicht) {
     parsed.gewicht = parsed.gewicht
