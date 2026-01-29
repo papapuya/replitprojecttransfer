@@ -803,7 +803,9 @@ router.post('/download', async (req: Request, res: Response) => {
       const csvLines = [headers.join(';')];
       for (const row of exportRows) {
         const values = headers.map(h => {
-          const val = String((row as any)[h] || '');
+          const rawVal = (row as any)[h];
+          // null und undefined als leerer String behandeln
+          const val = (rawVal === null || rawVal === undefined) ? '' : String(rawVal);
           // Werte mit Semikolon, Anführungszeichen oder Zeilenumbruch in Anführungszeichen setzen
           if (val.includes(';') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
             return '"' + val.replace(/"/g, '""') + '"';
