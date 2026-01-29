@@ -152,62 +152,64 @@ function extractFromHtmlTable(html: string): Record<string, string> {
   delete fields['ersetzt'];
   delete fields['geeignet für'];
   
-  // DEDIZIERTE Kompatibilitäts-Extraktion aus "Passend für:" / "Ersetzt:" HTML-Blöcken
-  // Wichtig: Zuerst die HTML-Blöcke in einzelne Items splitten BEVOR Tags entfernt werden
+  // KOMPLETT NEUE Kompatibilitäts-Extraktion
+  // Sucht nach "Passend für:" und "Ersetzt:" Blöcken und extrahiert Gerätemodelle
   const compatModels: string[] = [];
   
-  function extractModelsFromBlock(blockHtml: string): string[] {
-    const items: string[] = [];
-    // Zuerst nach <p>, <li>, <br> Tags splitten um Einzelzeilen zu bekommen
-    const splitHtml = blockHtml
-      .replace(/<br\s*\/?>/gi, '|||SPLIT|||')
-      .replace(/<\/p>/gi, '|||SPLIT|||')
-      .replace(/<\/li>/gi, '|||SPLIT|||')
-      .replace(/<\/div>/gi, '|||SPLIT|||');
+  // Hilfsfunktion: HTML-Block in einzelne Items aufteilen
+  function splitHtmlBlock(blockHtml: string): string[] {
+    // Schritt 1: Alle HTML-Tags die Zeilenumbrüche bedeuten durch Newlines ersetzen
+    let text = blockHtml
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<p[^>]*>/gi, '\n')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '\n')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<div[^>]*>/gi, '\n');
     
-    const parts = splitHtml.split('|||SPLIT|||');
-    for (const part of parts) {
-      // Jetzt Tags aus jedem Teil entfernen
-      const clean = part.replace(/<[^>]+>/g, '').trim();
-      if (clean && clean.length > 1) {
-        items.push(clean);
-      }
-    }
+    // Schritt 2: Restliche HTML-Tags entfernen
+    text = text.replace(/<[^>]+>/g, '');
+    
+    // Schritt 3: Nach Newlines splitten und leere Zeilen entfernen
+    const items = text
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 2);
+    
     return items;
   }
   
-  // "Passend für:" Block suchen
-  const passendPatterns = [
-    /<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234]|<h2|Technische|$)/i,
-    /<strong>Passend für:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|Technische|$)/i,
-    /<b>Passend für:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|Technische|$)/i,
-  ];
+  // Hilfsfunktion: Unerwünschte Einträge filtern
+  function isValidModel(model: string): boolean {
+    const lower = model.toLowerCase();
+    // Filtere generische Begriffe und Hinweise
+    if (lower.includes('achtung')) return false;
+    if (lower.includes('zellentausch')) return false;
+    if (lower.includes('original')) return false;
+    if (lower.includes('eingesendet')) return false;
+    if (lower.includes('benötigt')) return false;
+    if (lower.includes('umbau')) return false;
+    if (model.length < 3) return false;
+    return true;
+  }
   
-  for (const pattern of passendPatterns) {
-    const match = html.match(pattern);
-    if (match && match[1]) {
-      const models = extractModelsFromBlock(match[1]);
-      compatModels.push(...models);
-      console.log(`[Parser] Passend für Block gefunden, Modelle:`, models);
-      break;
-    }
+  // "Passend für:" Block suchen - verschiedene HTML-Formate
+  const passendMatch = html.match(/Passend\s+für:\s*<\/(?:h2|h3|strong|b)>([\s\S]*?)(?:<hr|<h[234]|Ersetzt:|Technische|Lieferumfang|$)/i);
+  if (passendMatch && passendMatch[1]) {
+    const items = splitHtmlBlock(passendMatch[1]);
+    const validItems = items.filter(isValidModel);
+    compatModels.push(...validItems);
+    console.log(`[Parser] Passend für: ${validItems.length} Modelle gefunden:`, validItems);
   }
   
   // "Ersetzt:" Block suchen
-  const ersetztPatterns = [
-    /<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234]|<h3|Technische|$)/i,
-    /<strong>Ersetzt:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|Technische|$)/i,
-    /<b>Ersetzt:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|Technische|$)/i,
-  ];
-  
-  for (const pattern of ersetztPatterns) {
-    const match = html.match(pattern);
-    if (match && match[1]) {
-      const models = extractModelsFromBlock(match[1]);
-      compatModels.push(...models);
-      console.log(`[Parser] Ersetzt Block gefunden, Modelle:`, models);
-      break;
-    }
+  const ersetztMatch = html.match(/Ersetzt:\s*<\/(?:h2|h3|strong|b)>([\s\S]*?)(?:<hr|<h[234]|Passend|Technische|Lieferumfang|$)/i);
+  if (ersetztMatch && ersetztMatch[1]) {
+    const items = splitHtmlBlock(ersetztMatch[1]);
+    const validItems = items.filter(isValidModel);
+    compatModels.push(...validItems);
+    console.log(`[Parser] Ersetzt: ${validItems.length} Modelle gefunden:`, validItems);
   }
   
   // Duplikate entfernen und als Kompatibilität setzen
