@@ -148,20 +148,38 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     }
   }
   
-  // Passend für / Ersetzt aus bpsDesc extrahieren
-  const passendFuerMatch = html.match(/<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234])/i);
+  // Passend für / Ersetzt aus bpsDesc extrahieren - direkt als Kompatibilität speichern
+  const passendFuerMatch = html.match(/<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234]|$)/i);
   if (passendFuerMatch) {
-    const value = stripHtmlTags(passendFuerMatch[1]).trim();
-    if (value && !fields['passend für'] && !fields['kompatibilität']) {
-      fields['passend für'] = value;
+    // HTML zu Text konvertieren, aber Zeilenumbrüche als Komma-Trenner behandeln
+    let value = passendFuerMatch[1]
+      .replace(/<br\s*\/?>/gi, ', ')
+      .replace(/<\/p>\s*<p>/gi, ', ')
+      .replace(/<\/li>\s*<li>/gi, ', ')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (value && !fields['kompatibilität']) {
+      fields['kompatibilität'] = value;
     }
   }
   
-  const ersetztMatch = html.match(/<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234])/i);
+  const ersetztMatch = html.match(/<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234]|$)/i);
   if (ersetztMatch) {
-    const value = stripHtmlTags(ersetztMatch[1]).trim();
-    if (value && !fields['ersetzt'] && !fields['kompatibilität']) {
-      fields['ersetzt'] = value;
+    let value = ersetztMatch[1]
+      .replace(/<br\s*\/?>/gi, ', ')
+      .replace(/<\/p>\s*<p>/gi, ', ')
+      .replace(/<\/li>\s*<li>/gi, ', ')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (value) {
+      // An bestehende Kompatibilität anhängen oder neu setzen
+      if (fields['kompatibilität']) {
+        fields['kompatibilität'] += ', ' + value;
+      } else {
+        fields['kompatibilität'] = value;
+      }
     }
   }
   
