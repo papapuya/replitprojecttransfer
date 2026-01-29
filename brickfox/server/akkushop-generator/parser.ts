@@ -381,6 +381,16 @@ export function parseDescription(description: string, productName?: string, csvR
 
   parsed.produkttyp = normalizeProdukttyp(productName || '', parsed.produkttyp);
 
+  // Gewicht normalisieren: "Gramm" → "g", "Kilogramm" → "kg"
+  if (parsed.gewicht) {
+    parsed.gewicht = parsed.gewicht
+      .replace(/\s*Gramm\b/gi, ' g')
+      .replace(/\s*gramm\b/gi, ' g')
+      .replace(/\s*Kilogramm\b/gi, ' kg')
+      .replace(/\s*kilogramm\b/gi, ' kg')
+      .trim();
+  }
+
   // Keine Pflichtfeld-Prüfung mehr - wenn Beschreibung vorhanden ist, immer weitermachen
   // Fehlende technische Daten werden im Rendering als optionale Felder behandelt
 
