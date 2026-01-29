@@ -492,25 +492,61 @@ router.post('/generate-bullets-only', async (req: Request, res: Response) => {
       // Bullet 1: Produktname (vollständig)
       const bullet1 = cleanText(productName);
       
-      // Bullet 2: Technische Daten aus Beschreibung extrahieren
-      const spannungMatch = description.match(/<td>Spannung<\/td>\s*<td>([^<]+)<\/td>/i)
-        || description.match(/Spannung[:\s]+(\d+(?:[.,]\d+)?\s*V)/i)
-        || productName.match(/(\d+(?:[.,]\d+)?)\s*V\b/i);
-      const kapazitaetMatch = description.match(/<td>Kapazität<\/td>\s*<td>([^<]+)<\/td>/i)
-        || description.match(/Kapazität[:\s]+(\d+(?:[.,]\d+)?\s*mAh)/i)
-        || productName.match(/(\d+(?:[.,]\d+)?)\s*mAh\b/i);
-      const energieMatch = description.match(/<td>Energiegehalt<\/td>\s*<td>([^<]+)<\/td>/i)
-        || description.match(/Energiegehalt[:\s]+(\d+(?:[.,]\d+)?\s*Wh)/i);
+      // Bullet 2: Technische Daten aus Beschreibung oder Produktname extrahieren
+      // Spannung: Tabelle → Beschreibung → Produktname (3,6V, 3,6 V, 3,6 Volt)
+      let spannung = '';
+      const spannungTableMatch = description.match(/<td>Spannung<\/td>\s*<td>([^<]+)<\/td>/i);
+      if (spannungTableMatch && spannungTableMatch[1]) {
+        spannung = spannungTableMatch[1].trim();
+      } else {
+        const spannungNameMatch = productName.match(/(\d+(?:[.,]\d+)?)\s*V(?:olt)?\b/i);
+        if (spannungNameMatch && spannungNameMatch[1]) {
+          spannung = spannungNameMatch[1].replace('.', ',') + ' V';
+        }
+      }
+      
+      // Kapazität: Tabelle → Beschreibung → Produktname
+      let kapazitaet = '';
+      const kapazitaetTableMatch = description.match(/<td>Kapazität<\/td>\s*<td>([^<]+)<\/td>/i);
+      if (kapazitaetTableMatch && kapazitaetTableMatch[1]) {
+        kapazitaet = kapazitaetTableMatch[1].trim();
+      } else {
+        const kapazitaetNameMatch = productName.match(/(\d+(?:[.,]\d+)?)\s*mAh\b/i);
+        if (kapazitaetNameMatch && kapazitaetNameMatch[1]) {
+          kapazitaet = kapazitaetNameMatch[1].replace('.', ',') + ' mAh';
+        }
+      }
+      
+      // Energiegehalt: Tabelle → Beschreibung → Produktname → Berechnung
+      let energie = '';
+      const energieTableMatch = description.match(/<td>Energiegehalt<\/td>\s*<td>([^<]+)<\/td>/i);
+      if (energieTableMatch && energieTableMatch[1]) {
+        energie = energieTableMatch[1].trim();
+      } else {
+        const energieNameMatch = productName.match(/(\d+(?:[.,]\d+)?)\s*Wh\b/i);
+        if (energieNameMatch && energieNameMatch[1]) {
+          energie = energieNameMatch[1].replace('.', ',') + ' Wh';
+        } else if (spannung && kapazitaet) {
+          // Berechnung: V * mAh / 1000 = Wh
+          const vNum = parseFloat(spannung.replace(',', '.').replace(/[^\d.]/g, ''));
+          const mahNum = parseFloat(kapazitaet.replace(',', '.').replace(/[^\d.]/g, ''));
+          if (vNum > 0 && mahNum > 0) {
+            const whNum = (vNum * mahNum) / 1000;
+            if (whNum > 0) {
+              energie = whNum.toFixed(2).replace('.', ',') + ' Wh';
+            }
+          }
+        }
+      }
       
       const parts = [];
-      if (spannungMatch && spannungMatch[1]) parts.push(spannungMatch[1].trim());
-      if (kapazitaetMatch && kapazitaetMatch[1]) parts.push(kapazitaetMatch[1].trim());
+      if (spannung) parts.push(spannung);
+      if (kapazitaet) parts.push(kapazitaet);
       // Wh nur hinzufügen wenn > 0
-      if (energieMatch && energieMatch[1]) {
-        const whValue = energieMatch[1].trim();
-        const whNum = parseFloat(whValue.replace(',', '.').replace(/[^\d.]/g, ''));
+      if (energie) {
+        const whNum = parseFloat(energie.replace(',', '.').replace(/[^\d.]/g, ''));
         if (whNum > 0) {
-          parts.push(whValue);
+          parts.push(energie);
         }
       }
       
