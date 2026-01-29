@@ -179,17 +179,26 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     
     // Schritt 4: Wenn nur 1 langes Item, versuche nach Marken-Wiederholungen zu splitten
     // Z.B. "Weinmann SauerstoffgerätWeinmann OXYTRON 3" -> "Weinmann Sauerstoffgerät", "Weinmann OXYTRON 3"
-    if (items.length === 1 && items[0].length > 30) {
+    // Z.B. "Hartenberger mini compact / 92201201Hartenberger Akku" -> 2 Items
+    if (items.length === 1 && items[0].length > 20) {
       const singleItem = items[0];
       // Finde das erste Wort (Marke) und suche nach Wiederholungen
-      const firstWord = singleItem.match(/^([A-Za-zÄÖÜäöüß]+)\s/);
+      const firstWord = singleItem.match(/^([A-Za-zÄÖÜäöüß&]+)/);
       if (firstWord && firstWord[1].length >= 3) {
         const brand = firstWord[1];
-        // Splitte vor jeder Wiederholung der Marke (außer am Anfang)
-        const regex = new RegExp(`(?<!^)(?=${brand}\\s)`, 'gi');
+        // Splitte vor jeder Wiederholung der Marke (auch ohne Leerzeichen davor, z.B. nach Zahlen)
+        // Matches: "...92201201Hartenberger..." oder "...gerätHartenberger..."
+        const regex = new RegExp(`(?=[0-9a-zäöüß])(?=${brand}(?:\\s|$))`, 'gi');
         const splitItems = singleItem.split(regex).map(s => s.trim()).filter(s => s.length > 2);
         if (splitItems.length > 1) {
           items = splitItems;
+        } else {
+          // Fallback: Versuche einfach bei jeder Marken-Wiederholung zu splitten
+          const fallbackRegex = new RegExp(`(?<=[0-9a-zäöüß])(?=${brand})`, 'gi');
+          const fallbackItems = singleItem.split(fallbackRegex).map(s => s.trim()).filter(s => s.length > 2);
+          if (fallbackItems.length > 1) {
+            items = fallbackItems;
+          }
         }
       }
     }
@@ -197,9 +206,24 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     return items;
   }
   
+  // Hilfsfunktion: Modell-String bereinigen (NiMH, generische Begriffe entfernen)
+  function cleanModel(model: string): string {
+    return model
+      .replace(/\bNiMH\s*\d*\b/gi, '')
+      .replace(/\bNiCd\s*\d*\b/gi, '')
+      .replace(/\bLi-?Ion\s*\d*\b/gi, '')
+      .replace(/\bLiPo\s*\d*\b/gi, '')
+      .replace(/\bAGM\s*\d*\b/gi, '')
+      .replace(/\bErsatzakku\b/gi, '')
+      .replace(/\bAkkupack\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+  
   // Hilfsfunktion: Unerwünschte Einträge filtern
   function isValidModel(model: string): boolean {
-    const lower = model.toLowerCase();
+    const cleaned = cleanModel(model);
+    const lower = cleaned.toLowerCase();
     // Filtere generische Begriffe und Hinweise
     if (lower.includes('achtung')) return false;
     if (lower.includes('zellentausch')) return false;
@@ -207,27 +231,62 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     if (lower.includes('eingesendet')) return false;
     if (lower.includes('benötigt')) return false;
     if (lower.includes('umbau')) return false;
-    if (model.length < 3) return false;
+    if (cleaned.length < 3) return false;
     return true;
   }
   
-  // "Passend für:" Block suchen - verschiedene HTML-Formate
-  const passendMatch = html.match(/Passend\s+für:\s*<\/(?:h2|h3|strong|b)>([\s\S]*?)(?:<hr|<h[234]|Ersetzt:|Technische|Lieferumfang|$)/i);
-  if (passendMatch && passendMatch[1]) {
-    console.log(`[Parser] RAW Passend für HTML:`, passendMatch[1].substring(0, 500));
-    const items = splitHtmlBlock(passendMatch[1]);
-    const validItems = items.filter(isValidModel);
-    compatModels.push(...validItems);
-    console.log(`[Parser] Passend für: ${validItems.length} Modelle gefunden:`, validItems);
+  // Hilfsfunktion: Bereinigte Modelle zu Liste hinzufügen
+  function addCleanedModels(models: string[]): void {
+    for (const m of models) {
+      const cleaned = cleanModel(m);
+      if (cleaned.length >= 3) {
+        compatModels.push(cleaned);
+      }
+    }
   }
   
-  // "Ersetzt:" Block suchen
-  const ersetztMatch = html.match(/Ersetzt:\s*<\/(?:h2|h3|strong|b)>([\s\S]*?)(?:<hr|<h[234]|Passend|Technische|Lieferumfang|$)/i);
-  if (ersetztMatch && ersetztMatch[1]) {
-    const items = splitHtmlBlock(ersetztMatch[1]);
-    const validItems = items.filter(isValidModel);
-    compatModels.push(...validItems);
-    console.log(`[Parser] Ersetzt: ${validItems.length} Modelle gefunden:`, validItems);
+  // "Passend für:" Block suchen - verschiedene HTML-Formate
+  // Format 1: <b>Passend für:</b> Modelle...
+  // Format 2: <h3>Passend für:</h3> Modelle...
+  // Format 3: Passend für: Modelle... (ohne Tags)
+  const passendPatterns = [
+    /Passend\s+für:\s*<\/(?:h2|h3|strong|b)>([\s\S]*?)(?:<hr|<h[234]|Ersetzt:|Technische|Lieferumfang|$)/i,
+    /<(?:h2|h3|strong|b)[^>]*>Passend\s+für:<\/(?:h2|h3|strong|b)>\s*([\s\S]*?)(?:<hr|<h[234]|Ersetzt:|Technische|Lieferumfang|$)/i,
+    /Passend\s+für:\s*([^\n<]+(?:<br[^>]*>\s*[^\n<]+)*)/i
+  ];
+  
+  for (const pattern of passendPatterns) {
+    const passendMatch = html.match(pattern);
+    if (passendMatch && passendMatch[1] && passendMatch[1].trim().length > 2) {
+      console.log(`[Parser] RAW Passend für HTML:`, passendMatch[1].substring(0, 500));
+      const items = splitHtmlBlock(passendMatch[1]);
+      const validItems = items.filter(isValidModel);
+      if (validItems.length > 0) {
+        addCleanedModels(validItems);
+        console.log(`[Parser] Passend für: ${validItems.length} Modelle gefunden:`, validItems);
+        break; // Nur erste erfolgreiche Match verwenden
+      }
+    }
+  }
+  
+  // "Ersetzt:" Block suchen - verschiedene Formate
+  const ersetztPatterns = [
+    /Ersetzt:\s*<\/(?:h2|h3|strong|b)>([\s\S]*?)(?:<hr|<h[234]|Passend|Technische|Lieferumfang|$)/i,
+    /<(?:h2|h3|strong|b)[^>]*>Ersetzt:<\/(?:h2|h3|strong|b)>\s*([\s\S]*?)(?:<hr|<h[234]|Passend|Technische|Lieferumfang|$)/i,
+    /Ersetzt:\s*([^\n<]+(?:<br[^>]*>\s*[^\n<]+)*)/i
+  ];
+  
+  for (const pattern of ersetztPatterns) {
+    const ersetztMatch = html.match(pattern);
+    if (ersetztMatch && ersetztMatch[1] && ersetztMatch[1].trim().length > 2) {
+      const items = splitHtmlBlock(ersetztMatch[1]);
+      const validItems = items.filter(isValidModel);
+      if (validItems.length > 0) {
+        addCleanedModels(validItems);
+        console.log(`[Parser] Ersetzt: ${validItems.length} Modelle gefunden:`, validItems);
+        break;
+      }
+    }
   }
   
   // Duplikate entfernen und als Kompatibilität setzen
