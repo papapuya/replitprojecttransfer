@@ -44,6 +44,43 @@ function removeMarketingPhrases(text: string): string {
   return result.replace(/\s{2,}/g, ' ').trim();
 }
 
+// Anwendungsbereich aus Produktnamen extrahieren (z.B. "Speicherbatterie für Fernbedienungen" → "Fernbedienungen")
+function extractApplicationFromName(productName: string): string | null {
+  // Muster: "für [Anwendung]" oder "passend für [Anwendung]"
+  const fuerMatch = productName.match(/(?:passend\s+)?für\s+([^,\d]+?)(?:\s*[-–,]|\s+\d|$)/i);
+  if (fuerMatch && fuerMatch[1]) {
+    const application = fuerMatch[1].trim();
+    // Nur zurückgeben wenn es nicht zu lang ist und kein technischer Wert
+    if (application.length > 3 && application.length < 60 && !/^\d/.test(application)) {
+      return application;
+    }
+  }
+  return null;
+}
+
+// Beschreibungstexte an den Anwendungsbereich anpassen
+function adaptTextsToApplication(texts: { absatz1: string; absatz2: string; absatz3: string }, application: string | null, category: string): { absatz1: string; absatz2: string; absatz3: string } {
+  if (!application) return texts;
+  
+  // Nur für bestimmte Kategorien anpassen
+  if (category === 'SPEICHERBATTERIE' || category === 'PUFFERBATTERIE') {
+    // Generische Begriffe durch spezifischen Anwendungsbereich ersetzen
+    return {
+      absatz1: texts.absatz1
+        .replace(/in der industriellen Automatisierung[^.]*\./i, `in ${application}.`)
+        .replace(/in CNC-Systemen, Servoantrieben und speicherprogrammierbaren Steuerungen/i, application)
+        .replace(/in industriellen Steuerungsanlagen/i, `in ${application}`)
+        .replace(/für Ihre Industriesteuerung oder Ihr Servosystem/i, `für ${application}`),
+      absatz2: texts.absatz2
+        .replace(/in CNC-Maschinen und Bearbeitungszentren/i, `in ${application}`)
+        .replace(/CNC-Werkzeugmaschinen und RAID-Controller/i, application),
+      absatz3: texts.absatz3,
+    };
+  }
+  
+  return texts;
+}
+
 function correctSpelling(text: string): string {
   let result = text;
   for (const [pattern, replacement] of SPELLING_CORRECTIONS) {
@@ -381,11 +418,15 @@ export async function renderAkkuHtmlWithCategory(
   
   const variant = getVariant(rowIndex);
   const categoryTexts = getCategoryTextBlocks(category, variant);
-  const texts = {
+  
+  // Anwendungsbereich aus Produktnamen extrahieren und Texte anpassen
+  const application = extractApplicationFromName(productName);
+  const texts = adaptTextsToApplication({
     absatz1: categoryTexts.absatz1,
     absatz2: categoryTexts.absatz2,
     absatz3: categoryTexts.absatz3,
-  };
+  }, application, category);
+  
   const usps = categoryTexts.usps;
 
   const { unNumber, hsCode } = determineUnHs(parsed.type || '');
