@@ -473,12 +473,23 @@ router.post('/generate-bullets-only', async (req: Request, res: Response) => {
     let successCount = 0;
     let errorCount = 0;
 
-    // Hilfsfunktion: Text auf max. Länge kürzen
-    const truncate = (text: string, maxLen: number = 55): string => {
-      if (text.length <= maxLen) return text.trim();
+    // Hilfsfunktion: Text auf max. Länge kürzen (nie mitten im Wort abschneiden)
+    const truncate = (text: string, maxLen: number = 60): string => {
+      if (!text) return '';
+      text = text.trim();
+      if (text.length <= maxLen) return text;
+      // Am letzten Leerzeichen vor maxLen abschneiden
       const cut = text.substring(0, maxLen);
       const lastSpace = cut.lastIndexOf(' ');
-      return (lastSpace > maxLen - 15 ? cut.substring(0, lastSpace) : cut).trim();
+      if (lastSpace > 0) {
+        return cut.substring(0, lastSpace).trim();
+      }
+      // Falls kein Leerzeichen, am letzten sinnvollen Trennzeichen
+      const lastComma = cut.lastIndexOf(',');
+      if (lastComma > maxLen / 2) {
+        return cut.substring(0, lastComma).trim();
+      }
+      return cut.trim();
     };
 
     for (const row of rows) {
@@ -491,32 +502,41 @@ router.post('/generate-bullets-only', async (req: Request, res: Response) => {
         continue;
       }
 
-      // Bullet 1: Produktname gekürzt
-      const bullet1 = truncate(productName, 55);
+      // Bullet 1: Produktname gekürzt (max 60 Zeichen)
+      const bullet1 = truncate(productName, 60);
       
       // Bullet 2: Technische Daten aus Beschreibung extrahieren
       const spannungMatch = description.match(/<td>Spannung<\/td>\s*<td>([^<]+)<\/td>/i)
-        || description.match(/Spannung[:\s]+(\d+(?:[.,]\d+)?\s*V)/i);
+        || description.match(/Spannung[:\s]+(\d+(?:[.,]\d+)?\s*V)/i)
+        || productName.match(/(\d+(?:[.,]\d+)?)\s*V\b/i);
       const kapazitaetMatch = description.match(/<td>Kapazität<\/td>\s*<td>([^<]+)<\/td>/i)
-        || description.match(/Kapazität[:\s]+(\d+(?:[.,]\d+)?\s*mAh)/i);
+        || description.match(/Kapazität[:\s]+(\d+(?:[.,]\d+)?\s*mAh)/i)
+        || productName.match(/(\d+(?:[.,]\d+)?)\s*mAh\b/i);
       const energieMatch = description.match(/<td>Energiegehalt<\/td>\s*<td>([^<]+)<\/td>/i)
         || description.match(/Energiegehalt[:\s]+(\d+(?:[.,]\d+)?\s*Wh)/i);
       
       const parts = [];
       if (spannungMatch && spannungMatch[1]) parts.push(spannungMatch[1].trim());
       if (kapazitaetMatch && kapazitaetMatch[1]) parts.push(kapazitaetMatch[1].trim());
-      if (energieMatch && energieMatch[1]) parts.push(energieMatch[1].trim());
+      // Wh nur hinzufügen wenn > 0
+      if (energieMatch && energieMatch[1]) {
+        const whValue = energieMatch[1].trim();
+        const whNum = parseFloat(whValue.replace(',', '.').replace(/[^\d.]/g, ''));
+        if (whNum > 0) {
+          parts.push(whValue);
+        }
+      }
       
       const bullet2 = parts.length > 0 
-        ? truncate(`Akku ${parts.join(', ')}`, 55)
+        ? truncate(`Akku ${parts.join(', ')}`, 60)
         : 'Hochwertiger Ersatzakku';
       
       // Bullet 3: Kompatibilität aus Beschreibung
       const kompatMatch = description.match(/<td>Kompatibilität<\/td>\s*<td>([^<]+)<\/td>/i);
       const produkttyp = row._category || 'Akku';
       const bullet3 = kompatMatch && kompatMatch[1]
-        ? truncate(`${produkttyp} für ${kompatMatch[1].trim()}`, 55)
-        : truncate(`${produkttyp} Ersatz`, 55);
+        ? truncate(`${produkttyp} für ${kompatMatch[1].trim()}`, 60)
+        : truncate(`${produkttyp} Ersatz`, 60);
 
       results.push({
         ...row,
@@ -554,17 +574,28 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
     let successCount = 0;
     let errorCount = 0;
 
-    // Chemisches System Mapping
+    // Chemisches System Mapping (erweitert)
     const chemMapping: Record<string, string> = {
       'nimh': 'NiMH - Nickel-Metallhydrid',
+      'ni-mh': 'NiMH - Nickel-Metallhydrid',
+      'nickel-metallhydrid': 'NiMH - Nickel-Metallhydrid',
+      'nickel-metall-hydrid': 'NiMH - Nickel-Metallhydrid',
       'nicd': 'NiCD - Nickel-Cadmium',
+      'ni-cd': 'NiCD - Nickel-Cadmium',
+      'nickel-cadmium': 'NiCD - Nickel-Cadmium',
       'li-ion': 'Li-Ion - Lithium-Ionen',
       'liion': 'Li-Ion - Lithium-Ionen',
+      'lithium-ionen': 'Li-Ion - Lithium-Ionen',
       'lithium': 'Li-Ion - Lithium-Ionen',
       'lifepo4': 'LiFePO4 - Lithium-Eisenphosphat',
       'lipo': 'Li-Po - Lithium-Polymer',
+      'li-po': 'Li-Po - Lithium-Polymer',
+      'lithium-polymer': 'Li-Po - Lithium-Polymer',
       'blei': 'Blei - Blei-Säure',
+      'bleisäure': 'Blei - Blei-Säure',
       'agm': 'AGM - Blei-AGM',
+      'vrla': 'VRLA - Blei-Gel',
+      'gel': 'Gel - Blei-Gel',
     };
 
     for (const row of rows) {
@@ -627,11 +658,19 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
       }
 
       if (!akku_ch) {
-        const chemMatch = description.match(/<td>Chemisches System<\/td>\s*<td>([^<]+)<\/td>/i)
-          || productName.match(/\b(NiMH|NiCd|Li-Ion|LiIon|Lithium|LiFePO4|LiPo|Blei|AGM)\b/i);
-        if (chemMatch && chemMatch[1]) {
-          const chemKey = chemMatch[1].toLowerCase().replace('-', '');
-          akku_ch = chemMapping[chemKey] || chemMatch[1];
+        // Zuerst aus HTML-Tabelle versuchen
+        const chemTableMatch = description.match(/<td>Chemisches System<\/td>\s*<td>([^<]+)<\/td>/i);
+        if (chemTableMatch && chemTableMatch[1]) {
+          const tableValue = chemTableMatch[1].trim();
+          const chemKey = tableValue.toLowerCase().replace(/[\s-]/g, '');
+          akku_ch = chemMapping[chemKey] || tableValue;
+        } else {
+          // Dann aus Produktname extrahieren
+          const chemNameMatch = productName.match(/\b(NiMH|Ni-MH|NiCd|Ni-Cd|Li-Ion|LiIon|Lithium|LiFePO4|LiPo|Li-Po|Blei|AGM|Nickel-Cadmium|Nickel-Metallhydrid)\b/i);
+          if (chemNameMatch && chemNameMatch[1]) {
+            const chemKey = chemNameMatch[1].toLowerCase().replace(/[\s-]/g, '');
+            akku_ch = chemMapping[chemKey] || chemNameMatch[1];
+          }
         }
       }
 
