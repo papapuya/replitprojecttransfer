@@ -565,6 +565,12 @@ export function extractDeviceFromProductName(productName: string): string | null
 }
 
 export async function detectProductCategoryWithAI(productName: string, description: string): Promise<ProductCategory | string> {
+  // WICHTIG: Wenn Produktname mit "Zellentausch" beginnt, IMMER ZELLENTAUSCH zurückgeben
+  if (/^zellentausch/i.test(productName.trim())) {
+    console.log(`[CategoryDetection] "${productName.substring(0, 60)}" → ZELLENTAUSCH (Name beginnt mit Zellentausch)`);
+    return 'ZELLENTAUSCH';
+  }
+  
   const keywordCategory = detectProductCategory(productName, description);
   
   // Prüfe ob "passend für [Gerät]" im Namen steht
@@ -572,8 +578,8 @@ export async function detectProductCategoryWithAI(productName: string, descripti
   
   console.log(`[CategoryDetection] "${productName.substring(0, 60)}" → Keyword: ${keywordCategory}${extractedDevice ? `, Gerät: "${extractedDevice}"` : ''}`);
   
-  // ZELLENTAUSCH oder Gerät extrahiert: AI soll die richtige Kategorie bestimmen
-  const needsAI = keywordCategory === 'ZELLENTAUSCH' || extractedDevice;
+  // Gerät extrahiert: AI soll die richtige Kategorie bestimmen
+  const needsAI = extractedDevice;
   
   if (!needsAI && keywordCategory !== 'GENERISCH') {
     return keywordCategory;
