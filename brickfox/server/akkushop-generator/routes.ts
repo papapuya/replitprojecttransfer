@@ -582,6 +582,19 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
       let akku_v = row['akku_v'] || '';
       let akku_ch = row['akku_ch'] || '';
 
+      // Hilfsfunktion: Trailing-Nullen entfernen (27,00 → 27, aber 27,5 bleibt)
+      const cleanNumber = (val: string): string => {
+        if (!val) return val;
+        // Punkt zu Komma
+        let num = val.replace('.', ',');
+        // Trailing-Nullen nach Komma entfernen (27,00 → 27, 27,50 → 27,5)
+        if (num.includes(',')) {
+          num = num.replace(/,0+$/, '').replace(/,(\d*?)0+$/, ',$1');
+          if (num.endsWith(',')) num = num.slice(0, -1);
+        }
+        return num;
+      };
+
       // NUR leere Werte aus HTML-Tabelle oder Text extrahieren
       if (!akku_v) {
         const spannungMatch = description.match(/<td>Spannung<\/td>\s*<td>([^<]+)<\/td>/i) 
@@ -589,7 +602,7 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
           || productName.match(/(\d+(?:[.,]\d+)?)\s*V\b/i);
         if (spannungMatch && spannungMatch[1]) {
           const vMatch = spannungMatch[1].match(/(\d+(?:[.,]\d+)?)/);
-          if (vMatch) akku_v = vMatch[1].replace('.', ',');
+          if (vMatch) akku_v = cleanNumber(vMatch[1]);
         }
       }
 
@@ -599,7 +612,7 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
           || productName.match(/(\d+(?:[.,]\d+)?)\s*mAh\b/i);
         if (kapazitaetMatch && kapazitaetMatch[1]) {
           const mahMatch = kapazitaetMatch[1].match(/(\d+(?:[.,]\d+)?)/);
-          if (mahMatch) akku_mah = mahMatch[1].replace('.', ',');
+          if (mahMatch) akku_mah = cleanNumber(mahMatch[1]);
         }
       }
 
@@ -608,7 +621,7 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
           || description.match(/Energiegehalt[:\s]+(\d+(?:[.,]\d+)?\s*Wh)/i);
         if (energieMatch && energieMatch[1]) {
           const whMatch = energieMatch[1].match(/(\d+(?:[.,]\d+)?)/);
-          if (whMatch) akku_wh = whMatch[1].replace('.', ',');
+          if (whMatch) akku_wh = cleanNumber(whMatch[1]);
         }
       }
 
