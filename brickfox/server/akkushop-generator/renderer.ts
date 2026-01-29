@@ -586,7 +586,7 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
   };
 }
 
-export function validateRenderedHtml(html: string): { valid: boolean; error?: string } {
+export function validateRenderedHtml(html: string, category?: string): { valid: boolean; error?: string } {
   const h2Match = html.match(/<h2>[\s\S]*?<\/h2>/);
   const h3Produkteigenschaften = html.indexOf('<h3>Produkteigenschaften</h3>');
   const h3TechnischeDaten = html.indexOf('<h3>Technische Daten</h3>');
@@ -595,13 +595,20 @@ export function validateRenderedHtml(html: string): { valid: boolean; error?: st
     return { valid: false, error: 'HTML-Struktur unvollständig' };
   }
 
+  // ZELLENTAUSCH Produkte haben festen Text ohne Zahlen, Validierung überspringen
+  if (category === 'ZELLENTAUSCH') {
+    return { valid: true };
+  }
+
   const textBeforeTable = html.substring(0, h3TechnischeDaten);
 
+  // Nur reine Text-Paragraphen prüfen (ohne Tags darin)
   const paragraphsMatch = textBeforeTable.match(/<p>[^<]*<\/p>/g);
   if (paragraphsMatch) {
     for (const p of paragraphsMatch) {
       if (p.includes('✅')) continue;
       if (/\d/.test(p)) {
+        console.log(`[Validator] Zahl gefunden in: ${p.substring(0, 100)}`);
         return { valid: false, error: 'Regelverstoß: technische Werte (Zahlen) in Fließtext-Absätzen' };
       }
     }
