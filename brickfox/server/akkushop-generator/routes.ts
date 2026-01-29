@@ -627,11 +627,18 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
         return num;
       };
 
-      // NUR leere Werte aus HTML-Tabelle oder Text extrahieren
+      // NUR leere Werte aus HTML-Tabelle, Text oder Produktname extrahieren
       if (!akku_v) {
-        const spannungMatch = description.match(/<td>Spannung<\/td>\s*<td>([^<]+)<\/td>/i) 
-          || description.match(/Spannung[:\s]+(\d+(?:[.,]\d+)?\s*V)/i)
-          || productName.match(/(\d+(?:[.,]\d+)?)\s*V\b/i);
+        // Zuerst HTML-Tabelle prüfen
+        let spannungMatch = description.match(/<td>Spannung<\/td>\s*<td>([^<]+)<\/td>/i);
+        if (!spannungMatch) {
+          // Dann Beschreibungstext
+          spannungMatch = description.match(/Spannung[:\s]+(\d+(?:[.,]\d+)?\s*V(?:olt)?)/i);
+        }
+        if (!spannungMatch) {
+          // Dann Produktname (z.B. "4,8V" oder "4,8 Volt")
+          spannungMatch = productName.match(/(\d+(?:[.,]\d+)?)\s*V(?:olt)?\b/i);
+        }
         if (spannungMatch && spannungMatch[1]) {
           const vMatch = spannungMatch[1].match(/(\d+(?:[.,]\d+)?)/);
           if (vMatch) akku_v = cleanNumber(vMatch[1]);
@@ -639,9 +646,16 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
       }
 
       if (!akku_mah) {
-        const kapazitaetMatch = description.match(/<td>Kapazität<\/td>\s*<td>([^<]+)<\/td>/i)
-          || description.match(/Kapazität[:\s]+(\d+(?:[.,]\d+)?\s*mAh)/i)
-          || productName.match(/(\d+(?:[.,]\d+)?)\s*mAh\b/i);
+        // Zuerst HTML-Tabelle prüfen
+        let kapazitaetMatch = description.match(/<td>Kapazität<\/td>\s*<td>([^<]+)<\/td>/i);
+        if (!kapazitaetMatch) {
+          // Dann Beschreibungstext
+          kapazitaetMatch = description.match(/Kapazität[:\s]+(\d+(?:[.,]\d+)?\s*mAh)/i);
+        }
+        if (!kapazitaetMatch) {
+          // Dann Produktname (z.B. "4000mAh")
+          kapazitaetMatch = productName.match(/(\d+(?:[.,]\d+)?)\s*mAh\b/i);
+        }
         if (kapazitaetMatch && kapazitaetMatch[1]) {
           const mahMatch = kapazitaetMatch[1].match(/(\d+(?:[.,]\d+)?)/);
           if (mahMatch) akku_mah = cleanNumber(mahMatch[1]);
@@ -649,11 +663,25 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
       }
 
       if (!akku_wh) {
-        const energieMatch = description.match(/<td>Energiegehalt<\/td>\s*<td>([^<]+)<\/td>/i)
-          || description.match(/Energiegehalt[:\s]+(\d+(?:[.,]\d+)?\s*Wh)/i);
+        // Zuerst HTML-Tabelle prüfen
+        let energieMatch = description.match(/<td>Energiegehalt<\/td>\s*<td>([^<]+)<\/td>/i);
+        if (!energieMatch) {
+          // Dann Beschreibungstext
+          energieMatch = description.match(/Energiegehalt[:\s]+(\d+(?:[.,]\d+)?\s*Wh)/i);
+        }
+        if (!energieMatch) {
+          // Dann Produktname (z.B. "16,2Wh")
+          energieMatch = productName.match(/(\d+(?:[.,]\d+)?)\s*Wh\b/i);
+        }
         if (energieMatch && energieMatch[1]) {
           const whMatch = energieMatch[1].match(/(\d+(?:[.,]\d+)?)/);
-          if (whMatch) akku_wh = cleanNumber(whMatch[1]);
+          if (whMatch) {
+            const whValue = cleanNumber(whMatch[1]);
+            // Nur wenn Wh > 0
+            if (parseFloat(whValue.replace(',', '.')) > 0) {
+              akku_wh = whValue;
+            }
+          }
         }
       }
 
