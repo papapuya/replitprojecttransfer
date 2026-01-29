@@ -171,11 +171,28 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     // Schritt 2: Restliche HTML-Tags entfernen
     text = text.replace(/<[^>]+>/g, '');
     
-    // Schritt 3: Nach Newlines splitten und leere Zeilen entfernen
-    const items = text
+    // Schritt 3: Nach Newlines splitten
+    let items = text
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 2);
+    
+    // Schritt 4: Wenn nur 1 langes Item, versuche nach Marken-Wiederholungen zu splitten
+    // Z.B. "Weinmann SauerstoffgerätWeinmann OXYTRON 3" -> "Weinmann Sauerstoffgerät", "Weinmann OXYTRON 3"
+    if (items.length === 1 && items[0].length > 30) {
+      const singleItem = items[0];
+      // Finde das erste Wort (Marke) und suche nach Wiederholungen
+      const firstWord = singleItem.match(/^([A-Za-zÄÖÜäöüß]+)\s/);
+      if (firstWord && firstWord[1].length >= 3) {
+        const brand = firstWord[1];
+        // Splitte vor jeder Wiederholung der Marke (außer am Anfang)
+        const regex = new RegExp(`(?<!^)(?=${brand}\\s)`, 'gi');
+        const splitItems = singleItem.split(regex).map(s => s.trim()).filter(s => s.length > 2);
+        if (splitItems.length > 1) {
+          items = splitItems;
+        }
+      }
+    }
     
     return items;
   }
