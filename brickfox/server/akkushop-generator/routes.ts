@@ -449,6 +449,190 @@ router.post('/generate-from-categorized', async (req: Request, res: Response) =>
   }
 });
 
+// Option 1: Nur Bulletpoints generieren (aus Original-Beschreibung extrahieren)
+router.post('/generate-bullets-only', async (req: Request, res: Response) => {
+  try {
+    const { rows } = req.body;
+    
+    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'Keine Daten zum Verarbeiten' });
+    }
+
+    const results: any[] = [];
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Hilfsfunktion: Text auf max. Länge kürzen
+    const truncate = (text: string, maxLen: number = 55): string => {
+      if (text.length <= maxLen) return text.trim();
+      const cut = text.substring(0, maxLen);
+      const lastSpace = cut.lastIndexOf(' ');
+      return (lastSpace > maxLen - 15 ? cut.substring(0, lastSpace) : cut).trim();
+    };
+
+    for (const row of rows) {
+      const productName = row['p_name[de]'] || '';
+      const description = row['p_description[de]'] || '';
+      
+      if (!productName || !description) {
+        results.push({ ...row, _status: 'error', error: 'Keine Produktdaten' });
+        errorCount++;
+        continue;
+      }
+
+      // Bullet 1: Produktname gekürzt
+      const bullet1 = truncate(productName, 55);
+      
+      // Bullet 2: Technische Daten aus Beschreibung extrahieren
+      const spannungMatch = description.match(/<td>Spannung<\/td>\s*<td>([^<]+)<\/td>/i)
+        || description.match(/Spannung[:\s]+(\d+(?:[.,]\d+)?\s*V)/i);
+      const kapazitaetMatch = description.match(/<td>Kapazität<\/td>\s*<td>([^<]+)<\/td>/i)
+        || description.match(/Kapazität[:\s]+(\d+(?:[.,]\d+)?\s*mAh)/i);
+      const energieMatch = description.match(/<td>Energiegehalt<\/td>\s*<td>([^<]+)<\/td>/i)
+        || description.match(/Energiegehalt[:\s]+(\d+(?:[.,]\d+)?\s*Wh)/i);
+      
+      const parts = [];
+      if (spannungMatch && spannungMatch[1]) parts.push(spannungMatch[1].trim());
+      if (kapazitaetMatch && kapazitaetMatch[1]) parts.push(kapazitaetMatch[1].trim());
+      if (energieMatch && energieMatch[1]) parts.push(energieMatch[1].trim());
+      
+      const bullet2 = parts.length > 0 
+        ? truncate(`Akku ${parts.join(', ')}`, 55)
+        : 'Hochwertiger Ersatzakku';
+      
+      // Bullet 3: Kompatibilität aus Beschreibung
+      const kompatMatch = description.match(/<td>Kompatibilität<\/td>\s*<td>([^<]+)<\/td>/i);
+      const produkttyp = row._category || 'Akku';
+      const bullet3 = kompatMatch && kompatMatch[1]
+        ? truncate(`${produkttyp} für ${kompatMatch[1].trim()}`, 55)
+        : truncate(`${produkttyp} Ersatz`, 55);
+
+      results.push({
+        ...row,
+        'p_description[de]': description, // Original behalten
+        bullet_1: bullet1,
+        bullet_2: bullet2,
+        bullet_3: bullet3,
+        _status: 'success',
+      });
+      successCount++;
+    }
+
+    res.json({
+      success: true,
+      summary: { total: rows.length, success: successCount, errors: errorCount, skipped: 0 },
+      rows: results,
+    });
+  } catch (error: any) {
+    console.error('[AkkushopGenerator] Bullets-Only Error:', error);
+    res.status(500).json({ error: error.message || 'Interner Serverfehler' });
+  }
+});
+
+// Option 2: Nur Attribute extrahieren (aus technischen Daten) - NUR leere Werte füllen
+router.post('/extract-attributes-only', async (req: Request, res: Response) => {
+  try {
+    const { rows } = req.body;
+    
+    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'Keine Daten zum Verarbeiten' });
+    }
+
+    const results: any[] = [];
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Chemisches System Mapping
+    const chemMapping: Record<string, string> = {
+      'nimh': 'NiMH - Nickel-Metallhydrid',
+      'nicd': 'NiCD - Nickel-Cadmium',
+      'li-ion': 'Li-Ion - Lithium-Ionen',
+      'liion': 'Li-Ion - Lithium-Ionen',
+      'lithium': 'Li-Ion - Lithium-Ionen',
+      'lifepo4': 'LiFePO4 - Lithium-Eisenphosphat',
+      'lipo': 'Li-Po - Lithium-Polymer',
+      'blei': 'Blei - Blei-Säure',
+      'agm': 'AGM - Blei-AGM',
+    };
+
+    for (const row of rows) {
+      const productName = row['p_name[de]'] || '';
+      const description = row['p_description[de]'] || '';
+      
+      if (!description) {
+        results.push({ ...row, _status: 'error', error: 'Keine Beschreibung' });
+        errorCount++;
+        continue;
+      }
+
+      // Bestehende Werte aus der Row (falls bereits vorhanden)
+      let akku_mah = row['akku_mah'] || '';
+      let akku_wh = row['akku_wh'] || '';
+      let akku_v = row['akku_v'] || '';
+      let akku_ch = row['akku_ch'] || '';
+
+      // NUR leere Werte aus HTML-Tabelle oder Text extrahieren
+      if (!akku_v) {
+        const spannungMatch = description.match(/<td>Spannung<\/td>\s*<td>([^<]+)<\/td>/i) 
+          || description.match(/Spannung[:\s]+(\d+(?:[.,]\d+)?\s*V)/i)
+          || productName.match(/(\d+(?:[.,]\d+)?)\s*V\b/i);
+        if (spannungMatch && spannungMatch[1]) {
+          const vMatch = spannungMatch[1].match(/(\d+(?:[.,]\d+)?)/);
+          if (vMatch) akku_v = vMatch[1].replace('.', ',');
+        }
+      }
+
+      if (!akku_mah) {
+        const kapazitaetMatch = description.match(/<td>Kapazität<\/td>\s*<td>([^<]+)<\/td>/i)
+          || description.match(/Kapazität[:\s]+(\d+(?:[.,]\d+)?\s*mAh)/i)
+          || productName.match(/(\d+(?:[.,]\d+)?)\s*mAh\b/i);
+        if (kapazitaetMatch && kapazitaetMatch[1]) {
+          const mahMatch = kapazitaetMatch[1].match(/(\d+(?:[.,]\d+)?)/);
+          if (mahMatch) akku_mah = mahMatch[1].replace('.', ',');
+        }
+      }
+
+      if (!akku_wh) {
+        const energieMatch = description.match(/<td>Energiegehalt<\/td>\s*<td>([^<]+)<\/td>/i)
+          || description.match(/Energiegehalt[:\s]+(\d+(?:[.,]\d+)?\s*Wh)/i);
+        if (energieMatch && energieMatch[1]) {
+          const whMatch = energieMatch[1].match(/(\d+(?:[.,]\d+)?)/);
+          if (whMatch) akku_wh = whMatch[1].replace('.', ',');
+        }
+      }
+
+      if (!akku_ch) {
+        const chemMatch = description.match(/<td>Chemisches System<\/td>\s*<td>([^<]+)<\/td>/i)
+          || productName.match(/\b(NiMH|NiCd|Li-Ion|LiIon|Lithium|LiFePO4|LiPo|Blei|AGM)\b/i);
+        if (chemMatch && chemMatch[1]) {
+          const chemKey = chemMatch[1].toLowerCase().replace('-', '');
+          akku_ch = chemMapping[chemKey] || chemMatch[1];
+        }
+      }
+
+      results.push({
+        ...row,
+        'p_description[de]': description, // Original behalten
+        akku_mah,
+        akku_wh,
+        akku_v,
+        akku_ch,
+        _status: 'success',
+      });
+      successCount++;
+    }
+
+    res.json({
+      success: true,
+      summary: { total: rows.length, success: successCount, errors: errorCount, skipped: 0 },
+      rows: results,
+    });
+  } catch (error: any) {
+    console.error('[AkkushopGenerator] Attributes-Only Error:', error);
+    res.status(500).json({ error: error.message || 'Interner Serverfehler' });
+  }
+});
+
 router.post('/download', async (req: Request, res: Response) => {
   try {
     const { rows, format = 'xlsx', errorsOnly = false, withBom = false } = req.body;
