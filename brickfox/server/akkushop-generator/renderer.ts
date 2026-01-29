@@ -352,10 +352,14 @@ function renderZellentauschHtml(
   
   // Dimensionen
   let dimensionRows = '';
-  if (parsed.laenge) dimensionRows += `\n<tr><td>Länge</td><td>${parsed.laenge}</td></tr>`;
-  if (parsed.breite) dimensionRows += `\n<tr><td>Breite</td><td>${parsed.breite}</td></tr>`;
-  if (parsed.hoehe) dimensionRows += `\n<tr><td>Höhe</td><td>${parsed.hoehe}</td></tr>`;
-  if (parsed.durchmesser) dimensionRows += `\n<tr><td>Durchmesser</td><td>${parsed.durchmesser}</td></tr>`;
+  if (parsed.laenge || parsed.breite || parsed.hoehe || parsed.durchmesser) {
+    if (parsed.laenge) dimensionRows += `\n<tr><td>Länge</td><td>${parsed.laenge}</td></tr>`;
+    if (parsed.breite) dimensionRows += `\n<tr><td>Breite</td><td>${parsed.breite}</td></tr>`;
+    if (parsed.hoehe) dimensionRows += `\n<tr><td>Höhe</td><td>${parsed.hoehe}</td></tr>`;
+    if (parsed.durchmesser) dimensionRows += `\n<tr><td>Durchmesser</td><td>${parsed.durchmesser}</td></tr>`;
+  } else if (parsed.rawFields?.['abmessungen']) {
+    dimensionRows = `\n<tr><td>Abmessungen</td><td>${parsed.rawFields['abmessungen']}</td></tr>`;
+  }
   
   const html = `<h2>${productName}</h2>
 
@@ -440,10 +444,13 @@ export async function renderAkkuHtmlWithCategory(
     dimensionRows = `
 <tr><td>Länge</td><td>${parsed.laenge}</td></tr>
 <tr><td>Durchmesser</td><td>${parsed.durchmesser}</td></tr>`;
-  } else {
+  } else if (parsed.laenge || parsed.breite || parsed.hoehe) {
     if (parsed.laenge) dimensionRows += `\n<tr><td>Länge</td><td>${parsed.laenge}</td></tr>`;
     if (parsed.breite) dimensionRows += `\n<tr><td>Breite</td><td>${parsed.breite}</td></tr>`;
     if (parsed.hoehe) dimensionRows += `\n<tr><td>Höhe</td><td>${parsed.hoehe}</td></tr>`;
+  } else if (parsed.rawFields?.['abmessungen']) {
+    // Wenn Abmessungen als Rohwert vorhanden sind (z.B. "53 x 16 mm (ØxH)")
+    dimensionRows = `\n<tr><td>Abmessungen</td><td>${parsed.rawFields['abmessungen']}</td></tr>`;
   }
 
   const teilenummerRow = parsed.teilenummer 
