@@ -1228,9 +1228,9 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
   },
   SPEICHERBATTERIE: {
     A: {
-      absatz1: 'Diese Speicherbatterie findet vor allem in der industriellen Automatisierung Anwendung, insbesondere in CNC-Systemen, Servoantrieben und speicherprogrammierbaren Steuerungen, wo sie als zuverlässige Pufferbatterie dient.',
-      absatz2: 'Die Lithium-Technologie bietet eine hohe Energiedichte bei geringer Selbstentladung. So bleiben wichtige Daten und Konfigurationen auch bei einem Stromausfall erhalten.',
-      absatz3: 'Die Abmessungen und der Steckertyp entsprechen den Originalspezifikationen für einen direkten Austausch.',
+      absatz1: 'Diese Speicherbatterie wird überwiegend in industriellen Anwendungen wie CNC-Maschinen, Servoantrieben und RAID-Controllern eingesetzt.',
+      absatz2: 'Die Batterie dient als nicht wiederaufladbare Lithium-Einwegbatterie zur Datenspeicherung und Pufferung in professionellen Geräten. Sie wird in speicherprogrammierbaren Steuerungen (SPS) verwendet, oft in Verbindung mit CNC-Werkzeugmaschinen und Bearbeitungszentren, um Daten bei Stromausfall zu sichern.',
+      absatz3: 'In Computersystemen kommt sie auch in bestimmten RAID-Controllern zum Einsatz, um Konfigurations- und Cache-Daten zu puffern. Die Abmessungen entsprechen den Originalspezifikationen für einen direkten Austausch.',
       usps: [
         'Für SPS, CNC-Systeme und Servoantriebe',
         'Geringe Selbstentladung',
@@ -1240,8 +1240,8 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     },
     B: {
       absatz1: 'Diese Speicherbatterie sichert Programm- und Parameterdaten in industriellen Steuerungsanlagen und gewährleistet die Absolutwert-Positionserkennung in Servosystemen.',
-      absatz2: 'Die lange Lebensdauer reduziert Wartungsintervalle in CNC-Maschinen und Bearbeitungszentren. Ein rechtzeitiger Austausch verhindert Datenverlust.',
-      absatz3: 'Beim Batteriewechsel die Anlage nicht vom Netz trennen, um Datenverlust zu vermeiden. Schneller Wechsel empfohlen.',
+      absatz2: 'Ein Hauptanwendungsgebiet ist die Stromversorgung innerhalb von Servosystemen. Die lange Lebensdauer reduziert Wartungsintervalle in CNC-Maschinen und Bearbeitungszentren.',
+      absatz3: 'Beim Batteriewechsel die Anlage nicht vom Netz trennen, um Datenverlust zu vermeiden. Ein rechtzeitiger Austausch verhindert Datenverlust.',
       usps: [
         'Sichert Programm- und Parameterdaten',
         'Für CNC-Maschinen und Servosysteme',
@@ -1250,9 +1250,9 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
       ],
     },
     C: {
-      absatz1: 'Hochwertige Ersatzbatterie für Ihre Industriesteuerung oder Ihr Servosystem. Schützt zuverlässig vor Datenverlust bei Stromausfall.',
-      absatz2: 'Geeignet für SPS-Steuerungen, CNC-Werkzeugmaschinen und RAID-Controller. Ein rechtzeitiger Batteriewechsel sichert Ihre Maschinendaten.',
-      absatz3: 'Der Wechsel sollte zügig erfolgen, um Datenverlust zu vermeiden.',
+      absatz1: 'Diese Speicherbatterie wird in speicherprogrammierbaren Steuerungen (SPS, auch PLC genannt) verwendet, um Daten bei Stromausfall zu sichern.',
+      absatz2: 'Geeignet für SPS-Steuerungen, CNC-Werkzeugmaschinen und RAID-Controller. Die Batterie puffert zuverlässig Konfigurations- und Cache-Daten.',
+      absatz3: 'Die Abmessungen entsprechen den Originalspezifikationen. Der Wechsel sollte zügig erfolgen, um Datenverlust zu vermeiden.',
       usps: [
         'Schutz vor Datenverlust',
         'Für SPS, CNC und RAID-Controller',
