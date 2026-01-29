@@ -339,31 +339,43 @@ export default function AkkushopGenerator() {
       if (!response.ok) throw new Error('Download fehlgeschlagen');
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
       const filename = `${downloadFilename}${suffix}.${format}`;
       
-      // Versuche mehrere Download-Methoden
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      
-      // Simuliere Mausklick für bessere Browser-Kompatibilität
-      const clickEvent = new MouseEvent('click', {
-        view: window,
-        bubbles: true,
-        cancelable: true
-      });
-      a.dispatchEvent(clickEvent);
-      
-      // Cleanup nach Verzögerung
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        if (a.parentNode) document.body.removeChild(a);
-      }, 2000);
+      // Für Iframe-kompatiblen Download: Öffne Blob in neuem Fenster
+      const reader = new FileReader();
+      reader.onload = function() {
+        const dataUrl = reader.result as string;
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(`
+            <html>
+            <head><title>Download</title></head>
+            <body>
+              <p>Download startet automatisch...</p>
+              <p><a id="dl" href="${dataUrl}" download="${filename}">Falls nicht, hier klicken</a></p>
+              <script>
+                document.getElementById('dl').click();
+                setTimeout(function() { window.close(); }, 3000);
+              </script>
+            </body>
+            </html>
+          `);
+          newWindow.document.close();
+        } else {
+          // Fallback: Direkter Download-Link
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+          }, 2000);
+        }
+      };
+      reader.readAsDataURL(blob);
 
       toast({
         title: 'Download gestartet',
