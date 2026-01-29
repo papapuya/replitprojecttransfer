@@ -204,7 +204,167 @@ export async function renderAkkuHtml(
   
   // KI-gestützte Produktkategorisierung für bessere Genauigkeit
   const category = await detectProductCategoryWithAI(productName, parsed.originalHtml || '');
-  return renderAkkuHtmlWithCategory(productName, parsed, rowIndex, category);
+  return renderAkkuHtmlWithCategory(productName, parsed, rowIndex, category as ProductCategory);
+}
+
+// Bulletpoints auf maximal 60 Zeichen begrenzen und Satzzeichen am Ende entfernen
+function truncateBullet(text: string, maxLength: number = 60): string {
+  let result = text;
+  if (result.length > maxLength) {
+    const truncated = result.substring(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > maxLength - 15) {
+      result = truncated.substring(0, lastSpace);
+    } else {
+      result = truncated;
+    }
+  }
+  return result.replace(/[.,;:!?]+$/, '').trim();
+}
+
+// Chemisches System Kurzform -> Langform Mapping
+const CHEMICAL_SYSTEM_LONG_NAMES: Record<string, string> = {
+  'NiMH': 'Nickel-Metall-Hydrid (NiMH)',
+  'NiMh': 'Nickel-Metall-Hydrid (NiMH)',
+  'Ni-MH': 'Nickel-Metall-Hydrid (NiMH)',
+  'NiCd': 'Nickel-Cadmium (NiCd)',
+  'Ni-Cd': 'Nickel-Cadmium (NiCd)',
+  'Li-Ion': 'Lithium-Ionen (Li-Ion)',
+  'Li-ion': 'Lithium-Ionen (Li-Ion)',
+  'LiIon': 'Lithium-Ionen (Li-Ion)',
+  'Lithium-Ion': 'Lithium-Ionen (Li-Ion)',
+  'LiFePO4': 'Lithium-Eisenphosphat (LiFePO4)',
+  'LFP': 'Lithium-Eisenphosphat (LiFePO4)',
+  'Li-Po': 'Lithium-Polymer (Li-Po)',
+  'LiPo': 'Lithium-Polymer (Li-Po)',
+  'Blei': 'Blei-Säure (Pb)',
+  'Blei-Gel': 'Blei-Gel',
+  'AGM': 'Blei-AGM',
+  'Pb': 'Blei-Säure (Pb)',
+};
+
+function getChemicalSystemLongName(shortName: string): string {
+  if (!shortName) return '';
+  // Direkt match prüfen
+  if (CHEMICAL_SYSTEM_LONG_NAMES[shortName]) {
+    return CHEMICAL_SYSTEM_LONG_NAMES[shortName];
+  }
+  // Case-insensitive suchen
+  for (const [key, value] of Object.entries(CHEMICAL_SYSTEM_LONG_NAMES)) {
+    if (shortName.toLowerCase().includes(key.toLowerCase())) {
+      return value;
+    }
+  }
+  return shortName; // Fallback: Original zurückgeben
+}
+
+function extractDeviceNameFromProduct(productName: string): string {
+  // Zellentausch-spezifische Extraktion des Gerätenamens
+  // Beispiel: "Zellentausch Swivel Sweeper Akkupack, DS Produkte..." → "Swivel Sweeper Akkupack"
+  const cleanName = productName
+    .replace(/^Zellentausch\s*/i, '')
+    .replace(/,.*$/, '') // Alles nach erstem Komma entfernen
+    .replace(/Akkutausch.*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleanName || 'Akkupack';
+}
+
+function extractManufacturerFromProduct(productName: string): string {
+  // Hersteller aus Produktnamen extrahieren
+  // Beispiel: "...DS Produkte Akkutausch..." → "DS Produkte"
+  const patterns = [
+    /,\s*([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+Akkutausch/i,
+    /für\s+([A-Za-z]+(?:\s+[A-Za-z0-9]+)?)/i,
+    /von\s+([A-Za-z]+(?:\s+[A-Za-z0-9]+)?)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = productName.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+  return '';
+}
+
+// Spezielle Render-Funktion für Zellentausch-Produkte
+function renderZellentauschHtml(
+  productName: string,
+  parsed: ParsedProduct
+): RenderResult {
+  const { unNumber, hsCode } = determineUnHs(parsed.type || '');
+  
+  // Chemisches System in Langform
+  const chemicalSystemShort = parsed.type || '';
+  const chemicalSystemLong = getChemicalSystemLongName(chemicalSystemShort);
+  
+  // Gerätename und Hersteller extrahieren
+  const deviceName = extractDeviceNameFromProduct(productName);
+  const manufacturer = extractManufacturerFromProduct(productName);
+  const fullDeviceName = manufacturer ? `${manufacturer} ${deviceName}` : deviceName;
+  
+  // Energiegehalt berechnen
+  let energiegehalt = parsed.energiegehalt;
+  if (!energiegehalt && parsed.spannung && parsed.kapazitaet) {
+    energiegehalt = calculateEnergyContent(parsed.spannung, parsed.kapazitaet);
+  }
+  
+  // Dimensionen
+  let dimensionRows = '';
+  if (parsed.laenge) dimensionRows += `\n<tr><td>Länge</td><td>${parsed.laenge}</td></tr>`;
+  if (parsed.breite) dimensionRows += `\n<tr><td>Breite</td><td>${parsed.breite}</td></tr>`;
+  if (parsed.hoehe) dimensionRows += `\n<tr><td>Höhe</td><td>${parsed.hoehe}</td></tr>`;
+  if (parsed.durchmesser) dimensionRows += `\n<tr><td>Durchmesser</td><td>${parsed.durchmesser}</td></tr>`;
+  
+  const html = `<h2>${productName}</h2>
+
+<p>Bei diesem Artikel handelt es sich um einen Zellentausch als Reparaturservice für Ihren ${deviceName}${manufacturer ? ` von ${manufacturer}` : ''}. Sie erhalten keinen neuen Akku, sondern wir erneuern Ihren vorhandenen Originalakku durch den Austausch der Zellen, damit das Akkupack wieder zuverlässig genutzt werden kann.</p>
+
+<p><strong>Wichtiger Hinweis zum Ablauf:</strong> Nach der Bestellung senden Sie uns Ihren Originalakku ausreichend frankiert zu. Das Originalgehäuse wird zwingend benötigt. <strong>Eine detaillierte Schritt-für-Schritt-Erklärung finden Sie zusätzlich im Infobereich oben rechts auf dieser Produktseite.</strong></p>
+
+<p>Nach Eingang wird der Akku in unsere Reparaturplanung aufgenommen, professionell geöffnet und mit hochwertigen Markenzellen erneuert. Anschließend wird der überarbeitete Akku sicher verschlossen und an Sie zurückgesendet.</p>
+
+<h3>Produkteigenschaften</h3>
+<p>
+✅ Zellentausch als Reparaturservice für Ihren vorhandenen Akkupack<br />
+✅ Professionelle Erneuerung mit hochwertigen Markenzellen<br />
+✅ Nachhaltige Reparatur statt Neukauf eines Akkus<br />
+✅ Weiterverwendung des bestehenden Originalgehäuses
+</p>
+
+<h3>Technische Daten</h3>
+<table>
+<tr><td>Produkttyp</td><td>Zellentausch Service (Akkureparatur)</td></tr>${chemicalSystemLong ? `
+<tr><td>Chemisches System</td><td>${chemicalSystemLong}</td></tr>` : ''}${parsed.spannung ? `
+<tr><td>Spannung</td><td>${parsed.spannung}</td></tr>` : ''}${parsed.kapazitaet ? `
+<tr><td>Kapazität</td><td>${parsed.kapazitaet}</td></tr>` : ''}${energiegehalt ? `
+<tr><td>Energiegehalt</td><td>${energiegehalt}</td></tr>` : ''}${dimensionRows}${parsed.gewicht ? `
+<tr><td>Gewicht</td><td>${parsed.gewicht}</td></tr>` : ''}
+<tr><td>Kompatibilität</td><td>${fullDeviceName}</td></tr>
+</table>
+
+<p><br /><br /><br /></p>
+
+<h3>Lieferumfang</h3>
+<ul>
+<li>Zellentausch Service für ${deviceName}, Originalakku muss eingesendet werden</li>
+</ul>`;
+
+  // Bullets für Zellentausch
+  const bullet1 = truncateBullet(`Zellentausch Service: ${deviceName}`);
+  const bullet2 = truncateBullet(`Akkureparatur${parsed.spannung ? `, ${parsed.spannung}` : ''}${parsed.kapazitaet ? `, ${parsed.kapazitaet}` : ''}`);
+  const bullet3 = truncateBullet(`Professionelle Erneuerung mit Markenzellen`);
+
+  return {
+    success: true,
+    html: correctSpelling(html),
+    unNumber,
+    hsCode,
+    bullet1: correctSpelling(bullet1),
+    bullet2: correctSpelling(bullet2),
+    bullet3: correctSpelling(bullet3),
+    category: 'ZELLENTAUSCH',
+  };
 }
 
 // Render mit vorgegebener Kategorie (für 2-Stufen-Prozess)
@@ -214,6 +374,11 @@ export async function renderAkkuHtmlWithCategory(
   rowIndex: number,
   category: ProductCategory
 ): Promise<RenderResult> {
+  // Spezielle Behandlung für Zellentausch-Produkte
+  if (category === 'ZELLENTAUSCH') {
+    return renderZellentauschHtml(productName, parsed);
+  }
+  
   const variant = getVariant(rowIndex);
   const categoryTexts = getCategoryTextBlocks(category, variant);
   const texts = {
@@ -326,23 +491,6 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
 <li>${buildLieferumfang(parsed, category)}</li>
 </ul>`;
 
-  // Bulletpoints auf maximal 60 Zeichen begrenzen und Satzzeichen am Ende entfernen
-  const truncateBullet = (text: string, maxLength: number = 60): string => {
-    let result = text;
-    if (result.length > maxLength) {
-      // Am letzten Leerzeichen vor dem Limit abschneiden
-      const truncated = result.substring(0, maxLength);
-      const lastSpace = truncated.lastIndexOf(' ');
-      if (lastSpace > maxLength - 15) {
-        result = truncated.substring(0, lastSpace);
-      } else {
-        result = truncated;
-      }
-    }
-    // Satzzeichen am Ende entfernen
-    return result.replace(/[.,;:!?]+$/, '').trim();
-  };
-
   const bullet1 = truncateBullet(productName);
   // Bullet 2: Produktlabel basierend auf Kategorie
   let produktLabel: string;
@@ -376,8 +524,6 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     produktLabel = 'Rasiererakku';
   } else if (category === 'HANDLEUCHTE') {
     produktLabel = 'Handleuchtenakku';
-  } else if (category === 'ZELLENTAUSCH') {
-    produktLabel = 'Zellentausch-Set';
   } else {
     produktLabel = productName.toLowerCase().includes('ersatz') ? 'Ersatzakku' : 'Akku';
   }
@@ -421,8 +567,6 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     bullet3Label = 'Rasiererakku';
   } else if (category === 'HANDLEUCHTE') {
     bullet3Label = 'Handleuchtenakku';
-  } else if (category === 'ZELLENTAUSCH') {
-    bullet3Label = 'Zellentausch-Set';
   } else {
     bullet3Label = parsed.produkttyp || 'Akku';
   }
