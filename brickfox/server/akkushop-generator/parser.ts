@@ -148,10 +148,15 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     }
   }
   
+  // Kompatibilität aus Tabellen löschen - wird unten aus "Passend für:" / "Ersetzt:" extrahiert
+  delete fields['kompatibilität'];
+  delete fields['passend für'];
+  delete fields['ersetzt'];
+  
   // Passend für / Ersetzt aus bpsDesc extrahieren - direkt als Kompatibilität speichern
   // Verschiedene HTML-Formate unterstützen
   const passendPatterns = [
-    /<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234]|$)/i,
+    /<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234]|<h2|$)/i,
     /<strong>Passend für:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|$)/i,
     /<b>Passend für:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|$)/i,
     /Passend für:\s*<\/?(p|div|span)[^>]*>([\s\S]*?)(?:<hr|<h[234]|$)/i,
@@ -176,7 +181,7 @@ function extractFromHtmlTable(html: string): Record<string, string> {
         .trim()
         .replace(/^,\s*/, '')
         .replace(/,\s*$/, '');
-      if (value && !fields['kompatibilität']) {
+      if (value) {
         fields['kompatibilität'] = value;
         break;
       }
@@ -184,7 +189,7 @@ function extractFromHtmlTable(html: string): Record<string, string> {
   }
   
   const ersetztPatterns = [
-    /<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234]|$)/i,
+    /<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234]|<h3|$)/i,
     /<strong>Ersetzt:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|$)/i,
     /<b>Ersetzt:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|$)/i,
     /Ersetzt:\s*<\/?(p|div|span)[^>]*>([\s\S]*?)(?:<hr|<h[234]|$)/i,
