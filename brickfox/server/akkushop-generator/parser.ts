@@ -244,12 +244,20 @@ function extractFromText(text: string): Record<string, string> {
   const fields: Record<string, string> = {};
   const lines = text.split(/[\n|]+/).map(l => l.trim()).filter(l => l.length > 0);
   
+  // Schlüssel die NICHT aus Text extrahiert werden sollen (werden dediziert aus HTML extrahiert)
+  const ignoredKeys = ['passend für', 'passend fur', 'ersetzt', 'geeignet für', 'kompatibilität', 'kompatibilitaet'];
+  
   for (const line of lines) {
     const colonIndex = line.indexOf(':');
     if (colonIndex === -1 || colonIndex < 2) continue;
     
     const key = line.substring(0, colonIndex).trim().toLowerCase();
     const value = line.substring(colonIndex + 1).trim();
+    
+    // Ignoriere Kompatibilitäts-Felder - diese werden dediziert aus HTML extrahiert
+    if (ignoredKeys.some(ik => key.includes(ik))) {
+      continue;
+    }
     
     if (key && value && value.length > 0 && value !== '-' && value !== '–') {
       fields[key] = value;
