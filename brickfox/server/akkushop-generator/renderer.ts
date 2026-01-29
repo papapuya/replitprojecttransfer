@@ -502,6 +502,8 @@ export async function renderAkkuHtmlWithCategory(
   if (category === 'SPEICHERBATTERIE') {
     html = `<h2>${productName}</h2>
 
+<p><br /><br /></p>
+
 <h3>Technische Daten</h3>
 <table>
 ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>` : ''}${teilenummerRow}${parsed.type ? `
