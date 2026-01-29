@@ -240,12 +240,13 @@ export default function AkkushopGenerator() {
     return readyRows.length > 0 && readyRows.every(r => selectedRows.has(r._rowIndex));
   }, [categorizedRows, selectedRows]);
 
-  // Schritt 2: Beschreibungen generieren (nur ausgewählte Zeilen)
-  const handleGenerate = async () => {
+  // Generierungs-Option Handler
+  const handleGenerateOption = async (option: 'bullets' | 'attributes' | 'full') => {
+    // Nur Zeilen mit Status 'ready' verarbeiten
     const rowsToGenerate = categorizedRows.filter(r => selectedRows.has(r._rowIndex) && r._status === 'ready');
     
     if (rowsToGenerate.length === 0) {
-      toast({ title: 'Keine Auswahl', description: 'Bitte wählen Sie Produkte zum Generieren aus.', variant: 'destructive' });
+      toast({ title: 'Keine Auswahl', description: 'Bitte wählen Sie Produkte mit Status "bereit" aus.', variant: 'destructive' });
       return;
     }
 
@@ -274,8 +275,21 @@ export default function AkkushopGenerator() {
       eventSource.close();
     };
 
+    // Endpoint basierend auf Option wählen
+    const endpoints: Record<string, string> = {
+      'bullets': '/api/akkushop-generator/generate-bullets-only',
+      'attributes': '/api/akkushop-generator/extract-attributes-only',
+      'full': '/api/akkushop-generator/generate-from-categorized',
+    };
+
+    const titles: Record<string, string> = {
+      'bullets': 'Bulletpoints generiert',
+      'attributes': 'Attribute extrahiert',
+      'full': 'Beschreibungen generiert',
+    };
+
     try {
-      const response = await fetch('/api/akkushop-generator/generate-from-categorized', {
+      const response = await fetch(endpoints[option], {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -289,15 +303,15 @@ export default function AkkushopGenerator() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Generierung fehlgeschlagen');
+        throw new Error(data.error || 'Verarbeitung fehlgeschlagen');
       }
 
       setGeneratedResult(data);
       setStep('generated');
       
       toast({
-        title: 'Generierung abgeschlossen',
-        description: `${data.summary.success} von ${data.summary.total} Beschreibungen generiert.`,
+        title: titles[option],
+        description: `${data.summary.success} von ${data.summary.total} Produkte verarbeitet.`,
       });
     } catch (error: any) {
       toast({
@@ -481,31 +495,44 @@ export default function AkkushopGenerator() {
             )}
 
             {step === 'categorized' && (
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="outline"
-                  onClick={resetToUpload}
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Neue Datei
-                </Button>
-                <Button
-                  onClick={handleGenerate}
-                  disabled={isProcessing || categorizedRows.filter(r => r._status === 'ready').length === 0}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generiere...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4 mr-2" />
-                      Ausgewählte generieren ({selectedRows.size})
-                    </>
-                  )}
-                </Button>
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={resetToUpload}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Neue Datei
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    onClick={() => handleGenerateOption('bullets')}
+                    disabled={isProcessing || selectedRows.size === 0}
+                    variant="outline"
+                    className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                  >
+                    {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+                    1. Nur Bulletpoints ({selectedRows.size})
+                  </Button>
+                  <Button
+                    onClick={() => handleGenerateOption('attributes')}
+                    disabled={isProcessing || selectedRows.size === 0}
+                    variant="outline"
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                  >
+                    {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+                    2. Nur Attribute füllen ({selectedRows.size})
+                  </Button>
+                  <Button
+                    onClick={() => handleGenerateOption('full')}
+                    disabled={isProcessing || categorizedRows.filter(r => r._status === 'ready').length === 0}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+                    3. Beschreibungen generieren ({selectedRows.size})
+                  </Button>
+                </div>
               </div>
             )}
 
