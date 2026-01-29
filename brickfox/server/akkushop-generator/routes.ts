@@ -11,6 +11,50 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const progressEmitters = new Map<string, EventEmitter>();
 
+// Mojibake-Muster korrigieren (UTF-8 doppelt kodiert als Windows-1252)
+const MOJIBAKE_FIXES: [RegExp, string][] = [
+  [/Ã¤/g, 'ä'],
+  [/Ã¶/g, 'ö'],
+  [/Ã¼/g, 'ü'],
+  [/Ã„/g, 'Ä'],
+  [/Ã–/g, 'Ö'],
+  [/Ãœ/g, 'Ü'],
+  [/ÃŸ/g, 'ß'],
+  [/â€"/g, '–'],
+  [/â€™/g, "'"],
+  [/â€œ/g, '"'],
+  [/â€/g, '"'],
+  [/Ã©/g, 'é'],
+  [/Ã¨/g, 'è'],
+  [/Ã /g, 'à'],
+  [/Ã¢/g, 'â'],
+  [/Ã®/g, 'î'],
+  [/Ã´/g, 'ô'],
+  [/Ã»/g, 'û'],
+  [/Ã§/g, 'ç'],
+];
+
+function fixMojibake(text: string): string {
+  if (!text) return text;
+  let result = text;
+  for (const [pattern, replacement] of MOJIBAKE_FIXES) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+}
+
+function fixMojibakeInRow(row: Record<string, any>): Record<string, any> {
+  const fixed: Record<string, any> = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (typeof value === 'string') {
+      fixed[key] = fixMojibake(value);
+    } else {
+      fixed[key] = value;
+    }
+  }
+  return fixed;
+}
+
 router.get('/progress/:sessionId', (req: Request, res: Response) => {
   const { sessionId } = req.params;
   
@@ -280,7 +324,11 @@ router.post('/categorize', upload.single('file'), async (req: Request, res: Resp
       }
 
       rows = parseResult.data as ProductRow[];
-      console.log(`[AkkushopGenerator] CSV: ${rows.length} Produkte mit PapaParse geparst`);
+      
+      // Mojibake in allen Zeilen korrigieren
+      rows = rows.map(row => fixMojibakeInRow(row) as ProductRow);
+      
+      console.log(`[AkkushopGenerator] CSV: ${rows.length} Produkte mit PapaParse geparst (Mojibake korrigiert)`);
       const headers = Object.keys(rows[0] || {});
       console.log(`[AkkushopGenerator] CSV Headers (${headers.length}):`, JSON.stringify(headers));
       console.log(`[AkkushopGenerator] Erste Zeile p_name[de]:`, (rows[0] as any)?.['p_name[de]']?.substring(0, 50));
