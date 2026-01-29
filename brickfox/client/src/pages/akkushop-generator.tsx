@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Loader2, RefreshCw, Pencil, Play } from 'lucide-react';
+import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Loader2, RefreshCw, Pencil, Play, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Kategorisiertes Produkt (Schritt 1)
@@ -868,6 +868,27 @@ export default function AkkushopGenerator() {
                 className="border rounded-lg p-4 bg-white prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: previewRow?.['p_description[de]'] || '' }}
               />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold">HTML-Code zum Kopieren:</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(previewRow?.['p_description[de]'] || '');
+                    alert('HTML-Code wurde in die Zwischenablage kopiert!');
+                  }}
+                  className="text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+                >
+                  <Copy className="h-4 w-4 mr-1" />
+                  Kopieren
+                </Button>
+              </div>
+              <pre className="border rounded-lg p-4 bg-gray-900 text-gray-100 text-xs overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
+                {previewRow?.['p_description[de]'] || ''}
+              </pre>
             </div>
 
             <div>
