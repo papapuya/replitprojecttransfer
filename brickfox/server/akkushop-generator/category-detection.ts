@@ -654,7 +654,7 @@ export interface CategoryTextBlocks {
   usps: [string, string, string, string];
 }
 
-const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C' | 'D', CategoryTextBlocks>> = {
+const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', CategoryTextBlocks> & Partial<Record<'D', CategoryTextBlocks>>> = {
   NOTLEUCHTE: {
     A: {
       absatz1: 'Dieser Akku wurde speziell für den Einsatz in Notbeleuchtungssystemen konzipiert und gewährleistet die zuverlässige Energieversorgung im Bereitschaftsbetrieb.',
@@ -1625,7 +1625,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C' | 'D'
 
 export function getCategoryTextBlocks(
   category: ProductCategory,
-  variant: 'A' | 'B' | 'C' | 'D'
+  variant: 'A' | 'B' | 'C'
 ): CategoryTextBlocks {
   return CATEGORY_TEXT_BLOCKS[category][variant];
 }
