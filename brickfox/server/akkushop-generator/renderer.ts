@@ -111,9 +111,9 @@ export interface RenderResult {
   category?: string;
 }
 
-function getVariant(rowIndex: number): 'A' | 'B' | 'C' | 'D' {
-  const variants: ('A' | 'B' | 'C' | 'D')[] = ['A', 'B', 'C', 'D'];
-  return variants[rowIndex % 4];
+function getVariant(rowIndex: number): 'A' | 'B' | 'C' {
+  const variants: ('A' | 'B' | 'C')[] = ['A', 'B', 'C'];
+  return variants[rowIndex % 3];
 }
 
 function determineUnHs(type: string): { unNumber: string; hsCode: string } {
@@ -451,9 +451,9 @@ export async function renderAkkuHtmlWithCategory(
     kompatibilitaet = unique.join(', ');
   }
 
-  // Bei kurzen Absätzen (Variante D oder generell kurze Texte) in einem Block zusammenfassen
+  // Bei kurzen Absätzen in einem Block zusammenfassen
   const totalLength = texts.absatz1.length + texts.absatz2.length + texts.absatz3.length;
-  const isCompact = totalLength < 300 || variant === 'D';
+  const isCompact = totalLength < 300;
   
   const textSection = isCompact
     ? `<p>${texts.absatz1} ${texts.absatz2} ${texts.absatz3}</p>`
