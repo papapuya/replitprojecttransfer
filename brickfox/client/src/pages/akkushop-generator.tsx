@@ -475,7 +475,21 @@ export default function AkkushopGenerator() {
     }
   };
 
-  const handleDownload = async (format: 'xlsx' | 'csv', filter: 'success' | 'errors' | 'generisch' | 'selected' = 'success', withBom: boolean = false) => {
+  // Prüft ob ein Produkt vollständig befüllt ist
+  const isProductComplete = (row: any): boolean => {
+    // Pflichtfelder prüfen
+    if (!row['p_description[de]'] || row['p_description[de]'].trim() === '') return false;
+    if (!row['bullet_1'] || row['bullet_1'].trim() === '') return false;
+    if (!row['bullet_2'] || row['bullet_2'].trim() === '') return false;
+    // Für Akku-Produkte: Attribute prüfen
+    if (row._category === 'AKKU' || row._category === 'WERKZEUGAKKU') {
+      if (!row['akku_v'] || row['akku_v'].trim() === '') return false;
+      if (!row['akku_mah'] || row['akku_mah'].trim() === '') return false;
+    }
+    return true;
+  };
+
+  const handleDownload = async (format: 'xlsx' | 'csv', filter: 'success' | 'errors' | 'generisch' | 'selected' | 'complete' | 'incomplete' = 'success', withBom: boolean = false) => {
     if (!generatedResult?.rows) return;
 
     try {
@@ -486,6 +500,18 @@ export default function AkkushopGenerator() {
         // Nur ausgewählte Zeilen exportieren
         filteredRows = generatedResult.rows.filter((_, index) => selectedGeneratedRows.has(index));
         suffix = '_auswahl';
+      } else if (filter === 'complete') {
+        // Nur ausgewählte UND vollständig befüllte Produkte
+        filteredRows = generatedResult.rows.filter((row, index) => 
+          selectedGeneratedRows.has(index) && isProductComplete(row)
+        );
+        suffix = '_vollstaendig';
+      } else if (filter === 'incomplete') {
+        // Nur ausgewählte UND unvollständig befüllte Produkte
+        filteredRows = generatedResult.rows.filter((row, index) => 
+          selectedGeneratedRows.has(index) && !isProductComplete(row)
+        );
+        suffix = '_unvollstaendig';
       } else if (filter === 'errors') {
         filteredRows = generatedResult.rows.filter(r => r._status === 'error' || r._status === 'skipped');
         suffix = '_fehler';
@@ -810,23 +836,45 @@ export default function AkkushopGenerator() {
                       placeholder="akkushop_generated"
                     />
                   </div>
-                  <Button
-                    onClick={() => handleDownload('xlsx', 'selected')}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700"
-                    disabled={selectedGeneratedRows.size === 0}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Auswahl als Excel ({selectedGeneratedRows.size})
-                  </Button>
-                  <Button
-                    onClick={() => handleDownload('csv', 'selected', false)}
-                    variant="outline"
-                    className="w-full"
-                    disabled={selectedGeneratedRows.size === 0}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Auswahl als CSV ({selectedGeneratedRows.size})
-                  </Button>
+                  {(() => {
+                    const selectedRows = generatedResult.rows.filter((_, i) => selectedGeneratedRows.has(i));
+                    const completeCount = selectedRows.filter(r => isProductComplete(r)).length;
+                    const incompleteCount = selectedRows.length - completeCount;
+                    return (
+                      <>
+                        <div className="text-xs text-gray-500 mb-1">
+                          Ausgewählt: {selectedRows.length} | Vollständig: {completeCount} | Unvollständig: {incompleteCount}
+                        </div>
+                        <Button
+                          onClick={() => handleDownload('csv', 'complete')}
+                          className="w-full bg-green-600 hover:bg-green-700"
+                          disabled={completeCount === 0}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Vollständige als CSV ({completeCount})
+                        </Button>
+                        {incompleteCount > 0 && (
+                          <Button
+                            onClick={() => handleDownload('csv', 'incomplete')}
+                            variant="outline"
+                            className="w-full border-amber-400 text-amber-700 hover:bg-amber-50"
+                          >
+                            <AlertTriangle className="w-4 h-4 mr-2" />
+                            Unvollständige als CSV ({incompleteCount})
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => handleDownload('xlsx', 'selected')}
+                          variant="outline"
+                          className="w-full"
+                          disabled={selectedGeneratedRows.size === 0}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Alle Auswahl als Excel ({selectedGeneratedRows.size})
+                        </Button>
+                      </>
+                    );
+                  })()}
                   {generatedResult.summary.errors > 0 && (
                     <Button
                       onClick={() => handleDownload('xlsx', 'errors')}
