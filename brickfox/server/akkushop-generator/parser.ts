@@ -343,8 +343,10 @@ function extractFromProductName(name: string): Partial<ParsedProduct> {
     result.type = 'Li-Ion';
   }
   
-  const compat = extractCompatibilityFromText(name);
-  if (compat) {
+  // Kompatibilität wird NUR aus HTML "Passend für:" / "Ersetzt:" Abschnitten extrahiert
+  // Nicht aus dem Produktnamen
+  const compat = '';
+  if (false) {
     result.kompatibilitaet = compat;
   }
   
@@ -383,12 +385,8 @@ export function parseDescription(description: string, productName?: string, csvR
     }
   }
 
-  if (!rawFields['kompatibilität'] && !rawFields['kompatibilitaet']) {
-    const compatFromDesc = extractCompatibilityFromText(cleanText);
-    if (compatFromDesc) {
-      rawFields['kompatibilität'] = compatFromDesc;
-    }
-  }
+  // Kompatibilität wird NUR aus den "Passend für:" / "Ersetzt:" HTML-Abschnitten extrahiert
+  // Diese Extraktion passiert bereits in extractFromHtmlTable()
 
   for (const [rawKey, value] of Object.entries(rawFields)) {
     const normalizedKey = rawKey.toLowerCase().trim();
