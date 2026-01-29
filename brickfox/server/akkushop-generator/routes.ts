@@ -708,6 +708,8 @@ router.post('/download', async (req: Request, res: Response) => {
     
     const worksheet = XLSX.utils.json_to_sheet(exportRows, { header: xlsxHeaders, skipHeader: false });
     const workbook = XLSX.utils.book_new();
+    // Wichtig: UTF-8 Codepage für Excel setzen (für Emoji-Unterstützung)
+    workbook.Workbook = { WBProps: { codeName: 'Produkte' } };
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Produkte');
 
     if (format === 'csv') {
