@@ -67,32 +67,18 @@ function isSpecificDevice(application: string): boolean {
   return hasModelNumber || hasKnownBrand;
 }
 
-// Beschreibungstexte an den Anwendungsbereich anpassen
+// Beschreibungstexte an den Anwendungsbereich anpassen - IMMER spezifisch wenn "für..." vorhanden
 function adaptTextsToApplication(texts: { absatz1: string; absatz2: string; absatz3: string }, application: string | null, category: string): { absatz1: string; absatz2: string; absatz3: string } {
   if (!application) return texts;
   
-  // Nur für bestimmte Kategorien anpassen
+  // Für SPEICHERBATTERIE und PUFFERBATTERIE - IMMER gerätespezifische Texte
   if (category === 'SPEICHERBATTERIE' || category === 'PUFFERBATTERIE') {
-    // Bei spezifischen Geräten komplett neue gerätespezifische Texte verwenden
-    if (isSpecificDevice(application)) {
-      return {
-        absatz1: `Diese Speicherbatterie ist speziell für den Einsatz im ${application} konzipiert.`,
-        absatz2: `Die Batterie dient zur Datensicherung und Pufferung im ${application}. Die Lithium-Technologie bietet eine hohe Energiedichte bei geringer Selbstentladung.`,
-        absatz3: 'Die Abmessungen entsprechen den Originalspezifikationen für einen direkten Austausch.',
-      };
-    }
-    
-    // Bei generischen Anwendungen (z.B. "Fernbedienungen") nur ersetzen
+    // Grammatik anpassen: "im" vs "in" vs "für"
+    const preposition = /^(das|der|die)\s/i.test(application) ? 'für' : 'im';
     return {
-      absatz1: texts.absatz1
-        .replace(/in der industriellen Automatisierung[^.]*\./i, `in ${application}.`)
-        .replace(/in CNC-Systemen, Servoantrieben und speicherprogrammierbaren Steuerungen/i, application)
-        .replace(/in industriellen Steuerungsanlagen/i, `in ${application}`)
-        .replace(/für Ihre Industriesteuerung oder Ihr Servosystem/i, `für ${application}`),
-      absatz2: texts.absatz2
-        .replace(/in CNC-Maschinen und Bearbeitungszentren/i, `in ${application}`)
-        .replace(/CNC-Werkzeugmaschinen und RAID-Controller/i, application),
-      absatz3: texts.absatz3,
+      absatz1: `Diese Speicherbatterie ist speziell für den Einsatz ${preposition} ${application} konzipiert.`,
+      absatz2: `Die Batterie dient zur Datensicherung und Pufferung ${preposition} ${application}. Die Lithium-Technologie bietet eine hohe Energiedichte bei geringer Selbstentladung.`,
+      absatz3: 'Die Abmessungen entsprechen den Originalspezifikationen für einen direkten Austausch.',
     };
   }
   
