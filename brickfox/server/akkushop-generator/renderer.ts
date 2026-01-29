@@ -466,11 +466,10 @@ export async function renderAkkuHtmlWithCategory(
     energiegehalt = calculateEnergyContent(parsed.spannung, parsed.kapazitaet);
   }
 
+  // Kompatibilität nur aus "Ersetzt:", "passend für:", "geeignet für:" - keine Fallbacks
   let kompatibilitaet = parsed.kompatibilitaet;
   
-  if (!kompatibilitaet || kompatibilitaet === 'undefined' || kompatibilitaet === '-') {
-    kompatibilitaet = extractProductTypeFromName(productName);
-  }
+  // Keine Fallback-Extraktion aus Produktnamen - nur explizite Modelle aus der Beschreibung
   
   if (kompatibilitaet) {
     kompatibilitaet = kompatibilitaet
