@@ -108,12 +108,14 @@ function extractFromHtmlTable(html: string): Record<string, string> {
   }
   
   // bpsDesc Format: pd-spec-name und pd-spec-value Klassen
-  // Format: <td class="pd-spec-name">Key</td> ... <td class="pd-spec-value"><span>Value</span></td>
-  const bpsSpecRegex = /<td[^>]*class=[^>]*pd-spec-name[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*class=[^>]*pd-spec-value[^>]*>([\s\S]*?)<\/td>/gi;
+  // Format kann sein:
+  // 1. <td class="pd-spec-name">Key</td><td class="pd-spec-value"><span>Value</span></td>
+  // 2. <td class="pd-spec-name">Key</td><td class="pd-spec-value">Value</td>
+  // Wichtig: class kann "" (escaped quotes) oder normale " haben
+  const bpsSpecRegex = /<td[^>]*(?:class=[""][^""]*pd-spec-name|class="[^"]*pd-spec-name)[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*(?:class=[""][^""]*pd-spec-value|class="[^"]*pd-spec-value)[^>]*>([\s\S]*?)<\/td>/gi;
   
   while ((match = bpsSpecRegex.exec(html)) !== null) {
     const key = stripHtmlTags(match[1]).toLowerCase().replace(/[:\s]+$/, '').trim();
-    // Value kann in <span> sein oder direkt
     let value = stripHtmlTags(match[2]).trim();
     
     if (key && value && value !== '-' && value !== '–') {
@@ -122,14 +124,15 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     }
   }
   
-  // Fallback: Einfachere Regex für pd-spec-name/value
+  // Fallback: Noch einfachere Regex für verschiedene Formate
   if (Object.keys(fields).length === 0) {
-    const simpleRegex = /pd-spec-name[^>]*>([^<]+)<[\s\S]*?pd-spec-value[\s\S]*?<span[^>]*>([^<]+)</gi;
-    while ((match = simpleRegex.exec(html)) !== null) {
-      const key = match[1].toLowerCase().trim();
-      const value = match[2].trim();
+    // Suche nach <tr> mit pd-spec-name und pd-spec-value
+    const trRegex = /<tr[^>]*>[\s\S]*?pd-spec-name[^>]*>([\s\S]*?)<\/td>[\s\S]*?pd-spec-value[^>]*>([\s\S]*?)<\/td>[\s\S]*?<\/tr>/gi;
+    while ((match = trRegex.exec(html)) !== null) {
+      const key = stripHtmlTags(match[1]).toLowerCase().replace(/[:\s]+$/, '').trim();
+      const value = stripHtmlTags(match[2]).trim();
       if (key && value && value !== '-' && value !== '–') {
-        console.log(`[Parser] Simple regex extracted: ${key} = ${value}`);
+        console.log(`[Parser] TR regex extracted: ${key} = ${value}`);
         fields[key] = value;
       }
     }
