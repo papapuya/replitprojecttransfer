@@ -381,9 +381,12 @@ export function parseDescription(description: string, productName?: string, csvR
 
   parsed.produkttyp = normalizeProdukttyp(productName || '', parsed.produkttyp);
 
-  // Gewicht normalisieren: "Gramm" → "g", "Kilogramm" → "kg"
+  // Gewicht normalisieren: "ca." entfernen, "Gramm" → "g", "Kilogramm" → "kg"
   if (parsed.gewicht) {
     parsed.gewicht = parsed.gewicht
+      .replace(/\bca\.?\s*/gi, '')
+      .replace(/\bcirca\s*/gi, '')
+      .replace(/\bungefähr\s*/gi, '')
       .replace(/\s*Gramm\b/gi, ' g')
       .replace(/\s*gramm\b/gi, ' g')
       .replace(/\s*Kilogramm\b/gi, ' kg')
