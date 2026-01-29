@@ -343,10 +343,14 @@ export default function AkkushopGenerator() {
       const a = document.createElement('a');
       a.href = url;
       a.download = `${downloadFilename}${suffix}.${format}`;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Warten, damit der Browser den Download starten kann
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 1000);
 
       toast({
         title: 'Download gestartet',
@@ -684,8 +688,13 @@ export default function AkkushopGenerator() {
                         const a = document.createElement('a');
                         a.href = url;
                         a.download = 'generisch_produkte.csv';
+                        a.style.display = 'none';
+                        document.body.appendChild(a);
                         a.click();
-                        URL.revokeObjectURL(url);
+                        setTimeout(() => {
+                          URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        }, 1000);
                       }}
                     >
                       <AlertTriangle className="w-4 h-4 mr-1" />
@@ -710,8 +719,13 @@ export default function AkkushopGenerator() {
                         const a = document.createElement('a');
                         a.href = url;
                         a.download = 'fehler_produkte.csv';
+                        a.style.display = 'none';
+                        document.body.appendChild(a);
                         a.click();
-                        URL.revokeObjectURL(url);
+                        setTimeout(() => {
+                          URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        }, 1000);
                       }}
                     >
                       <XCircle className="w-4 h-4 mr-1" />
