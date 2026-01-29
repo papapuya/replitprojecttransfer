@@ -487,6 +487,15 @@ export async function renderAkkuHtmlWithCategory(
       .replace(/^für[\s:]+/gi, '')
       .replace(/\s+mit[\s:]+/gi, ', ')
       .replace(/^mit[\s:]+/gi, '')
+      // Generische Produktbezeichnungen entfernen
+      .replace(/\bErsatzakku\b/gi, '')
+      .replace(/\bErsatzbatterie\b/gi, '')
+      .replace(/\bAkkupack\b/gi, '')
+      .replace(/\bBatteriepack\b/gi, '')
+      .replace(/\bNiMH\s*\d*\b/gi, '')
+      .replace(/\bNiCd\s*\d*\b/gi, '')
+      .replace(/\bLi-Ion\s*\d*\b/gi, '')
+      .replace(/\bLiPo\s*\d*\b/gi, '')
       .replace(/Technische Daten[:\s].*$/gi, '')
       .replace(/chemisches System.*$/gi, '')
       .replace(/Spannung.*$/gi, '')
@@ -497,6 +506,7 @@ export async function renderAkkuHtmlWithCategory(
       .replace(/Ersetzt:\s*/gi, ', ') // "Ersetzt:" durch Komma ersetzen
       .replace(/([a-z])([A-Z])/g, '$1, $2') // "BoschBosch" -> "Bosch, Bosch"
       .replace(/,\s*,/g, ',') // Doppelte Kommas entfernen
+      .replace(/\s{2,}/g, ' ') // Mehrfache Leerzeichen entfernen
       .trim();
     
     // Duplikate entfernen
