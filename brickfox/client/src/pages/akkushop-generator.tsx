@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Papa from 'papaparse';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -96,6 +96,7 @@ export default function AkkushopGenerator() {
   const [editingCategory, setEditingCategory] = useState<number | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [originalDescPreview, setOriginalDescPreview] = useState<{name: string; desc: string} | null>(null);
+  const [selectedGeneratedRows, setSelectedGeneratedRows] = useState<Set<number>>(new Set());
   
   // Generierungs-Optionen (Checkboxen)
   const [genOptions, setGenOptions] = useState({
@@ -250,6 +251,33 @@ export default function AkkushopGenerator() {
     const readyRows = categorizedRows.filter(r => r._status === 'ready');
     return readyRows.length > 0 && readyRows.every(r => selectedRows.has(r._rowIndex));
   }, [categorizedRows, selectedRows]);
+
+  // Handler für generierte Ergebnisse Checkboxen (mit useCallback für Performance)
+  const handleSelectGeneratedRow = useCallback((index: number, checked: boolean) => {
+    setSelectedGeneratedRows(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(index);
+      else next.delete(index);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAllGenerated = useCallback((checked: boolean) => {
+    if (checked && generatedResult?.rows) {
+      const successIndices = generatedResult.rows
+        .map((r, i) => r._status === 'success' ? i : -1)
+        .filter(i => i >= 0);
+      setSelectedGeneratedRows(new Set(successIndices));
+    } else {
+      setSelectedGeneratedRows(new Set());
+    }
+  }, [generatedResult?.rows]);
+
+  const allGeneratedSelected = useMemo(() => {
+    if (!generatedResult?.rows) return false;
+    const successRows = generatedResult.rows.filter(r => r._status === 'success');
+    return successRows.length > 0 && selectedGeneratedRows.size === successRows.length;
+  }, [generatedResult?.rows, selectedGeneratedRows]);
 
   // Generierungs-Option Handler
   const handleGenerateOption = async (option: 'bullets' | 'attributes' | 'full') => {
@@ -447,14 +475,18 @@ export default function AkkushopGenerator() {
     }
   };
 
-  const handleDownload = async (format: 'xlsx' | 'csv', filter: 'success' | 'errors' | 'generisch' = 'success', withBom: boolean = false) => {
+  const handleDownload = async (format: 'xlsx' | 'csv', filter: 'success' | 'errors' | 'generisch' | 'selected' = 'success', withBom: boolean = false) => {
     if (!generatedResult?.rows) return;
 
     try {
       let filteredRows;
       let suffix = '';
       
-      if (filter === 'errors') {
+      if (filter === 'selected') {
+        // Nur ausgewählte Zeilen exportieren
+        filteredRows = generatedResult.rows.filter((_, index) => selectedGeneratedRows.has(index));
+        suffix = '_auswahl';
+      } else if (filter === 'errors') {
         filteredRows = generatedResult.rows.filter(r => r._status === 'error' || r._status === 'skipped');
         suffix = '_fehler';
       } else if (filter === 'generisch') {
@@ -779,21 +811,21 @@ export default function AkkushopGenerator() {
                     />
                   </div>
                   <Button
-                    onClick={() => handleDownload('xlsx', 'success')}
+                    onClick={() => handleDownload('xlsx', 'selected')}
                     className="w-full bg-indigo-600 hover:bg-indigo-700"
-                    disabled={generatedResult.summary.success === 0}
+                    disabled={selectedGeneratedRows.size === 0}
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Erfolge als Excel (.xlsx)
+                    Auswahl als Excel ({selectedGeneratedRows.size})
                   </Button>
                   <Button
-                    onClick={() => handleDownload('csv', 'success', false)}
+                    onClick={() => handleDownload('csv', 'selected', false)}
                     variant="outline"
                     className="w-full"
-                    disabled={generatedResult.summary.success === 0}
+                    disabled={selectedGeneratedRows.size === 0}
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    CSV für Brickfox
+                    Auswahl als CSV ({selectedGeneratedRows.size})
                   </Button>
                   {generatedResult.summary.errors > 0 && (
                     <Button
@@ -1044,6 +1076,12 @@ export default function AkkushopGenerator() {
               <Table>
                 <TableHeader className="sticky top-0 bg-white z-10">
                   <TableRow className="bg-gray-50">
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allGeneratedSelected}
+                        onCheckedChange={(checked) => handleSelectAllGenerated(!!checked)}
+                      />
+                    </TableHead>
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Artikelnummer</TableHead>
@@ -1062,7 +1100,14 @@ export default function AkkushopGenerator() {
                 </TableHeader>
                 <TableBody>
                   {generatedResult.rows.map((row, index) => (
-                    <TableRow key={index} className={row._status === 'error' ? 'bg-red-50' : row._status === 'skipped' ? 'bg-amber-50' : ''}>
+                    <TableRow key={index} className={row._status === 'error' ? 'bg-red-50' : row._status === 'skipped' ? 'bg-amber-50' : selectedGeneratedRows.has(index) ? 'bg-indigo-50' : ''}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedGeneratedRows.has(index)}
+                          onCheckedChange={(checked) => handleSelectGeneratedRow(index, !!checked)}
+                          disabled={row._status === 'error'}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-sm">{index + 1}</TableCell>
                       <TableCell>{getStatusBadge(row._status)}</TableCell>
                       <TableCell className="font-mono text-sm">{row.p_item_number || '-'}</TableCell>
