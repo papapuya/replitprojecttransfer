@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Loader2, RefreshCw, Pencil, Play, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -89,6 +90,8 @@ export default function AkkushopGenerator() {
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [editingCategory, setEditingCategory] = useState<number | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [originalDescPreview, setOriginalDescPreview] = useState<{name: string; desc: string} | null>(null);
   
   const { toast } = useToast();
 
@@ -208,10 +211,41 @@ export default function AkkushopGenerator() {
     setEditingCategory(null);
   };
 
-  // Schritt 2: Beschreibungen generieren
+  // Checkbox-Handler
+  const handleSelectRow = (rowIndex: number, checked: boolean) => {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(rowIndex);
+      } else {
+        next.delete(rowIndex);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allReady = categorizedRows
+        .filter(r => r._status === 'ready')
+        .map(r => r._rowIndex);
+      setSelectedRows(new Set(allReady));
+    } else {
+      setSelectedRows(new Set());
+    }
+  };
+
+  const allReadySelected = useMemo(() => {
+    const readyRows = categorizedRows.filter(r => r._status === 'ready');
+    return readyRows.length > 0 && readyRows.every(r => selectedRows.has(r._rowIndex));
+  }, [categorizedRows, selectedRows]);
+
+  // Schritt 2: Beschreibungen generieren (nur ausgewählte Zeilen)
   const handleGenerate = async () => {
-    if (categorizedRows.length === 0) {
-      toast({ title: 'Keine Daten', description: 'Bitte zuerst kategorisieren.', variant: 'destructive' });
+    const rowsToGenerate = categorizedRows.filter(r => selectedRows.has(r._rowIndex) && r._status === 'ready');
+    
+    if (rowsToGenerate.length === 0) {
+      toast({ title: 'Keine Auswahl', description: 'Bitte wählen Sie Produkte zum Generieren aus.', variant: 'destructive' });
       return;
     }
 
@@ -247,7 +281,7 @@ export default function AkkushopGenerator() {
           'Content-Type': 'application/json',
           'X-Session-Id': sessionId,
         },
-        body: JSON.stringify({ rows: categorizedRows }),
+        body: JSON.stringify({ rows: rowsToGenerate }),
       });
 
       eventSource.close();
@@ -439,7 +473,7 @@ export default function AkkushopGenerator() {
                   ) : (
                     <>
                       <Play className="w-4 h-4 mr-2" />
-                      Beschreibungen generieren ({categorizedRows.filter(r => r._status === 'ready').length})
+                      Ausgewählte generieren ({selectedRows.size})
                     </>
                   )}
                 </Button>
@@ -693,10 +727,17 @@ export default function AkkushopGenerator() {
               <Table>
                 <TableHeader className="sticky top-0 bg-white z-10">
                   <TableRow className="bg-gray-50">
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allReadySelected}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Artikelnummer</TableHead>
                     <TableHead>Produktname</TableHead>
+                    <TableHead>Original-Beschr.</TableHead>
                     <TableHead>Kategorie</TableHead>
                     <TableHead>Fehler</TableHead>
                   </TableRow>
@@ -705,7 +746,14 @@ export default function AkkushopGenerator() {
                   {filteredRows.map((row, index) => {
                     const originalIndex = categorizedRows.indexOf(row);
                     return (
-                      <TableRow key={index} className={row._status === 'error' ? 'bg-red-50' : row._category === 'GENERISCH' ? 'bg-amber-50' : ''}>
+                      <TableRow key={index} className={row._status === 'error' ? 'bg-red-50' : row._category === 'GENERISCH' ? 'bg-amber-50' : selectedRows.has(row._rowIndex) ? 'bg-indigo-50' : ''}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedRows.has(row._rowIndex)}
+                            onCheckedChange={(checked) => handleSelectRow(row._rowIndex, !!checked)}
+                            disabled={row._status === 'error'}
+                          />
+                        </TableCell>
                         <TableCell className="font-mono text-sm">{row._rowIndex + 1}</TableCell>
                         <TableCell>{getStatusBadge(row._status)}</TableCell>
                         <TableCell className="font-mono text-sm">{row.p_item_number || '-'}</TableCell>
@@ -724,6 +772,19 @@ export default function AkkushopGenerator() {
                               </PopoverContent>
                             </Popover>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0"
+                            onClick={() => setOriginalDescPreview({
+                              name: row['p_name[de]'],
+                              desc: row['p_description[de]'] || '-'
+                            })}
+                          >
+                            <Eye className="w-3 h-3 text-gray-400 hover:text-indigo-600" />
+                          </Button>
                         </TableCell>
                         <TableCell>
                           {editingCategory === originalIndex ? (
@@ -914,6 +975,20 @@ export default function AkkushopGenerator() {
               </Badge>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog für Original-Beschreibung */}
+      <Dialog open={!!originalDescPreview} onOpenChange={() => setOriginalDescPreview(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Original-Beschreibung (aus CSV)</DialogTitle>
+            <DialogDescription>{originalDescPreview?.name}</DialogDescription>
+          </DialogHeader>
+          <div 
+            className="border rounded-lg p-4 bg-gray-50 prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: originalDescPreview?.desc || '-' }}
+          />
         </DialogContent>
       </Dialog>
     </div>
