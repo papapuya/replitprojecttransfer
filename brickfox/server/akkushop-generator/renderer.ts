@@ -385,7 +385,7 @@ function renderZellentauschHtml(
 <tr><td>Kapazität</td><td>${parsed.kapazitaet}</td></tr>` : ''}${energiegehalt ? `
 <tr><td>Energiegehalt</td><td>${energiegehalt}</td></tr>` : ''}${dimensionRows}${parsed.gewicht ? `
 <tr><td>Gewicht</td><td>${parsed.gewicht}</td></tr>` : ''}
-<tr><td>Kompatibilität</td><td>${fullDeviceName}</td></tr>
+<tr><td>Kompatibilität</td><td>${parsed.kompatibilitaet || fullDeviceName}</td></tr>
 </table>
 
 <p><br /><br /><br /></p>
