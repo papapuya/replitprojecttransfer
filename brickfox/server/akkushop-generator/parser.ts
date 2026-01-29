@@ -94,6 +94,7 @@ export function stripHtmlTags(text: string): string {
 function extractFromHtmlTable(html: string): Record<string, string> {
   const fields: Record<string, string> = {};
   
+  // Standard table rows mit td-Elementen
   const tableRowRegex = /<tr[^>]*>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<\/tr>/gi;
   let match;
   
@@ -103,6 +104,57 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     
     if (key && value && value !== '-' && value !== '–') {
       fields[key] = value;
+    }
+  }
+  
+  // bpsDesc Format: pd-spec-name und pd-spec-value Klassen (auch mit escaped quotes "")
+  const bpsSpecRegex = /<td[^>]*class=[""]?[^"]*pd-spec-name[^"]*[""]?[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*class=[""]?[^"]*pd-spec-value[^"]*[""]?[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/gi;
+  
+  while ((match = bpsSpecRegex.exec(html)) !== null) {
+    const key = stripHtmlTags(match[1]).toLowerCase().replace(/[:\s]+$/, '').trim();
+    const value = stripHtmlTags(match[2]).trim();
+    
+    if (key && value && value !== '-' && value !== '–') {
+      fields[key] = value;
+    }
+  }
+  
+  // Alternative: Suche direkt nach dem Muster pd-spec-name...pd-spec-value
+  const altBpsRegex = /pd-spec-name[^>]*>([\s\S]*?)<\/td>[\s\S]*?pd-spec-value[^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/gi;
+  
+  while ((match = altBpsRegex.exec(html)) !== null) {
+    const key = stripHtmlTags(match[1]).toLowerCase().replace(/[:\s]+$/, '').trim();
+    const value = stripHtmlTags(match[2]).trim();
+    
+    if (key && value && value !== '-' && value !== '–' && !fields[key]) {
+      fields[key] = value;
+    }
+  }
+  
+  // Abmessungen (LxBxH) in Länge, Breite, Höhe aufteilen
+  if (fields['abmessungen']) {
+    const dimMatch = fields['abmessungen'].match(/(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)\s*mm/i);
+    if (dimMatch) {
+      if (!fields['länge'] && !fields['laenge']) fields['länge'] = dimMatch[1] + ' mm';
+      if (!fields['breite']) fields['breite'] = dimMatch[2] + ' mm';
+      if (!fields['höhe'] && !fields['hoehe']) fields['höhe'] = dimMatch[3] + ' mm';
+    }
+  }
+  
+  // Passend für / Ersetzt aus bpsDesc extrahieren
+  const passendFuerMatch = html.match(/<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234])/i);
+  if (passendFuerMatch) {
+    const value = stripHtmlTags(passendFuerMatch[1]).trim();
+    if (value && !fields['passend für'] && !fields['kompatibilität']) {
+      fields['passend für'] = value;
+    }
+  }
+  
+  const ersetztMatch = html.match(/<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234])/i);
+  if (ersetztMatch) {
+    const value = stripHtmlTags(ersetztMatch[1]).trim();
+    if (value && !fields['ersetzt'] && !fields['kompatibilität']) {
+      fields['ersetzt'] = value;
     }
   }
   
