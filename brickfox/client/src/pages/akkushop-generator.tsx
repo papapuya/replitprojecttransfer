@@ -33,6 +33,10 @@ interface GeneratedRow {
   bullet_1?: string;
   bullet_2?: string;
   bullet_3?: string;
+  akku_mah?: string;
+  akku_wh?: string;
+  akku_v?: string;
+  akku_ch?: string;
   error?: string;
   _status: 'success' | 'error' | 'skipped';
   _category?: string;
@@ -916,6 +920,12 @@ export default function AkkushopGenerator() {
                     <TableHead>Artikelnummer</TableHead>
                     <TableHead>Produktname</TableHead>
                     <TableHead>Kategorie</TableHead>
+                    <TableHead>Bullet 1</TableHead>
+                    <TableHead>Bullet 2</TableHead>
+                    <TableHead>V</TableHead>
+                    <TableHead>mAh</TableHead>
+                    <TableHead>Wh</TableHead>
+                    <TableHead>Chem.</TableHead>
                     <TableHead>Fehler</TableHead>
                     <TableHead className="w-24">Aktionen</TableHead>
                   </TableRow>
@@ -950,6 +960,24 @@ export default function AkkushopGenerator() {
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
+                      </TableCell>
+                      <TableCell className="max-w-[120px] truncate text-xs" title={row.bullet_1 || ''}>
+                        {row.bullet_1 || <span className="text-gray-300">-</span>}
+                      </TableCell>
+                      <TableCell className="max-w-[120px] truncate text-xs" title={row.bullet_2 || ''}>
+                        {row.bullet_2 || <span className="text-gray-300">-</span>}
+                      </TableCell>
+                      <TableCell className="text-xs font-mono">
+                        {row.akku_v || <span className="text-gray-300">-</span>}
+                      </TableCell>
+                      <TableCell className="text-xs font-mono">
+                        {row.akku_mah || <span className="text-gray-300">-</span>}
+                      </TableCell>
+                      <TableCell className="text-xs font-mono">
+                        {row.akku_wh || <span className="text-gray-300">-</span>}
+                      </TableCell>
+                      <TableCell className="max-w-[80px] truncate text-xs" title={row.akku_ch || ''}>
+                        {row.akku_ch || <span className="text-gray-300">-</span>}
                       </TableCell>
                       <TableCell className="max-w-xs truncate text-sm text-red-600" title={row.error || ''}>
                         {row.error || '-'}
