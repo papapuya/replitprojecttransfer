@@ -332,60 +332,50 @@ export function parseDescription(description: string, productName?: string, csvR
     }
   }
 
-  // Produkttyp normalisieren - saubere Werte statt langer Beschreibungen
-  // Unterscheidung: Ist es ein Akku FÜR ein Gerät oder das Gerät selbst?
+  // Produkttyp direkt aus dem Produktnamen extrahieren
   const normalizeProdukttyp = (name: string, existingType?: string): string => {
-    const combined = `${name} ${existingType || ''}`.toLowerCase();
     const nameLower = name.toLowerCase();
     
-    // Prüfen ob es ein Akku ist (enthält "akku" oder "batterie" im Namen)
-    const isAkku = /akku|batterie|battery|ersatz.*akku/i.test(nameLower);
+    // Direkte Begriffe aus dem Produktnamen übernehmen (exakte Schreibweise)
+    const direkteTypen = [
+      { pattern: /speicherbatterie/i, typ: 'Speicherbatterie' },
+      { pattern: /pufferbatterie/i, typ: 'Pufferbatterie' },
+      { pattern: /starterbatterie/i, typ: 'Starterbatterie' },
+      { pattern: /bleiakku/i, typ: 'Bleiakku' },
+      { pattern: /bleibatterie/i, typ: 'Bleibatterie' },
+      { pattern: /notleuchtenakku/i, typ: 'Notleuchtenakku' },
+      { pattern: /funkakku/i, typ: 'Funkakku' },
+      { pattern: /werkzeugakku/i, typ: 'Werkzeugakku' },
+      { pattern: /kranakku/i, typ: 'Kranakku' },
+      { pattern: /telefonakku/i, typ: 'Telefonakku' },
+      { pattern: /kameraakku/i, typ: 'Kameraakku' },
+      { pattern: /lampenakku/i, typ: 'Lampenakku' },
+      { pattern: /rasiererakku/i, typ: 'Rasiererakku' },
+      { pattern: /staubsaugerakku/i, typ: 'Staubsaugerakku' },
+      { pattern: /powerbank/i, typ: 'Powerbank' },
+      { pattern: /akkupack/i, typ: 'Akkupack' },
+      { pattern: /akkueinsatz/i, typ: 'Akkueinsatz' },
+      { pattern: /zellentausch/i, typ: 'Zellentausch' },
+      { pattern: /ersatzakku/i, typ: 'Ersatzakku' },
+      { pattern: /taschenlampe/i, typ: 'Taschenlampe' },
+      { pattern: /arbeitsleuchte/i, typ: 'Arbeitsleuchte' },
+      { pattern: /handlampe/i, typ: 'Handlampe' },
+      { pattern: /stirnlampe/i, typ: 'Stirnlampe' },
+      { pattern: /ladegerät/i, typ: 'Ladegerät' },
+      { pattern: /netzteil/i, typ: 'Netzteil' },
+      { pattern: /adapter/i, typ: 'Adapter' },
+    ];
     
-    // Produkte selbst (keine Akkus)
-    if (!isAkku) {
-      if (/taschenlampe/i.test(nameLower)) return 'Taschenlampe';
-      if (/arbeitsleuchte/i.test(nameLower)) return 'Arbeitsleuchte';
-      if (/handlampe/i.test(nameLower)) return 'Handlampe';
-      if (/stirnlampe/i.test(nameLower)) return 'Stirnlampe';
-      if (/kopflampe/i.test(nameLower)) return 'Kopflampe';
-      if (/strahler/i.test(nameLower)) return 'Strahler';
-      if (/ladegerät/i.test(nameLower)) return 'Ladegerät';
-      if (/netzteil/i.test(nameLower)) return 'Netzteil';
-      if (/kabel/i.test(nameLower)) return 'Kabel';
-      if (/adapter/i.test(nameLower)) return 'Adapter';
+    for (const { pattern, typ } of direkteTypen) {
+      if (pattern.test(nameLower)) {
+        return typ;
+      }
     }
     
-    // Akkus für verschiedene Geräte
-    if (/notleuchte|notbeleuchtung|sicherheitsbeleuchtung/i.test(combined)) {
-      return 'Notleuchtenakku';
-    }
-    if (/funkakku|funkgerät|kenwood|motorola|icom|sepura|hytera/i.test(combined)) {
-      return 'Funkakku';
-    }
-    if (/werkzeugakku|akkuschrauber|bosch|makita|dewalt|milwaukee|metabo/i.test(combined)) {
-      return 'Werkzeugakku';
-    }
-    if (/telefon|dect|schnurlos/i.test(combined)) {
-      return 'Telefonakku';
-    }
-    if (/taschenlampe|handlampe|stirnlampe|arbeitsleuchte/i.test(combined)) {
-      return 'Lampenakku';
-    }
-    if (/laptop|notebook/i.test(combined)) {
-      return 'Notebookakku';
-    }
-    if (/kamera|camcorder/i.test(combined)) {
-      return 'Kameraakku';
-    }
-    if (/e-bike|fahrrad|pedelec/i.test(combined)) {
-      return 'E-Bike Akku';
-    }
-    if (/staubsauger/i.test(combined)) {
-      return 'Staubsaugerakku';
-    }
-    if (/rasenmäher|rasenroboter/i.test(combined)) {
-      return 'Gartengeräteakku';
-    }
+    // Fallback: Allgemeiner Akku/Batterie
+    if (/batterie/i.test(nameLower)) return 'Batterie';
+    if (/akku/i.test(nameLower)) return 'Akku';
+    
     return 'Akku';
   };
 
