@@ -521,6 +521,7 @@ router.post('/generate-bullets-only', async (req: Request, res: Response) => {
       results.push({
         ...row,
         'p_description[de]': description, // Original behalten
+        original_description: description, // Für Vorschau
         bullet_1: bullet1,
         bullet_2: bullet2,
         bullet_3: bullet3,
@@ -637,6 +638,7 @@ router.post('/extract-attributes-only', async (req: Request, res: Response) => {
       results.push({
         ...row,
         'p_description[de]': description, // Original behalten
+        original_description: description, // Für Vorschau
         akku_mah,
         akku_wh,
         akku_v,
