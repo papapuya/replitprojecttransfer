@@ -843,18 +843,24 @@ export default function AkkushopGenerator() {
                             </Popover>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0"
-                            onClick={() => setOriginalDescPreview({
-                              name: row['p_name[de]'],
-                              desc: row['p_description[de]'] || '-'
-                            })}
-                          >
-                            <Eye className="w-3 h-3 text-gray-400 hover:text-indigo-600" />
-                          </Button>
+                        <TableCell className="max-w-[300px]">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="flex-1 max-h-20 overflow-hidden text-xs prose prose-sm [&_table]:hidden [&_h1]:text-sm [&_h2]:text-xs [&_p]:text-xs [&_ul]:text-xs [&_li]:text-xs"
+                              dangerouslySetInnerHTML={{ __html: (row['p_description[de]'] || '-').substring(0, 500) }}
+                            />
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0 flex-shrink-0"
+                              onClick={() => setOriginalDescPreview({
+                                name: row['p_name[de]'],
+                                desc: row['p_description[de]'] || '-'
+                              })}
+                            >
+                              <Eye className="w-3 h-3 text-gray-400 hover:text-indigo-600" />
+                            </Button>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {editingCategory === originalIndex ? (
