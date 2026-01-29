@@ -689,7 +689,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Für sicherheitsrelevante Notbeleuchtungssysteme entwickelt, bei denen Ausfallsicherheit höchste Priorität hat. Der Akku gewährleistet die Stromversorgung genau dann, wenn sie gebraucht wird.',
       absatz2: 'Die Zelltechnologie ist auf maximale Zuverlässigkeit und Langlebigkeit ausgelegt. Regelmäßige Wartungsintervalle gemäß den geltenden Vorschriften sichern die Funktionsfähigkeit.',
-      absatz3: 'Die Installation erfolgt gemäß den Vorgaben des Leuchtenherstellers. Auf korrekte Polarität und sichere Verbindungen ist zu achten.',
+      absatz3: 'Die Installation erfolgt gemäß den Vorgaben des Leuchtenherstellers.',
       usps: [
         'Entwickelt für sicherheitsrelevante Dauereinsätze',
         'Langlebige Zellen für maximale Betriebssicherheit',
@@ -873,7 +873,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Für den professionellen Einsatz in Medizin- und Pflegetechnik entwickelt. Der Akku gewährleistet zuverlässigen Betrieb.',
       absatz2: 'Die robuste Zelltechnologie ist auf Dauereinsatz ausgelegt und behält ihre Kapazität auch bei täglicher Nutzung.',
-      absatz3: 'Der Einbau sollte gemäß den Vorgaben des Geräteherstellers erfolgen. Auf korrekte Polarität achten.',
+      absatz3: 'Der Einbau erfolgt gemäß den Vorgaben des Geräteherstellers.',
       usps: [
         'Entwickelt für den professionellen Pflegeeinsatz',
         'Langlebige Zellen für maximale Zuverlässigkeit',
@@ -1057,7 +1057,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Dieser Ersatzakku ist für elektrische Airsoft-Gewehre konzipiert und bietet zuverlässige Leistung.',
       absatz2: 'Die hochwertige Zelltechnologie sorgt für eine gleichmäßige Energieabgabe und eine hohe Schusszahl pro Ladung.',
-      absatz3: 'Der Einbau erfolgt je nach Modell in Schulterstütze, Handschutz oder externem Akkufach. Auf korrekte Polarität achten.',
+      absatz3: 'Der Einbau erfolgt je nach Modell in Schulterstütze, Handschutz oder externem Akkufach.',
       usps: [
         'Zuverlässige Leistung für AEG-Systeme',
         'Gleichmäßige Energieabgabe',
@@ -1103,7 +1103,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Dieser Ersatzakku ist für Akku-Gartengeräte konzipiert und bietet zuverlässige Leistung.',
       absatz2: 'Die robuste Zelltechnologie ist auf häufige Nutzung ausgelegt und behält ihre Kapazität auch nach vielen Ladezyklen.',
-      absatz3: 'Der Einbau erfolgt gemäß den Vorgaben des Geräteherstellers. Auf korrekte Polarität achten.',
+      absatz3: 'Der Einbau erfolgt gemäß den Vorgaben des Geräteherstellers.',
       usps: [
         'Zuverlässige Leistung für Gartengeräte',
         'Langlebige Zellen für viele Ladezyklen',
@@ -1149,7 +1149,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Diese Starterbatterie ist für den Einsatz in Motorrädern und Rollern ausgelegt und bietet zuverlässige Leistung.',
       absatz2: 'Die wartungsfreie Technologie erfordert kein Nachfüllen von destilliertem Wasser. Die Batterie ist in jeder Einbaulage verwendbar.',
-      absatz3: 'Vor dem Einbau die Polkonfiguration und Abmessungen prüfen. Auf festen Sitz und korrekte Polanschlüsse achten.',
+      absatz3: 'Die Abmessungen entsprechen den Originalspezifikationen für einen direkten Austausch.',
       usps: [
         'Wartungsfrei – kein Nachfüllen nötig',
         'Lageunabhängiger Einbau möglich',
@@ -1195,7 +1195,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Dieser Ersatzakku ist für Kranfernsteuerungen konzipiert und bietet zuverlässige Leistung im Industrieeinsatz.',
       absatz2: 'Die robuste Zelltechnologie ist auf häufige Ladezyklen ausgelegt und behält ihre Kapazität auch bei intensiver Nutzung.',
-      absatz3: 'Beim Akkuwechsel auf korrekte Polarität achten. Die Fernbedienung nach dem Einsetzen prüfen.',
+      absatz3: 'Der Akkuwechsel ist einfach und schnell durchführbar.',
       usps: [
         'Zuverlässige Leistung im Industrieeinsatz',
         'Langlebige Zellen für viele Ladezyklen',
@@ -1276,7 +1276,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Dieser Akku ist für Anwendungen wie USV-Anlagen, Notbeleuchtung oder Solaranlagen ausgelegt.',
       absatz2: 'Die zyklenfeste Ausführung ermöglicht viele Lade- und Entladezyklen. Die Technologie ist auf Langlebigkeit ausgelegt.',
-      absatz3: 'Beim Anschluss auf korrekte Polarität achten. Die Batterie vor der ersten Nutzung vollständig laden.',
+      absatz3: 'Die Batterie sollte vor der ersten Nutzung vollständig geladen werden.',
       usps: [
         'Für USV, Notbeleuchtung, Solar',
         'Zyklenfeste Ausführung',
@@ -1322,7 +1322,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Dieser Ersatzakku sichert den Betrieb von Automatiktüren auch bei Netzausfall.',
       absatz2: 'Die robuste Ausführung ist auf den Dauerbetrieb in Türsystemen ausgelegt.',
-      absatz3: 'Beim Akkuwechsel auf korrekte Polarität achten. Nach dem Einbau die Funktion prüfen.',
+      absatz3: 'Der Akkuwechsel ist einfach und schnell durchführbar.',
       usps: [
         'Sichert Betrieb bei Netzausfall',
         'Für Dauerbetrieb ausgelegt',
@@ -1460,7 +1460,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Dieser Ersatzakku ist für elektrische Rasierer konzipiert und bietet zuverlässige Leistung.',
       absatz2: 'Die robuste Zelltechnologie behält ihre Kapazität auch nach vielen Ladezyklen.',
-      absatz3: 'Der Einbau erfordert Lötkenntnisse. Auf korrekte Polarität achten.',
+      absatz3: 'Der Einbau erfordert Lötkenntnisse.',
       usps: [
         'Zuverlässige Leistung',
         'Langlebige Zellen',
@@ -1506,7 +1506,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Dieser Ersatzakku ist für Handleuchten und Arbeitsleuchten konzipiert.',
       absatz2: 'Die robuste Zelltechnologie ist auf häufige Nutzung ausgelegt.',
-      absatz3: 'Der Einbau erfolgt gemäß den Vorgaben des Lampenherstellers. Auf korrekte Polarität achten.',
+      absatz3: 'Der Einbau erfolgt gemäß den Vorgaben des Lampenherstellers.',
       usps: [
         'Zuverlässige Leistung für Handleuchten',
         'Langlebige Zellen',
@@ -1552,7 +1552,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Mit diesem Zellentausch-Set können die alten Akkuzellen im Originalgehäuse durch neue, leistungsstarke Zellen ersetzt werden.',
       absatz2: 'Statt einen komplett neuen, oft teuren Originalakku zu kaufen, bietet der Zellentausch eine wirtschaftliche Alternative.',
-      absatz3: 'Das Set ist für den Selbsteinbau konzipiert. Auf korrekte Polarität und fachgerechte Verbindung der Zellen achten.',
+      absatz3: 'Das Set ist für den Selbsteinbau konzipiert.',
       usps: [
         'Wirtschaftliche Alternative zum Neukauf',
         'Neue Zellen im bewährten Gehäuse',
@@ -1598,7 +1598,7 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
     B: {
       absatz1: 'Für Anwendungen entwickelt, bei denen Zuverlässigkeit an erster Stelle steht. Der Akku gewährleistet die Energieversorgung auch bei intensiver Nutzung.',
       absatz2: 'Bei korrekter Anwendung und Lagerung erreicht dieser Akku seine maximale Lebensdauer. Die Zelltechnologie ist auf Langlebigkeit ausgelegt.',
-      absatz3: 'Der Einbau sollte gemäß den Herstellerangaben des Geräts erfolgen. Auf korrekte Polarität und sichere Befestigung achten.',
+      absatz3: 'Der Einbau erfolgt gemäß den Herstellerangaben des Geräts.',
       usps: [
         'Entwickelt für zuverlässige Dauereinsätze',
         'Langlebige Zellen für maximale Betriebssicherheit',
