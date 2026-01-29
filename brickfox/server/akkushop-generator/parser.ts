@@ -273,7 +273,9 @@ function extractFromHtmlTable(html: string): Record<string, string> {
   const ersetztPatterns = [
     /Ersetzt:\s*<\/(?:h2|h3|strong|b)>([\s\S]*?)(?:<hr|<h[234]|Passend|Technische|Lieferumfang|$)/i,
     /<(?:h2|h3|strong|b)[^>]*>Ersetzt:<\/(?:h2|h3|strong|b)>\s*([\s\S]*?)(?:<hr|<h[234]|Passend|Technische|Lieferumfang|$)/i,
-    /Ersetzt:\s*([^\n<]+(?:<br[^>]*>\s*[^\n<]+)*)/i
+    /Ersetzt:\s*([^\n<]+(?:<br[^>]*>\s*[^\n<]+)*)/i,
+    // Einfacher Text ohne HTML: "Ersetzt:\nModell / Nummer"
+    /Ersetzt:\s*\n([^\n]+)/i
   ];
   
   for (const pattern of ersetztPatterns) {
