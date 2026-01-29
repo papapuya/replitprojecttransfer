@@ -1019,13 +1019,13 @@ export default function AkkushopGenerator() {
 
       {/* Dialog für Original-Beschreibung */}
       <Dialog open={!!originalDescPreview} onOpenChange={() => setOriginalDescPreview(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Original-Beschreibung (aus CSV)</DialogTitle>
             <DialogDescription>{originalDescPreview?.name}</DialogDescription>
           </DialogHeader>
           <div 
-            className="border rounded-lg p-4 bg-gray-50 prose prose-sm max-w-none"
+            className="border rounded-lg p-4 bg-gray-50 prose prose-sm max-w-none [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-gray-300 [&_td]:p-2 [&_th]:border [&_th]:border-gray-300 [&_th]:p-2 [&_th]:bg-gray-100 [&_.pd-spec-name]:font-semibold [&_.pd-spec-name]:bg-gray-100 [&_.pd-spec-value]:bg-white"
             dangerouslySetInnerHTML={{ __html: originalDescPreview?.desc || '-' }}
           />
         </DialogContent>
