@@ -474,9 +474,15 @@ export async function renderAkkuHtmlWithCategory(
   
   if (kompatibilitaet) {
     kompatibilitaet = kompatibilitaet
-      .replace(/^Passend für\s*/i, '')
-      .replace(/^Geeignet für\s*/i, '')
-      .replace(/^Kompatibel mit\s*/i, '')
+      // Alle "passend für", "für", "mit" Präfixe entfernen
+      .replace(/passend für[\s:]+/gi, '')
+      .replace(/geeignet für[\s:]+/gi, '')
+      .replace(/kompatibel mit[\s:]+/gi, '')
+      .replace(/kompatibel für[\s:]+/gi, '')
+      .replace(/^für[\s:]+/i, '')
+      .replace(/,\s*für[\s:]+/gi, ', ')
+      .replace(/^mit[\s:]+/i, '')
+      .replace(/,\s*mit[\s:]+/gi, ', ')
       .replace(/Technische Daten[:\s].*$/gi, '')
       .replace(/chemisches System.*$/gi, '')
       .replace(/Spannung.*$/gi, '')
