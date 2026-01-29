@@ -63,13 +63,11 @@ const FIELD_MAPPINGS: Record<string, keyof ParsedProduct> = {
   'kabellänge': 'kabellaenge',
   'kabellaenge': 'kabellaenge',
   'cable length': 'kabellaenge',
-  'kompatibilität': 'kompatibilitaet',
-  'kompatibilitaet': 'kompatibilitaet',
-  'compatibility': 'kompatibilitaet',
-  'passend für': 'kompatibilitaet',
-  'passend fuer': 'kompatibilitaet',
-  'ersetzt': 'kompatibilitaet',
-  'geeignet für': 'kompatibilitaet',
+  // Kompatibilität wird NICHT über FIELD_MAPPINGS extrahiert!
+  // Stattdessen wird sie dediziert aus "Passend für:" / "Ersetzt:" HTML-Blöcken extrahiert
+  // 'kompatibilität': 'kompatibilitaet',  // DEAKTIVIERT
+  // 'passend für': 'kompatibilitaet',      // DEAKTIVIERT
+  // 'ersetzt': 'kompatibilitaet',          // DEAKTIVIERT
 };
 
 export function stripHtmlTags(text: string): string {
@@ -148,80 +146,75 @@ function extractFromHtmlTable(html: string): Record<string, string> {
     }
   }
   
-  // Kompatibilität aus Tabellen löschen - wird unten aus "Passend für:" / "Ersetzt:" extrahiert
+  // Kompatibilität aus Tabellen löschen - wird unten dediziert extrahiert
   delete fields['kompatibilität'];
   delete fields['passend für'];
   delete fields['ersetzt'];
+  delete fields['geeignet für'];
   
-  // Passend für / Ersetzt aus bpsDesc extrahieren - direkt als Kompatibilität speichern
-  // Verschiedene HTML-Formate unterstützen
+  // DEDIZIERTE Kompatibilitäts-Extraktion aus "Passend für:" / "Ersetzt:" HTML-Blöcken
+  // Wichtig: Zuerst die HTML-Blöcke in einzelne Items splitten BEVOR Tags entfernt werden
+  const compatModels: string[] = [];
+  
+  function extractModelsFromBlock(blockHtml: string): string[] {
+    const items: string[] = [];
+    // Zuerst nach <p>, <li>, <br> Tags splitten um Einzelzeilen zu bekommen
+    const splitHtml = blockHtml
+      .replace(/<br\s*\/?>/gi, '|||SPLIT|||')
+      .replace(/<\/p>/gi, '|||SPLIT|||')
+      .replace(/<\/li>/gi, '|||SPLIT|||')
+      .replace(/<\/div>/gi, '|||SPLIT|||');
+    
+    const parts = splitHtml.split('|||SPLIT|||');
+    for (const part of parts) {
+      // Jetzt Tags aus jedem Teil entfernen
+      const clean = part.replace(/<[^>]+>/g, '').trim();
+      if (clean && clean.length > 1) {
+        items.push(clean);
+      }
+    }
+    return items;
+  }
+  
+  // "Passend für:" Block suchen
   const passendPatterns = [
-    /<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234]|<h2|$)/i,
-    /<strong>Passend für:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|$)/i,
-    /<b>Passend für:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|$)/i,
-    /Passend für:\s*<\/?(p|div|span)[^>]*>([\s\S]*?)(?:<hr|<h[234]|$)/i,
+    /<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234]|<h2|Technische|$)/i,
+    /<strong>Passend für:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|Technische|$)/i,
+    /<b>Passend für:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|Technische|$)/i,
   ];
   
   for (const pattern of passendPatterns) {
     const match = html.match(pattern);
-    if (match) {
-      const content = match[1] || match[2] || '';
-      // HTML zu Text konvertieren, alle Zeilenumbrüche als Komma-Trenner
-      let value = content
-        .replace(/<br\s*\/?>/gi, ', ')
-        .replace(/<\/p>/gi, ', ')
-        .replace(/<p[^>]*>/gi, '')
-        .replace(/<\/div>/gi, ', ')
-        .replace(/<div[^>]*>/gi, '')
-        .replace(/<\/li>/gi, ', ')
-        .replace(/<li[^>]*>/gi, '')
-        .replace(/<[^>]+>/g, '')
-        .replace(/,\s*,/g, ', ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .replace(/^,\s*/, '')
-        .replace(/,\s*$/, '');
-      if (value) {
-        fields['kompatibilität'] = value;
-        break;
-      }
+    if (match && match[1]) {
+      const models = extractModelsFromBlock(match[1]);
+      compatModels.push(...models);
+      console.log(`[Parser] Passend für Block gefunden, Modelle:`, models);
+      break;
     }
   }
   
+  // "Ersetzt:" Block suchen
   const ersetztPatterns = [
-    /<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234]|<h3|$)/i,
-    /<strong>Ersetzt:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|$)/i,
-    /<b>Ersetzt:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|$)/i,
-    /Ersetzt:\s*<\/?(p|div|span)[^>]*>([\s\S]*?)(?:<hr|<h[234]|$)/i,
+    /<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234]|<h3|Technische|$)/i,
+    /<strong>Ersetzt:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|Technische|$)/i,
+    /<b>Ersetzt:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|Technische|$)/i,
   ];
   
   for (const pattern of ersetztPatterns) {
     const match = html.match(pattern);
-    if (match) {
-      const content = match[1] || match[2] || '';
-      let value = content
-        .replace(/<br\s*\/?>/gi, ', ')
-        .replace(/<\/p>/gi, ', ')
-        .replace(/<p[^>]*>/gi, '')
-        .replace(/<\/div>/gi, ', ')
-        .replace(/<div[^>]*>/gi, '')
-        .replace(/<\/li>/gi, ', ')
-        .replace(/<li[^>]*>/gi, '')
-        .replace(/<[^>]+>/g, '')
-        .replace(/,\s*,/g, ', ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .replace(/^,\s*/, '')
-        .replace(/,\s*$/, '');
-      if (value) {
-        if (fields['kompatibilität']) {
-          fields['kompatibilität'] += ', ' + value;
-        } else {
-          fields['kompatibilität'] = value;
-        }
-        break;
-      }
+    if (match && match[1]) {
+      const models = extractModelsFromBlock(match[1]);
+      compatModels.push(...models);
+      console.log(`[Parser] Ersetzt Block gefunden, Modelle:`, models);
+      break;
     }
+  }
+  
+  // Duplikate entfernen und als Kompatibilität setzen
+  if (compatModels.length > 0) {
+    const uniqueModels = Array.from(new Set(compatModels));
+    fields['kompatibilität'] = uniqueModels.join(', ');
+    console.log(`[Parser] Finale Kompatibilität:`, fields['kompatibilität']);
   }
   
   return fields;
