@@ -408,6 +408,10 @@ export function parseDescription(description: string, productName?: string, csvR
 
   // Kompatibilität wird NUR aus den "Passend für:" / "Ersetzt:" HTML-Abschnitten extrahiert
   // Diese Extraktion passiert bereits in extractFromHtmlTable()
+  // Direkt auf parsed setzen (FIELD_MAPPINGS sind für Kompatibilität deaktiviert)
+  if (rawFields['kompatibilität']) {
+    parsed.kompatibilitaet = rawFields['kompatibilität'];
+  }
 
   for (const [rawKey, value] of Object.entries(rawFields)) {
     const normalizedKey = rawKey.toLowerCase().trim();
