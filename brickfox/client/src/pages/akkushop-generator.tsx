@@ -864,7 +864,7 @@ export default function AkkushopGenerator() {
             <div>
               <h4 className="font-semibold mb-2">Original-Beschreibung (aus CSV):</h4>
               <div 
-                className="border rounded-lg p-4 bg-gray-50 prose prose-sm max-w-none max-h-48 overflow-y-auto"
+                className="border rounded-lg p-4 bg-gray-50 prose prose-sm max-w-none max-h-96 overflow-y-auto"
                 dangerouslySetInnerHTML={{ __html: previewRow?.original_description || '-' }}
               />
             </div>
