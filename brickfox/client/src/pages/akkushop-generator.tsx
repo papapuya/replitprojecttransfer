@@ -855,6 +855,13 @@ export default function AkkushopGenerator() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
+              <h4 className="font-semibold mb-2">Original-Produktname (aus CSV):</h4>
+              <div className="border rounded-lg p-4 bg-gray-50 font-medium">
+                {previewRow?.['p_name[de]'] || '-'}
+              </div>
+            </div>
+
+            <div>
               <h4 className="font-semibold mb-2">Original-Beschreibung (aus CSV):</h4>
               <div 
                 className="border rounded-lg p-4 bg-gray-50 prose prose-sm max-w-none max-h-48 overflow-y-auto"
