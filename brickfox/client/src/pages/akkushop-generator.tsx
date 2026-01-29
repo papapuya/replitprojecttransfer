@@ -916,7 +916,7 @@ export default function AkkushopGenerator() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-auto max-h-[600px] border rounded-lg">
+            <div className="overflow-x-scroll overflow-y-auto max-h-[600px] border rounded-lg" style={{ scrollbarGutter: 'stable' }}>
               <Table>
                 <TableHeader className="sticky top-0 bg-white z-10">
                   <TableRow className="bg-gray-50">
@@ -1040,7 +1040,7 @@ export default function AkkushopGenerator() {
             <CardDescription>Klicken Sie auf das Auge-Icon um die generierte HTML-Beschreibung anzuzeigen.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-auto max-h-[600px] border rounded-lg">
+            <div className="overflow-x-scroll overflow-y-auto max-h-[600px] border rounded-lg" style={{ scrollbarGutter: 'stable' }}>
               <Table>
                 <TableHeader className="sticky top-0 bg-white z-10">
                   <TableRow className="bg-gray-50">
