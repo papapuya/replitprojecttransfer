@@ -226,21 +226,36 @@ export function extractProductTypeFromName(name: string): string {
 }
 
 function extractCompatibilityFromText(text: string): string {
-  const patterns = [
-    /passend\s+(?:für|fuer)\s+([A-Za-zÄÖÜäöüß]+-?(?:Notbeleuchtung|Notleuchte|Leuchten?))/i,
-    /(?:für|fuer)\s+([A-Za-zÄÖÜäöüß]+-?(?:Notbeleuchtung|Notleuchte))/i,
-    /([A-Z][a-zA-ZÄÖÜäöüß]+-Notbeleuchtung)/,
-    /([A-Z][a-zA-ZÄÖÜäöüß]+-Notleuchte)/,
-  ];
+  const models: string[] = [];
   
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
+  // Suche nach "Ersetzt:" Abschnitt - NUR die Modellnummern danach
+  const ersetztMatch = text.match(/Ersetzt:\s*([^\n]+)/i);
+  if (ersetztMatch && ersetztMatch[1]) {
+    const modelsText = ersetztMatch[1].trim();
+    // Splitte bei Komma, Semikolon oder "/"
+    const parts = modelsText.split(/[,;\/]+/).map(p => p.trim()).filter(p => p.length > 0);
+    models.push(...parts);
   }
   
-  return '';
+  // Suche nach "passend für:" Abschnitt - NUR die Modellnummern/Geräte danach
+  const passendMatch = text.match(/passend\s+für:\s*([^\n]+)/i);
+  if (passendMatch && passendMatch[1]) {
+    const modelsText = passendMatch[1].trim();
+    const parts = modelsText.split(/[,;\/]+/).map(p => p.trim()).filter(p => p.length > 0);
+    models.push(...parts);
+  }
+  
+  // Suche nach "geeignet für:" Abschnitt
+  const geeignetMatch = text.match(/geeignet\s+für:\s*([^\n]+)/i);
+  if (geeignetMatch && geeignetMatch[1]) {
+    const modelsText = geeignetMatch[1].trim();
+    const parts = modelsText.split(/[,;\/]+/).map(p => p.trim()).filter(p => p.length > 0);
+    models.push(...parts);
+  }
+  
+  // Duplikate entfernen
+  const unique = Array.from(new Set(models));
+  return unique.join(', ');
 }
 
 function extractFromProductName(name: string): Partial<ParsedProduct> {
