@@ -32,6 +32,17 @@ const MOJIBAKE_FIXES: [RegExp, string][] = [
   [/Ã´/g, 'ô'],
   [/Ã»/g, 'û'],
   [/Ã§/g, 'ç'],
+  // Emojis (UTF-8 als Windows-1252 doppelt kodiert)
+  [/âœ…/g, '✅'],
+  [/âœ"/g, '✓'],
+  [/âœ˜/g, '✘'],
+  [/âœ"/g, '✔'],
+  [/â—/g, '●'],
+  [/â–ª/g, '▪'],
+  [/â–¶/g, '▶'],
+  [/â—†/g, '◆'],
+  [/â˜…/g, '★'],
+  [/â˜†/g, '☆'],
 ];
 
 function fixMojibake(text: string): string {
