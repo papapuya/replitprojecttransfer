@@ -571,6 +571,25 @@ export async function detectProductCategoryWithAI(productName: string, descripti
     return 'ZELLENTAUSCH';
   }
   
+  // VORRANG: Produkttyp aus Produktnamen hat Vorrang vor anderen Keywords
+  const produktnameVorrang: { pattern: RegExp; category: ProductCategory }[] = [
+    { pattern: /speicherbatterie/i, category: 'SPEICHERBATTERIE' },
+    { pattern: /pufferbatterie/i, category: 'PUFFERBATTERIE' },
+    { pattern: /notleuchtenakku/i, category: 'NOTLEUCHTE' },
+    { pattern: /kranakku/i, category: 'KRANAKKU' },
+    { pattern: /funkakku/i, category: 'FUNKAKKU' },
+    { pattern: /werkzeugakku/i, category: 'WERKZEUGAKKU' },
+    { pattern: /rasiererakku/i, category: 'RASIERER' },
+    { pattern: /bleiakku/i, category: 'BLEIAKKU' },
+  ];
+  
+  for (const { pattern, category } of produktnameVorrang) {
+    if (pattern.test(productName)) {
+      console.log(`[CategoryDetection] "${productName.substring(0, 60)}" → ${category} (Produkttyp im Namen)`);
+      return category;
+    }
+  }
+  
   const keywordCategory = detectProductCategory(productName, description);
   
   // Prüfe ob "passend für [Gerät]" im Namen steht
@@ -1209,47 +1228,36 @@ const CATEGORY_TEXT_BLOCKS: Record<ProductCategory, Record<'A' | 'B' | 'C', Cate
   },
   SPEICHERBATTERIE: {
     A: {
-      absatz1: 'Diese Speicherbatterie dient zur Datensicherung in speicherprogrammierbaren Steuerungen und Industrieanlagen.',
-      absatz2: 'Die Lithium-Technologie bietet eine hohe Energiedichte bei geringer Selbstentladung. Die Daten bleiben auch bei Stromausfall erhalten.',
-      absatz3: 'Die Abmessungen und der Steckertyp entsprechen den Originalspezifikationen. Vor dem Einbau die Polarität prüfen.',
+      absatz1: 'Diese Speicherbatterie findet vor allem in der industriellen Automatisierung Anwendung, insbesondere in CNC-Systemen, Servoantrieben und speicherprogrammierbaren Steuerungen, wo sie als zuverlässige Pufferbatterie dient.',
+      absatz2: 'Die Lithium-Technologie bietet eine hohe Energiedichte bei geringer Selbstentladung. So bleiben wichtige Daten und Konfigurationen auch bei einem Stromausfall erhalten.',
+      absatz3: 'Die Abmessungen und der Steckertyp entsprechen den Originalspezifikationen für einen direkten Austausch.',
       usps: [
-        'Für SPS und Industriesteuerungen',
+        'Für SPS, CNC-Systeme und Servoantriebe',
         'Geringe Selbstentladung',
         'Datensicherheit bei Stromausfall',
         'Direkter Austausch gegen die Originalbatterie',
       ],
     },
     B: {
-      absatz1: 'Diese Batterie sichert die Programm- und Parameterdaten in Steuerungsanlagen und sorgt für Datenkontinuität.',
-      absatz2: 'Die lange Lebensdauer reduziert Wartungsintervalle. Ein rechtzeitiger Austausch verhindert Datenverlust.',
+      absatz1: 'Diese Speicherbatterie sichert Programm- und Parameterdaten in industriellen Steuerungsanlagen und gewährleistet die Absolutwert-Positionserkennung in Servosystemen.',
+      absatz2: 'Die lange Lebensdauer reduziert Wartungsintervalle in CNC-Maschinen und Bearbeitungszentren. Ein rechtzeitiger Austausch verhindert Datenverlust.',
       absatz3: 'Beim Batteriewechsel die Anlage nicht vom Netz trennen, um Datenverlust zu vermeiden. Schneller Wechsel empfohlen.',
       usps: [
         'Sichert Programm- und Parameterdaten',
-        'Lange Lebensdauer',
+        'Für CNC-Maschinen und Servosysteme',
         'Reduzierte Wartungsintervalle',
         'Passgenauer Austausch',
       ],
     },
     C: {
-      absatz1: 'Hochwertige Ersatzbatterie für Ihre Steuerungsanlage. Schützt vor Datenverlust bei Stromausfall.',
-      absatz2: 'Ein rechtzeitiger Batteriewechsel sichert Ihre Maschinendaten.',
+      absatz1: 'Hochwertige Ersatzbatterie für Ihre Industriesteuerung oder Ihr Servosystem. Schützt zuverlässig vor Datenverlust bei Stromausfall.',
+      absatz2: 'Geeignet für SPS-Steuerungen, CNC-Werkzeugmaschinen und RAID-Controller. Ein rechtzeitiger Batteriewechsel sichert Ihre Maschinendaten.',
       absatz3: 'Der Wechsel sollte zügig erfolgen, um Datenverlust zu vermeiden.',
       usps: [
         'Schutz vor Datenverlust',
-        'Für Steuerungsanlagen',
+        'Für SPS, CNC und RAID-Controller',
         'Schneller Batteriewechsel',
         'Passend für Ihre Anlage',
-      ],
-    },
-    D: {
-      absatz1: 'Speicherbatterie für SPS und Industriesteuerungen. Passend und sofort einsatzbereit.',
-      absatz2: 'Lange Lebensdauer. Geringe Selbstentladung.',
-      absatz3: 'Direkter Austausch.',
-      usps: [
-        'Für SPS-Steuerungen',
-        'Lange Lebensdauer',
-        'Geringe Selbstentladung',
-        'Direkter Austausch',
       ],
     },
   },
