@@ -474,15 +474,19 @@ export async function renderAkkuHtmlWithCategory(
   
   if (kompatibilitaet) {
     kompatibilitaet = kompatibilitaet
-      // Alle "passend für", "für", "mit" Präfixe entfernen
-      .replace(/passend für[\s:]+/gi, '')
-      .replace(/geeignet für[\s:]+/gi, '')
-      .replace(/kompatibel mit[\s:]+/gi, '')
-      .replace(/kompatibel für[\s:]+/gi, '')
-      .replace(/^für[\s:]+/i, '')
-      .replace(/,\s*für[\s:]+/gi, ', ')
-      .replace(/^mit[\s:]+/i, '')
-      .replace(/,\s*mit[\s:]+/gi, ', ')
+      // Alle "passend für", "für", "mit", "geeignet" überall entfernen und durch Komma ersetzen
+      .replace(/\s+passend für[\s:]+/gi, ', ')
+      .replace(/^passend für[\s:]+/gi, '')
+      .replace(/\s+geeignet für[\s:]+/gi, ', ')
+      .replace(/^geeignet für[\s:]+/gi, '')
+      .replace(/\s+kompatibel mit[\s:]+/gi, ', ')
+      .replace(/^kompatibel mit[\s:]+/gi, '')
+      .replace(/\s+kompatibel für[\s:]+/gi, ', ')
+      .replace(/^kompatibel für[\s:]+/gi, '')
+      .replace(/\s+für[\s:]+/gi, ', ')
+      .replace(/^für[\s:]+/gi, '')
+      .replace(/\s+mit[\s:]+/gi, ', ')
+      .replace(/^mit[\s:]+/gi, '')
       .replace(/Technische Daten[:\s].*$/gi, '')
       .replace(/chemisches System.*$/gi, '')
       .replace(/Spannung.*$/gi, '')
@@ -492,6 +496,7 @@ export async function renderAkkuHtmlWithCategory(
       .replace(/\s*\/\s*$/, '')
       .replace(/Ersetzt:\s*/gi, ', ') // "Ersetzt:" durch Komma ersetzen
       .replace(/([a-z])([A-Z])/g, '$1, $2') // "BoschBosch" -> "Bosch, Bosch"
+      .replace(/,\s*,/g, ',') // Doppelte Kommas entfernen
       .trim();
     
     // Duplikate entfernen
