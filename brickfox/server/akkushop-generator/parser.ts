@@ -149,36 +149,72 @@ function extractFromHtmlTable(html: string): Record<string, string> {
   }
   
   // Passend für / Ersetzt aus bpsDesc extrahieren - direkt als Kompatibilität speichern
-  const passendFuerMatch = html.match(/<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234]|$)/i);
-  if (passendFuerMatch) {
-    // HTML zu Text konvertieren, aber Zeilenumbrüche als Komma-Trenner behandeln
-    let value = passendFuerMatch[1]
-      .replace(/<br\s*\/?>/gi, ', ')
-      .replace(/<\/p>\s*<p>/gi, ', ')
-      .replace(/<\/li>\s*<li>/gi, ', ')
-      .replace(/<[^>]+>/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (value && !fields['kompatibilität']) {
-      fields['kompatibilität'] = value;
+  // Verschiedene HTML-Formate unterstützen
+  const passendPatterns = [
+    /<h2>Passend für:\s*<\/h2>([\s\S]*?)(?:<hr|<h[234]|$)/i,
+    /<strong>Passend für:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|$)/i,
+    /<b>Passend für:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|$)/i,
+    /Passend für:\s*<\/?(p|div|span)[^>]*>([\s\S]*?)(?:<hr|<h[234]|$)/i,
+  ];
+  
+  for (const pattern of passendPatterns) {
+    const match = html.match(pattern);
+    if (match) {
+      const content = match[1] || match[2] || '';
+      // HTML zu Text konvertieren, alle Zeilenumbrüche als Komma-Trenner
+      let value = content
+        .replace(/<br\s*\/?>/gi, ', ')
+        .replace(/<\/p>/gi, ', ')
+        .replace(/<p[^>]*>/gi, '')
+        .replace(/<\/div>/gi, ', ')
+        .replace(/<div[^>]*>/gi, '')
+        .replace(/<\/li>/gi, ', ')
+        .replace(/<li[^>]*>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/,\s*,/g, ', ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^,\s*/, '')
+        .replace(/,\s*$/, '');
+      if (value && !fields['kompatibilität']) {
+        fields['kompatibilität'] = value;
+        break;
+      }
     }
   }
   
-  const ersetztMatch = html.match(/<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234]|$)/i);
-  if (ersetztMatch) {
-    let value = ersetztMatch[1]
-      .replace(/<br\s*\/?>/gi, ', ')
-      .replace(/<\/p>\s*<p>/gi, ', ')
-      .replace(/<\/li>\s*<li>/gi, ', ')
-      .replace(/<[^>]+>/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (value) {
-      // An bestehende Kompatibilität anhängen oder neu setzen
-      if (fields['kompatibilität']) {
-        fields['kompatibilität'] += ', ' + value;
-      } else {
-        fields['kompatibilität'] = value;
+  const ersetztPatterns = [
+    /<h3>Ersetzt:\s*<\/h3>([\s\S]*?)(?:<hr|<h[234]|$)/i,
+    /<strong>Ersetzt:\s*<\/strong>([\s\S]*?)(?:<hr|<h[234]|<strong>|$)/i,
+    /<b>Ersetzt:\s*<\/b>([\s\S]*?)(?:<hr|<h[234]|<b>|$)/i,
+    /Ersetzt:\s*<\/?(p|div|span)[^>]*>([\s\S]*?)(?:<hr|<h[234]|$)/i,
+  ];
+  
+  for (const pattern of ersetztPatterns) {
+    const match = html.match(pattern);
+    if (match) {
+      const content = match[1] || match[2] || '';
+      let value = content
+        .replace(/<br\s*\/?>/gi, ', ')
+        .replace(/<\/p>/gi, ', ')
+        .replace(/<p[^>]*>/gi, '')
+        .replace(/<\/div>/gi, ', ')
+        .replace(/<div[^>]*>/gi, '')
+        .replace(/<\/li>/gi, ', ')
+        .replace(/<li[^>]*>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/,\s*,/g, ', ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^,\s*/, '')
+        .replace(/,\s*$/, '');
+      if (value) {
+        if (fields['kompatibilität']) {
+          fields['kompatibilität'] += ', ' + value;
+        } else {
+          fields['kompatibilität'] = value;
+        }
+        break;
       }
     }
   }
