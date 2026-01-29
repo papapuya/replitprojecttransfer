@@ -287,6 +287,11 @@ export function parseDescription(description: string, productName?: string, csvR
 
   const tableFields = extractFromHtmlTable(description);
   Object.assign(rawFields, tableFields);
+  
+  // Debug: Zeige extrahierte Felder
+  if (Object.keys(tableFields).length > 0) {
+    console.log(`[Parser] Extrahierte Felder aus HTML:`, JSON.stringify(tableFields).substring(0, 300));
+  }
 
   const cleanText = stripHtmlTags(description);
   const textFields = extractFromText(cleanText);
