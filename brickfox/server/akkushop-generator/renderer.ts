@@ -496,17 +496,41 @@ export async function renderAkkuHtmlWithCategory(
     kompatibilitaet = unique.join(', ');
   }
 
-  // Bei kurzen Absätzen in einem Block zusammenfassen
-  const totalLength = texts.absatz1.length + texts.absatz2.length + texts.absatz3.length;
-  const isCompact = totalLength < 300;
+  // SPEICHERBATTERIE: Nur Überschrift, Tabelle und Lieferumfang - keine Beschreibungstexte
+  let html: string;
   
-  const textSection = isCompact
-    ? `<p>${texts.absatz1} ${texts.absatz2} ${texts.absatz3}</p>`
-    : `<p>${texts.absatz1}</p>
+  if (category === 'SPEICHERBATTERIE') {
+    html = `<h2>${productName}</h2>
+
+<h3>Technische Daten</h3>
+<table>
+${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>` : ''}${teilenummerRow}${parsed.type ? `
+<tr><td>Chemisches System</td><td>${getChemicalSystemLongName(parsed.type)}</td></tr>` : ''}${parsed.spannung ? `
+<tr><td>Spannung</td><td>${parsed.spannung}</td></tr>` : ''}${parsed.kapazitaet ? `
+<tr><td>Kapazität</td><td>${parsed.kapazitaet}</td></tr>` : ''}${energiegehalt ? `
+<tr><td>Energiegehalt</td><td>${energiegehalt}</td></tr>` : ''}${dimensionRows}${parsed.gewicht ? `
+<tr><td>Gewicht</td><td>${parsed.gewicht}</td></tr>` : ''}${kabellaengeRow}${kompatibilitaet ? `
+<tr><td>Kompatibilität</td><td>${kompatibilitaet}</td></tr>` : ''}
+</table>
+
+<p><br /><br /><br /></p>
+
+<h3>Lieferumfang</h3>
+<ul>
+<li>${buildLieferumfang(parsed, category)}</li>
+</ul>`;
+  } else {
+    // Bei kurzen Absätzen in einem Block zusammenfassen
+    const totalLength = texts.absatz1.length + texts.absatz2.length + texts.absatz3.length;
+    const isCompact = totalLength < 300;
+    
+    const textSection = isCompact
+      ? `<p>${texts.absatz1} ${texts.absatz2} ${texts.absatz3}</p>`
+      : `<p>${texts.absatz1}</p>
 <p>${texts.absatz2}</p>
 <p>${texts.absatz3}</p>`;
 
-  const html = `<h2>${productName}</h2>
+    html = `<h2>${productName}</h2>
 
 ${textSection}
 
@@ -535,6 +559,7 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
 <ul>
 <li>${buildLieferumfang(parsed, category)}</li>
 </ul>`;
+  }
 
   const bullet1 = truncateBullet(productName);
   // Bullet 2: Produktlabel basierend auf Kategorie
