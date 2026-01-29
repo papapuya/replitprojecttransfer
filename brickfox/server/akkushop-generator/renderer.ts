@@ -150,6 +150,11 @@ export interface RenderResult {
   bullet2?: string;
   bullet3?: string;
   category?: string;
+  // Akku-Attribute für Export
+  akku_mah?: string;
+  akku_wh?: string;
+  akku_v?: string;
+  akku_ch?: string;
 }
 
 function getVariant(rowIndex: number): 'A' | 'B' | 'C' {
@@ -299,6 +304,71 @@ function getChemicalSystemLongName(shortName: string): string {
   return shortName; // Fallback: Original zurückgeben
 }
 
+// Chemisches System für Attribut-Export (Format: "NiMH - Nickel-Metallhydrid")
+const CHEMICAL_SYSTEM_ATTRIBUTES: Record<string, string> = {
+  'NiMH': 'NiMH - Nickel-Metallhydrid',
+  'NiMh': 'NiMH - Nickel-Metallhydrid',
+  'Ni-MH': 'NiMH - Nickel-Metallhydrid',
+  'NiCd': 'NiCD - Nickel-Cadmium',
+  'Ni-Cd': 'NiCD - Nickel-Cadmium',
+  'Li-Ion': 'Li-Ion - Lithium-Ionen',
+  'Li-ion': 'Li-Ion - Lithium-Ionen',
+  'LiIon': 'Li-Ion - Lithium-Ionen',
+  'Lithium-Ion': 'Li-Ion - Lithium-Ionen',
+  'LiFePO4': 'LiFePO4 - Lithium-Eisenphosphat',
+  'LFP': 'LiFePO4 - Lithium-Eisenphosphat',
+  'Li-Po': 'Li-Po - Lithium-Polymer',
+  'LiPo': 'Li-Po - Lithium-Polymer',
+  'Blei': 'Blei - Blei-Säure',
+  'Blei-Gel': 'Blei-Gel',
+  'AGM': 'AGM - Blei-AGM',
+  'Pb': 'Blei - Blei-Säure',
+};
+
+function getChemicalSystemAttribute(shortName: string): string {
+  if (!shortName) return '';
+  // Direkt match prüfen
+  if (CHEMICAL_SYSTEM_ATTRIBUTES[shortName]) {
+    return CHEMICAL_SYSTEM_ATTRIBUTES[shortName];
+  }
+  // Case-insensitive suchen
+  for (const [key, value] of Object.entries(CHEMICAL_SYSTEM_ATTRIBUTES)) {
+    if (shortName.toLowerCase().includes(key.toLowerCase())) {
+      return value;
+    }
+  }
+  return shortName;
+}
+
+// Akku-Attributwerte aus parsed-Daten extrahieren
+function extractAkkuAttributes(parsed: ParsedProduct): { mah: string; wh: string; v: string; ch: string } {
+  // mAh: Nur Zahl aus Kapazität extrahieren (z.B. "1600mAh" → "1600")
+  let mah = '';
+  if (parsed.kapazitaet) {
+    const mahMatch = parsed.kapazitaet.match(/(\d+(?:[.,]\d+)?)/);
+    if (mahMatch) mah = mahMatch[1].replace('.', ',');
+  }
+
+  // Wh: Nur Zahl aus Energiegehalt extrahieren (z.B. "5,76 Wh" → "5,76")
+  let wh = '';
+  if (parsed.energiegehalt) {
+    const whMatch = parsed.energiegehalt.match(/(\d+(?:[.,]\d+)?)/);
+    if (whMatch) wh = whMatch[1].replace('.', ',');
+  }
+
+  // V: Nur Zahl aus Spannung extrahieren (z.B. "3.6V" → "3,6")
+  let v = '';
+  if (parsed.spannung) {
+    const vMatch = parsed.spannung.match(/(\d+(?:[.,]\d+)?)/);
+    if (vMatch) v = vMatch[1].replace('.', ',');
+  }
+
+  // CH: Chemisches System formatieren
+  const ch = parsed.type ? getChemicalSystemAttribute(parsed.type) : '';
+
+  return { mah, wh, v, ch };
+}
+
 function extractDeviceNameFromProduct(productName: string): string {
   // Zellentausch-spezifische Extraktion des Gerätenamens
   // Beispiel: "Zellentausch Swivel Sweeper Akkupack, DS Produkte..." → "Swivel Sweeper Akkupack"
@@ -400,6 +470,9 @@ function renderZellentauschHtml(
   const bullet2 = truncateBullet(`Akkureparatur${parsed.spannung ? `, ${parsed.spannung}` : ''}${parsed.kapazitaet ? `, ${parsed.kapazitaet}` : ''}`);
   const bullet3 = truncateBullet(`Professionelle Erneuerung mit Markenzellen`);
 
+  // Akku-Attribute extrahieren
+  const akkuAttrs = extractAkkuAttributes(parsed);
+
   return {
     success: true,
     html: correctSpelling(html),
@@ -409,6 +482,10 @@ function renderZellentauschHtml(
     bullet2: correctSpelling(bullet2),
     bullet3: correctSpelling(bullet3),
     category: 'ZELLENTAUSCH',
+    akku_mah: akkuAttrs.mah,
+    akku_wh: akkuAttrs.wh,
+    akku_v: akkuAttrs.v,
+    akku_ch: akkuAttrs.ch,
   };
 }
 
@@ -673,6 +750,9 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     ? truncateBullet(`${bullet3Label} für ${kompatibilitaet}`)
     : undefined;
 
+  // Akku-Attribute extrahieren
+  const akkuAttrs = extractAkkuAttributes(parsed);
+
   return {
     success: true,
     html: correctSpelling(html),
@@ -682,6 +762,10 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
     bullet2: correctSpelling(bullet2),
     bullet3: bullet3 ? correctSpelling(bullet3) : undefined,
     category,
+    akku_mah: akkuAttrs.mah,
+    akku_wh: akkuAttrs.wh,
+    akku_v: akkuAttrs.v,
+    akku_ch: akkuAttrs.ch,
   };
 }
 

@@ -200,6 +200,10 @@ export async function generateFromCategorized(
       bullet_1: renderResult.bullet1,
       bullet_2: renderResult.bullet2,
       bullet_3: renderResult.bullet3,
+      akku_mah: renderResult.akku_mah,
+      akku_wh: renderResult.akku_wh,
+      akku_v: renderResult.akku_v,
+      akku_ch: renderResult.akku_ch,
       _status: 'success',
       _category: category,
     });
