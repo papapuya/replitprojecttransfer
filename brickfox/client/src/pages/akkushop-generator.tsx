@@ -925,6 +925,7 @@ export default function AkkushopGenerator() {
                     <TableHead>Status</TableHead>
                     <TableHead>Artikelnummer</TableHead>
                     <TableHead>Produktname</TableHead>
+                    <TableHead className="min-w-[300px]">Original-Beschreibung</TableHead>
                     <TableHead>Kategorie</TableHead>
                     <TableHead>Bullet 1</TableHead>
                     <TableHead>Bullet 2</TableHead>
@@ -956,6 +957,25 @@ export default function AkkushopGenerator() {
                               <p className="text-sm text-gray-700 break-words">{row['p_name[de]']}</p>
                             </PopoverContent>
                           </Popover>
+                        </div>
+                      </TableCell>
+                      <TableCell className="min-w-[300px] max-w-[400px]">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="flex-1 max-h-16 overflow-hidden text-xs prose prose-sm [&_table]:hidden [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_p]:text-xs [&_ul]:text-xs [&_li]:text-xs"
+                            dangerouslySetInnerHTML={{ __html: (row.original_description || '-').substring(0, 400) }}
+                          />
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0 flex-shrink-0"
+                            onClick={() => setOriginalDescPreview({
+                              name: row['p_name[de]'],
+                              desc: row.original_description || '-'
+                            })}
+                          >
+                            <Eye className="w-3 h-3 text-gray-400 hover:text-indigo-600" />
+                          </Button>
                         </div>
                       </TableCell>
                       <TableCell>
