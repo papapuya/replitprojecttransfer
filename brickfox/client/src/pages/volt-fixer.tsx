@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 const VOLT_COL = "p_attributes[akku_v][de]";
 const DESC_COLS = ["p_description[de]", "p_description[nl]"];
 const NAME_COLS = ["p_name[de]", "p_name[nl]"];
+const NAME_COL_LABELS: Record<string, string> = { "p_name[de]": "DE", "p_name[nl]": "NL" };
 const DETAIL_COLS = [...NAME_COLS, ...DESC_COLS, VOLT_COL];
 
 function truncateHtml(val: string, max = 80): string {
@@ -238,6 +239,57 @@ export default function VoltFixer() {
             )}
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           </div>
+
+          {/* Geänderte Namen */}
+          {result.stats.nameChanged > 0 && (() => {
+            const changedNameRows = result.preview.filter((e) =>
+              NAME_COLS.some((col) => e.changed.includes(col))
+            );
+            return (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-1">
+                  Geänderte Produktnamen
+                  <span className="ml-2 text-sm font-normal text-gray-400">
+                    ({changedNameRows.length} von {result.stats.nameChanged.toLocaleString()} in Vorschau)
+                  </span>
+                </h2>
+                <div className="border rounded-xl overflow-hidden shadow-sm divide-y">
+                  {changedNameRows.map((entry, i) => {
+                    const itemNr = entry.row["p_item_number"] || entry.row["v_item_number"] || `Zeile ${i + 1}`;
+                    return (
+                      <div key={i} className="px-4 py-3 bg-white hover:bg-gray-50">
+                        <p className="text-xs text-gray-400 mb-2 font-mono">{itemNr}</p>
+                        <div className="space-y-2">
+                          {NAME_COLS.filter((col) => entry.changed.includes(col)).map((col) => (
+                            <div key={col} className="flex flex-col gap-1">
+                              <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">
+                                {NAME_COL_LABELS[col] ?? col}
+                              </span>
+                              <div className="flex items-start gap-3 text-sm">
+                                <span className="text-red-400 line-through opacity-80 flex-1">
+                                  {entry.original[col] || "—"}
+                                </span>
+                                <span className="text-gray-400 shrink-0">→</span>
+                                <span className="text-indigo-700 font-medium flex-1 inline-flex items-center gap-1">
+                                  <CheckCircle size={13} className="shrink-0 text-indigo-500" />
+                                  {entry.row[col] || "—"}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {result.stats.nameChanged > changedNameRows.length && (
+                  <p className="text-sm text-gray-400 mt-2">
+                    … {(result.stats.nameChanged - changedNameRows.length).toLocaleString()} weitere Änderungen im Download enthalten
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Download */}
           <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
