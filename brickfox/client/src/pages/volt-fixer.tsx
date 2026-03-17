@@ -5,30 +5,72 @@ import { Badge } from "@/components/ui/badge";
 
 const VOLT_COL = "p_attributes[akku_v][de]";
 const ID_COL = "v_item_number";
+const DESC_COLS = ["p_description[de]", "p_description[nl]"];
 
+// Setzt Komma nach erster Stelle: 385 → 3,85 | 48 → 4,8
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   const trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
   if (trimmed.includes(",") || trimmed.includes(".")) return { fixed: trimmed, changed: false };
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   if (trimmed.length === 1) return { fixed: trimmed, changed: false };
-  const fixed = trimmed[0] + "," + trimmed.slice(1);
-  return { fixed, changed: true };
+  return { fixed: trimmed[0] + "," + trimmed.slice(1), changed: true };
+}
+
+// Ersetzt Spannungswert in Technische-Daten-Tabelle (HTML)
+function replaceSpannungInHtml(html: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
+  if (!html || !oldVolt || !newVolt || oldVolt === newVolt) return { result: html, changed: false };
+  // Findet <td>Spannung</td><td>WERT...</td> und tauscht WERT aus
+  const regex = /(<td[^>]*>\s*Spannung\s*<\/td>\s*<td[^>]*>)([^<]*)(<\/td>)/gi;
+  let changed = false;
+  const result = html.replace(regex, (_match, before, value, after) => {
+    const trimmedValue = value.trim();
+    // Wenn der Wert mit dem alten Volt-Wert beginnt (z.B. "385" oder "385 V")
+    if (trimmedValue === oldVolt || trimmedValue.startsWith(oldVolt + " ") || trimmedValue.startsWith(oldVolt + ",")) {
+      changed = true;
+      const suffix = trimmedValue.slice(oldVolt.length);
+      return before + newVolt + suffix + after;
+    }
+    return before + value + after;
+  });
+  return { result, changed };
 }
 
 function parseCsv(text: string): { headers: string[]; rows: Record<string, string>[] } {
-  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  // Handle quoted fields with semicolons inside
+  const rawText = text.replace(/^\uFEFF/, "");
+  const lines = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   if (lines.length === 0) return { headers: [], rows: [] };
-  const sep = lines[0].includes(";") ? ";" : ",";
-  const headers = lines[0].split(sep).map((h) => h.trim().replace(/^\ufeff/, ""));
+
+  const sep = ";";
+
+  function splitLine(line: string): string[] {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === sep && !inQuotes) {
+        result.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  const headers = splitLine(lines[0]).map((h) => h.trim());
   const rows: Record<string, string>[] = [];
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
-    const parts = lines[i].split(sep);
+    const parts = splitLine(lines[i]);
     const row: Record<string, string> = {};
-    headers.forEach((h, idx) => {
-      row[h] = parts[idx] ?? "";
-    });
+    headers.forEach((h, idx) => { row[h] = parts[idx] ?? ""; });
     rows.push(row);
   }
   return { headers, rows };
@@ -36,7 +78,7 @@ function parseCsv(text: string): { headers: string[]; rows: Record<string, strin
 
 function toCsv(headers: string[], rows: Record<string, string>[]): string {
   const escape = (v: string) => {
-    if (v.includes(";") || v.includes('"') || v.includes("\n")) {
+    if (v.includes(";") || v.includes('"') || v.includes("\n") || v.includes("\r")) {
       return '"' + v.replace(/"/g, '""') + '"';
     }
     return v;
@@ -48,12 +90,22 @@ function toCsv(headers: string[], rows: Record<string, string>[]): string {
   return lines.join("\r\n");
 }
 
+// Kürzt langen Text für Vorschau
+function truncatePreview(val: string, max = 80): string {
+  if (!val) return "";
+  val = val.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return val.length > max ? val.slice(0, max) + "…" : val;
+}
+
+type Stats = { total: number; voltChanged: number; voltSkipped: number; descChanged: number };
+
 export default function VoltFixer() {
   const [fileName, setFileName] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
   const [original, setOriginal] = useState<Record<string, string>[]>([]);
   const [fixed, setFixed] = useState<Record<string, string>[]>([]);
-  const [stats, setStats] = useState({ total: 0, changed: 0, skipped: 0 });
+  const [changedCols, setChangedCols] = useState<Set<string>[]>([]);
+  const [stats, setStats] = useState<Stats>({ total: 0, voltChanged: 0, voltSkipped: 0, descChanged: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -66,20 +118,53 @@ export default function VoltFixer() {
       setHeaders(h);
       setOriginal(rows);
 
-      let changed = 0;
-      let skipped = 0;
-      const fixedRows = rows.map((row) => {
+      let voltChanged = 0, voltSkipped = 0, descChanged = 0;
+      const fixedRows: Record<string, string>[] = [];
+      const changedColsList: Set<string>[] = [];
+
+      for (const row of rows) {
+        const newRow = { ...row };
+        const changed = new Set<string>();
+
+        // 1) Volt-Spalte korrigieren
         const voltVal = row[VOLT_COL] ?? "";
+        let newVolt = voltVal;
+        let voltWasChanged = false;
+
         if (!voltVal.trim()) {
-          skipped++;
-          return { ...row };
+          voltSkipped++;
+        } else {
+          const { fixed: fv, changed: wc } = fixVolt(voltVal);
+          newVolt = fv;
+          voltWasChanged = wc;
+          if (wc) {
+            voltChanged++;
+            newRow[VOLT_COL] = fv;
+            changed.add(VOLT_COL);
+          }
         }
-        const { fixed: fixedVal, changed: wasChanged } = fixVolt(voltVal);
-        if (wasChanged) changed++;
-        return { ...row, [VOLT_COL]: fixedVal };
-      });
+
+        // 2) Beschreibungen updaten wenn Volt geändert wurde
+        if (voltWasChanged) {
+          for (const col of DESC_COLS) {
+            const descVal = row[col];
+            if (!descVal) continue;
+            const { result, changed: dc } = replaceSpannungInHtml(descVal, voltVal.trim(), newVolt);
+            if (dc) {
+              newRow[col] = result;
+              changed.add(col);
+              descChanged++;
+            }
+          }
+        }
+
+        fixedRows.push(newRow);
+        changedColsList.push(changed);
+      }
+
       setFixed(fixedRows);
-      setStats({ total: rows.length, changed, skipped });
+      setChangedCols(changedColsList);
+      setStats({ total: rows.length, voltChanged, voltSkipped, descChanged });
     };
     reader.readAsText(file, "utf-8");
   }, []);
@@ -110,15 +195,18 @@ export default function VoltFixer() {
   };
 
   const hasVoltCol = headers.includes(VOLT_COL);
-  const previewRows = fixed.slice(0, 200);
-  const hasMore = fixed.length > 200;
+  const previewRows = fixed.slice(0, 100);
+  const hasMore = fixed.length > 100;
+
+  // HTML-Beschreibungsspalten für kompakte Darstellung in Vorschau
+  const isDescCol = (h: string) => h.startsWith("p_description");
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Volt-Komma Fixer</h1>
         <p className="text-gray-500 mt-1">
-          Setzt Kommas in der Spalte <code className="bg-gray-100 px-1 rounded text-sm">{VOLT_COL}</code> — z.B. <strong>385 → 3,85</strong>, <strong>48 → 4,8</strong>
+          Korrigiert <code className="bg-gray-100 px-1 rounded text-sm">{VOLT_COL}</code> (z.B. <strong>385 → 3,85</strong>) und aktualisiert automatisch den Spannungswert in den Produktbeschreibungen.
         </p>
       </div>
 
@@ -145,9 +233,10 @@ export default function VoltFixer() {
             <FileText size={16} className="text-gray-500" />
             <span className="text-sm font-medium text-gray-700">{fileName}</span>
           </div>
-          <Badge variant="outline" className="text-gray-600">{stats.total.toLocaleString()} Zeilen gesamt</Badge>
-          <Badge className="bg-indigo-600 text-white">{stats.changed.toLocaleString()} Werte korrigiert</Badge>
-          <Badge variant="outline" className="text-gray-400">{stats.skipped.toLocaleString()} leer (übersprungen)</Badge>
+          <Badge variant="outline">{stats.total.toLocaleString()} Zeilen</Badge>
+          <Badge className="bg-indigo-600 text-white">{stats.voltChanged.toLocaleString()} Volt-Werte korrigiert</Badge>
+          <Badge className="bg-green-600 text-white">{stats.descChanged.toLocaleString()} Beschreibungen aktualisiert</Badge>
+          <Badge variant="outline" className="text-gray-400">{stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           {!hasVoltCol && (
             <Badge variant="destructive">
               <AlertCircle size={12} className="mr-1" />
@@ -165,59 +254,66 @@ export default function VoltFixer() {
         </Button>
       )}
 
-      {/* Preview table */}
+      {/* Preview table – alle Spalten */}
       {fixed.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">
-            Spaltenvorschau
-            {hasMore && <span className="text-sm font-normal text-gray-400 ml-2">(erste 200 von {fixed.length.toLocaleString()} Zeilen)</span>}
+          <h2 className="text-lg font-semibold text-gray-800 mb-1">
+            Vollständige Spaltenvorschau
           </h2>
+          <p className="text-sm text-gray-400 mb-3">
+            {hasMore ? `Erste 100 von ${fixed.length.toLocaleString()} Zeilen` : `${fixed.length.toLocaleString()} Zeilen`}
+            {" · "}
+            Geänderte Felder sind <span className="text-indigo-600 font-medium">blau</span> hervorgehoben
+          </p>
           <div className="border rounded-xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b">
-                    <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">#</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">{ID_COL}</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Volt (Original)</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Volt (Korrigiert)</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-600 whitespace-nowrap">Status</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap sticky left-0 bg-gray-50 z-10">#</th>
+                    {headers.map((h) => (
+                      <th
+                        key={h}
+                        className={`px-3 py-2 text-left font-semibold whitespace-nowrap ${
+                          h === VOLT_COL ? "text-indigo-700 bg-indigo-50" :
+                          isDescCol(h) ? "text-green-700 bg-green-50" :
+                          "text-gray-600"
+                        }`}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {previewRows.map((row, i) => {
-                    const origVal = original[i]?.[VOLT_COL] ?? "";
-                    const fixedVal = row[VOLT_COL] ?? "";
-                    const changed = origVal !== fixedVal;
+                    const changed = changedCols[i] ?? new Set();
                     return (
-                      <tr key={i} className={`border-b last:border-0 ${changed ? "bg-indigo-50" : "bg-white"}`}>
-                        <td className="px-4 py-2 text-gray-400">{i + 1}</td>
-                        <td className="px-4 py-2 text-gray-700 font-mono text-xs">{row[ID_COL] ?? ""}</td>
-                        <td className="px-4 py-2">
-                          {origVal ? (
-                            <span className={changed ? "text-red-500 line-through" : "text-gray-700"}>{origVal}</span>
-                          ) : (
-                            <span className="text-gray-300 italic">leer</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2">
-                          {fixedVal ? (
-                            <span className={changed ? "font-semibold text-indigo-700" : "text-gray-700"}>{fixedVal}</span>
-                          ) : (
-                            <span className="text-gray-300 italic">leer</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2">
-                          {!origVal.trim() ? (
-                            <span className="text-gray-400 text-xs">übersprungen</span>
-                          ) : changed ? (
-                            <span className="inline-flex items-center gap-1 text-indigo-600 text-xs font-medium">
-                              <CheckCircle size={12} /> korrigiert
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs">unverändert</span>
-                          )}
-                        </td>
+                      <tr key={i} className={`border-b last:border-0 ${changed.size > 0 ? "bg-indigo-50/40" : "bg-white"}`}>
+                        <td className="px-3 py-1.5 text-gray-400 sticky left-0 bg-inherit z-10">{i + 1}</td>
+                        {headers.map((h) => {
+                          const origVal = original[i]?.[h] ?? "";
+                          const fixedVal = row[h] ?? "";
+                          const wasChanged = changed.has(h);
+                          const displayVal = isDescCol(h) ? truncatePreview(fixedVal) : fixedVal;
+                          const origDisplay = isDescCol(h) ? truncatePreview(origVal) : origVal;
+
+                          return (
+                            <td key={h} className={`px-3 py-1.5 max-w-xs ${wasChanged ? "bg-indigo-50" : ""}`}>
+                              {wasChanged ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-red-400 line-through opacity-70">{origDisplay || "—"}</span>
+                                  <span className="text-indigo-700 font-semibold">
+                                    <CheckCircle size={10} className="inline mr-1" />
+                                    {displayVal || "—"}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-700">{displayVal || <span className="text-gray-300">—</span>}</span>
+                              )}
+                            </td>
+                          );
+                        })}
                       </tr>
                     );
                   })}
@@ -227,7 +323,7 @@ export default function VoltFixer() {
           </div>
           {hasMore && (
             <p className="text-sm text-gray-400 mt-2 text-center">
-              … {(fixed.length - 200).toLocaleString()} weitere Zeilen im Download enthalten
+              … {(fixed.length - 100).toLocaleString()} weitere Zeilen im Download enthalten
             </p>
           )}
         </div>
