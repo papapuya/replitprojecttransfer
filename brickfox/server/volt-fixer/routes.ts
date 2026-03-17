@@ -28,6 +28,14 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
   if (trimmed.includes(',') || trimmed.includes('.')) return { fixed: trimmed, changed: false };
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   if (trimmed.length === 1) return { fixed: trimmed, changed: false };
+  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX,Y (z.B. 111→11,1, 144→14,4, 222→22,2, 108→10,8)
+  if (trimmed.length === 3) {
+    const firstTwo = parseInt(trimmed.slice(0, 2), 10);
+    if (firstTwo >= 10 && firstTwo <= 24) {
+      return { fixed: trimmed.slice(0, 2) + ',' + trimmed[2], changed: true };
+    }
+  }
+  // Standard: Komma nach erster Stelle (z.B. 385→3,85, 48→4,8, 36→3,6)
   return { fixed: trimmed[0] + ',' + trimmed.slice(1), changed: true };
 }
 
@@ -55,18 +63,23 @@ function extractVoltFromName(name: string): string | null {
   return fixed;
 }
 
-function replaceSpannungInHtml(html: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
-  if (!html || !oldVolt || !newVolt || oldVolt === newVolt) return { result: html, changed: false };
+// Setzt den Spannung-Wert in der HTML-Tabelle immer auf den korrekten Volt-Wert aus der Volt-Spalte.
+// Wird aufgerufen unabhängig davon ob der Volt-Wert geändert wurde – damit auch "11,1 bereits korrekt in Spalte, aber 1,1 in Beschreibung" korrekt wird.
+function setSpannungInHtml(html: string, targetVolt: string): { result: string; changed: boolean } {
+  if (!html || !targetVolt) return { result: html, changed: false };
   const regex = /(<td[^>]*>\s*Spannung\s*<\/td>\s*<td[^>]*>)([^<]*)(<\/td>)/gi;
   let changed = false;
   const result = html.replace(regex, (_match, before, value, after) => {
-    const trimmedValue = value.trim();
-    if (trimmedValue === oldVolt || trimmedValue.startsWith(oldVolt + ' ') || trimmedValue.startsWith(oldVolt + ',')) {
-      changed = true;
-      const suffix = trimmedValue.slice(oldVolt.length);
-      return before + newVolt + suffix + after;
+    const currentVal = value.trim();
+    // Erwarteter Wert: z.B. "11,1 V" oder "11,1V"
+    const expectedWithUnit = targetVolt + ' V';
+    if (currentVal === expectedWithUnit || currentVal === targetVolt) {
+      return before + value + after; // bereits korrekt, nichts tun
     }
-    return before + value + after;
+    changed = true;
+    // Einheit " V" anhängen falls noch nicht vorhanden
+    const suffix = currentVal.endsWith(' V') ? ' V' : (currentVal.endsWith('V') ? 'V' : ' V');
+    return before + targetVolt + suffix + after;
   });
   return { result, changed };
 }
