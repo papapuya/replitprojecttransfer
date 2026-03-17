@@ -235,7 +235,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     // Korrigierte CSV bauen
     const csvOut = Papa.unparse(fixedRows, { delimiter: ';', columns: headers });
-    const csvBuffer = Buffer.from(csvOut, 'utf-8');
+    const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
     // Job speichern (30 Minuten)
     const jobId = crypto.randomBytes(16).toString('hex');
