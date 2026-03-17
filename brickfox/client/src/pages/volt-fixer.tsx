@@ -21,12 +21,18 @@ type PreviewEntry = {
   changed: string[];
 };
 
+type ChangedNameEntry = {
+  itemNr: string;
+  cols: Array<{ col: string; before: string; after: string }>;
+};
+
 type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
   stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number };
   preview: PreviewEntry[];
+  allChangedNames: ChangedNameEntry[];
 };
 
 // Detail-Modal
@@ -240,56 +246,41 @@ export default function VoltFixer() {
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           </div>
 
-          {/* Geänderte Namen */}
-          {result.stats.nameChanged > 0 && (() => {
-            const changedNameRows = result.preview.filter((e) =>
-              NAME_COLS.some((col) => e.changed.includes(col))
-            );
-            return (
-              <div>
-                <h2 className="text-lg font-semibold text-gray-800 mb-1">
-                  Geänderte Produktnamen
-                  <span className="ml-2 text-sm font-normal text-gray-400">
-                    ({changedNameRows.length} von {result.stats.nameChanged.toLocaleString()} in Vorschau)
-                  </span>
-                </h2>
-                <div className="border rounded-xl overflow-hidden shadow-sm divide-y">
-                  {changedNameRows.map((entry, i) => {
-                    const itemNr = entry.row["p_item_number"] || entry.row["v_item_number"] || `Zeile ${i + 1}`;
-                    return (
-                      <div key={i} className="px-4 py-3 bg-white hover:bg-gray-50">
-                        <p className="text-xs text-gray-400 mb-2 font-mono">{itemNr}</p>
-                        <div className="space-y-2">
-                          {NAME_COLS.filter((col) => entry.changed.includes(col)).map((col) => (
-                            <div key={col} className="flex flex-col gap-1">
-                              <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">
-                                {NAME_COL_LABELS[col] ?? col}
-                              </span>
-                              <div className="flex items-start gap-3 text-sm">
-                                <span className="text-red-400 line-through opacity-80 flex-1">
-                                  {entry.original[col] || "—"}
-                                </span>
-                                <span className="text-gray-400 shrink-0">→</span>
-                                <span className="text-indigo-700 font-medium flex-1 inline-flex items-center gap-1">
-                                  <CheckCircle size={13} className="shrink-0 text-indigo-500" />
-                                  {entry.row[col] || "—"}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+          {/* Geänderte Namen – alle vollständig */}
+          {result.allChangedNames.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-1">
+                Geänderte Produktnamen
+                <span className="ml-2 text-sm font-normal text-gray-400">
+                  {result.allChangedNames.length.toLocaleString()} Produkte
+                </span>
+              </h2>
+              <div className="border rounded-xl overflow-hidden shadow-sm divide-y max-h-[600px] overflow-y-auto">
+                {result.allChangedNames.map((entry, i) => (
+                  <div key={i} className="px-4 py-3 bg-white hover:bg-gray-50">
+                    <p className="text-xs text-gray-400 mb-2 font-mono">{entry.itemNr || `Zeile ${i + 1}`}</p>
+                    <div className="space-y-2">
+                      {entry.cols.map(({ col, before, after }) => (
+                        <div key={col} className="flex flex-col gap-1">
+                          <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">
+                            {NAME_COL_LABELS[col] ?? col}
+                          </span>
+                          <div className="flex items-start gap-3 text-sm">
+                            <span className="text-red-400 line-through opacity-80 flex-1">{before || "—"}</span>
+                            <span className="text-gray-400 shrink-0">→</span>
+                            <span className="text-indigo-700 font-medium flex-1 inline-flex items-center gap-1">
+                              <CheckCircle size={13} className="shrink-0 text-indigo-500" />
+                              {after || "—"}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {result.stats.nameChanged > changedNameRows.length && (
-                  <p className="text-sm text-gray-400 mt-2">
-                    … {(result.stats.nameChanged - changedNameRows.length).toLocaleString()} weitere Änderungen im Download enthalten
-                  </p>
-                )}
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            );
-          })()}
+            </div>
+          )}
 
           {/* Download */}
           <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
