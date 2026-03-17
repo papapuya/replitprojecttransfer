@@ -105,6 +105,11 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0;
     const fixedRows: Record<string, string>[] = [];
     const changedCols: string[][] = [];
+    // Alle geänderten Namen (für vollständige Anzeige im Frontend)
+    const allChangedNames: Array<{
+      itemNr: string;
+      cols: Array<{ col: string; before: string; after: string }>;
+    }> = [];
 
     for (const row of rows) {
       const newRow = { ...row };
@@ -140,16 +145,24 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
 
         // Produktnamen abgleichen: Original-Volt-Wert im Namen suchen und ersetzen
+        const changedNameCols: Array<{ col: string; before: string; after: string }> = [];
         for (const col of NAME_COLS) {
           if (!headers.includes(col)) continue;
           const nameVal = row[col];
           if (!nameVal) continue;
           const { result, changed: nc } = replaceSpannungInName(nameVal, voltVal, newVolt);
           if (nc) {
+            changedNameCols.push({ col, before: nameVal, after: result });
             newRow[col] = result;
             changed.push(col);
             nameChanged++;
           }
+        }
+        if (changedNameCols.length > 0) {
+          allChangedNames.push({
+            itemNr: row['p_item_number'] || row['v_item_number'] || '',
+            cols: changedNameCols,
+          });
         }
       }
 
@@ -181,6 +194,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       headers,
       stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged },
       preview,
+      allChangedNames,
       fileName: jobStore.get(jobId)!.fileName,
     });
   } catch (err: any) {
