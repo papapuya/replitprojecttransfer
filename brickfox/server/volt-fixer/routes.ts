@@ -45,6 +45,16 @@ function replaceSpannungInName(text: string, oldVolt: string, newVolt: string): 
   return { result, changed };
 }
 
+// Extrahiert Volt-Wert aus Produktnamen, z.B. "3,85V" → "3,85", "385V" → "3,85", "4,8 Volt" → "4,8"
+function extractVoltFromName(name: string): string | null {
+  if (!name) return null;
+  const match = name.match(/\b(\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
+  if (!match) return null;
+  const raw = match[1].replace('.', ',');
+  const { fixed } = fixVolt(raw); // Komma setzen falls nötig (z.B. 385 → 3,85)
+  return fixed;
+}
+
 function replaceSpannungInHtml(html: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
   if (!html || !oldVolt || !newVolt || oldVolt === newVolt) return { result: html, changed: false };
   const regex = /(<td[^>]*>\s*Spannung\s*<\/td>\s*<td[^>]*>)([^<]*)(<\/td>)/gi;
@@ -102,13 +112,20 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const headers = parsed.meta.fields || [];
     const rows = parsed.data as Record<string, string>[];
 
-    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0;
+    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0;
     const fixedRows: Record<string, string>[] = [];
     const changedCols: string[][] = [];
     // Alle geänderten Namen (für vollständige Anzeige im Frontend)
     const allChangedNames: Array<{
       itemNr: string;
       cols: Array<{ col: string; before: string; after: string }>;
+    }> = [];
+    // Alle aus Produktnamen extrahierten Volt-Werte
+    const allExtractedVolt: Array<{
+      itemNr: string;
+      extractedVolt: string;
+      fromName: string;
+      fromCol: string;
     }> = [];
 
     for (const row of rows) {
@@ -119,7 +136,39 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       let voltWasChanged = false;
 
       if (!voltVal) {
-        voltSkipped++;
+        // Volt-Spalte leer → versuche aus Produktnamen zu extrahieren
+        let extracted: string | null = null;
+        let extractedFromCol = '';
+        let extractedFromName = '';
+        for (const col of NAME_COLS) {
+          if (!headers.includes(col)) continue;
+          const nameVal = row[col];
+          if (!nameVal) continue;
+          const found = extractVoltFromName(nameVal);
+          if (found) {
+            extracted = found;
+            extractedFromCol = col;
+            extractedFromName = nameVal;
+            break;
+          }
+        }
+
+        if (extracted) {
+          // Volt-Spalte befüllen
+          newRow[VOLT_COL] = extracted;
+          changed.push(VOLT_COL);
+          voltExtracted++;
+          newVolt = extracted;
+          voltWasChanged = true;
+          allExtractedVolt.push({
+            itemNr: row['p_item_number'] || row['v_item_number'] || '',
+            extractedVolt: extracted,
+            fromName: extractedFromName,
+            fromCol: extractedFromCol,
+          });
+        } else {
+          voltSkipped++;
+        }
       } else {
         const { fixed: fv, changed: wc } = fixVolt(voltVal);
         newVolt = fv;
@@ -192,9 +241,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted },
       preview,
       allChangedNames,
+      allExtractedVolt,
       fileName: jobStore.get(jobId)!.fileName,
     });
   } catch (err: any) {
