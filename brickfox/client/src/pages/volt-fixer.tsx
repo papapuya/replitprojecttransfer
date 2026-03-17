@@ -258,7 +258,7 @@ export default function VoltFixer() {
           </div>
 
           {/* Aus Produktnamen extrahierte Volt-Werte */}
-          {result.allExtractedVolt.length > 0 && (
+          {(result.allExtractedVolt ?? []).length > 0 && (
             <div>
               <h2 className="text-lg font-semibold text-gray-800 mb-1">
                 Volt-Werte aus Produktnamen ergänzt
