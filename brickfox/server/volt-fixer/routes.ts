@@ -102,7 +102,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const headers = parsed.meta.fields || [];
     const rows = parsed.data as Record<string, string>[];
 
-    let voltChanged = 0, voltSkipped = 0, descChanged = 0;
+    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0;
     const fixedRows: Record<string, string>[] = [];
     const changedCols: string[][] = [];
 
@@ -127,6 +127,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       }
 
       if (voltWasChanged) {
+        // Beschreibungen aktualisieren (HTML-Tabelle Spannung-Zeile)
         for (const col of DESC_COLS) {
           const descVal = row[col];
           if (!descVal) continue;
@@ -135,6 +136,19 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
             newRow[col] = result;
             changed.push(col);
             descChanged++;
+          }
+        }
+
+        // Produktnamen abgleichen: Original-Volt-Wert im Namen suchen und ersetzen
+        for (const col of NAME_COLS) {
+          if (!headers.includes(col)) continue;
+          const nameVal = row[col];
+          if (!nameVal) continue;
+          const { result, changed: nc } = replaceSpannungInName(nameVal, voltVal, newVolt);
+          if (nc) {
+            newRow[col] = result;
+            changed.push(col);
+            nameChanged++;
           }
         }
       }
@@ -165,7 +179,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged },
       preview,
       fileName: jobStore.get(jobId)!.fileName,
     });
