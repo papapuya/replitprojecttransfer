@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 const VOLT_COL = "p_attributes[akku_v][de]";
-const ID_COL = "v_item_number";
+const ID_COL = "p_item_number";
 const DESC_COLS = ["p_description[de]", "p_description[nl]"];
 
 // Setzt Komma nach erster Stelle: 385 → 3,85 | 48 → 4,8
