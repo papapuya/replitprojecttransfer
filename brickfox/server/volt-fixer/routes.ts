@@ -63,21 +63,20 @@ function extractVoltFromName(name: string): string | null {
   return fixed;
 }
 
-// Setzt den Spannung-Wert in der HTML-Tabelle immer auf den korrekten Volt-Wert aus der Volt-Spalte.
-// Wird aufgerufen unabhängig davon ob der Volt-Wert geändert wurde – damit auch "11,1 bereits korrekt in Spalte, aber 1,1 in Beschreibung" korrekt wird.
+// Setzt den Spannung/Nennspannung-Wert in der HTML-Tabelle immer auf den korrekten Volt-Wert.
+// Findet sowohl "Spannung" als auch "Nennspannung" als Label in der Tabelle.
 function setSpannungInHtml(html: string, targetVolt: string): { result: string; changed: boolean } {
   if (!html || !targetVolt) return { result: html, changed: false };
-  const regex = /(<td[^>]*>\s*Spannung\s*<\/td>\s*<td[^>]*>)([^<]*)(<\/td>)/gi;
+  const regex = /(<td[^>]*>\s*(?:Nenn)?[Ss]pannung\s*<\/td>\s*<td[^>]*>)([^<]*)(<\/td>)/gi;
   let changed = false;
   const result = html.replace(regex, (_match, before, value, after) => {
     const currentVal = value.trim();
-    // Erwarteter Wert: z.B. "11,1 V" oder "11,1V"
     const expectedWithUnit = targetVolt + ' V';
     if (currentVal === expectedWithUnit || currentVal === targetVolt) {
       return before + value + after; // bereits korrekt, nichts tun
     }
     changed = true;
-    // Einheit " V" anhängen falls noch nicht vorhanden
+    // Einheit beibehalten: wenn aktuell " V" → " V", wenn "V" → "V", sonst " V" anhängen
     const suffix = currentVal.endsWith(' V') ? ' V' : (currentVal.endsWith('V') ? 'V' : ' V');
     return before + targetVolt + suffix + after;
   });
@@ -193,19 +192,21 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
-      if (voltWasChanged) {
-        // Beschreibungen aktualisieren (HTML-Tabelle Spannung-Zeile)
+      // Beschreibungen IMMER aktualisieren wenn Volt-Wert vorhanden (auch wenn bereits korrekt in Spalte)
+      if (newVolt) {
         for (const col of DESC_COLS) {
           const descVal = row[col];
           if (!descVal) continue;
-          const { result, changed: dc } = replaceSpannungInHtml(descVal, voltVal, newVolt);
+          const { result, changed: dc } = setSpannungInHtml(descVal, newVolt);
           if (dc) {
             newRow[col] = result;
             changed.push(col);
             descChanged++;
           }
         }
+      }
 
+      if (voltWasChanged) {
         // Produktnamen abgleichen: Original-Volt-Wert im Namen suchen und ersetzen
         const changedNameCols: Array<{ col: string; before: string; after: string }> = [];
         for (const col of NAME_COLS) {
