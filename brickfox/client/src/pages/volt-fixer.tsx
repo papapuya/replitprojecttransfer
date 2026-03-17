@@ -109,12 +109,21 @@ export default function VoltFixer() {
   const [isDragging, setIsDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [error, setError] = useState("");
+
   const processFile = useCallback((file: File) => {
     setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
+    setError("");
+    setFixed([]);
+    setOriginal([]);
+    setHeaders([]);
+
+    const tryParse = (text: string) => {
       const { headers: h, rows } = parseCsv(text);
+      if (h.length === 0 || rows.length === 0) {
+        setError(`Keine Daten gefunden. Spalten erkannt: ${h.join(", ") || "keine"}`);
+        return;
+      }
       setHeaders(h);
       setOriginal(rows);
 
@@ -165,6 +174,28 @@ export default function VoltFixer() {
       setFixed(fixedRows);
       setChangedCols(changedColsList);
       setStats({ total: rows.length, voltChanged, voltSkipped, descChanged });
+    };
+
+    // Zuerst UTF-8 versuchen, bei Problemen auf Windows-1252 (latin1) zurückfallen
+    const reader = new FileReader();
+    reader.onerror = () => setError("Datei konnte nicht gelesen werden.");
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (!text || text.trim().length === 0) {
+        // Fallback: Windows-1252
+        const reader2 = new FileReader();
+        reader2.onload = (e2) => {
+          const text2 = e2.target?.result as string;
+          if (!text2 || text2.trim().length === 0) {
+            setError("Datei ist leer oder konnte nicht gelesen werden.");
+          } else {
+            tryParse(text2);
+          }
+        };
+        reader2.readAsText(file, "windows-1252");
+      } else {
+        tryParse(text);
+      }
     };
     reader.readAsText(file, "utf-8");
   }, []);
@@ -225,6 +256,14 @@ export default function VoltFixer() {
         <p className="text-sm text-gray-400 mt-1">Semikolon-getrennt, beliebig viele Spalten</p>
         <input ref={fileRef} type="file" accept=".csv,.CSV" className="hidden" onChange={onFileChange} />
       </div>
+
+      {/* Fehler */}
+      {error && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700">
+          <AlertCircle size={16} />
+          <span className="text-sm">{error}</span>
+        </div>
+      )}
 
       {/* Stats */}
       {original.length > 0 && (
