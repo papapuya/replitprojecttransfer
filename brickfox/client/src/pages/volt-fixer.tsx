@@ -26,13 +26,21 @@ type ChangedNameEntry = {
   cols: Array<{ col: string; before: string; after: string }>;
 };
 
+type ExtractedVoltEntry = {
+  itemNr: string;
+  extractedVolt: string;
+  fromName: string;
+  fromCol: string;
+};
+
 type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number };
   preview: PreviewEntry[];
   allChangedNames: ChangedNameEntry[];
+  allExtractedVolt: ExtractedVoltEntry[];
 };
 
 // Detail-Modal
@@ -239,12 +247,44 @@ export default function VoltFixer() {
             </div>
             <Badge variant="outline">{result.stats.total.toLocaleString()} Zeilen</Badge>
             <Badge className="bg-indigo-600 text-white">{result.stats.voltChanged.toLocaleString()} Volt-Werte korrigiert</Badge>
+            {result.stats.voltExtracted > 0 && (
+              <Badge className="bg-orange-500 text-white">{result.stats.voltExtracted.toLocaleString()} aus Namen ergänzt</Badge>
+            )}
             <Badge className="bg-green-600 text-white">{result.stats.descChanged.toLocaleString()} Beschreibungen aktualisiert</Badge>
             {result.stats.nameChanged > 0 && (
               <Badge className="bg-purple-600 text-white">{result.stats.nameChanged.toLocaleString()} Namen aktualisiert</Badge>
             )}
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           </div>
+
+          {/* Aus Produktnamen extrahierte Volt-Werte */}
+          {result.allExtractedVolt.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-1">
+                Volt-Werte aus Produktnamen ergänzt
+                <span className="ml-2 text-sm font-normal text-gray-400">
+                  {result.allExtractedVolt.length.toLocaleString()} Produkte · Volt-Spalte war leer
+                </span>
+              </h2>
+              <div className="border rounded-xl overflow-hidden shadow-sm divide-y max-h-[400px] overflow-y-auto">
+                {result.allExtractedVolt.map((entry, i) => (
+                  <div key={i} className="px-4 py-3 bg-white hover:bg-orange-50 flex items-start gap-4">
+                    <div className="shrink-0">
+                      <p className="text-xs text-gray-400 font-mono">{entry.itemNr || `Zeile ${i + 1}`}</p>
+                      <span className="text-xs text-gray-400">{NAME_COL_LABELS[entry.fromCol] ?? entry.fromCol}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-700 truncate">{entry.fromName}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="text-xs text-gray-400">Eingetragen:</span>
+                      <p className="text-base font-bold text-orange-600">{entry.extractedVolt} V</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Geänderte Namen – alle vollständig */}
           {result.allChangedNames.length > 0 && (
