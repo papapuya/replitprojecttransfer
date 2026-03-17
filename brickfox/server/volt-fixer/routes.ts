@@ -9,6 +9,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 102
 
 const VOLT_COL = 'p_attributes[akku_v][de]';
 const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
+const NAME_COLS = ['p_name[de]', 'p_name[nl]'];
 
 // Temporärer Speicher für verarbeitete Ergebnisse (max 30 Minuten)
 const jobStore = new Map<string, { csvBuffer: Buffer; fileName: string; expires: number }>();
@@ -28,6 +29,20 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   if (trimmed.length === 1) return { fixed: trimmed, changed: false };
   return { fixed: trimmed[0] + ',' + trimmed.slice(1), changed: true };
+}
+
+// Ersetzt Volt-Wert in Produktnamen (Plaintext), z.B. "385 V" → "3,85 V", "385 Volt" → "3,85 Volt"
+function replaceSpannungInName(text: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
+  if (!text || !oldVolt || !newVolt || oldVolt === newVolt) return { result: text, changed: false };
+  const escaped = oldVolt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Sucht den alten Wert nur wenn gefolgt von V oder Volt (mit optionalem Leerzeichen)
+  const regex = new RegExp(`\\b${escaped}(\\s*V(?:olt)?)\\b`, 'g');
+  let changed = false;
+  const result = text.replace(regex, (_match, suffix) => {
+    changed = true;
+    return newVolt + suffix;
+  });
+  return { result, changed };
 }
 
 function replaceSpannungInHtml(html: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
