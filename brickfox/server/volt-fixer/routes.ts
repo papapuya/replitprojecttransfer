@@ -5,7 +5,7 @@ import iconv from 'iconv-lite';
 import crypto from 'crypto';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 * 1024 } }); // 1 GB
 
 const VOLT_COL = 'p_attributes[akku_v][de]';
 const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
