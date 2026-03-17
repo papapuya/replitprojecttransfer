@@ -110,32 +110,23 @@ export default function VoltFixer() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [processing, setProcessing] = useState(false);
 
-  const processFile = useCallback((file: File) => {
-    setFileName(file.name);
-    setError("");
-    setFixed([]);
-    setOriginal([]);
-    setHeaders([]);
+  const processRows = useCallback(async (h: string[], rows: Record<string, string>[]) => {
+    setProcessing(true);
+    setProgress(0);
 
-    const tryParse = (text: string) => {
-      const { headers: h, rows } = parseCsv(text);
-      if (h.length === 0 || rows.length === 0) {
-        setError(`Keine Daten gefunden. Spalten erkannt: ${h.join(", ") || "keine"}`);
-        return;
-      }
-      setHeaders(h);
-      setOriginal(rows);
+    const CHUNK = 2000;
+    let voltChanged = 0, voltSkipped = 0, descChanged = 0;
+    const fixedRows: Record<string, string>[] = [];
+    const changedColsList: Set<string>[] = [];
 
-      let voltChanged = 0, voltSkipped = 0, descChanged = 0;
-      const fixedRows: Record<string, string>[] = [];
-      const changedColsList: Set<string>[] = [];
-
-      for (const row of rows) {
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      for (const row of chunk) {
         const newRow = { ...row };
         const changed = new Set<string>();
-
-        // 1) Volt-Spalte korrigieren
         const voltVal = row[VOLT_COL] ?? "";
         let newVolt = voltVal;
         let voltWasChanged = false;
@@ -152,8 +143,6 @@ export default function VoltFixer() {
             changed.add(VOLT_COL);
           }
         }
-
-        // 2) Beschreibungen updaten wenn Volt geändert wurde
         if (voltWasChanged) {
           for (const col of DESC_COLS) {
             const descVal = row[col];
@@ -166,23 +155,45 @@ export default function VoltFixer() {
             }
           }
         }
-
         fixedRows.push(newRow);
         changedColsList.push(changed);
       }
+      // Browser zwischen Chunks kurz freigeben
+      setProgress(Math.round(((i + chunk.length) / rows.length) * 100));
+      await new Promise((res) => setTimeout(res, 0));
+    }
 
-      setFixed(fixedRows);
-      setChangedCols(changedColsList);
-      setStats({ total: rows.length, voltChanged, voltSkipped, descChanged });
+    setFixed(fixedRows);
+    setChangedCols(changedColsList);
+    setStats({ total: rows.length, voltChanged, voltSkipped, descChanged });
+    setProcessing(false);
+    setProgress(100);
+  }, []);
+
+  const processFile = useCallback((file: File) => {
+    setFileName(file.name);
+    setError("");
+    setFixed([]);
+    setOriginal([]);
+    setHeaders([]);
+    setProgress(0);
+
+    const tryParse = (text: string) => {
+      const { headers: h, rows } = parseCsv(text);
+      if (h.length === 0 || rows.length === 0) {
+        setError(`Keine Daten gefunden. Spalten erkannt: ${h.join(", ") || "keine"}`);
+        return;
+      }
+      setHeaders(h);
+      setOriginal(rows);
+      processRows(h, rows);
     };
 
-    // Zuerst UTF-8 versuchen, bei Problemen auf Windows-1252 (latin1) zurückfallen
     const reader = new FileReader();
     reader.onerror = () => setError("Datei konnte nicht gelesen werden.");
     reader.onload = (e) => {
       const text = e.target?.result as string;
       if (!text || text.trim().length === 0) {
-        // Fallback: Windows-1252
         const reader2 = new FileReader();
         reader2.onload = (e2) => {
           const text2 = e2.target?.result as string;
@@ -198,7 +209,7 @@ export default function VoltFixer() {
       }
     };
     reader.readAsText(file, "utf-8");
-  }, []);
+  }, [processRows]);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -256,6 +267,22 @@ export default function VoltFixer() {
         <p className="text-sm text-gray-400 mt-1">Semikolon-getrennt, beliebig viele Spalten</p>
         <input ref={fileRef} type="file" accept=".csv,.CSV" className="hidden" onChange={onFileChange} />
       </div>
+
+      {/* Fortschritt */}
+      {processing && (
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>Verarbeite Daten…</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-indigo-600 h-3 rounded-full transition-all duration-150"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Fehler */}
       {error && (
