@@ -118,14 +118,25 @@ function replaceSpannungInName(text: string, oldVolt: string, newVolt: string): 
 // andere Schreibweise enthält.
 function syncVoltInName(text: string, targetVolt: string): { result: string; changed: boolean } {
   if (!text || !targetVolt) return { result: text, changed: false };
-  // Bereichswerte (z.B. "100-240", "12/24") kommen aus dem Namen selbst → nichts ersetzen
-  if (targetVolt.includes('-') || targetVolt.includes('/')) return { result: text, changed: false };
   let changed = false;
-  const result = text.replace(/\b(\d+(?:[,\.]\d+)?)(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
-    if (num === targetVolt) return _match;
-    changed = true;
-    return targetVolt + suffix;
-  });
+  let result = text;
+  if (targetVolt.includes('-') || targetVolt.includes('/')) {
+    // Bereichswert: Format normalisieren → immer "X V" (Leerzeichen, Volt→V)
+    // z.B. "100-240V" → "100-240 V", "12/24 Volt" → "12/24 V"
+    result = text.replace(/\b(\d+(?:[,.]?\d+)?[-\/]\d+(?:[,.]?\d+)?)\s*(V(?:olt)?)\b/gi, (_match, range, _unit) => {
+      const normalized = range + ' V';
+      if (normalized === _match.trim()) return _match;
+      changed = true;
+      return normalized;
+    });
+  } else {
+    // Einfacher Wert: falsche Schreibweisen ersetzen
+    result = text.replace(/\b(\d+(?:[,\.]\d+)?)(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
+      if (num === targetVolt) return _match;
+      changed = true;
+      return targetVolt + suffix;
+    });
+  }
   return { result, changed };
 }
 
