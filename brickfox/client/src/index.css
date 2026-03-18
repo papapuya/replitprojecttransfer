@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── HTML-Vorschau (Detail-Modal Volt-Fixer & Generator) ── */
+.html-preview {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #1f2937;
+}
+.html-preview h1 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.5rem; }
+.html-preview h2 { font-size: 1.1rem;  font-weight: 700; margin: 0.75rem 0 0.5rem; }
+.html-preview h3 { font-size: 0.95rem; font-weight: 600; margin: 0.6rem 0 0.4rem; }
+.html-preview p  { margin: 0.4rem 0; }
+.html-preview ul, .html-preview ol { padding-left: 1.25rem; margin: 0.4rem 0; }
+.html-preview li { margin: 0.2rem 0; }
+.html-preview br { display: block; content: ""; margin-top: 0.2rem; }
+.html-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6rem 0;
+  font-size: 0.8rem;
+}
+.html-preview table td,
+.html-preview table th {
+  border: 1px solid #d1d5db;
+  padding: 0.35rem 0.6rem;
+  vertical-align: top;
+}
+.html-preview table tr:nth-child(even) td { background: #f9fafb; }
+.html-preview table td:first-child { font-weight: 500; color: #374151; white-space: nowrap; width: 40%; }
+
 /* Emoji-Unterstützung für alle Elemente */
 body, .prose, table, td, th, p, span, div {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
