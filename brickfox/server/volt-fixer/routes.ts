@@ -434,19 +434,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
-      // NL-Tabelle durch DE-Tabelle ersetzen (gleiche technische Daten in beiden Sprachen)
-      if (headers.includes('p_description[de]') && headers.includes('p_description[nl]')) {
-        const deHtml = newRow['p_description[de]'];
-        const nlHtml = newRow['p_description[nl]'];
-        if (deHtml && nlHtml) {
-          const { result: nlSynced, changed: ts } = syncTableFromDe(deHtml, nlHtml);
-          if (ts) {
-            newRow['p_description[nl]'] = nlSynced;
-            if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
-          }
-        }
-      }
-
       // Intelligente Beschreibungs-Angleichung: reichhaltigere Beschreibung als Basis
       if (useDeForNL && headers.includes('p_description[de]') && headers.includes('p_description[nl]')) {
         const deDesc = newRow['p_description[de]'] || '';
