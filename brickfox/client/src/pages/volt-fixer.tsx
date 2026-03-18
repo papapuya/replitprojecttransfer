@@ -698,7 +698,7 @@ export default function VoltFixer() {
                       <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name NL</th>
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">Beschreibung DE</th>
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">Beschreibung NL</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Geändert</th>
+                      <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt original</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -763,12 +763,8 @@ export default function VoltFixer() {
                               </span>
                             ) : <span className="text-gray-300">—</span>}
                           </td>
-                          <td className="px-3 py-1.5">
-                            {hasChange ? (
-                              <span className="text-xs text-indigo-600 font-medium">{item.changed.length} Feld{item.changed.length !== 1 ? "er" : ""}</span>
-                            ) : (
-                              <span className="text-xs text-gray-300">—</span>
-                            )}
+                          <td className="px-3 py-1.5 bg-indigo-50/40 font-mono text-xs text-indigo-700">
+                            {item.voltOrig || <span className="text-gray-300">—</span>}
                           </td>
                         </tr>
                       );
