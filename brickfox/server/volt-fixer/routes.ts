@@ -232,8 +232,8 @@ function cleanEmptyTableRows(html: string): { result: string; changed: boolean }
     const rawValue = cellMatches[cellMatches.length - 1][1];
     // HTML-Tags entfernen und trimmen für die Prüfung
     const val = rawValue.replace(/<[^>]+>/g, '').trim();
-    // Leer, '-', nur Nullen (0, 00, 000, 0000, ...) → Zeile löschen
-    if (val === '' || val === '-' || /^0+$/.test(val)) {
+    // Leer, '-', nur Nullen (0, 00, 0000, 0.0, 0.000, 0,000, ...) → Zeile löschen
+    if (val === '' || val === '-' || /^0+([.,]0+)?$/.test(val)) {
       changed = true;
       return '';
     }
