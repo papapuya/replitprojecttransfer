@@ -314,7 +314,7 @@ export default function VoltFixer() {
   const currentJobIdRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Fortschritt alle 1.5 Sekunden abrufen während Upload läuft
+  // Fortschritt alle 1 Sekunde abrufen während Upload läuft
   useEffect(() => {
     if (!loading || !currentJobIdRef.current) return;
     const id = currentJobIdRef.current;
@@ -323,6 +323,8 @@ export default function VoltFixer() {
         const r = await fetch(`/api/volt-fixer/progress/${id}`);
         if (r.ok) {
           const p: ProgressState = await r.json();
+          // "waiting" nicht anzeigen wenn wir bereits eine höhere Prozentzahl haben
+          if (p.step === 'waiting') return;
           setProgress(p);
         }
       } catch { /* ignorieren */ }
@@ -330,8 +332,7 @@ export default function VoltFixer() {
     return () => clearInterval(interval);
   }, [loading]);
 
-  const uploadFile = async (file: File) => {
-    // Neue Job-ID generieren
+  const uploadFile = (file: File) => {
     const clientJobId = crypto.randomUUID();
     currentJobIdRef.current = clientJobId;
 
@@ -339,7 +340,7 @@ export default function VoltFixer() {
     setError("");
     setResult(null);
     setPage(0);
-    setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: 2, detail: '' });
+    setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: 1, detail: `0 / ${(file.size / 1024 / 1024).toFixed(1)} MB` });
 
     const formData = new FormData();
     formData.append("file", file);
@@ -347,19 +348,41 @@ export default function VoltFixer() {
     formData.append("useDeForNL", String(useDeForNL));
     formData.append("clientJobId", clientJobId);
 
-    try {
-      const res = await fetch("/api/volt-fixer/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload fehlgeschlagen");
-      setResult(data);
-      setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
-    } catch (e: any) {
-      setError(e.message || "Unbekannter Fehler");
+    const xhr = new XMLHttpRequest();
+
+    // Echter Upload-Fortschritt (0–30%)
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const pct = Math.max(1, Math.round((e.loaded / e.total) * 30));
+      const loadedMB = (e.loaded / 1024 / 1024).toFixed(1);
+      const totalMB  = (e.total  / 1024 / 1024).toFixed(1);
+      setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: pct, detail: `${loadedMB} / ${totalMB} MB` });
+    };
+
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status >= 400) throw new Error(data.error || "Upload fehlgeschlagen");
+        setResult(data);
+        setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
+      } catch (e: any) {
+        setError(e.message || "Unbekannter Fehler");
+        setProgress(null);
+      } finally {
+        setLoading(false);
+        currentJobIdRef.current = null;
+      }
+    };
+
+    xhr.onerror = () => {
+      setError("Netzwerkfehler beim Upload");
       setProgress(null);
-    } finally {
       setLoading(false);
       currentJobIdRef.current = null;
-    }
+    };
+
+    xhr.open("POST", "/api/volt-fixer/upload");
+    xhr.send(formData);
   };
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -434,13 +457,14 @@ export default function VoltFixer() {
             {/* Schritt-Indikatoren */}
             <div className="flex justify-between text-xs text-gray-400">
               {[
+                { key: 'uploading',      label: 'Hochladen' },
                 { key: 'parsing',        label: 'Lesen' },
                 { key: 'fixing',         label: 'Korrigieren' },
                 { key: 'translating-nl', label: 'DE→NL' },
                 { key: 'translating-de', label: 'NL→DE' },
                 { key: 'building',       label: 'Aufbereiten' },
               ].map(({ key, label }) => {
-                const steps = ['parsing','fixing','translating-nl','translating-de','building','done'];
+                const steps = ['uploading','parsing','fixing','translating-nl','translating-de','building','done'];
                 const current = progress?.step ?? 'uploading';
                 const currentIdx = steps.indexOf(current);
                 const thisIdx = steps.indexOf(key);
