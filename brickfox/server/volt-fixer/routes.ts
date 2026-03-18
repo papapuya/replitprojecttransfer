@@ -5,10 +5,11 @@ import iconv from 'iconv-lite';
 import crypto from 'crypto';
 import OpenAI from 'openai';
 
-async function translateHtmlDeToNL(html: string): Promise<string> {
+async function translateHtml(html: string, fromLang: 'DE' | 'NL', toLang: 'DE' | 'NL'): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return html;
   const client = new OpenAI({ apiKey });
+  const langNames: Record<string, string> = { DE: 'Deutschen', NL: 'Niederländischen' };
   const response = await client.chat.completions.create({
     model: 'gpt-4o',
     temperature: 0.2,
@@ -16,16 +17,42 @@ async function translateHtmlDeToNL(html: string): Promise<string> {
       {
         role: 'system',
         content:
-          'Du bist ein professioneller Übersetzer für E-Commerce-Produktbeschreibungen. ' +
-          'Übersetze den deutschen Textinhalt im folgenden HTML vollständig ins Niederländische. ' +
-          'Behalte ALLE HTML-Tags, Attribute, Klassen-IDs und Struktur exakt bei. ' +
-          'Übersetze NUR den sichtbaren Textinhalt zwischen den Tags. ' +
-          'Antworte NUR mit dem übersetzten HTML, ohne Erklärungen oder Markdown-Codeblöcke.',
+          `Du bist ein professioneller Übersetzer für E-Commerce-Produktbeschreibungen. ` +
+          `Übersetze den ${langNames[fromLang]}en Textinhalt im folgenden HTML vollständig ins ${langNames[toLang]}. ` +
+          `Behalte ALLE HTML-Tags, Attribute, Klassen-IDs und Struktur exakt bei. ` +
+          `Übersetze NUR den sichtbaren Textinhalt zwischen den Tags. ` +
+          `Antworte NUR mit dem übersetzten HTML, ohne Erklärungen oder Markdown-Codeblöcke.`,
       },
       { role: 'user', content: html },
     ],
   });
   return response.choices[0]?.message?.content?.trim() || html;
+}
+
+/** Gibt die Textlänge eines HTML-Strings zurück (ohne Tags) */
+function htmlTextLength(html: string): number {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length;
+}
+
+/**
+ * Verschiebt den Lieferumfang-Abschnitt ans Ende des HTML.
+ * Sucht nach <h2>Lieferumfang / Leveringsomvang o.ä. und verschiebt Block dahinter.
+ */
+function ensureDeliveryAtEnd(html: string): string {
+  if (!html) return html;
+  // Überschrift-Pattern (DE: Lieferumfang, NL: Leveringsomvang/Inhoud leveringspakket)
+  const headingPattern = /Lieferumfang|Leveringsomvang|Inhoud leveringspakket|In de doos/i;
+  // Block extrahieren: Heading (h2/h3) + alles bis zum nächsten h2/h3 oder Ende
+  const blockRegex = /(<h[23][^>]*>[^<]*(?:Lieferumfang|Leveringsomvang|Inhoud leveringspakket|In de doos)[^<]*<\/h[23]>[\s\S]*?)(?=<h[23]\b|$)/i;
+  const match = html.match(blockRegex);
+  if (!match) return html;
+  const block = match[1].trimEnd();
+  // Prüfe ob der Block bereits am Ende steht (nach Bereinigung)
+  const trimmedHtml = html.trimEnd();
+  if (trimmedHtml.endsWith(block)) return html; // bereits am Ende
+  // Entferne Block aus aktueller Position und hänge ihn ans Ende
+  const withoutBlock = html.replace(block, '').replace(/\s{2,}/g, '\n').trim();
+  return withoutBlock + '\n' + block;
 }
 
 async function runWithConcurrency<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
@@ -207,8 +234,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const headers = parsed.meta.fields || [];
     const rows = parsed.data as Record<string, string>[];
 
-    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0, nlTranslated = 0;
+    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0, nlTranslated = 0, deTranslated = 0;
     const nlTranslationQueue: Array<{ rowIndex: number }> = [];
+    const deTranslationQueue: Array<{ rowIndex: number }> = [];
     const fixedRows: Record<string, string>[] = [];
     const changedCols: string[][] = [];
     // Alle geänderten Namen (für vollständige Anzeige im Frontend)
@@ -303,17 +331,49 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
-      // DE-Beschreibung als Basis für NL übernehmen, wenn NL keinen vollständigen Text hat (kein <h2>)
+      // Intelligente Beschreibungs-Angleichung: reichhaltigere Beschreibung als Basis
       if (useDeForNL && headers.includes('p_description[de]') && headers.includes('p_description[nl]')) {
         const deDesc = newRow['p_description[de]'] || '';
         const nlDesc = newRow['p_description[nl]'] || '';
-        const nlHasFullText = /<h2\b/i.test(nlDesc);
-        const deHasFullText = /<h2\b/i.test(deDesc);
-        if (deHasFullText && !nlHasFullText && deDesc) {
-          newRow['p_description[nl]'] = deDesc; // Wird nach der Schleife übersetzt
+        const deHasH2 = /<h2\b/i.test(deDesc);
+        const nlHasH2 = /<h2\b/i.test(nlDesc);
+        const deLen   = htmlTextLength(deDesc);
+        const nlLen   = htmlTextLength(nlDesc);
+
+        if (deHasH2 && !nlHasH2) {
+          // Nur DE vollständig → DE nach NL übersetzen
+          newRow['p_description[nl]'] = deDesc;
           if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
           descChanged++;
           nlTranslationQueue.push({ rowIndex: fixedRows.length });
+        } else if (nlHasH2 && !deHasH2) {
+          // Nur NL vollständig → NL nach DE übersetzen
+          newRow['p_description[de]'] = nlDesc;
+          if (!changed.includes('p_description[de]')) changed.push('p_description[de]');
+          descChanged++;
+          deTranslationQueue.push({ rowIndex: fixedRows.length });
+        } else if (deHasH2 && nlHasH2 && nlLen > deLen + 100) {
+          // Beide vollständig, aber NL deutlich länger → NL als Basis, DE übersetzen
+          newRow['p_description[de]'] = nlDesc;
+          if (!changed.includes('p_description[de]')) changed.push('p_description[de]');
+          descChanged++;
+          deTranslationQueue.push({ rowIndex: fixedRows.length });
+        } else if (deHasH2 && nlHasH2 && deLen > nlLen + 100) {
+          // Beide vollständig, aber DE deutlich länger → DE als Basis, NL übersetzen
+          newRow['p_description[nl]'] = deDesc;
+          if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
+          descChanged++;
+          nlTranslationQueue.push({ rowIndex: fixedRows.length });
+        }
+      }
+
+      // Lieferumfang ans Ende verschieben (DE + NL)
+      for (const col of ['p_description[de]', 'p_description[nl]']) {
+        if (!newRow[col]) continue;
+        const reordered = ensureDeliveryAtEnd(newRow[col]);
+        if (reordered !== newRow[col]) {
+          newRow[col] = reordered;
+          if (!changed.includes(col)) changed.push(col);
         }
       }
 
@@ -344,21 +404,38 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       changedCols.push(changed);
     }
 
-    // NL-Beschreibungen übersetzen (parallel, max 5 gleichzeitig)
+    // DE→NL Übersetzungen (parallel, max 5)
     if (useDeForNL && nlTranslationQueue.length > 0) {
-      console.log(`[VoltFixer] Übersetze ${nlTranslationQueue.length} NL-Beschreibungen via GPT-4o...`);
+      console.log(`[VoltFixer] Übersetze ${nlTranslationQueue.length} DE→NL Beschreibungen via GPT-4o...`);
       const tasks = nlTranslationQueue.map(({ rowIndex }) => async () => {
         const html = fixedRows[rowIndex]['p_description[nl]'] || '';
         try {
-          const translated = await translateHtmlDeToNL(html);
-          fixedRows[rowIndex]['p_description[nl]'] = translated;
+          const translated = await translateHtml(html, 'DE', 'NL');
+          fixedRows[rowIndex]['p_description[nl]'] = ensureDeliveryAtEnd(translated);
           nlTranslated++;
         } catch (e) {
-          console.error(`[VoltFixer] Übersetzungsfehler Zeile ${rowIndex}:`, e);
+          console.error(`[VoltFixer] DE→NL Übersetzungsfehler Zeile ${rowIndex}:`, e);
         }
       });
       await runWithConcurrency(tasks, 5);
-      console.log(`[VoltFixer] ${nlTranslated} Beschreibungen übersetzt.`);
+      console.log(`[VoltFixer] ${nlTranslated} DE→NL Beschreibungen übersetzt.`);
+    }
+
+    // NL→DE Übersetzungen (parallel, max 5)
+    if (useDeForNL && deTranslationQueue.length > 0) {
+      console.log(`[VoltFixer] Übersetze ${deTranslationQueue.length} NL→DE Beschreibungen via GPT-4o...`);
+      const tasks = deTranslationQueue.map(({ rowIndex }) => async () => {
+        const html = fixedRows[rowIndex]['p_description[de]'] || '';
+        try {
+          const translated = await translateHtml(html, 'NL', 'DE');
+          fixedRows[rowIndex]['p_description[de]'] = ensureDeliveryAtEnd(translated);
+          deTranslated++;
+        } catch (e) {
+          console.error(`[VoltFixer] NL→DE Übersetzungsfehler Zeile ${rowIndex}:`, e);
+        }
+      });
+      await runWithConcurrency(tasks, 5);
+      console.log(`[VoltFixer] ${deTranslated} NL→DE Beschreibungen übersetzt.`);
     }
 
     // Korrigierte CSV bauen
@@ -412,7 +489,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated },
       previewItems,
       allChangedNames,
       allExtractedVolt,
