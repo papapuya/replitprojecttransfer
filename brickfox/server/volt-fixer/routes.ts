@@ -242,33 +242,48 @@ function cleanEmptyTableRows(html: string): { result: string; changed: boolean }
   return { result, changed };
 }
 
-// Extrahiert die Tabelle (inkl. vorangehender Überschrift) aus einem HTML-Beschreibungstext.
-function extractTableBlock(html: string): string | null {
-  if (!html) return null;
-  // Suche <table>...</table> mit optionaler vorangehender <h2>...</h2>
-  const match = html.match(/(?:<h2[^>]*>[\s\S]*?<\/h2>\s*)?<table[\s\S]*?<\/table>/i);
-  return match ? match[0] : null;
+// Extrahiert die Werte (zweite Zelle) aller <tr>-Zeilen aus einer HTML-Tabelle.
+function extractTableRowValues(html: string): string[] {
+  const values: string[] = [];
+  const rows = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  for (const row of rows) {
+    const cells = [...row.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length >= 2) {
+      values.push(cells[cells.length - 1][1]);
+    }
+  }
+  return values;
 }
 
-// Ersetzt die Tabelle in nlHtml durch die Tabelle aus deHtml.
-// Falls NL keine Tabelle hat, wird die DE-Tabelle am Ende angefügt.
-// Falls DE keine Tabelle hat, bleibt NL unverändert.
-function syncTableFromDe(deHtml: string, nlHtml: string): { result: string; changed: boolean } {
-  const deTable = extractTableBlock(deHtml);
-  if (!deTable) return { result: nlHtml, changed: false };
+// Synchronisiert die Werte der NL-Tabelle mit den Werten der DE-Tabelle (zeilenweise nach Position).
+// NL-Labels (niederländisch) bleiben erhalten, nur die Werte werden aus DE übernommen.
+function syncTableValuesFromDe(deHtml: string, nlHtml: string): { result: string; changed: boolean } {
+  if (!deHtml || !nlHtml) return { result: nlHtml, changed: false };
+  const deValues = extractTableRowValues(deHtml);
+  if (deValues.length === 0) return { result: nlHtml, changed: false };
 
-  // NL-Tabelle durch DE-Tabelle ersetzen
-  const nlTableMatch = nlHtml.match(/(?:<h2[^>]*>[\s\S]*?<\/h2>\s*)?<table[\s\S]*?<\/table>/i);
-  if (nlTableMatch) {
-    // Ersetze bestehende NL-Tabelle durch DE-Tabelle
-    const result = nlHtml.replace(nlTableMatch[0], deTable);
-    const changed = result !== nlHtml;
-    return { result, changed };
-  } else {
-    // NL hat keine Tabelle → DE-Tabelle am Ende anfügen
-    const result = nlHtml.trimEnd() + '\n' + deTable;
-    return { result, changed: true };
-  }
+  let rowIndex = 0;
+  let changed = false;
+  const result = nlHtml.replace(/<tr[^>]*>[\s\S]*?<\/tr>/gi, (row) => {
+    if (rowIndex >= deValues.length) return row; // mehr NL-Zeilen als DE → unverändert
+    const deValue = deValues[rowIndex++];
+    // Ersetze den Inhalt der letzten Zelle durch den DE-Wert
+    let cellCount = 0;
+    const totalCells = (row.match(/<(?:td|th)[^>]*/gi) || []).length;
+    const newRow = row.replace(/<(td|th)([^>]*)>([\s\S]*?)<\/(?:td|th)>/gi, (cellMatch, tag, attrs, content) => {
+      cellCount++;
+      if (cellCount === totalCells) {
+        // Letzte Zelle → DE-Wert einsetzen
+        if (content !== deValue) {
+          changed = true;
+          return `<${tag}${attrs}>${deValue}</${tag}>`;
+        }
+      }
+      return cellMatch;
+    });
+    return newRow;
+  });
+  return { result, changed };
 }
 
 // Ersetzt '? ' an typischen Bullet-Punkt-Positionen in HTML durch '✅ '
@@ -431,6 +446,19 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         if (cc) {
           newRow[col] = cleaned;
           if (!changed.includes(col)) changed.push(col);
+        }
+      }
+
+      // NL-Tabellenwerte aus DE übernehmen (NL-Labels bleiben erhalten, nur Werte werden synchronisiert)
+      if (headers.includes('p_description[de]') && headers.includes('p_description[nl]')) {
+        const deHtml = newRow['p_description[de]'];
+        const nlHtml = newRow['p_description[nl]'];
+        if (deHtml && nlHtml) {
+          const { result: nlSynced, changed: ts } = syncTableValuesFromDe(deHtml, nlHtml);
+          if (ts) {
+            newRow['p_description[nl]'] = nlSynced;
+            if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
+          }
         }
       }
 
