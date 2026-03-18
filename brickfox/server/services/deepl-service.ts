@@ -105,55 +105,81 @@ export class DeepLService {
       return texts;
     }
 
-    const CHUNK_SIZE = 50;
+    const CHUNK_SIZE = 10; // Klein halten um 413-Fehler zu vermeiden
+    const CONCURRENCY  = 3; // Wenige parallele Requests um 429 zu vermeiden
+    const MAX_RETRIES  = 3;
+    const RETRY_DELAY  = 2000; // 2 Sekunden warten bei 429
+
     const results: string[] = [...texts];
 
-    // Indizes der gültigen Texte sammeln
     const validIndices: number[] = [];
     for (let i = 0; i < texts.length; i++) {
       if (texts[i] && texts[i].trim() !== '') validIndices.push(i);
     }
     if (validIndices.length === 0) return results;
 
-    // In Chunks aufteilen und parallel verarbeiten
     const chunks: number[][] = [];
     for (let i = 0; i < validIndices.length; i += CHUNK_SIZE) {
       chunks.push(validIndices.slice(i, i + CHUNK_SIZE));
     }
 
-    await Promise.all(chunks.map(async (chunk) => {
+    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+    const translateChunk = async (chunk: number[]): Promise<void> => {
       const chunkTexts = chunk.map(i => texts[i]);
-      try {
-        const response = await fetch(`${this.baseUrl}/translate`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `DeepL-Auth-Key ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text: chunkTexts,
-            source_lang: sourceLang,
-            target_lang: targetLang,
-            preserve_formatting: true,
-            tag_handling: 'html',
-          }),
-        });
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          const response = await fetch(`${this.baseUrl}/translate`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `DeepL-Auth-Key ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: chunkTexts,
+              source_lang: sourceLang,
+              target_lang: targetLang,
+              preserve_formatting: true,
+              tag_handling: 'html',
+            }),
+          });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`❌ DeepL API Fehler: ${response.status} - ${errorText}`);
+          if (response.status === 429) {
+            await sleep(RETRY_DELAY * (attempt + 1));
+            continue;
+          }
+          if (response.status === 413) {
+            // Payload zu groß: halbiere den Chunk und versuche einzeln
+            if (chunk.length > 1) {
+              const mid = Math.floor(chunk.length / 2);
+              await translateChunk(chunk.slice(0, mid));
+              await translateChunk(chunk.slice(mid));
+            }
+            return;
+          }
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ DeepL Fehler ${response.status}: ${errorText}`);
+            return;
+          }
+
+          const data: DeepLResponse = await response.json();
+          chunk.forEach((originalIdx, j) => {
+            const translated = removeEmcomFromText(data.translations[j]?.text || texts[originalIdx]);
+            results[originalIdx] = translated;
+          });
           return;
+        } catch (error) {
+          if (attempt === MAX_RETRIES - 1) console.error('❌ DeepL Chunk-Fehler:', error);
+          await sleep(RETRY_DELAY);
         }
-
-        const data: DeepLResponse = await response.json();
-        chunk.forEach((originalIdx, j) => {
-          const translated = removeEmcomFromText(data.translations[j]?.text || texts[originalIdx]);
-          results[originalIdx] = translated;
-        });
-      } catch (error) {
-        console.error('❌ DeepL Chunk-Übersetzungsfehler:', error);
       }
-    }));
+    };
+
+    // Chunks sequenziell in Gruppen von CONCURRENCY abarbeiten
+    for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+      await Promise.all(chunks.slice(i, i + CONCURRENCY).map(translateChunk));
+    }
 
     console.log(`🌐 DeepL ${sourceLang}→${targetLang}: ${validIndices.length} Texte in ${chunks.length} Chunks übersetzt`);
     return results;
