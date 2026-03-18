@@ -33,6 +33,7 @@ const MARKETING_PHRASES_TO_REMOVE: RegExp[] = [
   /Wahnsinn!?\s*/gi,
   /Sensationell!?\s*/gi,
   /!{2,}/g, // Mehrfache Ausrufezeichen
+  /!/g,     // Alle einzelnen Ausrufezeichen
 ];
 
 function removeMarketingPhrases(text: string): string {
@@ -93,6 +94,17 @@ function correctSpelling(text: string): string {
   // Auch Marketing-Phrasen entfernen
   result = removeMarketingPhrases(result);
   return result;
+}
+
+// Normalisiert H3-Titel und bereinigt HTML nach der Generierung
+function postProcessHtml(html: string): string {
+  return html
+    // "Technische Daten für den Samsung XYZ Akku" → "Technische Daten"
+    .replace(/<h3>Technische Daten[^<]*<\/h3>/gi, '<h3>Technische Daten</h3>')
+    // "Produkteigenschaften des XYZ" → "Produkteigenschaften"
+    .replace(/<h3>Produkteigenschaften[^<]*<\/h3>/gi, '<h3>Produkteigenschaften</h3>')
+    // "Lieferumfang des XYZ" → "Lieferumfang"
+    .replace(/<h3>Lieferumfang[^<]*<\/h3>/gi, '<h3>Lieferumfang</h3>');
 }
 
 export async function searchCompatibility(productName: string, productType: string): Promise<string> {
@@ -475,7 +487,7 @@ function renderZellentauschHtml(
 
   return {
     success: true,
-    html: correctSpelling(html),
+    html: postProcessHtml(correctSpelling(html)),
     unNumber,
     hsCode,
     bullet1: correctSpelling(bullet1),
@@ -755,7 +767,7 @@ ${parsed.produkttyp ? `<tr><td>Produkttyp</td><td>${parsed.produkttyp}</td></tr>
 
   return {
     success: true,
-    html: correctSpelling(html),
+    html: postProcessHtml(correctSpelling(html)),
     unNumber,
     hsCode,
     bullet1: correctSpelling(bullet1),

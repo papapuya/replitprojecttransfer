@@ -175,7 +175,16 @@ function DetailModal({
                   </section>
                 )}
 
-                {/* ── 3. Geänderter Text Niederländisch ── */}
+                {/* ── 3. Original Text Niederländisch ── */}
+                {origNL && (
+                  <section>
+                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b">Original Text Niederländisch</h3>
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl overflow-y-auto max-h-64 html-preview"
+                      dangerouslySetInnerHTML={{ __html: origNL }} />
+                  </section>
+                )}
+
+                {/* ── 4. Geänderter Text Niederländisch ── */}
                 {fixedNL && (
                   <section>
                     <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b flex items-center gap-2">
@@ -201,7 +210,7 @@ function DetailModal({
                   </section>
                 )}
 
-                {/* ── 4. Volt-Wert ── */}
+                {/* ── 5. Volt-Wert ── */}
                 {(origV || fixedV) && (
                   <section>
                     <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b flex items-center gap-2">
