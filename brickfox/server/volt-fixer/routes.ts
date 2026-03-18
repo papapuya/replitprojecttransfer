@@ -218,6 +218,30 @@ function detectEncoding(buffer: Buffer): string {
   return 'utf-8';
 }
 
+// Entfernt Tabellenzeilen deren Wert leer, '-', nur Nullen (z.B. '0000') oder reines Whitespace ist.
+// Gilt für alle Beschreibungen (DE + NL), betrifft in der Praxis v.a. NL-Tabellen mit Leereinträgen.
+function cleanEmptyTableRows(html: string): { result: string; changed: boolean } {
+  if (!html) return { result: html, changed: false };
+  let changed = false;
+  // Matche einzelne <tr>...</tr> (auch über mehrere Zeilen)
+  const result = html.replace(/<tr[^>]*>[\s\S]*?<\/tr>/gi, (row) => {
+    // Alle Zellen im <tr> extrahieren
+    const cellMatches = [...row.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cellMatches.length === 0) return row;
+    // Letzter Zellinhalt ist der Wert (erster ist das Label)
+    const rawValue = cellMatches[cellMatches.length - 1][1];
+    // HTML-Tags entfernen und trimmen für die Prüfung
+    const val = rawValue.replace(/<[^>]+>/g, '').trim();
+    // Leer, '-', nur Nullen (0, 00, 000, 0000, ...) → Zeile löschen
+    if (val === '' || val === '-' || /^0+$/.test(val)) {
+      changed = true;
+      return '';
+    }
+    return row;
+  });
+  return { result, changed };
+}
+
 // Ersetzt '? ' an typischen Bullet-Punkt-Positionen in HTML durch '✅ '
 // (nach <br>, <li>, <p> und am absoluten Textanfang)
 function restoreEmojiCheckmarks(html: string): string {
@@ -368,6 +392,16 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
             if (!changed.includes(col)) changed.push(col);
             descChanged++;
           }
+        }
+      }
+
+      // Leere Tabellenzeilen entfernen (Wert ist '-', '0000', leer) → saubere Tabellen
+      for (const col of DESC_COLS) {
+        if (!headers.includes(col) || !newRow[col]) continue;
+        const { result: cleaned, changed: cc } = cleanEmptyTableRows(newRow[col]);
+        if (cc) {
+          newRow[col] = cleaned;
+          if (!changed.includes(col)) changed.push(col);
         }
       }
 
