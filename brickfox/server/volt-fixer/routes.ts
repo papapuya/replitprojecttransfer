@@ -222,13 +222,13 @@ function detectEncoding(buffer: Buffer): string {
 // (nach <br>, <li>, <p> und am absoluten Textanfang)
 function restoreEmojiCheckmarks(html: string): string {
   if (!html) return html;
-  let result = html;
-  // 1. Nach beliebiger Folge von HTML-Tags (öffnend/schließend): ? → ✅ (Leerzeichen optional)
-  result = result.replace(/((?:<[^>]+>\s*)+)\?[ ]?/gi, '$1✅ ');
-  // 2. Am absoluten Anfang des Strings
-  result = result.replace(/^\?[ ]?/, '✅ ');
-  // 3. Nach einem Zeilenumbruch (mit optionalen Tags)
-  result = result.replace(/(\n\s*(?:<[^>]*>\s*)*)\?[ ]?/g, '$1✅ ');
+  // Einfache, zuverlässige Strategie:
+  // '? ' (mit Leerzeichen) direkt nach einem HTML-Tag-Ende '>' → ✅
+  let result = html.replace(/>(\s*)\? /g, '>$1✅ ');
+  // Am absoluten Anfang des Strings
+  result = result.replace(/^\? /, '✅ ');
+  // Nach Zeilenumbruch
+  result = result.replace(/\n(\s*)\? /g, '\n$1✅ ');
   return result;
 }
 
@@ -357,14 +357,15 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       }
 
       // Beschreibungen IMMER aktualisieren wenn Volt-Wert vorhanden (auch wenn bereits korrekt in Spalte)
+      // WICHTIG: newRow[col] verwenden (bereits emoji-wiederhergestellt), nicht das Original descVal
       if (newVolt) {
         for (const col of DESC_COLS) {
-          const descVal = row[col];
+          const descVal = newRow[col] || row[col];
           if (!descVal) continue;
           const { result, changed: dc } = setSpannungInHtml(descVal, newVolt);
           if (dc) {
             newRow[col] = result;
-            changed.push(col);
+            if (!changed.includes(col)) changed.push(col);
             descChanged++;
           }
         }
@@ -445,6 +446,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
             itemNr: row['p_item_number'] || row['v_item_number'] || '',
             cols: changedNameCols,
           });
+        }
+      }
+
+      // Finaler Emoji-Pass: sicherstellen dass ✅ in ALLEN Beschreibungen korrekt steht
+      // (deckt Fälle ab wo spätere Verarbeitungsschritte ✅ überschrieben haben)
+      for (const col of DESC_COLS) {
+        if (!headers.includes(col) || !newRow[col]) continue;
+        const restored = restoreEmojiCheckmarks(newRow[col]);
+        if (restored !== newRow[col]) {
+          newRow[col] = restored;
+          if (!changed.includes(col)) changed.push(col);
         }
       }
 
