@@ -92,59 +92,71 @@ export class DeepLService {
   }
 
   async translateBatch(texts: string[]): Promise<string[]> {
+    return this.translateBatchGeneric(texts, 'DE', 'NL');
+  }
+
+  async translateBatchToDE(texts: string[]): Promise<string[]> {
+    return this.translateBatchGeneric(texts, 'NL', 'DE');
+  }
+
+  async translateBatchGeneric(texts: string[], sourceLang: string, targetLang: string): Promise<string[]> {
     if (!this.apiKey) {
       console.warn('⚠️ DEEPL_API_KEY nicht gesetzt');
-      return texts.map(() => '');
+      return texts;
     }
 
-    const validTexts = texts.filter(t => t && t.trim() !== '');
-    if (validTexts.length === 0) {
-      return texts.map(() => '');
+    const CHUNK_SIZE = 50;
+    const results: string[] = [...texts];
+
+    // Indizes der gültigen Texte sammeln
+    const validIndices: number[] = [];
+    for (let i = 0; i < texts.length; i++) {
+      if (texts[i] && texts[i].trim() !== '') validIndices.push(i);
+    }
+    if (validIndices.length === 0) return results;
+
+    // In Chunks aufteilen und parallel verarbeiten
+    const chunks: number[][] = [];
+    for (let i = 0; i < validIndices.length; i += CHUNK_SIZE) {
+      chunks.push(validIndices.slice(i, i + CHUNK_SIZE));
     }
 
-    try {
-      const response = await fetch(`${this.baseUrl}/translate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `DeepL-Auth-Key ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: validTexts,
-          source_lang: 'DE',
-          target_lang: 'NL',
-          preserve_formatting: true,
-          tag_handling: 'html',
-        }),
-      });
+    await Promise.all(chunks.map(async (chunk) => {
+      const chunkTexts = chunk.map(i => texts[i]);
+      try {
+        const response = await fetch(`${this.baseUrl}/translate`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `DeepL-Auth-Key ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: chunkTexts,
+            source_lang: sourceLang,
+            target_lang: targetLang,
+            preserve_formatting: true,
+            tag_handling: 'html',
+          }),
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ DeepL API Fehler: ${response.status} - ${errorText}`);
-        return texts.map(() => '');
-      }
-
-      const data: DeepLResponse = await response.json();
-      
-      const results: string[] = [];
-      let translationIndex = 0;
-      
-      for (const originalText of texts) {
-        if (originalText && originalText.trim() !== '') {
-          const translated = removeEmcomFromText(data.translations[translationIndex]?.text || '');
-          results.push(translated);
-          translationIndex++;
-        } else {
-          results.push('');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ DeepL API Fehler: ${response.status} - ${errorText}`);
+          return;
         }
+
+        const data: DeepLResponse = await response.json();
+        chunk.forEach((originalIdx, j) => {
+          const translated = removeEmcomFromText(data.translations[j]?.text || texts[originalIdx]);
+          results[originalIdx] = translated;
+        });
+      } catch (error) {
+        console.error('❌ DeepL Chunk-Übersetzungsfehler:', error);
       }
-      
-      console.log(`🇳🇱 Batch-Übersetzung: ${validTexts.length} Texte übersetzt`);
-      return results;
-    } catch (error) {
-      console.error('❌ DeepL Batch-Übersetzungsfehler:', error);
-      return texts.map(() => '');
-    }
+    }));
+
+    console.log(`🌐 DeepL ${sourceLang}→${targetLang}: ${validIndices.length} Texte in ${chunks.length} Chunks übersetzt`);
+    return results;
   }
 }
 

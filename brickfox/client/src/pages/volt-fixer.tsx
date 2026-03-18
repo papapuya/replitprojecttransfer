@@ -41,7 +41,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; nlSkipped?: number; deSkipped?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -470,18 +470,6 @@ export default function VoltFixer() {
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           </div>
 
-          {/* Warnung: Übersetzungs-Limit erreicht */}
-          {((result.stats.nlSkipped ?? 0) > 0 || (result.stats.deSkipped ?? 0) > 0) && (
-            <div className="flex items-start gap-2 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-amber-800 text-sm">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <span>
-                <strong>Übersetzungs-Limit erreicht:</strong>{" "}
-                {(result.stats.nlSkipped ?? 0) > 0 && <>{result.stats.nlSkipped!.toLocaleString()} DE→NL {" "}</>}
-                {(result.stats.deSkipped ?? 0) > 0 && <>{result.stats.deSkipped!.toLocaleString()} NL→DE {" "}</>}
-                Beschreibungen wurden nicht übersetzt (Limit: 200 pro Upload). Lade die CSV in mehreren kleineren Teilen hoch um alle zu übersetzen.
-              </span>
-            </div>
-          )}
 
           {/* Download */}
           <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
