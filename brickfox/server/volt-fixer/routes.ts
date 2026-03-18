@@ -118,9 +118,10 @@ function replaceSpannungInName(text: string, oldVolt: string, newVolt: string): 
 // andere Schreibweise enthält.
 function syncVoltInName(text: string, targetVolt: string): { result: string; changed: boolean } {
   if (!text || !targetVolt) return { result: text, changed: false };
+  // Bereichswerte (z.B. "100-240", "12/24") kommen aus dem Namen selbst → nichts ersetzen
+  if (targetVolt.includes('-') || targetVolt.includes('/')) return { result: text, changed: false };
   let changed = false;
   const result = text.replace(/\b(\d+(?:[,\.]\d+)?)(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
-    // Exakter String-Vergleich: nur wenn num identisch zum Zielwert ist, nichts tun
     if (num === targetVolt) return _match;
     changed = true;
     return targetVolt + suffix;
@@ -128,13 +129,19 @@ function syncVoltInName(text: string, targetVolt: string): { result: string; cha
   return { result, changed };
 }
 
-// Extrahiert Volt-Wert aus Produktnamen, z.B. "3,85V" → "3,85", "385V" → "3,85", "4,8 Volt" → "4,8"
+// Extrahiert Volt-Wert aus Produktnamen.
+// Erkennt auch Bereichsangaben: "100-240V" → "100-240", "12/24 Volt" → "12/24"
+// Einfache Werte: "3,85V" → "3,85", "385V" → "3,85"
 function extractVoltFromName(name: string): string | null {
   if (!name) return null;
-  const match = name.match(/\b(\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
-  if (!match) return null;
-  const raw = match[1].replace('.', ',');
-  const { fixed } = fixVolt(raw); // Komma setzen falls nötig (z.B. 385 → 3,85)
+  // Bereichs-Muster zuerst (X-YV oder X/YV, z.B. 100-240V, 12/24 Volt)
+  const rangeMatch = name.match(/\b(\d+(?:[,.]\d+)?[-\/]\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
+  if (rangeMatch) return rangeMatch[1].replace('.', ',');
+  // Einfacher Wert
+  const simpleMatch = name.match(/\b(\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
+  if (!simpleMatch) return null;
+  const raw = simpleMatch[1].replace('.', ',');
+  const { fixed } = fixVolt(raw);
   return fixed;
 }
 
