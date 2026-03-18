@@ -3,31 +3,7 @@ import multer from 'multer';
 import Papa from 'papaparse';
 import iconv from 'iconv-lite';
 import crypto from 'crypto';
-import OpenAI from 'openai';
-
-async function translateHtml(html: string, fromLang: 'DE' | 'NL', toLang: 'DE' | 'NL'): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return html;
-  const client = new OpenAI({ apiKey });
-  const langNames: Record<string, string> = { DE: 'Deutschen', NL: 'Niederländischen' };
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o',
-    temperature: 0.2,
-    messages: [
-      {
-        role: 'system',
-        content:
-          `Du bist ein professioneller Übersetzer für E-Commerce-Produktbeschreibungen. ` +
-          `Übersetze den ${langNames[fromLang]}en Textinhalt im folgenden HTML vollständig ins ${langNames[toLang]}. ` +
-          `Behalte ALLE HTML-Tags, Attribute, Klassen-IDs und Struktur exakt bei. ` +
-          `Übersetze NUR den sichtbaren Textinhalt zwischen den Tags. ` +
-          `Antworte NUR mit dem übersetzten HTML, ohne Erklärungen oder Markdown-Codeblöcke.`,
-      },
-      { role: 'user', content: html },
-    ],
-  });
-  return response.choices[0]?.message?.content?.trim() || html;
-}
+import { deeplService } from '../services/deepl-service';
 
 /** Gibt die Textlänge eines HTML-Strings zurück (ohne Tags) */
 function htmlTextLength(html: string): number {
@@ -235,6 +211,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const rows = parsed.data as Record<string, string>[];
 
     let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0, nlTranslated = 0, deTranslated = 0;
+    // (runWithConcurrency wird für DeepL-Batch nicht mehr benötigt, bleibt aber als Hilfsfunktion erhalten)
     const nlTranslationQueue: Array<{ rowIndex: number }> = [];
     const deTranslationQueue: Array<{ rowIndex: number }> = [];
     const fixedRows: Record<string, string>[] = [];
@@ -404,45 +381,31 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       changedCols.push(changed);
     }
 
-    // Übersetzungs-Limit: max 200 pro Richtung um API-Kosten zu begrenzen
-    const TRANSLATE_LIMIT = 200;
-    let nlSkipped = 0, deSkipped = 0;
-
-    // DE→NL Übersetzungen (parallel, max 5, begrenzt auf TRANSLATE_LIMIT)
+    // DE→NL Übersetzungen via DeepL (Batch, alle auf einmal)
     if (useDeForNL && nlTranslationQueue.length > 0) {
-      const toProcess = nlTranslationQueue.slice(0, TRANSLATE_LIMIT);
-      nlSkipped = nlTranslationQueue.length - toProcess.length;
-      console.log(`[VoltFixer] Übersetze ${toProcess.length} DE→NL (${nlSkipped} übersprungen – Limit ${TRANSLATE_LIMIT})...`);
-      const tasks = toProcess.map(({ rowIndex }) => async () => {
-        const html = fixedRows[rowIndex]['p_description[nl]'] || '';
-        try {
-          const translated = await translateHtml(html, 'DE', 'NL');
-          fixedRows[rowIndex]['p_description[nl]'] = ensureDeliveryAtEnd(translated);
+      console.log(`[VoltFixer] DeepL DE→NL: ${nlTranslationQueue.length} Beschreibungen...`);
+      const htmlList = nlTranslationQueue.map(({ rowIndex }) => fixedRows[rowIndex]['p_description[nl]'] || '');
+      const translated = await deeplService.translateBatch(htmlList);
+      nlTranslationQueue.forEach(({ rowIndex }, i) => {
+        if (translated[i]) {
+          fixedRows[rowIndex]['p_description[nl]'] = ensureDeliveryAtEnd(translated[i]);
           nlTranslated++;
-        } catch (e) {
-          console.error(`[VoltFixer] DE→NL Übersetzungsfehler Zeile ${rowIndex}:`, e);
         }
       });
-      await runWithConcurrency(tasks, 5);
       console.log(`[VoltFixer] ${nlTranslated} DE→NL übersetzt.`);
     }
 
-    // NL→DE Übersetzungen (parallel, max 5, begrenzt auf TRANSLATE_LIMIT)
+    // NL→DE Übersetzungen via DeepL (Batch, alle auf einmal)
     if (useDeForNL && deTranslationQueue.length > 0) {
-      const toProcess = deTranslationQueue.slice(0, TRANSLATE_LIMIT);
-      deSkipped = deTranslationQueue.length - toProcess.length;
-      console.log(`[VoltFixer] Übersetze ${toProcess.length} NL→DE (${deSkipped} übersprungen – Limit ${TRANSLATE_LIMIT})...`);
-      const tasks = toProcess.map(({ rowIndex }) => async () => {
-        const html = fixedRows[rowIndex]['p_description[de]'] || '';
-        try {
-          const translated = await translateHtml(html, 'NL', 'DE');
-          fixedRows[rowIndex]['p_description[de]'] = ensureDeliveryAtEnd(translated);
+      console.log(`[VoltFixer] DeepL NL→DE: ${deTranslationQueue.length} Beschreibungen...`);
+      const htmlList = deTranslationQueue.map(({ rowIndex }) => fixedRows[rowIndex]['p_description[de]'] || '');
+      const translated = await deeplService.translateBatchToDE(htmlList);
+      deTranslationQueue.forEach(({ rowIndex }, i) => {
+        if (translated[i]) {
+          fixedRows[rowIndex]['p_description[de]'] = ensureDeliveryAtEnd(translated[i]);
           deTranslated++;
-        } catch (e) {
-          console.error(`[VoltFixer] NL→DE Übersetzungsfehler Zeile ${rowIndex}:`, e);
         }
       });
-      await runWithConcurrency(tasks, 5);
       console.log(`[VoltFixer] ${deTranslated} NL→DE übersetzt.`);
     }
 
@@ -497,7 +460,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nlSkipped, deSkipped },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated },
       previewItems,
       allChangedNames,
       allExtractedVolt,
