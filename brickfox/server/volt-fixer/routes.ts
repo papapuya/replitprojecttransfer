@@ -286,6 +286,43 @@ function syncTableValuesFromDe(deHtml: string, nlHtml: string): { result: string
   return { result, changed };
 }
 
+// Konvertiert "<strong>Technische specificaties:</strong><ul><li>Key: Value</li>...</ul>"
+// in eine echte <table> (gleiche Struktur wie DE-Tabelle).
+function convertNlTechSpecToTable(html: string): { result: string; changed: boolean } {
+  if (!html) return { result: html, changed: false };
+  // Match: <strong>Technische specificaties:...</strong> gefolgt von <ul>...</ul>
+  const pattern = /<strong>\s*Technische\s+specificaties\s*:?\s*<\/strong>\s*(<ul>[\s\S]*?<\/ul>)/i;
+  const match = html.match(pattern);
+  if (!match) return { result: html, changed: false };
+
+  const ulContent = match[1];
+  const liMatches = [...ulContent.matchAll(/<li>([\s\S]*?)<\/li>/gi)];
+  const rows: string[] = [];
+  for (const li of liMatches) {
+    const text = li[1].replace(/<[^>]+>/g, '').trim();
+    const colonIdx = text.indexOf(':');
+    if (colonIdx > 0) {
+      const label = text.substring(0, colonIdx).trim();
+      const value = text.substring(colonIdx + 1).trim();
+      rows.push(`<tr><th class="thlabel"> ${label}</th><td class="data"> ${value}</td></tr>`);
+    }
+  }
+  if (rows.length === 0) return { result: html, changed: false };
+
+  const table = `<table style="width: auto; border-collapse: collapse;"><tbody>${rows.join('')}</tbody></table>`;
+  const replacement = `<h2>Technische specificaties</h2>${table}`;
+  const result = html.replace(pattern, replacement);
+  return { result, changed: result !== html };
+}
+
+// Entfernt den "<h2>extra informatie</h2>" Abschnitt inkl. der nachfolgenden Tabelle komplett.
+function removeExtraInformatie(html: string): { result: string; changed: boolean } {
+  if (!html) return { result: html, changed: false };
+  const result = html.replace(/<h2[^>]*>\s*extra\s+informatie\s*<\/h2>\s*<table[\s\S]*?<\/table>/gi, '').trimEnd();
+  const changed = result !== html;
+  return { result, changed };
+}
+
 // Ersetzt '? ' an typischen Bullet-Punkt-Positionen in HTML durch '✅ '
 // (nach <br>, <li>, <p> und am absoluten Textanfang)
 function restoreEmojiCheckmarks(html: string): string {
@@ -436,6 +473,21 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
             if (!changed.includes(col)) changed.push(col);
             descChanged++;
           }
+        }
+      }
+
+      // NL-spezifisch: "Technische specificaties" als <ul> → echte <table> konvertieren
+      // und "extra informatie"-Abschnitt komplett entfernen
+      if (headers.includes('p_description[nl]') && newRow['p_description[nl]']) {
+        const { result: nlConverted, changed: nc } = convertNlTechSpecToTable(newRow['p_description[nl]']);
+        if (nc) {
+          newRow['p_description[nl]'] = nlConverted;
+          if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
+        }
+        const { result: nlCleaned, changed: ec } = removeExtraInformatie(newRow['p_description[nl]']);
+        if (ec) {
+          newRow['p_description[nl]'] = nlCleaned;
+          if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
         }
       }
 
