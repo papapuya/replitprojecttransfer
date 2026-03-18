@@ -301,6 +301,37 @@ function DetailModal({
 
 type ProgressState = { step: string; stepLabel: string; percent: number; detail: string };
 
+function CostConfirmDialog({ fileSizeMB, onConfirm, onCancel }: { fileSizeMB: number; onConfirm: () => void; onCancel: () => void }) {
+  const estChars = Math.round(fileSizeMB * 1024 * 1024 * 0.4); // ~40% sind Text
+  const estCostLow  = ((estChars / 1_000_000) * 14).toFixed(0);
+  const estCostHigh = ((estChars / 1_000_000) * 25).toFixed(0);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="text-3xl">⚠️</div>
+          <div>
+            <h2 className="text-lg font-bold text-red-700">Kosten-Bestätigung erforderlich</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Diese Option übersetzt die Beschreibungen via DeepL API. Das erzeugt echte Kosten.
+            </p>
+          </div>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-1 text-sm">
+          <div className="flex justify-between"><span className="text-gray-600">Dateigröße:</span><span className="font-medium">{fileSizeMB.toFixed(1)} MB</span></div>
+          <div className="flex justify-between"><span className="text-gray-600">Geschätzte Zeichen:</span><span className="font-medium">~{(estChars / 1_000_000).toFixed(1)} Mio.</span></div>
+          <div className="flex justify-between border-t border-red-200 pt-1 mt-1"><span className="text-gray-700 font-semibold">Geschätzte Kosten:</span><span className="font-bold text-red-700">€{estCostLow}–€{estCostHigh}</span></div>
+        </div>
+        <p className="text-xs text-gray-500">Die tatsächlichen Kosten hängen vom DeepL-Tarif und der Anzahl der zu übersetzenden Produkte ab.</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium text-sm">Abbrechen</button>
+          <button onClick={onConfirm} className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 font-medium text-sm">Ja, kostenpflichtig starten</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function VoltFixer() {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -311,8 +342,10 @@ export default function VoltFixer() {
   const [restoreEmoji, setRestoreEmoji] = useState(false);
   const [useDeForNL, setUseDeForNL] = useState(false);
   const [progress, setProgress] = useState<ProgressState | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const currentJobIdRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   // Fortschritt alle 1 Sekunde abrufen während Upload läuft
   useEffect(() => {
@@ -365,6 +398,8 @@ export default function VoltFixer() {
         if (xhr.status >= 400) throw new Error(data.error || "Upload fehlgeschlagen");
         setResult(data);
         setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
+        // Zum Ergebnis scrollen
+        setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
       } catch (e: any) {
         setError(e.message || "Unbekannter Fehler");
         setProgress(null);
@@ -385,9 +420,18 @@ export default function VoltFixer() {
     xhr.send(formData);
   };
 
+  const handleFile = (file: File) => {
+    if (useDeForNL) {
+      // Kostenbestätigung erforderlich
+      setPendingFile(file);
+    } else {
+      uploadFile(file);
+    }
+  };
+
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) uploadFile(file);
+    if (file) handleFile(file);
     e.target.value = "";
   };
 
@@ -395,7 +439,7 @@ export default function VoltFixer() {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) uploadFile(file);
+    if (file) handleFile(file);
   };
 
   const download = () => {
@@ -510,26 +554,7 @@ export default function VoltFixer() {
         </div>
       </label>
 
-      {/* Option: NL-Beschreibung aus DE übernehmen */}
-      <label className={`flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors select-none ${
-        useDeForNL ? "bg-blue-50 border-blue-300" : "bg-gray-50 border-gray-200 hover:border-blue-300"
-      } ${loading ? "pointer-events-none opacity-50" : ""}`}>
-        <input
-          type="checkbox"
-          checked={useDeForNL}
-          onChange={(e) => setUseDeForNL(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-blue-600"
-        />
-        <div>
-          <p className="text-sm font-semibold text-gray-700">
-            🔄 Beschreibungen automatisch angleichen + übersetzen
-          </p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Vergleicht DE und NL: Die inhaltlich reichhaltigere Beschreibung wird als Basis genommen und
-            automatisch in die andere Sprache übersetzt. Außerdem wird der Lieferumfang immer ans Ende verschoben.
-          </p>
-        </div>
-      </label>
+      {/* Übersetzungs-Option deaktiviert */}
 
       {error && (
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700">
@@ -539,7 +564,7 @@ export default function VoltFixer() {
       )}
 
       {result && (
-        <>
+        <div ref={resultRef}>
           {/* Stats */}
           <div className="flex flex-wrap gap-3 items-center">
             <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-4 py-2">
@@ -771,7 +796,7 @@ export default function VoltFixer() {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {/* Detail-Modal */}
@@ -781,6 +806,19 @@ export default function VoltFixer() {
           index={detail.index}
           rowNum={detail.rowNum}
           onClose={() => setDetail(null)}
+        />
+      )}
+
+      {/* Kosten-Bestätigung */}
+      {pendingFile && (
+        <CostConfirmDialog
+          fileSizeMB={pendingFile.size / 1024 / 1024}
+          onConfirm={() => {
+            const f = pendingFile;
+            setPendingFile(null);
+            uploadFile(f);
+          }}
+          onCancel={() => setPendingFile(null)}
         />
       )}
     </div>
