@@ -144,7 +144,7 @@ function DetailModal({
                 {origDE && (
                   <section>
                     <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b">Original Text Deutsch</h3>
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 max-h-60 overflow-y-auto prose prose-sm max-w-none"
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl overflow-y-auto max-h-96 html-preview"
                       dangerouslySetInnerHTML={{ __html: origDE }} />
                   </section>
                 )}
@@ -159,7 +159,7 @@ function DetailModal({
 
                     {/* Fließtext */}
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
-                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-gray-800 max-h-60 overflow-y-auto prose prose-sm max-w-none mb-3"
+                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl overflow-y-auto max-h-96 html-preview mb-3"
                       dangerouslySetInnerHTML={{ __html: fixedDE }} />
 
                     {/* HTML-Quelltext */}
@@ -185,7 +185,7 @@ function DetailModal({
 
                     {/* Fließtext */}
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
-                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-gray-800 max-h-60 overflow-y-auto prose prose-sm max-w-none mb-3"
+                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl overflow-y-auto max-h-96 html-preview mb-3"
                       dangerouslySetInnerHTML={{ __html: fixedNL }} />
 
                     {/* HTML-Quelltext */}
