@@ -111,10 +111,25 @@ function detectEncoding(buffer: Buffer): string {
   return 'utf-8';
 }
 
+// Ersetzt '? ' an typischen Bullet-Punkt-Positionen in HTML durch '✅ '
+// (nach <br>, <li>, <p> und am absoluten Textanfang)
+function restoreEmojiCheckmarks(html: string): string {
+  if (!html) return html;
+  return html
+    // Nach <br>, <br />, </li>, </p>, <li ...> am Zeilenanfang
+    .replace(/((?:<br\s*\/?>|<\/li>|<\/p>|<li[^>]*>)\s*)\?\s+/gi, '$1✅ ')
+    // Am absoluten Anfang des HTML-Strings
+    .replace(/^\?\s+/, '✅ ')
+    // Nach einem Zeilenumbruch am Anfang einer Zeile
+    .replace(/(\n)\?\s+/g, '$1✅ ');
+}
+
 // POST /api/volt-fixer/upload
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+
+    const restoreEmoji = req.body?.restoreEmoji === 'true';
 
     const encoding = detectEncoding(req.file.buffer);
     const text = iconv.decode(req.file.buffer, encoding);
@@ -151,6 +166,19 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     for (const row of rows) {
       const newRow = { ...row };
       const changed: string[] = [];
+
+      // Emoji-Wiederherstellung: '? ' → '✅ ' in Beschreibungen (optional)
+      if (restoreEmoji) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !newRow[col]) continue;
+          const restored = restoreEmojiCheckmarks(newRow[col]);
+          if (restored !== newRow[col]) {
+            newRow[col] = restored;
+            if (!changed.includes(col)) changed.push(col);
+          }
+        }
+      }
+
       const voltVal = (row[VOLT_COL] ?? '').trim();
       let newVolt = voltVal;
       let voltWasChanged = false;
