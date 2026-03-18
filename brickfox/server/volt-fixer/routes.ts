@@ -57,6 +57,7 @@ const jobStore = new Map<string, {
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
+  restoreEmoji: boolean;
 }>();
 
 // Aufräumen alter Jobs
@@ -354,6 +355,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       originalRows: rows,
       headers,
       changedCols,
+      restoreEmoji,
     });
 
     // Hilfsfunktion: HTML → plain text (abgekürzt)
@@ -409,9 +411,18 @@ router.get('/detail/:jobId/:index', (req: Request, res: Response) => {
   if (isNaN(idx) || idx < 0 || idx >= job.fixedRows.length) {
     return res.status(400).json({ error: 'Ungültiger Index' });
   }
+
+  // Wenn restoreEmoji aktiv war: ✅ auch im Originaltext wiederherstellen (nur für Anzeige)
+  const original = { ...job.originalRows[idx] };
+  if (job.restoreEmoji) {
+    for (const col of ['p_description[de]', 'p_description[nl]']) {
+      if (original[col]) original[col] = restoreEmojiCheckmarks(original[col]);
+    }
+  }
+
   res.json({
     row: job.fixedRows[idx],
-    original: job.originalRows[idx],
+    original,
     changed: job.changedCols[idx] || [],
     headers: job.headers,
   });
