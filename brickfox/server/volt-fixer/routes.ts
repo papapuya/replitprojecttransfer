@@ -3,6 +3,43 @@ import multer from 'multer';
 import Papa from 'papaparse';
 import iconv from 'iconv-lite';
 import crypto from 'crypto';
+import OpenAI from 'openai';
+
+async function translateHtmlDeToNL(html: string): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return html;
+  const client = new OpenAI({ apiKey });
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o',
+    temperature: 0.2,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'Du bist ein professioneller Übersetzer für E-Commerce-Produktbeschreibungen. ' +
+          'Übersetze den deutschen Textinhalt im folgenden HTML vollständig ins Niederländische. ' +
+          'Behalte ALLE HTML-Tags, Attribute, Klassen-IDs und Struktur exakt bei. ' +
+          'Übersetze NUR den sichtbaren Textinhalt zwischen den Tags. ' +
+          'Antworte NUR mit dem übersetzten HTML, ohne Erklärungen oder Markdown-Codeblöcke.',
+      },
+      { role: 'user', content: html },
+    ],
+  });
+  return response.choices[0]?.message?.content?.trim() || html;
+}
+
+async function runWithConcurrency<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let idx = 0;
+  async function worker() {
+    while (idx < tasks.length) {
+      const i = idx++;
+      results[i] = await tasks[i]();
+    }
+  }
+  await Promise.all(Array.from({ length: limit }, () => worker()));
+  return results;
+}
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 * 1024 } }); // 1 GB
@@ -148,7 +185,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const headers = parsed.meta.fields || [];
     const rows = parsed.data as Record<string, string>[];
 
-    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0;
+    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0, nlTranslated = 0;
+    const nlTranslationQueue: Array<{ rowIndex: number }> = [];
     const fixedRows: Record<string, string>[] = [];
     const changedCols: string[][] = [];
     // Alle geänderten Namen (für vollständige Anzeige im Frontend)
@@ -250,9 +288,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         const nlHasFullText = /<h2\b/i.test(nlDesc);
         const deHasFullText = /<h2\b/i.test(deDesc);
         if (deHasFullText && !nlHasFullText && deDesc) {
-          newRow['p_description[nl]'] = deDesc;
+          newRow['p_description[nl]'] = deDesc; // Wird nach der Schleife übersetzt
           if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
           descChanged++;
+          nlTranslationQueue.push({ rowIndex: fixedRows.length });
         }
       }
 
@@ -281,6 +320,23 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
       fixedRows.push(newRow);
       changedCols.push(changed);
+    }
+
+    // NL-Beschreibungen übersetzen (parallel, max 5 gleichzeitig)
+    if (useDeForNL && nlTranslationQueue.length > 0) {
+      console.log(`[VoltFixer] Übersetze ${nlTranslationQueue.length} NL-Beschreibungen via GPT-4o...`);
+      const tasks = nlTranslationQueue.map(({ rowIndex }) => async () => {
+        const html = fixedRows[rowIndex]['p_description[nl]'] || '';
+        try {
+          const translated = await translateHtmlDeToNL(html);
+          fixedRows[rowIndex]['p_description[nl]'] = translated;
+          nlTranslated++;
+        } catch (e) {
+          console.error(`[VoltFixer] Übersetzungsfehler Zeile ${rowIndex}:`, e);
+        }
+      });
+      await runWithConcurrency(tasks, 5);
+      console.log(`[VoltFixer] ${nlTranslated} Beschreibungen übersetzt.`);
     }
 
     // Korrigierte CSV bauen
@@ -333,7 +389,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated },
       previewItems,
       allChangedNames,
       allExtractedVolt,
