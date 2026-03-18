@@ -7,7 +7,6 @@ const VOLT_COL = "p_attributes[akku_v][de]";
 const DESC_COLS = ["p_description[de]", "p_description[nl]"];
 const NAME_COLS = ["p_name[de]", "p_name[nl]"];
 const NAME_COL_LABELS: Record<string, string> = { "p_name[de]": "DE", "p_name[nl]": "NL" };
-const DETAIL_COLS = [...NAME_COLS, ...DESC_COLS, VOLT_COL];
 const PAGE_SIZE = 500;
 
 type PreviewItem = {
@@ -113,8 +112,6 @@ function DetailModal({
       .catch(() => { setErr("Fehler beim Laden"); setLoading(false); });
   });
 
-  const detailCols = data ? data.headers.filter((h) => DETAIL_COLS.includes(h)) : [];
-  const otherCols = data ? data.headers.filter((h) => !DETAIL_COLS.includes(h)) : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
@@ -127,78 +124,110 @@ function DetailModal({
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-200 text-gray-500"><X size={20} /></button>
         </div>
 
-        <div className="overflow-y-auto p-6 space-y-6">
+        <div className="overflow-y-auto p-6 space-y-8">
           {loading && <div className="flex items-center gap-2 text-gray-400"><Loader2 size={18} className="animate-spin" /> Lade Daten…</div>}
           {err && <p className="text-red-500">{err}</p>}
-          {data && (
-            <>
-              {detailCols.map((h) => {
-                const origVal = data.original[h] ?? "";
-                const fixedVal = data.row[h] ?? "";
-                const wasChanged = data.changed.includes(h);
-                const isDesc = DESC_COLS.includes(h);
-                return (
-                  <div key={h}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                        h === VOLT_COL ? "bg-indigo-100 text-indigo-700" :
-                        isDesc ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
-                      }`}>{h}</span>
-                      {wasChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
-                      {isDesc && fixedVal && <CopyButton text={fixedVal} label="HTML kopieren" />}
+          {data && (() => {
+            const origDE  = data.original["p_description[de]"] ?? "";
+            const fixedDE = data.row["p_description[de]"] ?? "";
+            const origNL  = data.original["p_description[nl]"] ?? "";
+            const fixedNL = data.row["p_description[nl]"] ?? "";
+            const origV   = data.original[VOLT_COL] ?? "";
+            const fixedV  = data.row[VOLT_COL] ?? "";
+            const vChanged = data.changed.includes(VOLT_COL);
+            const deChanged = data.changed.includes("p_description[de]");
+            const nlChanged = data.changed.includes("p_description[nl]");
+
+            return (
+              <>
+                {/* ── 1. Original Text Deutsch ── */}
+                {origDE && (
+                  <section>
+                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b">Original Text Deutsch</h3>
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 max-h-60 overflow-y-auto prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: origDE }} />
+                  </section>
+                )}
+
+                {/* ── 2. Geänderter Text Deutsch ── */}
+                {fixedDE && (
+                  <section>
+                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b flex items-center gap-2">
+                      Geänderter Text Deutsch
+                      {deChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                    </h3>
+
+                    {/* Fließtext */}
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
+                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-gray-800 max-h-60 overflow-y-auto prose prose-sm max-w-none mb-3"
+                      dangerouslySetInnerHTML={{ __html: fixedDE }} />
+
+                    {/* HTML-Quelltext */}
+                    <div className="rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
+                        <CopyButton text={fixedDE} label="Kopieren" />
+                      </div>
+                      <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-52 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
+                        {fixedDE}
+                      </pre>
                     </div>
+                  </section>
+                )}
 
-                    {wasChanged && (
-                      <div className="mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-xs text-red-500 font-medium mb-1">Original:</p>
-                        {isDesc
-                          ? <div className="text-xs text-red-600 max-h-32 overflow-y-auto" dangerouslySetInnerHTML={{ __html: origVal }} />
-                          : <p className="text-sm text-red-600 line-through">{origVal}</p>}
+                {/* ── 3. Geänderter Text Niederländisch ── */}
+                {fixedNL && (
+                  <section>
+                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b flex items-center gap-2">
+                      Geänderter Text Niederländisch
+                      {nlChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                    </h3>
+
+                    {/* Fließtext */}
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
+                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-gray-800 max-h-60 overflow-y-auto prose prose-sm max-w-none mb-3"
+                      dangerouslySetInnerHTML={{ __html: fixedNL }} />
+
+                    {/* HTML-Quelltext */}
+                    <div className="rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
+                        <CopyButton text={fixedNL} label="Kopieren" />
                       </div>
-                    )}
+                      <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-52 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
+                        {fixedNL}
+                      </pre>
+                    </div>
+                  </section>
+                )}
 
-                    {isDesc ? (
-                      <div className="space-y-2">
-                        {/* Gerenderte Vorschau */}
-                        <div className={`p-3 rounded-lg border ${wasChanged ? "bg-indigo-50 border-indigo-200" : "bg-gray-50 border-gray-200"}`}>
-                          {wasChanged && <p className="text-xs text-indigo-500 font-medium mb-1">Vorschau (gerendert):</p>}
-                          <div className="text-xs text-gray-700 max-h-48 overflow-y-auto prose prose-xs max-w-none" dangerouslySetInnerHTML={{ __html: fixedVal }} />
-                        </div>
-                        {/* HTML-Quelltext zum Kopieren */}
-                        <div className="rounded-lg border border-gray-200 overflow-hidden">
-                          <div className="flex items-center justify-between px-3 py-1.5 bg-gray-100 border-b border-gray-200">
-                            <span className="text-xs font-medium text-gray-500">HTML-Quelltext</span>
-                            <CopyButton text={fixedVal} label="Kopieren" />
+                {/* ── 4. Volt-Wert ── */}
+                {(origV || fixedV) && (
+                  <section>
+                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b flex items-center gap-2">
+                      {VOLT_COL}
+                      {vChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                    </h3>
+                    <div className="flex items-center gap-6">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-400 mb-0.5">Original</span>
+                        <span className={`text-xl font-bold ${vChanged ? "text-red-400 line-through" : "text-gray-700"}`}>{origV || "—"}</span>
+                      </div>
+                      {vChanged && (
+                        <>
+                          <span className="text-2xl text-gray-300">→</span>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-400 mb-0.5">Korrigiert</span>
+                            <span className="text-2xl font-bold text-indigo-700">{fixedV}</span>
                           </div>
-                          <pre className="text-xs text-gray-700 p-3 overflow-x-auto overflow-y-auto max-h-56 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
-                            {fixedVal || <span className="text-gray-300 italic">leer</span>}
-                          </pre>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className={`p-3 rounded-lg border ${wasChanged ? "bg-indigo-50 border-indigo-200" : "bg-gray-50 border-gray-200"}`}>
-                        {wasChanged && <p className="text-xs text-indigo-500 font-medium mb-1">Korrigiert:</p>}
-                        <p className="text-sm text-gray-800">{fixedVal || <span className="text-gray-300 italic">leer</span>}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {otherCols.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 mb-3">Weitere Spalten</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {otherCols.map((h) => (
-                      <div key={h} className="bg-gray-50 rounded-lg px-3 py-2">
-                        <p className="text-xs text-gray-400 mb-0.5">{h}</p>
-                        <p className="text-xs text-gray-700 truncate">{data.row[h] || "—"}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+                        </>
+                      )}
+                    </div>
+                  </section>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>
