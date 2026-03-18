@@ -104,7 +104,8 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
 function replaceSpannungInName(text: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
   if (!text || !oldVolt || !newVolt || oldVolt === newVolt) return { result: text, changed: false };
   const escaped = oldVolt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`\\b${escaped}(\\s*V(?:olt)?)\\b`, 'g');
+  // (?<!\/) verhindert Ersetzen wenn der Wert Teil eines X/Y-Musters ist (z.B. 12/2,4 V)
+  const regex = new RegExp(`(?<!\/)\\b${escaped}(\\s*V(?:olt)?)\\b`, 'g');
   let changed = false;
   const result = text.replace(regex, (_match, suffix) => {
     changed = true;
@@ -119,9 +120,9 @@ function replaceSpannungInName(text: string, oldVolt: string, newVolt: string): 
 function syncVoltInName(text: string, targetVolt: string): { result: string; changed: boolean } {
   if (!text || !targetVolt) return { result: text, changed: false };
   let changed = false;
-  const result = text.replace(/\b(\d+(?:[,\.]\d+)?)(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
+  // (?<!\/) verhindert Ersetzen von Werten in X/Y-Mustern (z.B. 12/2,4 V bleibt unverändert)
+  const result = text.replace(/(?<!\/)\b(\d+(?:[,\.]\d+)?)(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
     // Exakter String-Vergleich: nur wenn num identisch zum Zielwert ist, nichts tun
-    // "3.85" != "3,85" → wird ersetzt; "385" != "3,85" → wird ersetzt; "3,85" == "3,85" → bleibt
     if (num === targetVolt) return _match;
     changed = true;
     return targetVolt + suffix;
