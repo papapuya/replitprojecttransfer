@@ -278,15 +278,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       const newRow = { ...row };
       const changed: string[] = [];
 
-      // Emoji-Wiederherstellung: '? ' → '✅ ' in Beschreibungen (optional)
-      if (restoreEmoji) {
-        for (const col of DESC_COLS) {
-          if (!headers.includes(col) || !newRow[col]) continue;
-          const restored = restoreEmojiCheckmarks(newRow[col]);
-          if (restored !== newRow[col]) {
-            newRow[col] = restored;
-            if (!changed.includes(col)) changed.push(col);
-          }
+      // Emoji-Wiederherstellung: '? ' → '✅ ' immer ausführen (Brickfox-Export kodiert ✅ als ?)
+      for (const col of DESC_COLS) {
+        if (!headers.includes(col) || !newRow[col]) continue;
+        const restored = restoreEmojiCheckmarks(newRow[col]);
+        if (restored !== newRow[col]) {
+          newRow[col] = restored;
+          if (!changed.includes(col)) changed.push(col);
         }
       }
 
@@ -553,12 +551,10 @@ router.get('/detail/:jobId/:index', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Ungültiger Index' });
   }
 
-  // Wenn restoreEmoji aktiv war: ✅ auch im Originaltext wiederherstellen (nur für Anzeige)
+  // ✅ im Originaltext wiederherstellen (nur für Anzeige – Brickfox kodiert ✅ immer als ?)
   const original = { ...job.originalRows[idx] };
-  if (job.restoreEmoji) {
-    for (const col of ['p_description[de]', 'p_description[nl]']) {
-      if (original[col]) original[col] = restoreEmojiCheckmarks(original[col]);
-    }
+  for (const col of ['p_description[de]', 'p_description[nl]']) {
+    if (original[col]) original[col] = restoreEmojiCheckmarks(original[col]);
   }
 
   res.json({

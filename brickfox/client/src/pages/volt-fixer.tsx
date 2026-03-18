@@ -531,26 +531,16 @@ export default function VoltFixer() {
         <input ref={fileRef} type="file" accept=".csv,.CSV" className="hidden" onChange={onFileChange} />
       </div>
 
-      {/* Option: ? durch ✅ ersetzen */}
-      <label className={`flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors select-none ${
-        restoreEmoji ? "bg-amber-50 border-amber-300" : "bg-gray-50 border-gray-200 hover:border-amber-300"
-      } ${loading ? "pointer-events-none opacity-50" : ""}`}>
-        <input
-          type="checkbox"
-          checked={restoreEmoji}
-          onChange={(e) => setRestoreEmoji(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-amber-500"
-        />
+      {/* Hinweis: ? → ✅ läuft immer automatisch */}
+      <div className="flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50">
+        <span className="text-lg mt-0.5">✅</span>
         <div>
-          <p className="text-sm font-semibold text-gray-700">
-            <span className="mr-1">⚠️</span> Fragezeichen durch ✅ ersetzen
-          </p>
+          <p className="text-sm font-semibold text-gray-700">Fragezeichen werden automatisch durch ✅ ersetzt</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            Für Brickfox-Exporte im Windows-1252-Format: ✅-Emojis werden dabei zu <code className="bg-gray-100 px-0.5 rounded">?</code> konvertiert.
-            Diese Option stellt sie in den Beschreibungen automatisch wieder her.
+            Brickfox-Exporte im Windows-1252-Format konvertieren ✅ zu <code className="bg-amber-100 px-0.5 rounded">?</code>. Dies wird bei jedem Upload automatisch korrigiert.
           </p>
         </div>
-      </label>
+      </div>
 
       {/* Übersetzungs-Option deaktiviert */}
 
