@@ -134,12 +134,68 @@ function DetailModal({
             const fixedNL = data.row["p_description[nl]"] ?? "";
             const origV   = data.original[VOLT_COL] ?? "";
             const fixedV  = data.row[VOLT_COL] ?? "";
-            const vChanged = data.changed.includes(VOLT_COL);
+            const vChanged  = data.changed.includes(VOLT_COL);
             const deChanged = data.changed.includes("p_description[de]");
             const nlChanged = data.changed.includes("p_description[nl]");
 
+            const origNameDE  = data.original["p_name[de]"] ?? "";
+            const fixedNameDE = data.row["p_name[de]"] ?? "";
+            const origNameNL  = data.original["p_name[nl]"] ?? "";
+            const fixedNameNL = data.row["p_name[nl]"] ?? "";
+            const nameDeChanged = data.changed.includes("p_name[de]");
+            const nameNlChanged = data.changed.includes("p_name[nl]");
+
             return (
               <>
+                {/* ── 0. Produktnamen ── */}
+                {(origNameDE || origNameNL) && (
+                  <section>
+                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b">Produktnamen</h3>
+                    <div className="grid grid-cols-1 gap-3">
+                      {origNameDE && (
+                        <div className="rounded-xl border border-gray-200 overflow-hidden">
+                          <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Name DE</span>
+                            {nameDeChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                          </div>
+                          <div className="px-4 py-3 space-y-1">
+                            {nameDeChanged ? (
+                              <>
+                                <p className="text-xs text-gray-400">Original</p>
+                                <p className="text-sm text-red-500 line-through">{origNameDE}</p>
+                                <p className="text-xs text-gray-400 mt-1">Korrigiert</p>
+                                <p className="text-sm font-semibold text-indigo-700">{fixedNameDE}</p>
+                              </>
+                            ) : (
+                              <p className="text-sm text-gray-800">{origNameDE}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {origNameNL && (
+                        <div className="rounded-xl border border-gray-200 overflow-hidden">
+                          <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Name NL</span>
+                            {nameNlChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                          </div>
+                          <div className="px-4 py-3 space-y-1">
+                            {nameNlChanged ? (
+                              <>
+                                <p className="text-xs text-gray-400">Original</p>
+                                <p className="text-sm text-red-500 line-through">{origNameNL}</p>
+                                <p className="text-xs text-gray-400 mt-1">Korrigiert</p>
+                                <p className="text-sm font-semibold text-indigo-700">{fixedNameNL}</p>
+                              </>
+                            ) : (
+                              <p className="text-sm text-gray-800">{origNameNL}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                )}
+
                 {/* ── 1. Original Text Deutsch ── */}
                 {origDE && (
                   <section>
