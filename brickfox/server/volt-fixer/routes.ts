@@ -189,15 +189,14 @@ function detectEncoding(buffer: Buffer): string {
 // (nach <br>, <li>, <p> und am absoluten Textanfang)
 function restoreEmojiCheckmarks(html: string): string {
   if (!html) return html;
-  // Optionale weitere Tags zwischen Block-Tag und '?' erlauben (z.B. <strong>, <b>, <span>)
-  const optTags = '(?:\\s*<(?!/)(?!br)[a-z][^>]*>)*\\s*';
-  return html
-    // Nach öffnendem oder schließendem Block-Tag (<br>, <p>, </p>, <li>, </li>) – mit optionalen Inline-Tags
-    .replace(new RegExp(`((?:<br\\s*/?>|<p[^>]*>|<\\/p>|<li[^>]*>|<\\/li>)${optTags})\\?\\s+`, 'gi'), '$1✅ ')
-    // Am absoluten Anfang (mit optionalen vorangehenden Tags)
-    .replace(new RegExp(`^((?:<[^>]+>\\s*)*)\\?\\s+`), '$1✅ ')
-    // Nach einem Zeilenumbruch (mit optionalen vorangehenden Tags)
-    .replace(new RegExp(`(\\n\\s*(?:<[^>]+>\\s*)*)\\?\\s+`, 'g'), '$1✅ ');
+  let result = html;
+  // 1. Nach beliebiger Folge von HTML-Tags (öffnend/schließend) + optionalem Whitespace
+  result = result.replace(/((?:<[^>]+>\s*)+)\?\s+/gi, '$1✅ ');
+  // 2. Am absoluten Anfang des Strings
+  result = result.replace(/^\?\s+/, '✅ ');
+  // 3. Nach einem Zeilenumbruch (mit optionalen Tags)
+  result = result.replace(/(\n\s*(?:<[^>]*>\s*)*)\?\s+/g, '$1✅ ');
+  return result;
 }
 
 // GET /api/volt-fixer/progress/:jobId
