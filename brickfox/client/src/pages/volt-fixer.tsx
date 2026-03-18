@@ -241,6 +241,7 @@ export default function VoltFixer() {
   const [result, setResult] = useState<Result | null>(null);
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<{ index: number; rowNum: number } | null>(null);
+  const [restoreEmoji, setRestoreEmoji] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = async (file: File) => {
@@ -251,6 +252,7 @@ export default function VoltFixer() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("restoreEmoji", String(restoreEmoji));
 
     try {
       const res = await fetch("/api/volt-fixer/upload", { method: "POST", body: formData });
@@ -325,6 +327,27 @@ export default function VoltFixer() {
         )}
         <input ref={fileRef} type="file" accept=".csv,.CSV" className="hidden" onChange={onFileChange} />
       </div>
+
+      {/* Option: ? durch ✅ ersetzen */}
+      <label className={`flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors select-none ${
+        restoreEmoji ? "bg-amber-50 border-amber-300" : "bg-gray-50 border-gray-200 hover:border-amber-300"
+      } ${loading ? "pointer-events-none opacity-50" : ""}`}>
+        <input
+          type="checkbox"
+          checked={restoreEmoji}
+          onChange={(e) => setRestoreEmoji(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-amber-500"
+        />
+        <div>
+          <p className="text-sm font-semibold text-gray-700">
+            <span className="mr-1">⚠️</span> Fragezeichen durch ✅ ersetzen
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Für Brickfox-Exporte im Windows-1252-Format: ✅-Emojis werden dabei zu <code className="bg-gray-100 px-0.5 rounded">?</code> konvertiert.
+            Diese Option stellt sie in den Beschreibungen automatisch wieder her.
+          </p>
+        </div>
+      </label>
 
       {error && (
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700">
