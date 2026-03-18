@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -55,6 +55,29 @@ type DetailData = {
   headers: string[];
 };
 
+// Copy-Button mit kurzem "Kopiert!"-Feedback
+function CopyButton({ text, label = "HTML kopieren" }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={copy}
+      className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+        copied
+          ? "bg-green-50 border-green-300 text-green-700"
+          : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-indigo-600 hover:border-indigo-300"
+      }`}
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+      {copied ? "Kopiert!" : label}
+    </button>
+  );
+}
+
 // Detail-Modal
 function DetailModal({
   jobId,
@@ -107,10 +130,12 @@ function DetailModal({
                     <div className="flex items-center gap-2 mb-2">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
                         h === VOLT_COL ? "bg-indigo-100 text-indigo-700" :
-                        DESC_COLS.includes(h) ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                        isDesc ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
                       }`}>{h}</span>
                       {wasChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                      {isDesc && fixedVal && <CopyButton text={fixedVal} label="HTML kopieren" />}
                     </div>
+
                     {wasChanged && (
                       <div className="mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                         <p className="text-xs text-red-500 font-medium mb-1">Original:</p>
@@ -119,12 +144,31 @@ function DetailModal({
                           : <p className="text-sm text-red-600 line-through">{origVal}</p>}
                       </div>
                     )}
-                    <div className={`p-3 rounded-lg border ${wasChanged ? "bg-indigo-50 border-indigo-200" : "bg-gray-50 border-gray-200"}`}>
-                      {wasChanged && <p className="text-xs text-indigo-500 font-medium mb-1">Korrigiert:</p>}
-                      {isDesc
-                        ? <div className="text-xs text-gray-700 max-h-48 overflow-y-auto prose prose-xs max-w-none" dangerouslySetInnerHTML={{ __html: fixedVal }} />
-                        : <p className="text-sm text-gray-800">{fixedVal || <span className="text-gray-300 italic">leer</span>}</p>}
-                    </div>
+
+                    {isDesc ? (
+                      <div className="space-y-2">
+                        {/* Gerenderte Vorschau */}
+                        <div className={`p-3 rounded-lg border ${wasChanged ? "bg-indigo-50 border-indigo-200" : "bg-gray-50 border-gray-200"}`}>
+                          {wasChanged && <p className="text-xs text-indigo-500 font-medium mb-1">Vorschau (gerendert):</p>}
+                          <div className="text-xs text-gray-700 max-h-48 overflow-y-auto prose prose-xs max-w-none" dangerouslySetInnerHTML={{ __html: fixedVal }} />
+                        </div>
+                        {/* HTML-Quelltext zum Kopieren */}
+                        <div className="rounded-lg border border-gray-200 overflow-hidden">
+                          <div className="flex items-center justify-between px-3 py-1.5 bg-gray-100 border-b border-gray-200">
+                            <span className="text-xs font-medium text-gray-500">HTML-Quelltext</span>
+                            <CopyButton text={fixedVal} label="Kopieren" />
+                          </div>
+                          <pre className="text-xs text-gray-700 p-3 overflow-x-auto overflow-y-auto max-h-56 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
+                            {fixedVal || <span className="text-gray-300 italic">leer</span>}
+                          </pre>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={`p-3 rounded-lg border ${wasChanged ? "bg-indigo-50 border-indigo-200" : "bg-gray-50 border-gray-200"}`}>
+                        {wasChanged && <p className="text-xs text-indigo-500 font-medium mb-1">Korrigiert:</p>}
+                        <p className="text-sm text-gray-800">{fixedVal || <span className="text-gray-300 italic">leer</span>}</p>
+                      </div>
+                    )}
                   </div>
                 );
               })}
