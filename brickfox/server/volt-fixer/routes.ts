@@ -104,12 +104,27 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
 function replaceSpannungInName(text: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
   if (!text || !oldVolt || !newVolt || oldVolt === newVolt) return { result: text, changed: false };
   const escaped = oldVolt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Sucht den alten Wert nur wenn gefolgt von V oder Volt (mit optionalem Leerzeichen)
   const regex = new RegExp(`\\b${escaped}(\\s*V(?:olt)?)\\b`, 'g');
   let changed = false;
   const result = text.replace(regex, (_match, suffix) => {
     changed = true;
     return newVolt + suffix;
+  });
+  return { result, changed };
+}
+
+// Synchronisiert JEDE Volt-Angabe im Namen auf den Zielwert (z.B. "385V" → "3,85V" wenn targetVolt="3,85")
+// Wird benutzt wenn der Volt-Wert in der Spalte bereits korrekt ist, aber der Name noch eine
+// andere Schreibweise enthält.
+function syncVoltInName(text: string, targetVolt: string): { result: string; changed: boolean } {
+  if (!text || !targetVolt) return { result: text, changed: false };
+  let changed = false;
+  const result = text.replace(/\b(\d+(?:[,\.]\d+)?)(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
+    // Normalisiere: Punkt → Komma für den Vergleich
+    const withComma = num.replace('.', ',');
+    if (withComma === targetVolt) return _match; // bereits korrekte Schreibweise
+    changed = true;
+    return targetVolt + suffix;
   });
   return { result, changed };
 }
@@ -385,18 +400,27 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
-      if (voltWasChanged) {
-        // Produktnamen abgleichen: Original-Volt-Wert im Namen suchen und ersetzen
+      // Produktnamen immer synchronisieren wenn Volt-Wert vorhanden
+      if (newVolt) {
         const changedNameCols: Array<{ col: string; before: string; after: string }> = [];
         for (const col of NAME_COLS) {
           if (!headers.includes(col)) continue;
           const nameVal = row[col];
           if (!nameVal) continue;
-          const { result, changed: nc } = replaceSpannungInName(nameVal, voltVal, newVolt);
+          let result = nameVal;
+          let nc = false;
+          if (voltWasChanged) {
+            // Volt-Wert wurde korrigiert → alten Wert direkt suchen und ersetzen
+            ({ result, changed: nc } = replaceSpannungInName(nameVal, voltVal, newVolt));
+          }
+          // Zusätzlich: alle verbleibenden Volt-Angaben auf Zielwert synchronisieren
+          // (deckt Fälle ab wo voltWasChanged=false aber Name z.B. "385V" statt "3,85V" enthält)
+          const { result: synced, changed: sc } = syncVoltInName(result, newVolt);
+          if (sc) { result = synced; nc = true; }
           if (nc) {
             changedNameCols.push({ col, before: nameVal, after: result });
             newRow[col] = result;
-            changed.push(col);
+            if (!changed.includes(col)) changed.push(col);
             nameChanged++;
           }
         }
