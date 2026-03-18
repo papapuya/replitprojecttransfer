@@ -130,6 +130,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     if (!req.file) return res.status(400).json({ error: 'Keine Datei hochgeladen' });
 
     const restoreEmoji = req.body?.restoreEmoji === 'true';
+    const useDeForNL   = req.body?.useDeForNL === 'true';
 
     const encoding = detectEncoding(req.file.buffer);
     const text = iconv.decode(req.file.buffer, encoding);
@@ -239,6 +240,19 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
             changed.push(col);
             descChanged++;
           }
+        }
+      }
+
+      // DE-Beschreibung als Basis für NL übernehmen, wenn NL keinen vollständigen Text hat (kein <h2>)
+      if (useDeForNL && headers.includes('p_description[de]') && headers.includes('p_description[nl]')) {
+        const deDesc = newRow['p_description[de]'] || '';
+        const nlDesc = newRow['p_description[nl]'] || '';
+        const nlHasFullText = /<h2\b/i.test(nlDesc);
+        const deHasFullText = /<h2\b/i.test(deDesc);
+        if (deHasFullText && !nlHasFullText && deDesc) {
+          newRow['p_description[nl]'] = deDesc;
+          if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
+          descChanged++;
         }
       }
 
