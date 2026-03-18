@@ -404,10 +404,16 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       changedCols.push(changed);
     }
 
-    // DE→NL Übersetzungen (parallel, max 5)
+    // Übersetzungs-Limit: max 200 pro Richtung um API-Kosten zu begrenzen
+    const TRANSLATE_LIMIT = 200;
+    let nlSkipped = 0, deSkipped = 0;
+
+    // DE→NL Übersetzungen (parallel, max 5, begrenzt auf TRANSLATE_LIMIT)
     if (useDeForNL && nlTranslationQueue.length > 0) {
-      console.log(`[VoltFixer] Übersetze ${nlTranslationQueue.length} DE→NL Beschreibungen via GPT-4o...`);
-      const tasks = nlTranslationQueue.map(({ rowIndex }) => async () => {
+      const toProcess = nlTranslationQueue.slice(0, TRANSLATE_LIMIT);
+      nlSkipped = nlTranslationQueue.length - toProcess.length;
+      console.log(`[VoltFixer] Übersetze ${toProcess.length} DE→NL (${nlSkipped} übersprungen – Limit ${TRANSLATE_LIMIT})...`);
+      const tasks = toProcess.map(({ rowIndex }) => async () => {
         const html = fixedRows[rowIndex]['p_description[nl]'] || '';
         try {
           const translated = await translateHtml(html, 'DE', 'NL');
@@ -418,13 +424,15 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       });
       await runWithConcurrency(tasks, 5);
-      console.log(`[VoltFixer] ${nlTranslated} DE→NL Beschreibungen übersetzt.`);
+      console.log(`[VoltFixer] ${nlTranslated} DE→NL übersetzt.`);
     }
 
-    // NL→DE Übersetzungen (parallel, max 5)
+    // NL→DE Übersetzungen (parallel, max 5, begrenzt auf TRANSLATE_LIMIT)
     if (useDeForNL && deTranslationQueue.length > 0) {
-      console.log(`[VoltFixer] Übersetze ${deTranslationQueue.length} NL→DE Beschreibungen via GPT-4o...`);
-      const tasks = deTranslationQueue.map(({ rowIndex }) => async () => {
+      const toProcess = deTranslationQueue.slice(0, TRANSLATE_LIMIT);
+      deSkipped = deTranslationQueue.length - toProcess.length;
+      console.log(`[VoltFixer] Übersetze ${toProcess.length} NL→DE (${deSkipped} übersprungen – Limit ${TRANSLATE_LIMIT})...`);
+      const tasks = toProcess.map(({ rowIndex }) => async () => {
         const html = fixedRows[rowIndex]['p_description[de]'] || '';
         try {
           const translated = await translateHtml(html, 'NL', 'DE');
@@ -435,7 +443,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       });
       await runWithConcurrency(tasks, 5);
-      console.log(`[VoltFixer] ${deTranslated} NL→DE Beschreibungen übersetzt.`);
+      console.log(`[VoltFixer] ${deTranslated} NL→DE übersetzt.`);
     }
 
     // Korrigierte CSV bauen
@@ -489,7 +497,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nlSkipped, deSkipped },
       previewItems,
       allChangedNames,
       allExtractedVolt,
