@@ -63,11 +63,23 @@ const jobStore = new Map<string, {
   restoreEmoji: boolean;
 }>();
 
+// Fortschritts-Speicher für laufende Jobs
+const progressStore = new Map<string, {
+  step: string;
+  stepLabel: string;
+  percent: number;
+  detail: string;
+  expires: number;
+}>();
+
 // Aufräumen alter Jobs
 setInterval(() => {
   const now = Date.now();
   for (const [id, job] of jobStore) {
     if (job.expires < now) jobStore.delete(id);
+  }
+  for (const [id, p] of progressStore) {
+    if (p.expires < now) progressStore.delete(id);
   }
 }, 5 * 60 * 1000);
 
@@ -186,6 +198,13 @@ function restoreEmojiCheckmarks(html: string): string {
     .replace(/(\n)\?\s+/g, '$1✅ ');
 }
 
+// GET /api/volt-fixer/progress/:jobId
+router.get('/progress/:jobId', (req: Request, res: Response) => {
+  const p = progressStore.get(req.params.jobId);
+  if (!p) return res.json({ step: 'waiting', stepLabel: 'Warte auf Start…', percent: 0, detail: '' });
+  res.json({ step: p.step, stepLabel: p.stepLabel, percent: p.percent, detail: p.detail });
+});
+
 // POST /api/volt-fixer/upload
 router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   try {
@@ -193,6 +212,15 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     const restoreEmoji = req.body?.restoreEmoji === 'true';
     const useDeForNL   = req.body?.useDeForNL === 'true';
+    const clientJobId  = req.body?.clientJobId as string | undefined;
+
+    // Fortschritt initialisieren
+    const setProgress = (step: string, stepLabel: string, percent: number, detail = '') => {
+      if (!clientJobId) return;
+      progressStore.set(clientJobId, { step, stepLabel, percent, detail, expires: Date.now() + 30 * 60 * 1000 });
+    };
+
+    setProgress('parsing', 'CSV wird gelesen…', 5);
 
     const encoding = detectEncoding(req.file.buffer);
     const text = iconv.decode(req.file.buffer, encoding);
@@ -209,6 +237,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     const headers = parsed.meta.fields || [];
     const rows = parsed.data as Record<string, string>[];
+
+    setProgress('fixing', 'Volt-Werte werden korrigiert…', 15, `${rows.length.toLocaleString('de-DE')} Zeilen`);
 
     let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0, nlTranslated = 0, deTranslated = 0;
     // (runWithConcurrency wird für DeepL-Batch nicht mehr benötigt, bleibt aber als Hilfsfunktion erhalten)
@@ -384,8 +414,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     // DE→NL Übersetzungen via DeepL (Batch, alle auf einmal)
     if (useDeForNL && nlTranslationQueue.length > 0) {
       console.log(`[VoltFixer] DeepL DE→NL: ${nlTranslationQueue.length} Beschreibungen...`);
+      setProgress('translating-nl', 'DE → NL wird übersetzt…', 40, `${nlTranslationQueue.length.toLocaleString('de-DE')} Beschreibungen`);
       const htmlList = nlTranslationQueue.map(({ rowIndex }) => fixedRows[rowIndex]['p_description[nl]'] || '');
-      const translated = await deeplService.translateBatch(htmlList);
+      const total = nlTranslationQueue.length;
+      const translated = await deeplService.translateBatch(htmlList, (done) => {
+        const pct = Math.round(40 + (done / total) * 35);
+        setProgress('translating-nl', 'DE → NL wird übersetzt…', pct, `${done.toLocaleString('de-DE')} / ${total.toLocaleString('de-DE')}`);
+      });
       nlTranslationQueue.forEach(({ rowIndex }, i) => {
         if (translated[i]) {
           fixedRows[rowIndex]['p_description[nl]'] = ensureDeliveryAtEnd(translated[i]);
@@ -398,8 +433,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     // NL→DE Übersetzungen via DeepL (Batch, alle auf einmal)
     if (useDeForNL && deTranslationQueue.length > 0) {
       console.log(`[VoltFixer] DeepL NL→DE: ${deTranslationQueue.length} Beschreibungen...`);
+      setProgress('translating-de', 'NL → DE wird übersetzt…', 76, `${deTranslationQueue.length.toLocaleString('de-DE')} Beschreibungen`);
       const htmlList = deTranslationQueue.map(({ rowIndex }) => fixedRows[rowIndex]['p_description[de]'] || '');
-      const translated = await deeplService.translateBatchToDE(htmlList);
+      const total = deTranslationQueue.length;
+      const translated = await deeplService.translateBatchToDE(htmlList, (done) => {
+        const pct = Math.round(76 + (done / total) * 15);
+        setProgress('translating-de', 'NL → DE wird übersetzt…', pct, `${done.toLocaleString('de-DE')} / ${total.toLocaleString('de-DE')}`);
+      });
       deTranslationQueue.forEach(({ rowIndex }, i) => {
         if (translated[i]) {
           fixedRows[rowIndex]['p_description[de]'] = ensureDeliveryAtEnd(translated[i]);
@@ -408,6 +448,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       });
       console.log(`[VoltFixer] ${deTranslated} NL→DE übersetzt.`);
     }
+
+    setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
     // Korrigierte CSV bauen
     const csvOut = Papa.unparse(fixedRows, { delimiter: ';', columns: headers });
@@ -426,6 +468,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       changedCols,
       restoreEmoji,
     });
+
+    setProgress('done', 'Fertig!', 100);
 
     // Hilfsfunktion: HTML → plain text (abgekürzt)
     const toPlainText = (html: string, max = 120): string => {

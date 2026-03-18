@@ -91,15 +91,15 @@ export class DeepLService {
     }
   }
 
-  async translateBatch(texts: string[]): Promise<string[]> {
-    return this.translateBatchGeneric(texts, 'DE', 'NL');
+  async translateBatch(texts: string[], onProgress?: (done: number, total: number) => void): Promise<string[]> {
+    return this.translateBatchGeneric(texts, 'DE', 'NL', onProgress);
   }
 
-  async translateBatchToDE(texts: string[]): Promise<string[]> {
-    return this.translateBatchGeneric(texts, 'NL', 'DE');
+  async translateBatchToDE(texts: string[], onProgress?: (done: number, total: number) => void): Promise<string[]> {
+    return this.translateBatchGeneric(texts, 'NL', 'DE', onProgress);
   }
 
-  async translateBatchGeneric(texts: string[], sourceLang: string, targetLang: string): Promise<string[]> {
+  async translateBatchGeneric(texts: string[], sourceLang: string, targetLang: string, onProgress?: (done: number, total: number) => void): Promise<string[]> {
     if (!this.apiKey) {
       console.warn('⚠️ DEEPL_API_KEY nicht gesetzt');
       return texts;
@@ -177,8 +177,14 @@ export class DeepLService {
     };
 
     // Chunks sequenziell in Gruppen von CONCURRENCY abarbeiten
+    let doneChunks = 0;
     for (let i = 0; i < chunks.length; i += CONCURRENCY) {
       await Promise.all(chunks.slice(i, i + CONCURRENCY).map(translateChunk));
+      doneChunks += Math.min(CONCURRENCY, chunks.length - i);
+      if (onProgress) {
+        const doneItems = Math.min(doneChunks * CHUNK_SIZE, validIndices.length);
+        onProgress(doneItems, validIndices.length);
+      }
     }
 
     console.log(`🌐 DeepL ${sourceLang}→${targetLang}: ${validIndices.length} Texte in ${chunks.length} Chunks übersetzt`);

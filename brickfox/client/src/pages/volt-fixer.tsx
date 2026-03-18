@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -299,6 +299,8 @@ function DetailModal({
   );
 }
 
+type ProgressState = { step: string; stepLabel: string; percent: number; detail: string };
+
 export default function VoltFixer() {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -308,28 +310,55 @@ export default function VoltFixer() {
   const [detail, setDetail] = useState<{ index: number; rowNum: number } | null>(null);
   const [restoreEmoji, setRestoreEmoji] = useState(false);
   const [useDeForNL, setUseDeForNL] = useState(false);
+  const [progress, setProgress] = useState<ProgressState | null>(null);
+  const currentJobIdRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Fortschritt alle 1.5 Sekunden abrufen während Upload läuft
+  useEffect(() => {
+    if (!loading || !currentJobIdRef.current) return;
+    const id = currentJobIdRef.current;
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/volt-fixer/progress/${id}`);
+        if (r.ok) {
+          const p: ProgressState = await r.json();
+          setProgress(p);
+        }
+      } catch { /* ignorieren */ }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [loading]);
+
   const uploadFile = async (file: File) => {
+    // Neue Job-ID generieren
+    const clientJobId = crypto.randomUUID();
+    currentJobIdRef.current = clientJobId;
+
     setLoading(true);
     setError("");
     setResult(null);
     setPage(0);
+    setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: 2, detail: '' });
 
     const formData = new FormData();
     formData.append("file", file);
     formData.append("restoreEmoji", String(restoreEmoji));
     formData.append("useDeForNL", String(useDeForNL));
+    formData.append("clientJobId", clientJobId);
 
     try {
       const res = await fetch("/api/volt-fixer/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload fehlgeschlagen");
       setResult(data);
+      setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
     } catch (e: any) {
       setError(e.message || "Unbekannter Fehler");
+      setProgress(null);
     } finally {
       setLoading(false);
+      currentJobIdRef.current = null;
     }
   };
 
@@ -380,11 +409,52 @@ export default function VoltFixer() {
         onDrop={onDrop}
       >
         {loading ? (
-          <>
-            <Loader2 className="mx-auto mb-3 text-indigo-500 animate-spin" size={36} />
-            <p className="font-medium text-gray-700">Wird verarbeitet…</p>
-            <p className="text-sm text-gray-400 mt-1">Bitte warten, große Dateien dauern etwas länger</p>
-          </>
+          <div className="w-full px-2 py-2 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <Loader2 className="text-indigo-500 animate-spin shrink-0" size={22} />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-800 text-sm truncate">
+                  {progress?.stepLabel ?? 'Wird verarbeitet…'}
+                </p>
+                {progress?.detail && (
+                  <p className="text-xs text-gray-400 mt-0.5">{progress.detail}</p>
+                )}
+              </div>
+              <span className="text-sm font-bold text-indigo-600 shrink-0">
+                {progress?.percent ?? 0}%
+              </span>
+            </div>
+            {/* Fortschrittsbalken */}
+            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="bg-indigo-600 h-2.5 rounded-full transition-all duration-700 ease-out"
+                style={{ width: `${progress?.percent ?? 0}%` }}
+              />
+            </div>
+            {/* Schritt-Indikatoren */}
+            <div className="flex justify-between text-xs text-gray-400">
+              {[
+                { key: 'parsing',        label: 'Lesen' },
+                { key: 'fixing',         label: 'Korrigieren' },
+                { key: 'translating-nl', label: 'DE→NL' },
+                { key: 'translating-de', label: 'NL→DE' },
+                { key: 'building',       label: 'Aufbereiten' },
+              ].map(({ key, label }) => {
+                const steps = ['parsing','fixing','translating-nl','translating-de','building','done'];
+                const current = progress?.step ?? 'uploading';
+                const currentIdx = steps.indexOf(current);
+                const thisIdx = steps.indexOf(key);
+                const isDone = current === 'done' || (currentIdx > thisIdx && thisIdx !== -1);
+                const isActive = currentIdx === thisIdx;
+                return (
+                  <span key={key} className={`flex items-center gap-1 ${isDone ? 'text-indigo-600 font-medium' : isActive ? 'text-indigo-400 font-medium' : ''}`}>
+                    {isDone && <CheckCircle size={10} />}
+                    {label}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
         ) : (
           <>
             <Upload className="mx-auto mb-3 text-indigo-500" size={36} />
