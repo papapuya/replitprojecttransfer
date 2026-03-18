@@ -501,14 +501,12 @@ export default function VoltFixer() {
             {/* Schritt-Indikatoren */}
             <div className="flex justify-between text-xs text-gray-400">
               {[
-                { key: 'uploading',      label: 'Hochladen' },
-                { key: 'parsing',        label: 'Lesen' },
-                { key: 'fixing',         label: 'Korrigieren' },
-                { key: 'translating-nl', label: 'DE→NL' },
-                { key: 'translating-de', label: 'NL→DE' },
-                { key: 'building',       label: 'Aufbereiten' },
+                { key: 'uploading', label: 'Hochladen' },
+                { key: 'parsing',   label: 'Lesen' },
+                { key: 'fixing',    label: 'Korrigieren' },
+                { key: 'building',  label: 'Aufbereiten' },
               ].map(({ key, label }) => {
-                const steps = ['uploading','parsing','fixing','translating-nl','translating-de','building','done'];
+                const steps = ['uploading','parsing','fixing','building','done'];
                 const current = progress?.step ?? 'uploading';
                 const currentIdx = steps.indexOf(current);
                 const thisIdx = steps.indexOf(key);
