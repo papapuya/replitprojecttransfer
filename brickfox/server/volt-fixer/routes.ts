@@ -157,13 +157,13 @@ function extractVoltFromName(name: string): string | null {
 }
 
 // Setzt den Spannung/Nennspannung-Wert in der HTML-Tabelle immer auf den korrekten Volt-Wert.
-// Findet sowohl "Spannung" als auch "Nennspannung" als Label in der Tabelle.
+// Erkennt DE ("Spannung", "Nennspannung") und NL ("Spanning", "Nennspanning").
 // Falls keine Spannung-Zeile vorhanden ist aber eine Tabelle existiert, wird eine neue Zeile eingefügt.
 function setSpannungInHtml(html: string, targetVolt: string): { result: string; changed: boolean } {
   if (!html || !targetVolt) return { result: html, changed: false };
 
-  // Prüfe ob bereits eine Spannung-Zeile vorhanden ist
-  const spannungRegex = /(<(?:td|th)[^>]*>\s*(?:Nenn)?[Ss]pannung(?:\s*V)?\s*<\/(?:td|th)>\s*<(?:td|th)[^>]*>)([^<]*)(< *\/(?:td|th)>)/gi;
+  // Spannung-Zeilen: DE (Spannung/Nennspannung) + NL (Spanning/Nennspanning)
+  const spannungRegex = /(<(?:td|th)[^>]*>\s*(?:Nenn)?[Ss]pann(?:ung|ing)(?:\s*V)?\s*<\/(?:td|th)>\s*<(?:td|th)[^>]*>)([^<]*)(< *\/(?:td|th)>)/gi;
   let changed = false;
   let result = html.replace(spannungRegex, (_match, before, value, after) => {
     const currentVal = value.trim();
@@ -177,7 +177,8 @@ function setSpannungInHtml(html: string, targetVolt: string): { result: string; 
   });
 
   // Falls keine Spannung-Zeile gefunden wurde aber eine Tabelle existiert → Zeile einfügen
-  const hasSpannungRow = /(?:Nenn)?[Ss]pannung(?:\s*V)?/.test(html);
+  // Auch NL "Spanning" erkennen, damit keine doppelte Zeile eingefügt wird
+  const hasSpannungRow = /(?:Nenn)?[Ss]pann(?:ung|ing)(?:\s*V)?/.test(html);
   if (!changed && !hasSpannungRow) {
     // Füge Spannung-Zeile als erste Zeile nach <tbody> ein (oder vor dem ersten <tr>)
     const tbodyInsert = result.replace(/(<tbody[^>]*>)/, `$1<tr><th class="thlabel"> Spannung V</th><td class="data"> ${targetVolt} V</td></tr>`);
@@ -222,12 +223,12 @@ function detectEncoding(buffer: Buffer): string {
 function restoreEmojiCheckmarks(html: string): string {
   if (!html) return html;
   let result = html;
-  // 1. Nach beliebiger Folge von HTML-Tags (öffnend/schließend) + optionalem Whitespace
-  result = result.replace(/((?:<[^>]+>\s*)+)\?\s+/gi, '$1✅ ');
+  // 1. Nach beliebiger Folge von HTML-Tags (öffnend/schließend): ? → ✅ (Leerzeichen optional)
+  result = result.replace(/((?:<[^>]+>\s*)+)\?[ ]?/gi, '$1✅ ');
   // 2. Am absoluten Anfang des Strings
-  result = result.replace(/^\?\s+/, '✅ ');
+  result = result.replace(/^\?[ ]?/, '✅ ');
   // 3. Nach einem Zeilenumbruch (mit optionalen Tags)
-  result = result.replace(/(\n\s*(?:<[^>]*>\s*)*)\?\s+/g, '$1✅ ');
+  result = result.replace(/(\n\s*(?:<[^>]*>\s*)*)\?[ ]?/g, '$1✅ ');
   return result;
 }
 
