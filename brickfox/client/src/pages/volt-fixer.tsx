@@ -251,6 +251,7 @@ export default function VoltFixer() {
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<{ index: number; rowNum: number } | null>(null);
   const [restoreEmoji, setRestoreEmoji] = useState(false);
+  const [useDeForNL, setUseDeForNL] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = async (file: File) => {
@@ -262,6 +263,7 @@ export default function VoltFixer() {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("restoreEmoji", String(restoreEmoji));
+    formData.append("useDeForNL", String(useDeForNL));
 
     try {
       const res = await fetch("/api/volt-fixer/upload", { method: "POST", body: formData });
@@ -354,6 +356,27 @@ export default function VoltFixer() {
           <p className="text-xs text-gray-500 mt-0.5">
             Für Brickfox-Exporte im Windows-1252-Format: ✅-Emojis werden dabei zu <code className="bg-gray-100 px-0.5 rounded">?</code> konvertiert.
             Diese Option stellt sie in den Beschreibungen automatisch wieder her.
+          </p>
+        </div>
+      </label>
+
+      {/* Option: NL-Beschreibung aus DE übernehmen */}
+      <label className={`flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors select-none ${
+        useDeForNL ? "bg-blue-50 border-blue-300" : "bg-gray-50 border-gray-200 hover:border-blue-300"
+      } ${loading ? "pointer-events-none opacity-50" : ""}`}>
+        <input
+          type="checkbox"
+          checked={useDeForNL}
+          onChange={(e) => setUseDeForNL(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-blue-600"
+        />
+        <div>
+          <p className="text-sm font-semibold text-gray-700">
+            🇳🇱 NL-Beschreibung aus DE übernehmen (wenn NL unvollständig)
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Wenn die niederländische Beschreibung keinen vollständigen Text hat (nur Tabelle), wird die
+            korrigierte deutsche Beschreibung automatisch als NL-Beschreibung eingesetzt.
           </p>
         </div>
       </label>
