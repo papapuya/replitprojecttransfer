@@ -242,6 +242,35 @@ function cleanEmptyTableRows(html: string): { result: string; changed: boolean }
   return { result, changed };
 }
 
+// Extrahiert die Tabelle (inkl. vorangehender Überschrift) aus einem HTML-Beschreibungstext.
+function extractTableBlock(html: string): string | null {
+  if (!html) return null;
+  // Suche <table>...</table> mit optionaler vorangehender <h2>...</h2>
+  const match = html.match(/(?:<h2[^>]*>[\s\S]*?<\/h2>\s*)?<table[\s\S]*?<\/table>/i);
+  return match ? match[0] : null;
+}
+
+// Ersetzt die Tabelle in nlHtml durch die Tabelle aus deHtml.
+// Falls NL keine Tabelle hat, wird die DE-Tabelle am Ende angefügt.
+// Falls DE keine Tabelle hat, bleibt NL unverändert.
+function syncTableFromDe(deHtml: string, nlHtml: string): { result: string; changed: boolean } {
+  const deTable = extractTableBlock(deHtml);
+  if (!deTable) return { result: nlHtml, changed: false };
+
+  // NL-Tabelle durch DE-Tabelle ersetzen
+  const nlTableMatch = nlHtml.match(/(?:<h2[^>]*>[\s\S]*?<\/h2>\s*)?<table[\s\S]*?<\/table>/i);
+  if (nlTableMatch) {
+    // Ersetze bestehende NL-Tabelle durch DE-Tabelle
+    const result = nlHtml.replace(nlTableMatch[0], deTable);
+    const changed = result !== nlHtml;
+    return { result, changed };
+  } else {
+    // NL hat keine Tabelle → DE-Tabelle am Ende anfügen
+    const result = nlHtml.trimEnd() + '\n' + deTable;
+    return { result, changed: true };
+  }
+}
+
 // Ersetzt '? ' an typischen Bullet-Punkt-Positionen in HTML durch '✅ '
 // (nach <br>, <li>, <p> und am absoluten Textanfang)
 function restoreEmojiCheckmarks(html: string): string {
@@ -402,6 +431,19 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         if (cc) {
           newRow[col] = cleaned;
           if (!changed.includes(col)) changed.push(col);
+        }
+      }
+
+      // NL-Tabelle durch DE-Tabelle ersetzen (gleiche technische Daten in beiden Sprachen)
+      if (headers.includes('p_description[de]') && headers.includes('p_description[nl]')) {
+        const deHtml = newRow['p_description[de]'];
+        const nlHtml = newRow['p_description[nl]'];
+        if (deHtml && nlHtml) {
+          const { result: nlSynced, changed: ts } = syncTableFromDe(deHtml, nlHtml);
+          if (ts) {
+            newRow['p_description[nl]'] = nlSynced;
+            if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
+          }
         }
       }
 
