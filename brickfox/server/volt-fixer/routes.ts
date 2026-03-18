@@ -258,6 +258,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       changedCols,
     });
 
+    // Hilfsfunktion: HTML → plain text (abgekürzt)
+    const toPlainText = (html: string, max = 120): string => {
+      if (!html) return '';
+      const plain = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+      return plain.length > max ? plain.slice(0, max) + '…' : plain;
+    };
+
     // Kompakte Vorschau: alle Zeilen, nur wichtige Felder (kein HTML) für Tabelle
     const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
     const previewItems = fixedRows.map((row, i) => {
@@ -273,6 +280,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         nameDE: row['p_name[de]'] ?? '',
         nameNLOrig: orig['p_name[nl]'] ?? '',
         nameNL: row['p_name[nl]'] ?? '',
+        descDE: toPlainText(row['p_description[de]'] ?? ''),
+        descDEChanged: changed.includes('p_description[de]'),
+        descNL: toPlainText(row['p_description[nl]'] ?? ''),
+        descNLChanged: changed.includes('p_description[nl]'),
         changed,
       };
     });
