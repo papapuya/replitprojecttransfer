@@ -120,9 +120,9 @@ function syncVoltInName(text: string, targetVolt: string): { result: string; cha
   if (!text || !targetVolt) return { result: text, changed: false };
   let changed = false;
   const result = text.replace(/\b(\d+(?:[,\.]\d+)?)(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
-    // Normalisiere: Punkt → Komma für den Vergleich
-    const withComma = num.replace('.', ',');
-    if (withComma === targetVolt) return _match; // bereits korrekte Schreibweise
+    // Exakter String-Vergleich: nur wenn num identisch zum Zielwert ist, nichts tun
+    // "3.85" != "3,85" → wird ersetzt; "385" != "3,85" → wird ersetzt; "3,85" == "3,85" → bleibt
+    if (num === targetVolt) return _match;
     changed = true;
     return targetVolt + suffix;
   });
