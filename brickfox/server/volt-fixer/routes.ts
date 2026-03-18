@@ -12,7 +12,15 @@ const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
 const NAME_COLS = ['p_name[de]', 'p_name[nl]'];
 
 // Temporärer Speicher für verarbeitete Ergebnisse (max 30 Minuten)
-const jobStore = new Map<string, { csvBuffer: Buffer; fileName: string; expires: number }>();
+const jobStore = new Map<string, {
+  csvBuffer: Buffer;
+  fileName: string;
+  expires: number;
+  fixedRows: Record<string, string>[];
+  originalRows: Record<string, string>[];
+  headers: string[];
+  changedCols: string[][];
+}>();
 
 // Aufräumen alter Jobs
 setInterval(() => {
@@ -237,34 +245,67 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const csvOut = Papa.unparse(fixedRows, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
-    // Job speichern (30 Minuten)
+    // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
+    const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
     jobStore.set(jobId, {
       csvBuffer,
-      fileName: (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv'),
+      fileName,
       expires: Date.now() + 30 * 60 * 1000,
+      fixedRows,
+      originalRows: rows,
+      headers,
+      changedCols,
     });
 
-    // Vorschau: erste 100 Zeilen mit changed-Markierung
-    const preview = fixedRows.slice(0, 100).map((row, i) => ({
-      row,
-      original: rows[i],
-      changed: changedCols[i] || [],
-    }));
+    // Kompakte Vorschau: alle Zeilen, nur wichtige Felder (kein HTML) für Tabelle
+    const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
+    const previewItems = fixedRows.map((row, i) => {
+      const orig = rows[i];
+      const changed = changedCols[i] || [];
+      const itemNr = ITEM_NR_COLS.map(c => row[c]).find(v => v) || '';
+      return {
+        index: i,
+        itemNr,
+        voltOrig: orig[VOLT_COL] ?? '',
+        voltNew: row[VOLT_COL] ?? '',
+        nameDEOrig: orig['p_name[de]'] ?? '',
+        nameDE: row['p_name[de]'] ?? '',
+        nameNLOrig: orig['p_name[nl]'] ?? '',
+        nameNL: row['p_name[nl]'] ?? '',
+        changed,
+      };
+    });
 
     res.json({
       jobId,
       headers,
       stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted },
-      preview,
+      previewItems,
       allChangedNames,
       allExtractedVolt,
-      fileName: jobStore.get(jobId)!.fileName,
+      fileName,
     });
   } catch (err: any) {
     console.error('[VoltFixer] Upload error:', err);
     res.status(500).json({ error: err.message || 'Interner Fehler' });
   }
+});
+
+// GET /api/volt-fixer/detail/:jobId/:index — vollständige Zeile für Auge-Modal
+router.get('/detail/:jobId/:index', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  const idx = parseInt(req.params.index, 10);
+  if (isNaN(idx) || idx < 0 || idx >= job.fixedRows.length) {
+    return res.status(400).json({ error: 'Ungültiger Index' });
+  }
+  res.json({
+    row: job.fixedRows[idx],
+    original: job.originalRows[idx],
+    changed: job.changedCols[idx] || [],
+    headers: job.headers,
+  });
 });
 
 // GET /api/volt-fixer/download/:jobId
