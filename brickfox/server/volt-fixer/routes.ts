@@ -469,8 +469,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       restoreEmoji,
     });
 
-    setProgress('done', 'Fertig!', 100);
-
     // Hilfsfunktion: HTML → plain text (abgekürzt)
     const toPlainText = (html: string, max = 120): string => {
       if (!html) return '';
@@ -478,13 +476,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return plain.length > max ? plain.slice(0, max) + '…' : plain;
     };
 
-    // Kompakte Vorschau: alle Zeilen, nur wichtige Felder (kein HTML) für Tabelle
+    // Kompakte Vorschau: NUR geänderte Zeilen, max. 500 Einträge
     const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
-    const previewItems = fixedRows.map((row, i) => {
+    const MAX_PREVIEW = 500;
+    const previewItems: object[] = [];
+    for (let i = 0; i < fixedRows.length && previewItems.length < MAX_PREVIEW; i++) {
+      const changed = changedCols[i];
+      if (!changed || changed.length === 0) continue;
       const orig = rows[i];
-      const changed = changedCols[i] || [];
+      const row = fixedRows[i];
       const itemNr = ITEM_NR_COLS.map(c => row[c]).find(v => v) || '';
-      return {
+      previewItems.push({
         index: i,
         itemNr,
         voltOrig: orig[VOLT_COL] ?? '',
@@ -498,16 +500,18 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         descNL: toPlainText(row['p_description[nl]'] ?? ''),
         descNLChanged: changed.includes('p_description[nl]'),
         changed,
-      };
-    });
+      });
+    }
+
+    setProgress('done', 'Fertig!', 100);
 
     res.json({
       jobId,
       headers,
       stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated },
       previewItems,
-      allChangedNames,
-      allExtractedVolt,
+      allChangedNames: allChangedNames.slice(0, 300),
+      allExtractedVolt: allExtractedVolt.slice(0, 300),
       fileName,
     });
   } catch (err: any) {
