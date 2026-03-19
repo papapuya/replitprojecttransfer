@@ -154,20 +154,28 @@ function extractVoltFromName(name: string): string | null {
   return normalizeExtractedVolt(simpleMatch[1]);
 }
 
-// Ersetzt den alten (korrupten) Volt-Wert im Fließtext von HTML-Beschreibungen.
-// Wird nur aufgerufen wenn der Volt-Wert tatsächlich korrigiert wurde (oldVolt ≠ newVolt).
-// Ändert NUR den exakten alten Wert + V/Volt-Einheit – keine anderen Volt-Angaben.
+// Synchronisiert alle Volt-Werte im Fließtext einer HTML-Beschreibung auf den Zielwert.
+// Funktioniert wie syncVoltInName: ersetzt JEDEN Volt-Wert der nicht dem Zielwert entspricht.
 // HTML-Tags werden übersprungen, nur Textknoten werden verändert.
-function replaceVoltInHtmlText(html: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
-  if (!html || !oldVolt || !newVolt || oldVolt === newVolt) return { result: html, changed: false };
-  const escaped = oldVolt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const tagOrVolt = new RegExp(`(<[^>]*>)|(\\b${escaped}(\\s*V(?:olt)?)\\b)`, 'gi');
+// Bereichswerte (100-240V) werden nicht angefasst.
+function syncVoltInHtmlText(html: string, targetVolt: string): { result: string; changed: boolean } {
+  if (!html || !targetVolt || targetVolt.includes('-') || targetVolt.includes('/')) {
+    return { result: html, changed: false };
+  }
   let changed = false;
-  const result = html.replace(tagOrVolt, (match, tag, _voltMatch, unit) => {
-    if (tag !== undefined) return tag;
-    changed = true;
-    return newVolt + (unit?.trim() === 'Volt' ? ' Volt' : ' V');
-  });
+  const result = html.replace(/(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
+    (match, tag, _full, num, unit) => {
+      if (tag !== undefined) return tag; // HTML-Tag → unverändert
+      if (!num || !unit) return match;
+      const normalized = num.replace('.', ',');
+      if (normalized === targetVolt) return match; // bereits korrekt
+      // Bereichswerte innerhalb von Textknoten (z.B. "100-240") überspringen
+      if (/[-\/]/.test(num)) return match;
+      changed = true;
+      const unitOut = unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V';
+      return targetVolt + ' ' + unitOut;
+    }
+  );
   return { result, changed };
 }
 
@@ -534,18 +542,15 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
             descChanged++;
           }
 
-          // 2) Fließtext: alten (korrupten) Volt-Wert durch korrekten ersetzen
-          //    Nur wenn der Volt-Wert tatsächlich korrigiert wurde (z.B. "37" → "3,7")
-          if (voltWasChanged && voltVal) {
-            const { result: htmlAfterText, changed: tc } = replaceVoltInHtmlText(
-              newRow[col] || descVal,
-              voltVal,
-              newVolt
-            );
-            if (tc) {
-              newRow[col] = htmlAfterText;
-              if (!changed.includes(col)) changed.push(col);
-            }
+          // 2) Fließtext synchronisieren: alle Volt-Werte im Text auf Zielwert setzen
+          //    (wie syncVoltInName – ersetzt auch "3,6 Volt" → "3,7 Volt" wenn Spalte "3,7" hat)
+          const { result: htmlAfterText, changed: tc } = syncVoltInHtmlText(
+            newRow[col] || descVal,
+            newVolt
+          );
+          if (tc) {
+            newRow[col] = htmlAfterText;
+            if (!changed.includes(col)) changed.push(col);
           }
         }
       }
