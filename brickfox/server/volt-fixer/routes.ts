@@ -323,17 +323,19 @@ function removeExtraInformatie(html: string): { result: string; changed: boolean
   return { result, changed };
 }
 
-// Ersetzt '? ' an typischen Bullet-Punkt-Positionen in HTML durch '✅ '
-// (nach <br>, <li>, <p> und am absoluten Textanfang)
+// Ersetzt '? ' an typischen Bullet-Punkt-Positionen in HTML durch '&#x2705; ' (HTML-Entität für ✅)
+// HTML-Entität statt literalem Emoji: überlebt Windows-1252 Encoding in Brickfox-Export
 function restoreEmojiCheckmarks(html: string): string {
   if (!html) return html;
-  // Einfache, zuverlässige Strategie:
-  // '? ' (mit Leerzeichen) direkt nach einem HTML-Tag-Ende '>' → ✅
-  let result = html.replace(/>(\s*)\? /g, '>$1✅ ');
+  const CHECK = '&#x2705;';
+  // Auch bereits eingesetzte Literal-✅ in Entität umwandeln (falls vorhanden)
+  let result = html.replace(/✅/g, CHECK);
+  // '? ' direkt nach einem HTML-Tag-Ende '>'
+  result = result.replace(/>(\s*)\? /g, `>$1${CHECK} `);
   // Am absoluten Anfang des Strings
-  result = result.replace(/^\? /, '✅ ');
+  result = result.replace(/^\? /, `${CHECK} `);
   // Nach Zeilenumbruch
-  result = result.replace(/\n(\s*)\? /g, '\n$1✅ ');
+  result = result.replace(/\n(\s*)\? /g, `\n$1${CHECK} `);
   return result;
 }
 
