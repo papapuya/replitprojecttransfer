@@ -82,8 +82,6 @@ export default function CSVBulkDescription() {
   const [rawData, setRawData] = useState<RawCSVRow[]>([]);
   const [previewFilter, setPreviewFilter] = useState<string>('');
   const [previewPidFilter, setPreviewPidFilter] = useState<string>('');
-  const [showPreviewColumnSelector, setShowPreviewColumnSelector] = useState(false);
-  const [visibleKiColumns, setVisibleKiColumns] = useState<string[]>(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'seo_beschreibung', 'keywords']);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
@@ -1381,14 +1379,6 @@ export default function CSVBulkDescription() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowPreviewColumnSelector(!showPreviewColumnSelector)}
-                  >
-                    <Settings2 className="w-4 h-4 mr-2" />
-                    Spalten
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
                     onClick={async () => {
                       // DeepL Übersetzung für rawData - parallel für Geschwindigkeit
                       const descKey = Object.keys(rawData[0] || {}).find(k => k.toLowerCase().includes('p_description[de]'));
@@ -1558,59 +1548,6 @@ export default function CSVBulkDescription() {
                 </div>
               </div>
 
-              {/* Spaltenkonfigurator für KI-Spalten */}
-              {showPreviewColumnSelector && (
-                <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold">Sichtbare KI-Spalten auswählen</h4>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setVisibleKiColumns(['produktname_neu', 'mediamarkt_v1', 'mediamarkt_v2', 'seo_beschreibung', 'keywords'])}
-                      >
-                        Alle
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setVisibleKiColumns([])}
-                      >
-                        Keine
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-4">
-                    {[
-                      { key: 'produktname_neu', label: 'Produktname Neu' },
-                      { key: 'mediamarkt_v1', label: 'MediaMarkt V1' },
-                      { key: 'mediamarkt_v2', label: 'MediaMarkt V2' },
-                      { key: 'seo_beschreibung', label: 'SEO Beschreibung' },
-                      { key: 'keywords', label: 'Keywords' }
-                    ].map(col => (
-                      <div key={col.key} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`ki-col-${col.key}`}
-                          checked={visibleKiColumns.includes(col.key)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setVisibleKiColumns(prev => [...prev, col.key]);
-                            } else {
-                              setVisibleKiColumns(prev => prev.filter(c => c !== col.key));
-                            }
-                          }}
-                        />
-                        <Label
-                          htmlFor={`ki-col-${col.key}`}
-                          className="text-sm cursor-pointer"
-                        >
-                          {col.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
               <div className="table-scroll-visible max-h-[600px] border rounded-lg" style={{ scrollbarWidth: 'auto', scrollbarColor: '#888 #f1f1f1' }}>
                 <table className="w-full border-collapse text-xs min-w-max">
                   <thead className="sticky top-0 z-10">
@@ -1629,32 +1566,6 @@ export default function CSVBulkDescription() {
                             </th>
                           );
                         })}
-                      {/* KI-generierte Spalten - nur sichtbare */}
-                      {visibleKiColumns.includes('produktname_neu') && (
-                        <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
-                          🤖 Produktname Neu
-                        </th>
-                      )}
-                      {visibleKiColumns.includes('mediamarkt_v1') && (
-                        <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
-                          🤖 MediaMarkt V1
-                        </th>
-                      )}
-                      {visibleKiColumns.includes('mediamarkt_v2') && (
-                        <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
-                          🤖 MediaMarkt V2
-                        </th>
-                      )}
-                      {visibleKiColumns.includes('seo_beschreibung') && (
-                        <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-primary/10">
-                          🤖 SEO Beschreibung
-                        </th>
-                      )}
-                      {visibleKiColumns.includes('keywords') && (
-                        <th className="px-2 py-1 text-left font-semibold text-primary border border-border whitespace-nowrap bg-orange-500/20">
-                          🔑 Keywords
-                        </th>
-                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -1722,52 +1633,6 @@ export default function CSVBulkDescription() {
                                 </td>
                               );
                             }).filter(Boolean)}
-                          {/* KI-Spalten - nur sichtbare */}
-                          {visibleKiColumns.includes('produktname_neu') && (
-                            <td className="px-2 py-1 border border-border bg-green-500/10 text-foreground">
-                              {generatedProduct ? (
-                                <span className="line-clamp-2 font-medium text-green-700 dark:text-green-400">{generatedProduct.produktname_neu || '-'}</span>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">wird generiert...</span>
-                              )}
-                            </td>
-                          )}
-                          {visibleKiColumns.includes('mediamarkt_v1') && (
-                            <td className="px-2 py-1 border border-border bg-primary/5 text-foreground">
-                              {generatedProduct ? (
-                                <span className="line-clamp-1 font-medium">{generatedProduct.mediamarktname_v1}</span>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">wird generiert...</span>
-                              )}
-                            </td>
-                          )}
-                          {visibleKiColumns.includes('mediamarkt_v2') && (
-                            <td className="px-2 py-1 border border-border bg-primary/5 text-foreground">
-                              {generatedProduct ? (
-                                <span className="line-clamp-1 font-medium">{generatedProduct.mediamarktname_v2}</span>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">wird generiert...</span>
-                              )}
-                            </td>
-                          )}
-                          {visibleKiColumns.includes('seo_beschreibung') && (
-                            <td className="px-2 py-1 border border-border bg-primary/5 text-foreground">
-                              {generatedProduct ? (
-                                <span className="line-clamp-1 text-xs">{generatedProduct.seo_beschreibung}</span>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">wird generiert...</span>
-                              )}
-                            </td>
-                          )}
-                          {visibleKiColumns.includes('keywords') && (
-                            <td className="px-2 py-1 border border-border bg-orange-500/10 text-foreground max-w-xs">
-                              {generatedProduct ? (
-                                <span className="line-clamp-2 text-xs text-orange-700 dark:text-orange-400">{generatedProduct.seo_keywords || '-'}</span>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">wird generiert...</span>
-                              )}
-                            </td>
-                          )}
                           </tr>
                         );
                       });
