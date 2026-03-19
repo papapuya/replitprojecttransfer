@@ -154,6 +154,23 @@ function extractVoltFromName(name: string): string | null {
   return normalizeExtractedVolt(simpleMatch[1]);
 }
 
+// Ersetzt den alten (korrupten) Volt-Wert im Fließtext von HTML-Beschreibungen.
+// Wird nur aufgerufen wenn der Volt-Wert tatsächlich korrigiert wurde (oldVolt ≠ newVolt).
+// Ändert NUR den exakten alten Wert + V/Volt-Einheit – keine anderen Volt-Angaben.
+// HTML-Tags werden übersprungen, nur Textknoten werden verändert.
+function replaceVoltInHtmlText(html: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
+  if (!html || !oldVolt || !newVolt || oldVolt === newVolt) return { result: html, changed: false };
+  const escaped = oldVolt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tagOrVolt = new RegExp(`(<[^>]*>)|(\\b${escaped}(\\s*V(?:olt)?)\\b)`, 'gi');
+  let changed = false;
+  const result = html.replace(tagOrVolt, (match, tag, _voltMatch, unit) => {
+    if (tag !== undefined) return tag;
+    changed = true;
+    return newVolt + (unit?.trim() === 'Volt' ? ' Volt' : ' V');
+  });
+  return { result, changed };
+}
+
 // Normalisiert einen aus Text extrahierten Volt-Wert für die p_attributes[akku_v][de]-Spalte.
 // Aus Text extrahierte Werte sind bereits korrekt (z.B. "19" aus "19 V" = wirklich 19 Volt).
 // Ganze Zahlen bekommen ,0 angehängt (19 → 19,0, 24 → 24,0).
@@ -508,11 +525,27 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         for (const col of DESC_COLS) {
           const descVal = newRow[col] || row[col];
           if (!descVal) continue;
-          const { result, changed: dc } = setSpannungInHtml(descVal, newVolt);
+
+          // 1) Spannung-Tabellenzeile aktualisieren
+          const { result: htmlAfterTable, changed: dc } = setSpannungInHtml(descVal, newVolt);
           if (dc) {
-            newRow[col] = result;
+            newRow[col] = htmlAfterTable;
             if (!changed.includes(col)) changed.push(col);
             descChanged++;
+          }
+
+          // 2) Fließtext: alten (korrupten) Volt-Wert durch korrekten ersetzen
+          //    Nur wenn der Volt-Wert tatsächlich korrigiert wurde (z.B. "37" → "3,7")
+          if (voltWasChanged && voltVal) {
+            const { result: htmlAfterText, changed: tc } = replaceVoltInHtmlText(
+              newRow[col] || descVal,
+              voltVal,
+              newVolt
+            );
+            if (tc) {
+              newRow[col] = htmlAfterText;
+              if (!changed.includes(col)) changed.push(col);
+            }
           }
         }
       }
