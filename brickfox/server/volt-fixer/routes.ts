@@ -156,6 +156,23 @@ function extractVoltFromName(name: string): string | null {
   return fixed;
 }
 
+// Extrahiert den Volt-Wert aus einem HTML-Beschreibungstext (HTML-Tags werden ignoriert).
+// Gleiche Muster wie extractVoltFromName, aber sucht im Plaintext der Beschreibung.
+function extractVoltFromDesc(html: string): string | null {
+  if (!html) return null;
+  // HTML-Tags entfernen → Plaintext
+  const text = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ');
+  // Bereichs-Muster zuerst (z.B. 100-240V, 12/24 Volt)
+  const rangeMatch = text.match(/\b(\d+(?:[,.]\d+)?[-\/]\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
+  if (rangeMatch) return rangeMatch[1].replace('.', ',');
+  // Einfacher Wert (z.B. 3,7 V, 3.7V, 12 Volt)
+  const simpleMatch = text.match(/\b(\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
+  if (!simpleMatch) return null;
+  const raw = simpleMatch[1].replace('.', ',');
+  const { fixed } = fixVolt(raw);
+  return fixed;
+}
+
 // Setzt den Spannung/Nennspannung-Wert in der HTML-Tabelle immer auf den korrekten Volt-Wert.
 // Erkennt DE ("Spannung", "Nennspannung") und NL ("Spanning", "Nennspanning").
 // Falls keine Spannung-Zeile vorhanden ist aber eine Tabelle existiert, wird eine neue Zeile eingefügt.
@@ -430,6 +447,22 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
             extractedFromCol = col;
             extractedFromName = nameVal;
             break;
+          }
+        }
+
+        // Fallback: in der Produktbeschreibung suchen
+        if (!extracted) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const descVal = newRow[col] || row[col];
+            if (!descVal) continue;
+            const found = extractVoltFromDesc(descVal);
+            if (found) {
+              extracted = found;
+              extractedFromCol = col;
+              extractedFromName = descVal.replace(/<[^>]+>/g, ' ').substring(0, 80);
+              break;
+            }
           }
         }
 
