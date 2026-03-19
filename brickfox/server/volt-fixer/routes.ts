@@ -147,30 +147,39 @@ function extractVoltFromName(name: string): string | null {
   if (!name) return null;
   // Bereichs-Muster zuerst (X-YV oder X/YV, z.B. 100-240V, 12/24 Volt)
   const rangeMatch = name.match(/\b(\d+(?:[,.]\d+)?[-\/]\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
-  if (rangeMatch) return rangeMatch[1].replace('.', ',');
-  // Einfacher Wert
+  if (rangeMatch) return normalizeExtractedVolt(rangeMatch[1]);
+  // Einfacher Wert (z.B. 3,7 V, 19V, 24 Volt)
   const simpleMatch = name.match(/\b(\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
   if (!simpleMatch) return null;
-  const raw = simpleMatch[1].replace('.', ',');
-  const { fixed } = fixVolt(raw);
-  return fixed;
+  return normalizeExtractedVolt(simpleMatch[1]);
+}
+
+// Normalisiert einen aus Text extrahierten Volt-Wert für die p_attributes[akku_v][de]-Spalte.
+// Aus Text extrahierte Werte sind bereits korrekt (z.B. "19" aus "19 V" = wirklich 19 Volt).
+// Ganze Zahlen bekommen ,0 angehängt (19 → 19,0, 24 → 24,0).
+// Dezimalwerte: Punkt durch Komma ersetzen (3.7 → 3,7). Bereichswerte unverändert.
+function normalizeExtractedVolt(raw: string): string {
+  if (!raw) return raw;
+  // Bereichswert (z.B. "100-240", "12/24") → unverändert
+  if (/[-\/]/.test(raw)) return raw.replace('.', ',');
+  // Dezimalwert (z.B. "3,7" oder "3.7") → Punkt durch Komma
+  if (raw.includes(',') || raw.includes('.')) return raw.replace('.', ',');
+  // Ganzzahl → ,0 anhängen (19 → 19,0, 24 → 24,0)
+  return raw + ',0';
 }
 
 // Extrahiert den Volt-Wert aus einem HTML-Beschreibungstext (HTML-Tags werden ignoriert).
-// Gleiche Muster wie extractVoltFromName, aber sucht im Plaintext der Beschreibung.
 function extractVoltFromDesc(html: string): string | null {
   if (!html) return null;
   // HTML-Tags entfernen → Plaintext
   const text = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ');
   // Bereichs-Muster zuerst (z.B. 100-240V, 12/24 Volt)
   const rangeMatch = text.match(/\b(\d+(?:[,.]\d+)?[-\/]\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
-  if (rangeMatch) return rangeMatch[1].replace('.', ',');
-  // Einfacher Wert (z.B. 3,7 V, 3.7V, 12 Volt)
+  if (rangeMatch) return normalizeExtractedVolt(rangeMatch[1]);
+  // Einfacher Wert (z.B. 3,7 V, 3.7V, 19 Volt, 24V)
   const simpleMatch = text.match(/\b(\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
   if (!simpleMatch) return null;
-  const raw = simpleMatch[1].replace('.', ',');
-  const { fixed } = fixVolt(raw);
-  return fixed;
+  return normalizeExtractedVolt(simpleMatch[1]);
 }
 
 // Setzt den Spannung/Nennspannung-Wert in der HTML-Tabelle immer auf den korrekten Volt-Wert.
