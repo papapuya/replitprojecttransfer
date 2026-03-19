@@ -646,8 +646,18 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
+    // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
+    // Verhindert, dass mehrzeilige HTML-Felder im CSV über mehrere Zeilen verteilt werden
+    const csvRows = fixedRows.map(row => {
+      const r = { ...row };
+      for (const col of DESC_COLS) {
+        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ');
+      }
+      return r;
+    });
+
     // Korrigierte CSV bauen
-    const csvOut = Papa.unparse(fixedRows, { delimiter: ';', columns: headers });
+    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
