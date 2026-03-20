@@ -193,56 +193,48 @@ function normalizeExtractedVolt(raw: string): string {
   return raw + ',0';
 }
 
-// Sortiert Spannung-Zeilen in der technischen Tabelle aufsteigend nach Volt-Wert.
-// Spannung-Zeilen: alle Zeilen deren Label "Spannung", "Spanning", "Eingangsspannung" etc. enthält.
-// Nicht-Spannung-Zeilen bleiben an ihrer Position.
-// Beispiel: Spannung 3,6 V / Eingangsspannung 12 V / Ausgangsspannung 4,2 V
-//        → Spannung 3,6 V / Ausgangsspannung 4,2 V / Eingangsspannung 12 V (aufsteigend)
+// Sortiert Spannung-Zeilen in der technischen Tabelle in fester Reihenfolge:
+//   1. Spannung / Nennspannung  (Hauptspannung des Produkts)
+//   2. Eingangsspannung          (Input)
+//   3. Ausgangsspannung          (Output)
+// Alle anderen Zeilen bleiben an ihrer Position.
 function sortVoltageTableRows(html: string): { result: string; changed: boolean } {
   if (!html) return { result: html, changed: false };
-  // Label-Erkennung: DE + NL Spannung-Begriffe
-  const isVoltageLabel = /(?:nenn)?[Ss]pann(?:ung|ing)|[Ee]ingangs(?:spannung|spanning)|[Aa]usgangs(?:spannung|spanning)/i;
-  // Extrahiert den numerischen Volt-Wert aus dem Zellen-Inhalt
-  const extractVoltNum = (rowHtml: string): number => {
-    const cells = [...rowHtml.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
-    const valueCell = cells[cells.length - 1];
-    if (!valueCell) return Infinity;
-    const text = valueCell[1].replace(/<[^>]+>/g, '').trim();
-    const m = text.match(/\b(\d+(?:[,.]\d+)?)\s*V\b/i);
-    if (!m) return Infinity;
-    return parseFloat(m[1].replace(',', '.'));
+
+  // Priorität je Label: niedrigere Zahl = weiter vorne
+  const voltPriority = (rowHtml: string): number => {
+    const labelCell = rowHtml.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+    if (!labelCell) return 99;
+    const label = labelCell[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
+    if (/^(?:nenn)?spann(?:ung|ing)/.test(label)) return 0;      // Spannung / Nennspannung
+    if (/eingangs(?:spannung|spanning)/.test(label)) return 1;   // Eingangsspannung
+    if (/ausgangs(?:spannung|spanning)/.test(label)) return 2;   // Ausgangsspannung
+    return 99; // kein Spannung-Label
   };
+
+  const isVoltageRow = (rowHtml: string) => voltPriority(rowHtml) < 99;
 
   let changed = false;
   const result = html.replace(/(<table[^>]*>)([\s\S]*?)(<\/table>)/gi, (_tableMatch, open, body, close) => {
-    // Alle <tr>...</tr> extrahieren
     const rowPattern = /(<tr[^>]*>[\s\S]*?<\/tr>)/gi;
     const allRows = [...body.matchAll(rowPattern)].map(m => m[1]);
     if (allRows.length === 0) return _tableMatch;
 
     // Spannung-Zeilen-Indizes bestimmen
     const voltIndices: number[] = [];
-    allRows.forEach((row, i) => {
-      const labelCell = row.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
-      if (labelCell && isVoltageLabel.test(labelCell[1].replace(/<[^>]+>/g, ''))) {
-        voltIndices.push(i);
-      }
-    });
-    if (voltIndices.length <= 1) return _tableMatch; // Nichts zu sortieren
+    allRows.forEach((row, i) => { if (isVoltageRow(row)) voltIndices.push(i); });
+    if (voltIndices.length <= 1) return _tableMatch;
 
-    // Spannung-Zeilen nach Volt-Wert aufsteigend sortieren
+    // Spannung-Zeilen nach Priorität sortieren
     const voltRows = voltIndices.map(i => allRows[i]);
-    const sortedVoltRows = [...voltRows].sort((a, b) => extractVoltNum(a) - extractVoltNum(b));
+    const sortedVoltRows = [...voltRows].sort((a, b) => voltPriority(a) - voltPriority(b));
 
-    // Prüfen ob sich die Reihenfolge geändert hat
     if (voltRows.every((r, i) => r === sortedVoltRows[i])) return _tableMatch;
     changed = true;
 
-    // Neue Zeilenfolge aufbauen
     const newRows = [...allRows];
     voltIndices.forEach((origIdx, i) => { newRows[origIdx] = sortedVoltRows[i]; });
 
-    // Tabellen-Body mit neuer Reihenfolge rekonstruieren
     let rowIdx = 0;
     const newBody = body.replace(/(<tr[^>]*>[\s\S]*?<\/tr>)/gi, () => newRows[rowIdx++] ?? '');
     return open + newBody + close;
