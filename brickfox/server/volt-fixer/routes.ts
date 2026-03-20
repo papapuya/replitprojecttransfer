@@ -146,18 +146,24 @@ setInterval(() => {
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   const trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
-  if (trimmed.includes(',') || trimmed.includes('.')) return { fixed: trimmed, changed: false };
+  // Bereits mit Punkt → unverändert
+  if (trimmed.includes('.')) return { fixed: trimmed, changed: false };
+  // Mit Komma → Komma durch Punkt ersetzen (z.B. 3,85 → 3.85)
+  if (trimmed.includes(',')) {
+    const fixed = trimmed.replace(',', '.');
+    return { fixed, changed: true };
+  }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   if (trimmed.length === 1) return { fixed: trimmed, changed: false };
-  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX,Y (z.B. 111→11,1, 144→14,4, 222→22,2, 108→10,8)
+  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 111→11.1, 144→14.4)
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
     if (firstTwo >= 10 && firstTwo <= 24) {
-      return { fixed: trimmed.slice(0, 2) + ',' + trimmed[2], changed: true };
+      return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
     }
   }
-  // Standard: Komma nach erster Stelle (z.B. 385→3,85, 48→4,8, 36→3,6)
-  return { fixed: trimmed[0] + ',' + trimmed.slice(1), changed: true };
+  // Standard: Punkt nach erster Stelle (z.B. 385→3.85, 48→4.8, 36→3.6)
+  return { fixed: trimmed[0] + '.' + trimmed.slice(1), changed: true };
 }
 
 // Ersetzt Volt-Wert in Produktnamen (Plaintext), z.B. "385 V" → "3,85 V", "385 Volt" → "3,85 Volt"
@@ -269,17 +275,16 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
 }
 
 // Normalisiert einen aus Text extrahierten Volt-Wert für die p_attributes[akku_v][de]-Spalte.
-// Aus Text extrahierte Werte sind bereits korrekt (z.B. "19" aus "19 V" = wirklich 19 Volt).
-// Ganze Zahlen bekommen ,0 angehängt (19 → 19,0, 24 → 24,0).
-// Dezimalwerte: Punkt durch Komma ersetzen (3.7 → 3,7). Bereichswerte unverändert.
+// Export-Format: immer Punkt als Dezimaltrennzeichen (3,7 → 3.7, 19 → 19.0).
+// Bereichswerte (100-240) bleiben unverändert.
 function normalizeExtractedVolt(raw: string): string {
   if (!raw) return raw;
-  // Bereichswert (z.B. "100-240", "12/24") → unverändert
-  if (/[-\/]/.test(raw)) return raw.replace('.', ',');
-  // Dezimalwert (z.B. "3,7" oder "3.7") → Punkt durch Komma
-  if (raw.includes(',') || raw.includes('.')) return raw.replace('.', ',');
-  // Ganzzahl → ,0 anhängen (19 → 19,0, 24 → 24,0)
-  return raw + ',0';
+  // Bereichswert (z.B. "100-240", "12/24") → unverändert (kein Dezimal)
+  if (/[-\/]/.test(raw)) return raw.replace(',', '.');
+  // Dezimalwert (z.B. "3,7" oder "3.7") → Komma durch Punkt (Export-Format)
+  if (raw.includes(',') || raw.includes('.')) return raw.replace(',', '.');
+  // Ganzzahl → .0 anhängen (19 → 19.0, 24 → 24.0)
+  return raw + '.0';
 }
 
 // Gruppiert Spannung-Zeilen in der technischen Tabelle:
