@@ -118,6 +118,14 @@ function isUnorderly(html: string): boolean {
   return !/<table[\s>]/i.test(html);
 }
 
+// Erkennt Produktbeschreibungen mit weniger als 20 Wörtern (plain text, ohne HTML-Tags)
+function isShortDesc(html: string, minWords = 20): boolean {
+  if (!html || !html.trim()) return false;
+  const plain = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z#\d]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+  const wordCount = plain.split(' ').filter(w => w.length > 0).length;
+  return wordCount < minWords;
+}
+
 const jobStore = new Map<string, {
   csvBuffer: Buffer;
   fileName: string;
@@ -125,6 +133,7 @@ const jobStore = new Map<string, {
   fixedRows: Record<string, string>[];
   dreiSpannungIndices: number[];
   unorderlyIndices: number[];
+  shortDescIndices: number[];
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
@@ -972,6 +981,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .filter(({ html }) => isUnorderly(html))
       .map(({ i }) => i);
 
+    // Kurze Beschreibungen: weniger als 20 Wörter in p_description[de]
+    const shortDescIndices: number[] = fixedRows
+      .map((row, i) => ({ i, html: row['p_description[de]'] || '' }))
+      .filter(({ html }) => isShortDesc(html))
+      .map(({ i }) => i);
+
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
     const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
@@ -982,6 +997,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       fixedRows,
       dreiSpannungIndices,
       unorderlyIndices,
+      shortDescIndices,
       originalRows: rows,
       headers,
       changedCols,
@@ -1027,7 +1043,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nameNlTranslated, dreiSpannungCount: dreiSpannungIndices.length, unorderlyCount: unorderlyIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nameNlTranslated, dreiSpannungCount: dreiSpannungIndices.length, unorderlyCount: unorderlyIndices.length, shortDescCount: shortDescIndices.length },
       previewItems,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),
@@ -1117,6 +1133,32 @@ router.get('/download-unorderly/:jobId', (req: Request, res: Response) => {
   const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_unordentlich.csv');
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
+  res.send(csvBuffer);
+});
+
+// GET /api/volt-fixer/download-short-desc/:jobId
+// Exportiert nur Zeilen mit weniger als 20 Wörtern in p_description[de]
+router.get('/download-short-desc/:jobId', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  if (job.shortDescIndices.length === 0) {
+    return res.status(404).json({ error: 'Keine kurzen Beschreibungen gefunden' });
+  }
+
+  const filteredRows = job.shortDescIndices.map(i => {
+    const row = { ...job.fixedRows[i] };
+    for (const col of DESC_COLS) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ');
+    }
+    return row;
+  });
+
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
+  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
+  const filteredFileName = job.fileName.replace(/\.csv$/i, '_kurze_beschreibungen.csv');
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);

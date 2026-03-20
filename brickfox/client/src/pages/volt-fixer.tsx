@@ -41,7 +41,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; nameNlTranslated?: number; dreiSpannungCount?: number; unorderlyCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; nameNlTranslated?: number; dreiSpannungCount?: number; unorderlyCount?: number; shortDescCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -590,6 +590,9 @@ export default function VoltFixer() {
             {(result.stats.unorderlyCount ?? 0) > 0 && (
               <Badge className="bg-red-600 text-white">{result.stats.unorderlyCount!.toLocaleString()} unordentliche Beschreibungen</Badge>
             )}
+            {(result.stats.shortDescCount ?? 0) > 0 && (
+              <Badge className="bg-orange-600 text-white">{result.stats.shortDescCount!.toLocaleString()} kurze Beschreibungen (&lt;20 Wörter)</Badge>
+            )}
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           </div>
 
@@ -619,6 +622,16 @@ export default function VoltFixer() {
               >
                 <Download size={16} />
                 Unordentliche Beschreibungen ({result.stats.unorderlyCount!.toLocaleString()} Zeilen)
+              </Button>
+            )}
+            {(result.stats.shortDescCount ?? 0) > 0 && (
+              <Button
+                onClick={() => window.open(`/api/volt-fixer/download-short-desc/${result.jobId}`, "_blank")}
+                variant="outline"
+                className="border-orange-400 text-orange-700 hover:bg-orange-50 gap-2"
+              >
+                <Download size={16} />
+                Kurze Beschreibungen &lt;20 Wörter ({result.stats.shortDescCount!.toLocaleString()} Zeilen)
               </Button>
             )}
           </div>
