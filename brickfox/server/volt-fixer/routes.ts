@@ -52,6 +52,48 @@ const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
 const NAME_COLS = ['p_name[de]', 'p_name[nl]'];
 
 // Temporärer Speicher für verarbeitete Ergebnisse (max 30 Minuten)
+// Speichert die Zellwerte von Eingangs-/Ausgangsspannung-Zeilen aus dem Originaltext.
+// Schlüssel = bereinigtes Label (lowercase), Wert = vollständiger HTML-Inhalt der Wertezelle.
+function extractProtectedVoltCells(html: string): Map<string, string> {
+  const saved = new Map<string, string>();
+  if (!html) return saved;
+  const protectedLabel = /(?:eingangs|ausgangs)(?:spannung|spanning)/i;
+  for (const row of [...html.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/gi)].map(m => m[0])) {
+    const cells = [...row.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const label = cells[0][1].replace(/<[^>]+>/g, '').trim().toLowerCase();
+    if (protectedLabel.test(label)) {
+      saved.set(label, cells[cells.length - 1][1]);
+    }
+  }
+  return saved;
+}
+
+// Stellt die gespeicherten Zellwerte für Eingangs-/Ausgangsspannung-Zeilen wieder her.
+// Verhindert, dass Volt-Korrekturen die Original-Werte dieser Zeilen überschreiben.
+function restoreProtectedVoltCells(html: string, saved: Map<string, string>): string {
+  if (!html || saved.size === 0) return html;
+  const protectedLabel = /(?:eingangs|ausgangs)(?:spannung|spanning)/i;
+  return html.replace(/<tr[^>]*>[\s\S]*?<\/tr>/gi, (row) => {
+    const cells = [...row.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) return row;
+    const label = cells[0][1].replace(/<[^>]+>/g, '').trim().toLowerCase();
+    if (!protectedLabel.test(label)) return row;
+    const savedValue = saved.get(label);
+    if (savedValue === undefined) return row;
+    const currentValue = cells[cells.length - 1][1];
+    if (currentValue === savedValue) return row;
+    // Letzten Zellinhalt wiederherstellen
+    let cellIdx = 0;
+    const totalCells = (row.match(/<(?:td|th)[^>]*/gi) || []).length;
+    return row.replace(/<(td|th)([^>]*)>([\s\S]*?)<\/(?:td|th)>/gi, (m, tag, attrs) => {
+      cellIdx++;
+      if (cellIdx === totalCells) return `<${tag}${attrs}>${savedValue}</${tag}>`;
+      return m;
+    });
+  });
+}
+
 // Erkennt ob eine HTML-Beschreibung alle drei Spannungstypen enthält:
 // Spannung (ohne Eingangs-/Ausgangs-Präfix), Eingangsspannung UND Ausgangsspannung.
 function hasDreiSpannung(html: string): boolean {
@@ -629,6 +671,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           const descVal = newRow[col] || row[col];
           if (!descVal) continue;
 
+          // Eingangs-/Ausgangsspannung-Werte VOR der Verarbeitung sichern
+          const protectedVoltCells = extractProtectedVoltCells(descVal);
+
           // 1) Spannung-Tabellenzeile aktualisieren
           const { result: htmlAfterTable, changed: dc } = setSpannungInHtml(descVal, newVolt);
           if (dc) {
@@ -645,6 +690,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           );
           if (tc) {
             newRow[col] = htmlAfterText;
+            if (!changed.includes(col)) changed.push(col);
+          }
+
+          // 3) Eingangs-/Ausgangsspannung-Originalwerte wiederherstellen (dürfen nie geändert werden)
+          const htmlRestored = restoreProtectedVoltCells(newRow[col] || descVal, protectedVoltCells);
+          if (htmlRestored !== (newRow[col] || descVal)) {
+            newRow[col] = htmlRestored;
             if (!changed.includes(col)) changed.push(col);
           }
         }
