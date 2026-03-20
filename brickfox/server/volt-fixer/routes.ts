@@ -5,6 +5,30 @@ import iconv from 'iconv-lite';
 import crypto from 'crypto';
 import { deeplService } from '../services/deepl-service';
 
+/**
+ * RFC-4180-konformer CSV-Serializer mit Semikolon-Trennzeichen.
+ * Jedes Feld wird einzeln geprüft:
+ *  - null/undefined → leerer String
+ *  - enthält ; oder " oder Zeilenumbruch → in doppelte Anführungszeichen einschließen
+ *  - " im Wert wird zu "" escaped
+ * Jede Zeile hat exakt so viele Spalten wie der Header.
+ */
+function serializeCsv(rows: Record<string, string>[], headers: string[]): string {
+  const escField = (val: unknown): string => {
+    const s = val == null ? '' : String(val);
+    if (s.includes(';') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
+  const lines: string[] = [];
+  lines.push(headers.map(escField).join(';'));
+  for (const row of rows) {
+    lines.push(headers.map(h => escField(row[h])).join(';'));
+  }
+  return lines.join('\r\n');
+}
+
 /** Gibt die Textlänge eines HTML-Strings zurück (ohne Tags) */
 function htmlTextLength(html: string): number {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length;
@@ -950,7 +974,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     });
 
     // Korrigierte CSV bauen
-    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers, quotes: true });
+    const csvOut = serializeCsv(csvRows, headers);
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
     // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
@@ -1074,7 +1098,7 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
     return row;
   });
 
-  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers, quotes: true });
+  const csvOut = serializeCsv(filteredRows, job.headers);
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_drei_spannung.csv');
 
