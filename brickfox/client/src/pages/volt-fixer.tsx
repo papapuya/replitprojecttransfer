@@ -41,7 +41,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; nameNlTranslated?: number; dreiSpannungCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; nameNlTranslated?: number; dreiSpannungCount?: number; unorderlyCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -587,6 +587,9 @@ export default function VoltFixer() {
             {(result.stats.deTranslated ?? 0) > 0 && (
               <Badge className="bg-teal-600 text-white">🇩🇪 {result.stats.deTranslated!.toLocaleString()} NL→DE übersetzt</Badge>
             )}
+            {(result.stats.unorderlyCount ?? 0) > 0 && (
+              <Badge className="bg-red-600 text-white">{result.stats.unorderlyCount!.toLocaleString()} unordentliche Beschreibungen</Badge>
+            )}
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           </div>
 
@@ -606,6 +609,16 @@ export default function VoltFixer() {
               >
                 <Download size={16} />
                 Drei-Spannung-Produkte ({result.stats.dreiSpannungCount!.toLocaleString()} Zeilen)
+              </Button>
+            )}
+            {(result.stats.unorderlyCount ?? 0) > 0 && (
+              <Button
+                onClick={() => window.open(`/api/volt-fixer/download-unorderly/${result.jobId}`, "_blank")}
+                variant="outline"
+                className="border-red-400 text-red-700 hover:bg-red-50 gap-2"
+              >
+                <Download size={16} />
+                Unordentliche Beschreibungen ({result.stats.unorderlyCount!.toLocaleString()} Zeilen)
               </Button>
             )}
           </div>
