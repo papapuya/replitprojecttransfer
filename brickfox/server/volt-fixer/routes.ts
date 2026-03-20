@@ -674,6 +674,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
+      // Für Beschreibungen immer Komma-Format verwenden (z.B. "3.85" → "3,85")
+      // Spalten-Wert bleibt unverändert (z.B. "3.85" bleibt "3.85" in der Spalte)
+      const descVolt = newVolt ? newVolt.replace('.', ',') : newVolt;
+
       // Beschreibungen IMMER aktualisieren wenn Volt-Wert vorhanden (auch wenn bereits korrekt in Spalte)
       // WICHTIG: newRow[col] verwenden (bereits emoji-wiederhergestellt), nicht das Original descVal
       if (newVolt) {
@@ -684,8 +688,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           // Eingangs-/Ausgangsspannung-Werte VOR der Verarbeitung sichern
           const protectedVoltCells = extractProtectedVoltCells(descVal);
 
-          // 1) Spannung-Tabellenzeile aktualisieren
-          const { result: htmlAfterTable, changed: dc } = setSpannungInHtml(descVal, newVolt);
+          // 1) Spannung-Tabellenzeile aktualisieren (immer Komma-Format: "3,85 V")
+          const { result: htmlAfterTable, changed: dc } = setSpannungInHtml(descVal, descVolt);
           if (dc) {
             newRow[col] = htmlAfterTable;
             if (!changed.includes(col)) changed.push(col);
@@ -696,7 +700,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           //    (wie syncVoltInName – ersetzt auch "3,6 Volt" → "3,7 Volt" wenn Spalte "3,7" hat)
           const { result: htmlAfterText, changed: tc } = syncVoltInHtmlText(
             newRow[col] || descVal,
-            newVolt
+            descVolt
           );
           if (tc) {
             newRow[col] = htmlAfterText;
@@ -817,12 +821,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           let result = nameVal;
           let nc = false;
           if (voltWasChanged) {
-            // Volt-Wert wurde korrigiert → alten Wert direkt suchen und ersetzen
-            ({ result, changed: nc } = replaceSpannungInName(nameVal, voltVal, newVolt));
+            // Volt-Wert wurde korrigiert → alten Wert direkt suchen und ersetzen (Komma-Format)
+            ({ result, changed: nc } = replaceSpannungInName(nameVal, voltVal, descVolt));
           }
           // Zusätzlich: alle verbleibenden Volt-Angaben auf Zielwert synchronisieren
           // (deckt Fälle ab wo voltWasChanged=false aber Name z.B. "385V" statt "3,85V" enthält)
-          const { result: synced, changed: sc } = syncVoltInName(result, newVolt);
+          const { result: synced, changed: sc } = syncVoltInName(result, descVolt);
           if (sc) { result = synced; nc = true; }
           if (nc) {
             changedNameCols.push({ col, before: nameVal, after: result });
