@@ -193,6 +193,63 @@ function normalizeExtractedVolt(raw: string): string {
   return raw + ',0';
 }
 
+// Sortiert Spannung-Zeilen in der technischen Tabelle aufsteigend nach Volt-Wert.
+// Spannung-Zeilen: alle Zeilen deren Label "Spannung", "Spanning", "Eingangsspannung" etc. enthält.
+// Nicht-Spannung-Zeilen bleiben an ihrer Position.
+// Beispiel: Spannung 3,6 V / Eingangsspannung 12 V / Ausgangsspannung 4,2 V
+//        → Spannung 3,6 V / Ausgangsspannung 4,2 V / Eingangsspannung 12 V (aufsteigend)
+function sortVoltageTableRows(html: string): { result: string; changed: boolean } {
+  if (!html) return { result: html, changed: false };
+  // Label-Erkennung: DE + NL Spannung-Begriffe
+  const isVoltageLabel = /(?:nenn)?[Ss]pann(?:ung|ing)|[Ee]ingangs(?:spannung|spanning)|[Aa]usgangs(?:spannung|spanning)/i;
+  // Extrahiert den numerischen Volt-Wert aus dem Zellen-Inhalt
+  const extractVoltNum = (rowHtml: string): number => {
+    const cells = [...rowHtml.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    const valueCell = cells[cells.length - 1];
+    if (!valueCell) return Infinity;
+    const text = valueCell[1].replace(/<[^>]+>/g, '').trim();
+    const m = text.match(/\b(\d+(?:[,.]\d+)?)\s*V\b/i);
+    if (!m) return Infinity;
+    return parseFloat(m[1].replace(',', '.'));
+  };
+
+  let changed = false;
+  const result = html.replace(/(<table[^>]*>)([\s\S]*?)(<\/table>)/gi, (_tableMatch, open, body, close) => {
+    // Alle <tr>...</tr> extrahieren
+    const rowPattern = /(<tr[^>]*>[\s\S]*?<\/tr>)/gi;
+    const allRows = [...body.matchAll(rowPattern)].map(m => m[1]);
+    if (allRows.length === 0) return _tableMatch;
+
+    // Spannung-Zeilen-Indizes bestimmen
+    const voltIndices: number[] = [];
+    allRows.forEach((row, i) => {
+      const labelCell = row.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+      if (labelCell && isVoltageLabel.test(labelCell[1].replace(/<[^>]+>/g, ''))) {
+        voltIndices.push(i);
+      }
+    });
+    if (voltIndices.length <= 1) return _tableMatch; // Nichts zu sortieren
+
+    // Spannung-Zeilen nach Volt-Wert aufsteigend sortieren
+    const voltRows = voltIndices.map(i => allRows[i]);
+    const sortedVoltRows = [...voltRows].sort((a, b) => extractVoltNum(a) - extractVoltNum(b));
+
+    // Prüfen ob sich die Reihenfolge geändert hat
+    if (voltRows.every((r, i) => r === sortedVoltRows[i])) return _tableMatch;
+    changed = true;
+
+    // Neue Zeilenfolge aufbauen
+    const newRows = [...allRows];
+    voltIndices.forEach((origIdx, i) => { newRows[origIdx] = sortedVoltRows[i]; });
+
+    // Tabellen-Body mit neuer Reihenfolge rekonstruieren
+    let rowIdx = 0;
+    const newBody = body.replace(/(<tr[^>]*>[\s\S]*?<\/tr>)/gi, () => newRows[rowIdx++] ?? '');
+    return open + newBody + close;
+  });
+  return { result, changed };
+}
+
 // Extrahiert den Volt-Wert aus einem HTML-Beschreibungstext (HTML-Tags werden ignoriert).
 function extractVoltFromDesc(html: string): string | null {
   if (!html) return null;
@@ -576,6 +633,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         const { result: cleaned, changed: cc } = cleanEmptyTableRows(newRow[col]);
         if (cc) {
           newRow[col] = cleaned;
+          if (!changed.includes(col)) changed.push(col);
+        }
+      }
+
+      // Spannung-Zeilen in der Tabelle aufsteigend nach Volt-Wert sortieren
+      // (z.B. Spannung 3,6V → Ausgangsspannung 4,2V → Eingangsspannung 12V)
+      for (const col of DESC_COLS) {
+        if (!headers.includes(col) || !newRow[col]) continue;
+        const { result: sorted, changed: sc } = sortVoltageTableRows(newRow[col]);
+        if (sc) {
+          newRow[col] = sorted;
           if (!changed.includes(col)) changed.push(col);
         }
       }
