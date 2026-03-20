@@ -603,7 +603,7 @@ export default function VoltFixer() {
               <Badge className="bg-orange-600 text-white">{result.stats.shortDescCount!.toLocaleString()} kurze Beschreibungen (&lt;20 Wörter)</Badge>
             )}
             {(result.stats.emptyItemNrCount ?? 0) > 0 && (
-              <Badge className="bg-rose-700 text-white animate-pulse">⚠ {result.stats.emptyItemNrCount!.toLocaleString()} fehlende Artikel-Nr. → Brickfox-Import schlägt fehl</Badge>
+              <Badge className="bg-rose-700 text-white">⚠ {result.stats.emptyItemNrCount!.toLocaleString()} Zeilen ohne Artikel-Nr. aus Export entfernt</Badge>
             )}
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           </div>
