@@ -14,9 +14,11 @@ import { deeplService } from '../services/deepl-service';
  * Jede Zeile hat exakt so viele Spalten wie der Header.
  */
 function serializeCsv(rows: Record<string, string>[], headers: string[]): string {
+  // Zeilenumbrüche werden IMMER entfernt (Brickfox unterstützt keine multi-line quoted fields).
+  // Nur ; und " lösen noch Quoting aus.
   const escField = (val: unknown): string => {
-    const s = val == null ? '' : String(val);
-    if (s.includes(';') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    const s = (val == null ? '' : String(val)).replace(/\r\n|\r|\n/g, ' ');
+    if (s.includes(';') || s.includes('"')) {
       return '"' + s.replace(/"/g, '""') + '"';
     }
     return s;
@@ -26,6 +28,20 @@ function serializeCsv(rows: Record<string, string>[], headers: string[]): string
   for (const row of rows) {
     lines.push(headers.map(h => escField(row[h])).join(';'));
   }
+  // Prüfung: jede Zeile muss exakt headers.length Felder haben
+  const headerCount = headers.length;
+  lines.slice(1).forEach((line, i) => {
+    // Felder zählen (quotes-aware, nur für Debug)
+    let count = 0, inQ = false;
+    for (let c = 0; c < line.length; c++) {
+      if (line[c] === '"') { inQ = !inQ; }
+      else if (line[c] === ';' && !inQ) { count++; }
+    }
+    count++; // letzte Spalte
+    if (count !== headerCount) {
+      console.warn(`[VoltFixer][serializeCsv] Zeile ${i + 2}: ${count} Felder erwartet ${headerCount}`);
+    }
+  });
   return lines.join('\r\n');
 }
 
