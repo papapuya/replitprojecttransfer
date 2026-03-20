@@ -25,6 +25,7 @@ type PreviewItem = {
   changed: string[];
   isUnorderly?: boolean;
   isShortDesc?: boolean;
+  isEmptyItemNr?: boolean;
 };
 
 type ChangedNameEntry = {
@@ -43,7 +44,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; nameNlTranslated?: number; dreiSpannungCount?: number; unorderlyCount?: number; shortDescCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; nameNlTranslated?: number; dreiSpannungCount?: number; unorderlyCount?: number; shortDescCount?: number; emptyItemNrCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -340,7 +341,7 @@ export default function VoltFixer() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [page, setPage] = useState(0);
-  const [tableFilter, setTableFilter] = useState<'all' | 'changed' | 'unorderly' | 'short'>('all');
+  const [tableFilter, setTableFilter] = useState<'all' | 'changed' | 'unorderly' | 'short' | 'emptyNr'>('all');
   const [detail, setDetail] = useState<{ index: number; rowNum: number } | null>(null);
   const [restoreEmoji, setRestoreEmoji] = useState(false);
   const [useDeForNL, setUseDeForNL] = useState(false);
@@ -458,7 +459,8 @@ export default function VoltFixer() {
   const items = tableFilter === 'all' ? allItems
     : tableFilter === 'changed' ? allItems.filter(i => i.changed.length > 0)
     : tableFilter === 'unorderly' ? allItems.filter(i => i.isUnorderly)
-    : allItems.filter(i => i.isShortDesc);
+    : tableFilter === 'short' ? allItems.filter(i => i.isShortDesc)
+    : allItems.filter(i => i.isEmptyItemNr);
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
   const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -600,6 +602,9 @@ export default function VoltFixer() {
             {(result.stats.shortDescCount ?? 0) > 0 && (
               <Badge className="bg-orange-600 text-white">{result.stats.shortDescCount!.toLocaleString()} kurze Beschreibungen (&lt;20 Wörter)</Badge>
             )}
+            {(result.stats.emptyItemNrCount ?? 0) > 0 && (
+              <Badge className="bg-rose-700 text-white animate-pulse">⚠ {result.stats.emptyItemNrCount!.toLocaleString()} fehlende Artikel-Nr. → Brickfox-Import schlägt fehl</Badge>
+            )}
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           </div>
 
@@ -735,6 +740,7 @@ export default function VoltFixer() {
                   { key: 'changed',   label: `Geändert (${allItems.filter(i => i.changed.length > 0).length.toLocaleString()})`,              cls: 'indigo'  },
                   { key: 'unorderly', label: `Keine Tabelle (${(result?.stats.unorderlyCount ?? 0).toLocaleString()})`,                       cls: 'red'     },
                   { key: 'short',     label: `<20 Wörter (${(result?.stats.shortDescCount ?? 0).toLocaleString()})`,                          cls: 'orange'  },
+                  { key: 'emptyNr',   label: `Keine Artikel-Nr. (${(result?.stats.emptyItemNrCount ?? 0).toLocaleString()})`,                 cls: 'rose'    },
                 ] as const).map(({ key, label, cls }) => {
                   const active = tableFilter === key;
                   const colors: Record<string, string> = {
@@ -742,6 +748,7 @@ export default function VoltFixer() {
                     indigo: active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-600 border-indigo-300 hover:bg-indigo-50',
                     red:    active ? 'bg-red-600 text-white border-red-600'     : 'bg-white text-red-600 border-red-300 hover:bg-red-50',
                     orange: active ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-orange-600 border-orange-300 hover:bg-orange-50',
+                    rose:   active ? 'bg-rose-700 text-white border-rose-700'   : 'bg-white text-rose-700 border-rose-300 hover:bg-rose-50',
                   };
                   return (
                     <button
@@ -786,8 +793,9 @@ export default function VoltFixer() {
                       const voltChanged = item.changed.includes(VOLT_COL);
                       const nameDEChanged = item.changed.includes("p_name[de]");
                       const nameNLChanged = item.changed.includes("p_name[nl]");
-                      const rowBg = item.isUnorderly && item.isShortDesc
-                        ? "bg-orange-50/60"
+                      const rowBg = item.isEmptyItemNr
+                        ? "bg-rose-50/60"
+                        : item.isUnorderly && item.isShortDesc ? "bg-orange-50/60"
                         : item.isUnorderly ? "bg-red-50/40"
                         : item.isShortDesc ? "bg-orange-50/40"
                         : hasChange ? "bg-indigo-50/30"
@@ -806,6 +814,7 @@ export default function VoltFixer() {
                           </td>
                           <td className="px-3 py-1.5 font-mono text-xs">
                             <span className="text-gray-600">{item.itemNr || "—"}</span>
+                            {item.isEmptyItemNr && <span className="ml-1 inline-block text-[10px] px-1 py-0 rounded bg-rose-100 text-rose-700 font-bold leading-4">⚠ leer</span>}
                             {item.isUnorderly && <span className="ml-1 inline-block text-[10px] px-1 py-0 rounded bg-red-100 text-red-600 font-semibold leading-4">∅Tabelle</span>}
                             {item.isShortDesc && <span className="ml-1 inline-block text-[10px] px-1 py-0 rounded bg-orange-100 text-orange-600 font-semibold leading-4">&lt;20W</span>}
                           </td>
