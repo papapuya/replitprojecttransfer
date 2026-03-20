@@ -967,7 +967,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     });
 
     // Korrigierte CSV bauen
-    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
+    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers, quotes: true });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
     // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
@@ -1122,7 +1122,7 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
     return row;
   });
 
-  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers, quotes: true });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_drei_spannung.csv');
 
@@ -1148,7 +1148,7 @@ router.get('/download-unorderly/:jobId', (req: Request, res: Response) => {
     return row;
   });
 
-  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers, quotes: true });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_unordentlich.csv');
 
@@ -1174,7 +1174,7 @@ router.get('/download-short-desc/:jobId', (req: Request, res: Response) => {
     return row;
   });
 
-  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers, quotes: true });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_kurze_beschreibungen.csv');
 
