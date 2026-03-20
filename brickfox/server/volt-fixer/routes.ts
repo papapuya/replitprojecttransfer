@@ -155,27 +155,50 @@ function extractVoltFromName(name: string): string | null {
 }
 
 // Synchronisiert alle Volt-Werte im Fließtext einer HTML-Beschreibung auf den Zielwert.
-// Funktioniert wie syncVoltInName: ersetzt JEDEN Volt-Wert der nicht dem Zielwert entspricht.
-// HTML-Tags werden übersprungen, nur Textknoten werden verändert.
+// Eingangs- und Ausgangsspannung-Tabellenzeilen werden NICHT verändert.
 // Bereichswerte (100-240V) werden nicht angefasst.
 function syncVoltInHtmlText(html: string, targetVolt: string): { result: string; changed: boolean } {
   if (!html || !targetVolt || targetVolt.includes('-') || targetVolt.includes('/')) {
     return { result: html, changed: false };
   }
+  const protectedLabel = /(?:eingangs|ausgangs)(?:spannung|spanning)/i;
   let changed = false;
-  const result = html.replace(/(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
-    (match, tag, _full, num, unit) => {
-      if (tag !== undefined) return tag; // HTML-Tag → unverändert
-      if (!num || !unit) return match;
-      const normalized = num.replace('.', ',');
-      if (normalized === targetVolt) return match; // bereits korrekt
-      // Bereichswerte innerhalb von Textknoten (z.B. "100-240") überspringen
-      if (/[-\/]/.test(num)) return match;
-      changed = true;
-      const unitOut = unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V';
-      return targetVolt + ' ' + unitOut;
-    }
+
+  // Ersetzt Volt-Werte in Textknoten (HTML-Tags überspringen)
+  const replaceVoltInTextNodes = (s: string): string =>
+    s.replace(/(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
+      (m, tag, _f, num, unit) => {
+        if (tag !== undefined) return tag;
+        if (!num || !unit) return m;
+        const norm = num.replace('.', ',');
+        if (norm === targetVolt || /[-\/]/.test(num)) return m;
+        changed = true;
+        return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
+      });
+
+  // Schritt 1: Tabellen-Zeilen einzeln verarbeiten – Eingangs-/Ausgangsspannung schützen
+  let result = html.replace(/(<table[^>]*>[\s\S]*?<\/table>)/gi, (tableBlock) =>
+    tableBlock.replace(/(<tr\b[^>]*>[\s\S]*?<\/tr>)/gi, (trBlock) => {
+      const labelCell = trBlock.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+      if (labelCell && protectedLabel.test(labelCell[1].replace(/<[^>]+>/g, ''))) {
+        return trBlock; // geschützte Zeile → unverändert
+      }
+      return replaceVoltInTextNodes(trBlock);
+    })
   );
+
+  // Schritt 2: Fließtext außerhalb von Tabellen synchronisieren
+  result = result.replace(/(<table[^>]*>[\s\S]*?<\/table>)|(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
+    (m, table, tag, _f, num, unit) => {
+      if (table !== undefined) return table; // Tabelle bereits verarbeitet
+      if (tag !== undefined) return tag;
+      if (!num || !unit) return m;
+      const norm = num.replace('.', ',');
+      if (norm === targetVolt || /[-\/]/.test(num)) return m;
+      changed = true;
+      return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
+    });
+
   return { result, changed };
 }
 
