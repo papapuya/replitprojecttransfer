@@ -143,46 +143,58 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// Spalten-Format: Dezimalwerte mit Punkt (1.6, 3.7). Komma-Werte werden in Punkt umgewandelt.
+// Zahlen ohne Dezimalzeichen: Punkt nach korrekter Stelle einfügen (385→3.85, 36→3.6).
+// Ganzzahlen (single digit oder bereits gültig) bleiben unverändert.
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   const trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
-  if (trimmed.includes(',') || trimmed.includes('.')) return { fixed: trimmed, changed: false };
+  // Bereits Punkt → unverändert (korrekte Spaltenformat)
+  if (trimmed.includes('.')) return { fixed: trimmed, changed: false };
+  // Komma → in Punkt umwandeln (1,6 → 1.6, 3,7 → 3.7)
+  if (trimmed.includes(',')) {
+    const fixed = trimmed.replace(',', '.');
+    return { fixed, changed: true };
+  }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   if (trimmed.length === 1) return { fixed: trimmed, changed: false };
-  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX,Y (z.B. 111→11,1, 144→14,4, 222→22,2, 108→10,8)
+  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 111→11.1, 144→14.4)
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
     if (firstTwo >= 10 && firstTwo <= 24) {
-      return { fixed: trimmed.slice(0, 2) + ',' + trimmed[2], changed: true };
+      return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
     }
   }
-  // Standard: Komma nach erster Stelle (z.B. 385→3,85, 48→4,8, 36→3,6)
-  return { fixed: trimmed[0] + ',' + trimmed.slice(1), changed: true };
+  // Standard: Punkt nach erster Stelle (z.B. 385→3.85, 48→4.8, 36→3.6)
+  return { fixed: trimmed[0] + '.' + trimmed.slice(1), changed: true };
 }
 
-// Ersetzt Volt-Wert in Produktnamen (Plaintext), z.B. "385 V" → "3,85 V", "385 Volt" → "3,85 Volt"
+// Ersetzt Volt-Wert in Produktnamen (Plaintext).
+// oldVolt/newVolt sind im Spaltenformat (Punkt: 3.7). Im Text wird Kommaformat verwendet (3,7 V).
 function replaceSpannungInName(text: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
-  if (!text || !oldVolt || !newVolt || oldVolt === newVolt) return { result: text, changed: false };
-  const escaped = oldVolt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!text || !oldVolt || !newVolt) return { result: text, changed: false };
+  const displayOld = oldVolt.replace('.', ',');
+  const displayNew = newVolt.replace('.', ',');
+  if (displayOld === displayNew) return { result: text, changed: false };
+  const escaped = displayOld.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`\\b${escaped}(\\s*V(?:olt)?)\\b`, 'g');
   let changed = false;
   const result = text.replace(regex, (_match, suffix) => {
     changed = true;
-    return newVolt + suffix;
+    return displayNew + suffix;
   });
   return { result, changed };
 }
 
-// Synchronisiert JEDE Volt-Angabe im Namen auf den Zielwert (z.B. "385V" → "3,85V" wenn targetVolt="3,85")
-// Wird benutzt wenn der Volt-Wert in der Spalte bereits korrekt ist, aber der Name noch eine
-// andere Schreibweise enthält.
+// Synchronisiert JEDE Volt-Angabe im Namen auf den Zielwert.
+// targetVolt ist im Spaltenformat (Punkt: 3.7), im Text wird Kommaformat verwendet (3,7 V).
 function syncVoltInName(text: string, targetVolt: string): { result: string; changed: boolean } {
   if (!text || !targetVolt) return { result: text, changed: false };
+  // Anzeigeformat: Spalte nutzt Punkt (3.7), Text nutzt Komma (3,7)
+  const displayVolt = targetVolt.replace('.', ',');
   let changed = false;
   let result = text;
   if (targetVolt.includes('-') || targetVolt.includes('/')) {
-    // Bereichswert: Format normalisieren → immer "X V" (Leerzeichen, Volt→V)
-    // z.B. "100-240V" → "100-240 V", "12/24 Volt" → "12/24 V"
     result = text.replace(/\b(\d+(?:[,.]?\d+)?[-\/]\d+(?:[,.]?\d+)?)\s*(V(?:olt)?)\b/gi, (_match, range, _unit) => {
       const normalized = range + ' V';
       if (normalized === _match.trim()) return _match;
@@ -190,11 +202,12 @@ function syncVoltInName(text: string, targetVolt: string): { result: string; cha
       return normalized;
     });
   } else {
-    // Einfacher Wert: falsche Schreibweisen ersetzen
     result = text.replace(/\b(\d+(?:[,\.]\d+)?)(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
-      if (num === targetVolt) return _match;
+      // Vergleich im Anzeigeformat (Komma)
+      const normNum = num.replace('.', ',');
+      if (normNum === displayVolt) return _match;
       changed = true;
-      return targetVolt + suffix;
+      return displayVolt + suffix;
     });
   }
   return { result, changed };
@@ -215,12 +228,15 @@ function extractVoltFromName(name: string): string | null {
 }
 
 // Synchronisiert alle Volt-Werte im Fließtext einer HTML-Beschreibung auf den Zielwert.
+// targetVolt ist im Spaltenformat (Punkt: 3.7), im Text wird Kommaformat verwendet (3,7 V).
 // Eingangs- und Ausgangsspannung-Tabellenzeilen werden NICHT verändert.
 // Bereichswerte (100-240V) werden nicht angefasst.
 function syncVoltInHtmlText(html: string, targetVolt: string): { result: string; changed: boolean } {
   if (!html || !targetVolt || targetVolt.includes('-') || targetVolt.includes('/')) {
     return { result: html, changed: false };
   }
+  // Anzeigeformat: Spalte nutzt Punkt (3.7), Text nutzt Komma (3,7)
+  const displayVolt = targetVolt.replace('.', ',');
   const protectedLabel = /(?:eingangs|ausgangs)(?:spannung|spanning)/i;
   let changed = false;
 
@@ -231,9 +247,9 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
         if (tag !== undefined) return tag;
         if (!num || !unit) return m;
         const norm = num.replace('.', ',');
-        if (norm === targetVolt || /[-\/]/.test(num)) return m;
+        if (norm === displayVolt || /[-\/]/.test(num)) return m;
         changed = true;
-        return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
+        return displayVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
       });
 
   // Schritt 1: Tabellen-Zeilen einzeln verarbeiten – Eingangs-/Ausgangsspannung schützen
@@ -254,25 +270,24 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
       if (tag !== undefined) return tag;
       if (!num || !unit) return m;
       const norm = num.replace('.', ',');
-      if (norm === targetVolt || /[-\/]/.test(num)) return m;
+      if (norm === displayVolt || /[-\/]/.test(num)) return m;
       changed = true;
-      return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
+      return displayVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
     });
 
   return { result, changed };
 }
 
 // Normalisiert einen aus Text extrahierten Volt-Wert für die p_attributes[akku_v][de]-Spalte.
-// Aus Text extrahierte Werte sind bereits korrekt (z.B. "19" aus "19 V" = wirklich 19 Volt).
-// Dezimalwerte: Punkt durch Komma ersetzen (3.7 → 3,7). Bereichswerte unverändert.
+// Spaltenformat: Dezimalwert mit Punkt (1.6, 3.7). Komma wird durch Punkt ersetzt.
 // Ganze Zahlen bleiben unverändert (19 → 19, 24 → 24).
 function normalizeExtractedVolt(raw: string): string {
   if (!raw) return raw;
   // Bereichswert (z.B. "100-240", "12/24") → unverändert
-  if (/[-\/]/.test(raw)) return raw.replace('.', ',');
-  // Dezimalwert (z.B. "3,7" oder "3.7") → Punkt durch Komma
-  if (raw.includes(',') || raw.includes('.')) return raw.replace('.', ',');
-  // Ganzzahl → unverändert lassen (19 bleibt 19, nicht 19,0)
+  if (/[-\/]/.test(raw)) return raw;
+  // Dezimalwert: Komma durch Punkt ersetzen (3,7 → 3.7, 1,6 → 1.6)
+  if (raw.includes(',')) return raw.replace(',', '.');
+  // Bereits Punkt oder Ganzzahl → unverändert
   return raw;
 }
 
@@ -350,32 +365,32 @@ function extractVoltFromDesc(html: string): string | null {
 function setSpannungInHtml(html: string, targetVolt: string): { result: string; changed: boolean } {
   if (!html || !targetVolt) return { result: html, changed: false };
 
+  // Anzeigeformat: Spalte nutzt Punkt (3.7), HTML nutzt Komma (3,7 V)
+  const displayVolt = targetVolt.replace('.', ',');
+
   // Spannung-Zeilen: DE (Spannung/Nennspannung) + NL (Spanning/Nennspanning)
   const spannungRegex = /(<(?:td|th)[^>]*>\s*(?:Nenn)?[Ss]pann(?:ung|ing)(?:\s*V)?\s*<\/(?:td|th)>\s*<(?:td|th)[^>]*>)([^<]*)(< *\/(?:td|th)>)/gi;
   let changed = false;
   let result = html.replace(spannungRegex, (_match, before, value, after) => {
     const currentVal = value.trim();
-    const expectedWithUnit = targetVolt + ' V';
-    if (currentVal === expectedWithUnit || currentVal === targetVolt) {
+    const expectedWithUnit = displayVolt + ' V';
+    if (currentVal === expectedWithUnit || currentVal === displayVolt) {
       return before + value + after;
     }
     changed = true;
     const suffix = currentVal.endsWith(' V') ? ' V' : (currentVal.endsWith('V') ? 'V' : ' V');
-    return before + targetVolt + suffix + after;
+    return before + displayVolt + suffix + after;
   });
 
   // Falls keine Spannung-Zeile gefunden wurde aber eine Tabelle existiert → Zeile einfügen
-  // Auch NL "Spanning" erkennen, damit keine doppelte Zeile eingefügt wird
   const hasSpannungRow = /(?:Nenn)?[Ss]pann(?:ung|ing)(?:\s*V)?/.test(html);
   if (!changed && !hasSpannungRow) {
-    // Füge Spannung-Zeile als erste Zeile nach <tbody> ein (oder vor dem ersten <tr>)
-    const tbodyInsert = result.replace(/(<tbody[^>]*>)/, `$1<tr><th class="thlabel"> Spannung V</th><td class="data"> ${targetVolt} V</td></tr>`);
+    const tbodyInsert = result.replace(/(<tbody[^>]*>)/, `$1<tr><th class="thlabel"> Spannung V</th><td class="data"> ${displayVolt} V</td></tr>`);
     if (tbodyInsert !== result) {
       result = tbodyInsert;
       changed = true;
     } else {
-      // Fallback: vor dem ersten <tr> in der Tabelle einfügen
-      const trInsert = result.replace(/(<table[^>]*>[\s\S]*?)(<tr\b)/, `$1<tr><th class="thlabel"> Spannung V</th><td class="data"> ${targetVolt} V</td></tr>$2`);
+      const trInsert = result.replace(/(<table[^>]*>[\s\S]*?)(<tr\b)/, `$1<tr><th class="thlabel"> Spannung V</th><td class="data"> ${displayVolt} V</td></tr>$2`);
       if (trInsert !== result) {
         result = trInsert;
         changed = true;
