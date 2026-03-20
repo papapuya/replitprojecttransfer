@@ -589,10 +589,11 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('fixing', 'Volt-Werte werden korrigiert…', 15, `${rows.length.toLocaleString('de-DE')} Zeilen`);
 
-    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0, nlTranslated = 0, deTranslated = 0;
+    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0, nlTranslated = 0, deTranslated = 0, nameNlTranslated = 0;
     // (runWithConcurrency wird für DeepL-Batch nicht mehr benötigt, bleibt aber als Hilfsfunktion erhalten)
     const nlTranslationQueue: Array<{ rowIndex: number }> = [];
     const deTranslationQueue: Array<{ rowIndex: number }> = [];
+    const nameNlTranslationQueue: Array<{ rowIndex: number }> = [];
     const fixedRows: Record<string, string>[] = [];
     const changedCols: string[][] = [];
     // Alle geänderten Namen (für vollständige Anzeige im Frontend)
@@ -814,6 +815,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
+      // p_name[nl] aus p_name[de] übersetzen wenn NL-Name fehlt
+      if (useDeForNL && headers.includes('p_name[de]') && headers.includes('p_name[nl]')) {
+        const deNameVal = newRow['p_name[de]'] || '';
+        const nlNameVal = newRow['p_name[nl]'] || '';
+        if (deNameVal.trim() && !nlNameVal.trim()) {
+          newRow['p_name[nl]'] = deNameVal; // wird nach dem Loop übersetzt
+          if (!changed.includes('p_name[nl]')) changed.push('p_name[nl]');
+          nameNlTranslationQueue.push({ rowIndex: fixedRows.length });
+        }
+      }
+
       // Lieferumfang ans Ende verschieben (DE + NL)
       for (const col of ['p_description[de]', 'p_description[nl]']) {
         if (!newRow[col]) continue;
@@ -909,6 +921,21 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       console.log(`[VoltFixer] ${deTranslated} NL→DE übersetzt.`);
     }
 
+    // p_name[nl] Übersetzungen via DeepL (plain text, Batch)
+    if (useDeForNL && nameNlTranslationQueue.length > 0) {
+      console.log(`[VoltFixer] DeepL Namen DE→NL: ${nameNlTranslationQueue.length} Namen...`);
+      setProgress('translating-names', 'Namen DE → NL wird übersetzt…', 92, `${nameNlTranslationQueue.length.toLocaleString('de-DE')} Namen`);
+      const nameList = nameNlTranslationQueue.map(({ rowIndex }) => fixedRows[rowIndex]['p_name[de]'] || '');
+      const translatedNames = await deeplService.translateBatch(nameList);
+      nameNlTranslationQueue.forEach(({ rowIndex }, i) => {
+        if (translatedNames[i]) {
+          fixedRows[rowIndex]['p_name[nl]'] = translatedNames[i];
+          nameNlTranslated++;
+        }
+      });
+      console.log(`[VoltFixer] ${nameNlTranslated} Namen DE→NL übersetzt.`);
+    }
+
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
     // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
@@ -985,7 +1012,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nameNlTranslated, dreiSpannungCount: dreiSpannungIndices.length },
       previewItems,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),

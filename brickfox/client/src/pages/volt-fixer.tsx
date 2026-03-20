@@ -41,7 +41,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; nameNlTranslated?: number; dreiSpannungCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -531,7 +531,28 @@ export default function VoltFixer() {
         <input ref={fileRef} type="file" accept=".csv,.CSV" className="hidden" onChange={onFileChange} />
       </div>
 
-      {/* Übersetzungs-Option deaktiviert */}
+      {/* DeepL Übersetzungs-Option */}
+      <div
+        className={`flex items-start gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-colors ${useDeForNL ? 'bg-sky-50 border-sky-300' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}
+        onClick={() => setUseDeForNL(v => !v)}
+      >
+        <input
+          type="checkbox"
+          checked={useDeForNL}
+          onChange={e => setUseDeForNL(e.target.checked)}
+          onClick={e => e.stopPropagation()}
+          className="mt-0.5 h-4 w-4 rounded accent-sky-600 cursor-pointer"
+        />
+        <div>
+          <p className="text-sm font-medium text-gray-800">
+            🇳🇱 Niederländisch via DeepL übersetzen
+            <span className="ml-2 text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">kostenpflichtig</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Übersetzt <code className="bg-gray-100 px-1 rounded">p_description[nl]</code> und <code className="bg-gray-100 px-1 rounded">p_name[nl]</code> aus den deutschen Werten via DeepL API
+          </p>
+        </div>
+      </div>
 
       {error && (
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700">
@@ -558,7 +579,10 @@ export default function VoltFixer() {
               <Badge className="bg-purple-600 text-white">{result.stats.nameChanged.toLocaleString()} Namen aktualisiert</Badge>
             )}
             {(result.stats.nlTranslated ?? 0) > 0 && (
-              <Badge className="bg-sky-600 text-white">🇳🇱 {result.stats.nlTranslated!.toLocaleString()} DE→NL übersetzt</Badge>
+              <Badge className="bg-sky-600 text-white">🇳🇱 {result.stats.nlTranslated!.toLocaleString()} Beschreibungen DE→NL</Badge>
+            )}
+            {(result.stats.nameNlTranslated ?? 0) > 0 && (
+              <Badge className="bg-sky-500 text-white">🇳🇱 {result.stats.nameNlTranslated!.toLocaleString()} Namen DE→NL</Badge>
             )}
             {(result.stats.deTranslated ?? 0) > 0 && (
               <Badge className="bg-teal-600 text-white">🇩🇪 {result.stats.deTranslated!.toLocaleString()} NL→DE übersetzt</Badge>
