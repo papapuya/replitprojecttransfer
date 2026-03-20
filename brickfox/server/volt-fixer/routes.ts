@@ -111,20 +111,6 @@ function hasDreiSpannung(html: string): boolean {
   return hasSpannung && hasEingang && hasAusgang;
 }
 
-// Erkennt "unordentliche" Produktbeschreibungen.
-// Unordentlich = keine HTML-Tabelle (<table>) in p_description[de]
-function isUnorderly(html: string): boolean {
-  if (!html || html.trim().length < 50) return false;
-  return !/<table[\s>]/i.test(html);
-}
-
-// Erkennt Produktbeschreibungen mit weniger als 20 Wörtern (plain text, ohne HTML-Tags)
-function isShortDesc(html: string, minWords = 20): boolean {
-  if (!html || !html.trim()) return false;
-  const plain = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z#\d]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-  const wordCount = plain.split(' ').filter(w => w.length > 0).length;
-  return wordCount < minWords;
-}
 
 const jobStore = new Map<string, {
   csvBuffer: Buffer;
@@ -132,8 +118,6 @@ const jobStore = new Map<string, {
   expires: number;
   fixedRows: Record<string, string>[];
   dreiSpannungIndices: number[];
-  unorderlyIndices: number[];
-  shortDescIndices: number[];
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
@@ -975,18 +959,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .filter(({ html }) => hasDreiSpannung(html))
       .map(({ i }) => i);
 
-    // Unordentliche Beschreibungen: Zeilen mit p_description[de] die nicht der Standard-Struktur folgen
-    const unorderlyIndices: number[] = fixedRows
-      .map((row, i) => ({ i, html: row['p_description[de]'] || '' }))
-      .filter(({ html }) => isUnorderly(html))
-      .map(({ i }) => i);
-
-    // Kurze Beschreibungen: weniger als 20 Wörter in p_description[de]
-    const shortDescIndices: number[] = fixedRows
-      .map((row, i) => ({ i, html: row['p_description[de]'] || '' }))
-      .filter(({ html }) => isShortDesc(html))
-      .map(({ i }) => i);
-
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
     const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
@@ -996,8 +968,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       expires: Date.now() + 30 * 60 * 1000,
       fixedRows,
       dreiSpannungIndices,
-      unorderlyIndices,
-      shortDescIndices,
       originalRows: rows,
       headers,
       changedCols,
@@ -1011,17 +981,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return plain.length > max ? plain.slice(0, max) + '…' : plain;
     };
 
-    // Vorschau: geänderte + gefilterte Zeilen (unordentlich / kurz), max. 3000
+    // Vorschau: geänderte Zeilen, max. 3000
     const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
     const MAX_PREVIEW = 3000;
-    const unorderlySet = new Set(unorderlyIndices);
-    const shortDescSet = new Set(shortDescIndices);
     const previewItems: object[] = [];
     for (let i = 0; i < fixedRows.length && previewItems.length < MAX_PREVIEW; i++) {
       const changed = changedCols[i] ?? [];
-      const isUnorderly = unorderlySet.has(i);
-      const isShortDesc = shortDescSet.has(i);
-      if (changed.length === 0 && !isUnorderly && !isShortDesc) continue;
+      if (changed.length === 0) continue;
       const orig = rows[i];
       const row = fixedRows[i];
       const itemNr = ITEM_NR_COLS.map(c => row[c]).find(v => v) || '';
@@ -1039,8 +1005,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         descNL: toPlainText(row['p_description[nl]'] ?? ''),
         descNLChanged: changed.includes('p_description[nl]'),
         changed,
-        isUnorderly,
-        isShortDesc,
       });
     }
 
@@ -1049,7 +1013,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nameNlTranslated, dreiSpannungCount: dreiSpannungIndices.length, unorderlyCount: unorderlyIndices.length, shortDescCount: shortDescIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nameNlTranslated, dreiSpannungCount: dreiSpannungIndices.length },
       previewItems,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),
@@ -1119,56 +1083,5 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
   res.send(csvBuffer);
 });
 
-// GET /api/volt-fixer/download-unorderly/:jobId
-// Exportiert nur Zeilen mit p_description[de] die nicht der Standard-Struktur folgen
-router.get('/download-unorderly/:jobId', (req: Request, res: Response) => {
-  const job = jobStore.get(req.params.jobId);
-  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
-  if (job.unorderlyIndices.length === 0) {
-    return res.status(404).json({ error: 'Keine unordentlichen Beschreibungen gefunden' });
-  }
-
-  const filteredRows = job.unorderlyIndices.map(i => {
-    const row = { ...job.fixedRows[i] };
-    for (const col of [...DESC_COLS, ...NAME_COLS]) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
-    }
-    return row;
-  });
-
-  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers, quotes: true });
-  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
-  const filteredFileName = job.fileName.replace(/\.csv$/i, '_unordentlich.csv');
-
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
-  res.send(csvBuffer);
-});
-
-// GET /api/volt-fixer/download-short-desc/:jobId
-// Exportiert nur Zeilen mit weniger als 20 Wörtern in p_description[de]
-router.get('/download-short-desc/:jobId', (req: Request, res: Response) => {
-  const job = jobStore.get(req.params.jobId);
-  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
-  if (job.shortDescIndices.length === 0) {
-    return res.status(404).json({ error: 'Keine kurzen Beschreibungen gefunden' });
-  }
-
-  const filteredRows = job.shortDescIndices.map(i => {
-    const row = { ...job.fixedRows[i] };
-    for (const col of [...DESC_COLS, ...NAME_COLS]) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
-    }
-    return row;
-  });
-
-  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers, quotes: true });
-  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
-  const filteredFileName = job.fileName.replace(/\.csv$/i, '_kurze_beschreibungen.csv');
-
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
-  res.send(csvBuffer);
-});
 
 export default router;
