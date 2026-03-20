@@ -956,13 +956,14 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
-    // Zeilenumbrüche aus allen Textfeldern entfernen (CSV-Kompatibilität)
-    // Verhindert, dass mehrzeilige Felder (auch übersetzte Namen) CSV-Zeilen aufbrechen
-    const STRIP_NEWLINE_COLS = [...DESC_COLS, ...NAME_COLS];
+    // Zeilenumbrüche aus ALLEN Feldern entfernen (CSV-Kompatibilität)
+    // Brickfox zählt physische Zeilen – jedes \n in einem Feld (auch gequotet) verschiebt die Zeilennummern
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
-      for (const col of STRIP_NEWLINE_COLS) {
-        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ').trim();
+      for (const key of Object.keys(r)) {
+        if (r[key] && r[key].includes('\n')) {
+          r[key] = r[key].replace(/\r?\n|\r/g, ' ');
+        }
       }
       return r;
     });
@@ -1117,8 +1118,8 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.dreiSpannungIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const col of [...DESC_COLS, ...NAME_COLS]) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
+    for (const key of Object.keys(row)) {
+      if (row[key] && row[key].includes('\n')) row[key] = row[key].replace(/\r?\n|\r/g, ' ');
     }
     return row;
   });
@@ -1143,8 +1144,8 @@ router.get('/download-unorderly/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.unorderlyIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const col of [...DESC_COLS, ...NAME_COLS]) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
+    for (const key of Object.keys(row)) {
+      if (row[key] && row[key].includes('\n')) row[key] = row[key].replace(/\r?\n|\r/g, ' ');
     }
     return row;
   });
@@ -1169,8 +1170,8 @@ router.get('/download-short-desc/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.shortDescIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const col of [...DESC_COLS, ...NAME_COLS]) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
+    for (const key of Object.keys(row)) {
+      if (row[key] && row[key].includes('\n')) row[key] = row[key].replace(/\r?\n|\r/g, ' ');
     }
     return row;
   });
