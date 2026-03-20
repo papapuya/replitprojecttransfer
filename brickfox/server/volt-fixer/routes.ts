@@ -224,6 +224,8 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
   const protectedLabel = /(?:eingangs|ausgangs)(?:spannung|spanning)/i;
   let changed = false;
 
+  const targetNum = parseFloat(targetVolt.replace(',', '.'));
+
   // Ersetzt Volt-Werte in Textknoten (HTML-Tags überspringen)
   const replaceVoltInTextNodes = (s: string): string =>
     s.replace(/(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
@@ -232,6 +234,8 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
         if (!num || !unit) return m;
         const norm = num.replace('.', ',');
         if (norm === targetVolt || /[-\/]/.test(num)) return m;
+        // Numerisch gleich (z.B. "12" == "12,0") → nicht ändern
+        if (parseFloat(norm.replace(',', '.')) === targetNum) return m;
         changed = true;
         return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
       });
@@ -255,6 +259,8 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
       if (!num || !unit) return m;
       const norm = num.replace('.', ',');
       if (norm === targetVolt || /[-\/]/.test(num)) return m;
+      // Numerisch gleich (z.B. "12" == "12,0") → nicht ändern
+      if (parseFloat(norm.replace(',', '.')) === targetNum) return m;
       changed = true;
       return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
     });
@@ -352,6 +358,7 @@ function setSpannungInHtml(html: string, targetVolt: string): { result: string; 
 
   // Spannung-Zeilen: DE (Spannung/Nennspannung) + NL (Spanning/Nennspanning)
   const spannungRegex = /(<(?:td|th)[^>]*>\s*(?:Nenn)?[Ss]pann(?:ung|ing)(?:\s*V)?\s*<\/(?:td|th)>\s*<(?:td|th)[^>]*>)([^<]*)(< *\/(?:td|th)>)/gi;
+  const targetNum = parseFloat(targetVolt.replace(',', '.'));
   let changed = false;
   let result = html.replace(spannungRegex, (_match, before, value, after) => {
     const currentVal = value.trim();
@@ -359,6 +366,9 @@ function setSpannungInHtml(html: string, targetVolt: string): { result: string; 
     if (currentVal === expectedWithUnit || currentVal === targetVolt) {
       return before + value + after;
     }
+    // Numerisch gleich (z.B. "12 V" bei Zielwert "12,0") → nicht ändern
+    const currentNum = parseFloat(currentVal.replace(/\s*V(?:olt)?\s*$/i, '').replace(',', '.'));
+    if (currentNum === targetNum) return before + value + after;
     changed = true;
     const suffix = currentVal.endsWith(' V') ? ' V' : (currentVal.endsWith('V') ? 'V' : ' V');
     return before + targetVolt + suffix + after;
