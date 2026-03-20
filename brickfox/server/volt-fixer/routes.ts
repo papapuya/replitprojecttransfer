@@ -134,7 +134,6 @@ const jobStore = new Map<string, {
   dreiSpannungIndices: number[];
   unorderlyIndices: number[];
   shortDescIndices: number[];
-  emptyItemNrIndices: number[];
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
@@ -988,13 +987,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .filter(({ html }) => isShortDesc(html))
       .map(({ i }) => i);
 
-    // Leere Artikel-Nummern: p_item_number ist leer → Brickfox-Import schlägt fehl
-    const ITEM_NR_COLS_CHECK = ['p_item_number', 'v_item_number'];
-    const emptyItemNrIndices: number[] = fixedRows
-      .map((row, i) => ({ i, nr: ITEM_NR_COLS_CHECK.map(c => row[c]).find(v => v?.trim()) }))
-      .filter(({ nr }) => !nr)
-      .map(({ i }) => i);
-
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
     const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
@@ -1006,7 +998,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       dreiSpannungIndices,
       unorderlyIndices,
       shortDescIndices,
-      emptyItemNrIndices,
       originalRows: rows,
       headers,
       changedCols,
@@ -1025,14 +1016,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const MAX_PREVIEW = 3000;
     const unorderlySet = new Set(unorderlyIndices);
     const shortDescSet = new Set(shortDescIndices);
-    const emptyItemNrSet = new Set(emptyItemNrIndices);
     const previewItems: object[] = [];
     for (let i = 0; i < fixedRows.length && previewItems.length < MAX_PREVIEW; i++) {
       const changed = changedCols[i] ?? [];
       const isUnorderly = unorderlySet.has(i);
       const isShortDesc = shortDescSet.has(i);
-      const isEmptyItemNr = emptyItemNrSet.has(i);
-      if (changed.length === 0 && !isUnorderly && !isShortDesc && !isEmptyItemNr) continue;
+      if (changed.length === 0 && !isUnorderly && !isShortDesc) continue;
       const orig = rows[i];
       const row = fixedRows[i];
       const itemNr = ITEM_NR_COLS.map(c => row[c]).find(v => v) || '';
@@ -1052,7 +1041,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         changed,
         isUnorderly,
         isShortDesc,
-        isEmptyItemNr,
       });
     }
 
@@ -1061,7 +1049,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nameNlTranslated, dreiSpannungCount: dreiSpannungIndices.length, unorderlyCount: unorderlyIndices.length, shortDescCount: shortDescIndices.length, emptyItemNrCount: emptyItemNrIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nameNlTranslated, dreiSpannungCount: dreiSpannungIndices.length, unorderlyCount: unorderlyIndices.length, shortDescCount: shortDescIndices.length },
       previewItems,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),
