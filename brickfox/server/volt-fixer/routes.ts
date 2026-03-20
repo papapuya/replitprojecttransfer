@@ -956,25 +956,18 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
-    // Zeilenumbrüche aus ALLEN Feldern entfernen (CSV-Kompatibilität)
-    // Brickfox zählt physische Zeilen – jedes \n in einem Feld (auch gequotet) verschiebt die Zeilennummern
+    // Zeilenumbrüche aus Beschreibungs- und Namensfeldern entfernen (CSV-Kompatibilität)
+    const STRIP_NEWLINE_COLS = [...DESC_COLS, ...NAME_COLS];
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
-      for (const key of Object.keys(r)) {
-        if (r[key] && r[key].includes('\n')) {
-          r[key] = r[key].replace(/\r?\n|\r/g, ' ');
-        }
+      for (const col of STRIP_NEWLINE_COLS) {
+        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ').trim();
       }
       return r;
     });
 
-    // Zeilen ohne p_item_number UND v_item_number aus dem Export entfernen (Brickfox-Import schlägt sonst fehl)
-    const csvRowsFiltered = csvRows.filter(row =>
-      ['p_item_number', 'v_item_number'].some(c => row[c]?.trim())
-    );
-
     // Korrigierte CSV bauen
-    const csvOut = Papa.unparse(csvRowsFiltered, { delimiter: ';', columns: headers });
+    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
     // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
@@ -1123,8 +1116,8 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.dreiSpannungIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const key of Object.keys(row)) {
-      if (row[key] && row[key].includes('\n')) row[key] = row[key].replace(/\r?\n|\r/g, ' ');
+    for (const col of [...DESC_COLS, ...NAME_COLS]) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
     }
     return row;
   });
@@ -1149,8 +1142,8 @@ router.get('/download-unorderly/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.unorderlyIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const key of Object.keys(row)) {
-      if (row[key] && row[key].includes('\n')) row[key] = row[key].replace(/\r?\n|\r/g, ' ');
+    for (const col of [...DESC_COLS, ...NAME_COLS]) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
     }
     return row;
   });
@@ -1175,8 +1168,8 @@ router.get('/download-short-desc/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.shortDescIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const key of Object.keys(row)) {
-      if (row[key] && row[key].includes('\n')) row[key] = row[key].replace(/\r?\n|\r/g, ' ');
+    for (const col of [...DESC_COLS, ...NAME_COLS]) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
     }
     return row;
   });
