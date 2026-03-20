@@ -955,12 +955,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
-    // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
-    // Verhindert, dass mehrzeilige HTML-Felder im CSV über mehrere Zeilen verteilt werden
+    // Zeilenumbrüche aus allen Textfeldern entfernen (CSV-Kompatibilität)
+    // Verhindert, dass mehrzeilige Felder (auch übersetzte Namen) CSV-Zeilen aufbrechen
+    const STRIP_NEWLINE_COLS = [...DESC_COLS, ...NAME_COLS];
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
-      for (const col of DESC_COLS) {
-        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ');
+      for (const col of STRIP_NEWLINE_COLS) {
+        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ').trim();
       }
       return r;
     });
@@ -1104,8 +1105,8 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.dreiSpannungIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const col of DESC_COLS) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ');
+    for (const col of [...DESC_COLS, ...NAME_COLS]) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
     }
     return row;
   });
@@ -1130,8 +1131,8 @@ router.get('/download-unorderly/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.unorderlyIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const col of DESC_COLS) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ');
+    for (const col of [...DESC_COLS, ...NAME_COLS]) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
     }
     return row;
   });
@@ -1156,8 +1157,8 @@ router.get('/download-short-desc/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.shortDescIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const col of DESC_COLS) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ');
+    for (const col of [...DESC_COLS, ...NAME_COLS]) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
     }
     return row;
   });
