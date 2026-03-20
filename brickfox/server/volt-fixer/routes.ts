@@ -52,11 +52,29 @@ const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
 const NAME_COLS = ['p_name[de]', 'p_name[nl]'];
 
 // Temporärer Speicher für verarbeitete Ergebnisse (max 30 Minuten)
+// Erkennt ob eine HTML-Beschreibung alle drei Spannungstypen enthält:
+// Spannung (ohne Eingangs-/Ausgangs-Präfix), Eingangsspannung UND Ausgangsspannung.
+function hasDreiSpannung(html: string): boolean {
+  if (!html) return false;
+  const rows = [...html.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/gi)].map(m => m[0]);
+  let hasSpannung = false, hasEingang = false, hasAusgang = false;
+  for (const row of rows) {
+    const labelCell = row.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+    if (!labelCell) continue;
+    const label = labelCell[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
+    if (/eingangs(?:spannung|spanning)/.test(label)) { hasEingang = true; continue; }
+    if (/ausgangs(?:spannung|spanning)/.test(label)) { hasAusgang = true; continue; }
+    if (/^(?:nenn)?spann(?:ung|ing)/.test(label)) hasSpannung = true;
+  }
+  return hasSpannung && hasEingang && hasAusgang;
+}
+
 const jobStore = new Map<string, {
   csvBuffer: Buffer;
   fileName: string;
   expires: number;
   fixedRows: Record<string, string>[];
+  dreiSpannungIndices: number[];
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
@@ -828,6 +846,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
+    // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
+    const dreiSpannungIndices: number[] = fixedRows
+      .map((row, i) => ({ i, html: row['p_description[de]'] || '' }))
+      .filter(({ html }) => hasDreiSpannung(html))
+      .map(({ i }) => i);
+
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
     const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
@@ -836,6 +860,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       fileName,
       expires: Date.now() + 30 * 60 * 1000,
       fixedRows,
+      dreiSpannungIndices,
       originalRows: rows,
       headers,
       changedCols,
@@ -881,7 +906,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length },
       previewItems,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),
@@ -923,6 +948,32 @@ router.get('/download/:jobId', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${job.fileName}"`);
   res.send(job.csvBuffer);
+});
+
+// GET /api/volt-fixer/download-drei-spannung/:jobId
+// Exportiert nur Zeilen mit Spannung + Eingangsspannung + Ausgangsspannung in der DE-Beschreibung
+router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  if (job.dreiSpannungIndices.length === 0) {
+    return res.status(404).json({ error: 'Keine Drei-Spannung-Produkte gefunden' });
+  }
+
+  const filteredRows = job.dreiSpannungIndices.map(i => {
+    const row = { ...job.fixedRows[i] };
+    for (const col of DESC_COLS) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ');
+    }
+    return row;
+  });
+
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
+  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
+  const filteredFileName = job.fileName.replace(/\.csv$/i, '_drei_spannung.csv');
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
+  res.send(csvBuffer);
 });
 
 export default router;

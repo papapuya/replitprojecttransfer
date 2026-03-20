@@ -41,7 +41,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -568,10 +568,23 @@ export default function VoltFixer() {
 
 
           {/* Download */}
-          <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
-            <Download size={16} />
-            Korrigierte CSV herunterladen ({result.stats.total.toLocaleString()} Zeilen)
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+              <Download size={16} />
+              Korrigierte CSV herunterladen ({result.stats.total.toLocaleString()} Zeilen)
+            </Button>
+
+            {(result.stats.dreiSpannungCount ?? 0) > 0 && (
+              <Button
+                onClick={() => window.open(`/api/volt-fixer/download-drei-spannung/${result.jobId}`, "_blank")}
+                variant="outline"
+                className="border-amber-400 text-amber-700 hover:bg-amber-50 gap-2"
+              >
+                <Download size={16} />
+                Drei-Spannung-Produkte ({result.stats.dreiSpannungCount!.toLocaleString()} Zeilen)
+              </Button>
+            )}
+          </div>
 
           {/* Aus Produktnamen extrahierte Volt-Werte */}
           {(result.allExtractedVolt ?? []).length > 0 && (
