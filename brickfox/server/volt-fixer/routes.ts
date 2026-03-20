@@ -193,26 +193,22 @@ function normalizeExtractedVolt(raw: string): string {
   return raw + ',0';
 }
 
-// Sortiert Spannung-Zeilen in der technischen Tabelle in fester Reihenfolge:
-//   1. Spannung / Nennspannung  (Hauptspannung des Produkts)
-//   2. Eingangsspannung          (Input)
-//   3. Ausgangsspannung          (Output)
-// Alle anderen Zeilen bleiben an ihrer Position.
+// Gruppiert Spannung-Zeilen in der technischen Tabelle:
+// Eingangsspannung und Ausgangsspannung werden direkt unter Spannung/Nennspannung platziert.
+// Reihenfolge: Spannung → Eingangsspannung → Ausgangsspannung
+// Falls keine Hauptspannung vorhanden, bleiben die Zeilen unverändert.
 function sortVoltageTableRows(html: string): { result: string; changed: boolean } {
   if (!html) return { result: html, changed: false };
 
-  // Priorität je Label: niedrigere Zahl = weiter vorne
   const voltPriority = (rowHtml: string): number => {
     const labelCell = rowHtml.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
     if (!labelCell) return 99;
     const label = labelCell[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
-    if (/^(?:nenn)?spann(?:ung|ing)/.test(label)) return 0;      // Spannung / Nennspannung
-    if (/eingangs(?:spannung|spanning)/.test(label)) return 1;   // Eingangsspannung
-    if (/ausgangs(?:spannung|spanning)/.test(label)) return 2;   // Ausgangsspannung
-    return 99; // kein Spannung-Label
+    if (/^(?:nenn)?spann(?:ung|ing)/.test(label)) return 0;    // Spannung / Nennspannung
+    if (/eingangs(?:spannung|spanning)/.test(label)) return 1; // Eingangsspannung
+    if (/ausgangs(?:spannung|spanning)/.test(label)) return 2; // Ausgangsspannung
+    return 99;
   };
-
-  const isVoltageRow = (rowHtml: string) => voltPriority(rowHtml) < 99;
 
   let changed = false;
   const result = html.replace(/(<table[^>]*>)([\s\S]*?)(<\/table>)/gi, (_tableMatch, open, body, close) => {
@@ -220,24 +216,33 @@ function sortVoltageTableRows(html: string): { result: string; changed: boolean 
     const allRows = [...body.matchAll(rowPattern)].map(m => m[1]);
     if (allRows.length === 0) return _tableMatch;
 
-    // Spannung-Zeilen-Indizes bestimmen
-    const voltIndices: number[] = [];
-    allRows.forEach((row, i) => { if (isVoltageRow(row)) voltIndices.push(i); });
-    if (voltIndices.length <= 1) return _tableMatch;
+    // Spannung-Zeilen identifizieren (Priorität < 99)
+    const mainIdx = allRows.findIndex(r => voltPriority(r) === 0);  // Spannung
+    const subRows = allRows
+      .map((r, i) => ({ r, i, p: voltPriority(r) }))
+      .filter(({ p }) => p === 1 || p === 2); // Eingangs- / Ausgangsspannung
 
-    // Spannung-Zeilen nach Priorität sortieren
-    const voltRows = voltIndices.map(i => allRows[i]);
-    const sortedVoltRows = [...voltRows].sort((a, b) => voltPriority(a) - voltPriority(b));
+    if (mainIdx === -1 || subRows.length === 0) return _tableMatch; // Nichts zu verschieben
 
-    if (voltRows.every((r, i) => r === sortedVoltRows[i])) return _tableMatch;
+    // Prüfen ob bereits korrekt: subRows direkt nach mainIdx, in richtiger Reihenfolge
+    const alreadyCorrect = subRows
+      .sort((a, b) => a.p - b.p)
+      .every(({ i }, offset) => i === mainIdx + 1 + offset);
+    if (alreadyCorrect) return _tableMatch;
+
     changed = true;
 
-    const newRows = [...allRows];
-    voltIndices.forEach((origIdx, i) => { newRows[origIdx] = sortedVoltRows[i]; });
+    // Neue Zeilenfolge: alle Zeilen außer subRows behalten, nach mainIdx die subRows einfügen
+    const subIndices = new Set(subRows.map(({ i }) => i));
+    const sortedSubs = subRows.sort((a, b) => a.p - b.p).map(({ r }) => r);
+    const newRows: string[] = [];
+    allRows.forEach((row, i) => {
+      if (subIndices.has(i)) return; // subRows werden weggelassen und unten neu eingefügt
+      newRows.push(row);
+      if (i === mainIdx) newRows.push(...sortedSubs); // direkt nach Spannung einfügen
+    });
 
-    let rowIdx = 0;
-    const newBody = body.replace(/(<tr[^>]*>[\s\S]*?<\/tr>)/gi, () => newRows[rowIdx++] ?? '');
-    return open + newBody + close;
+    return open + newRows.join('') + close;
   });
   return { result, changed };
 }
