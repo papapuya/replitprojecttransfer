@@ -23,6 +23,8 @@ type PreviewItem = {
   descNL: string;
   descNLChanged: boolean;
   changed: string[];
+  isUnorderly?: boolean;
+  isShortDesc?: boolean;
 };
 
 type ChangedNameEntry = {
@@ -338,6 +340,7 @@ export default function VoltFixer() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [page, setPage] = useState(0);
+  const [tableFilter, setTableFilter] = useState<'all' | 'changed' | 'unorderly' | 'short'>('all');
   const [detail, setDetail] = useState<{ index: number; rowNum: number } | null>(null);
   const [restoreEmoji, setRestoreEmoji] = useState(false);
   const [useDeForNL, setUseDeForNL] = useState(false);
@@ -451,7 +454,11 @@ export default function VoltFixer() {
     setDetail({ index, rowNum });
   }, []);
 
-  const items = result?.previewItems ?? [];
+  const allItems = result?.previewItems ?? [];
+  const items = tableFilter === 'all' ? allItems
+    : tableFilter === 'changed' ? allItems.filter(i => i.changed.length > 0)
+    : tableFilter === 'unorderly' ? allItems.filter(i => i.isUnorderly)
+    : allItems.filter(i => i.isShortDesc);
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
   const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -710,32 +717,48 @@ export default function VoltFixer() {
             </div>
           )}
 
-          {/* Spaltenvorschau – nur geänderte Zeilen */}
+          {/* Spaltenvorschau – alle relevanten Zeilen */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-lg font-semibold text-gray-800">
-                Spaltenvorschau
-                <span className="ml-2 text-sm font-normal text-gray-400">
-                  {items.length.toLocaleString()} geänderte Zeilen{items.length >= 500 ? " (max. 500 angezeigt)" : ""} · Klick auf <Eye size={12} className="inline" /> für Details
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 inline">
+                  Spaltenvorschau
+                </h2>
+                <span className="ml-2 text-sm text-gray-400">
+                  {items.length.toLocaleString()} Zeilen{allItems.length >= 3000 ? " (max. 3000)" : ""} · <Eye size={12} className="inline" /> für Details
                 </span>
-              </h2>
+              </div>
+              {/* Filter-Tabs */}
+              <div className="flex gap-1 flex-wrap">
+                {([
+                  { key: 'all',       label: `Alle (${allItems.length.toLocaleString()})`,                                                    cls: 'gray'    },
+                  { key: 'changed',   label: `Geändert (${allItems.filter(i => i.changed.length > 0).length.toLocaleString()})`,              cls: 'indigo'  },
+                  { key: 'unorderly', label: `Keine Tabelle (${(result?.stats.unorderlyCount ?? 0).toLocaleString()})`,                       cls: 'red'     },
+                  { key: 'short',     label: `<20 Wörter (${(result?.stats.shortDescCount ?? 0).toLocaleString()})`,                          cls: 'orange'  },
+                ] as const).map(({ key, label, cls }) => {
+                  const active = tableFilter === key;
+                  const colors: Record<string, string> = {
+                    gray:   active ? 'bg-gray-700 text-white border-gray-700'   : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50',
+                    indigo: active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-600 border-indigo-300 hover:bg-indigo-50',
+                    red:    active ? 'bg-red-600 text-white border-red-600'     : 'bg-white text-red-600 border-red-300 hover:bg-red-50',
+                    orange: active ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-orange-600 border-orange-300 hover:bg-orange-50',
+                  };
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => { setTableFilter(key); setPage(0); }}
+                      className={`text-xs px-3 py-1 rounded-full border font-medium transition-colors ${colors[cls]}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
               {totalPages > 1 && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <button
-                    onClick={() => setPage(p => Math.max(0, p - 1))}
-                    disabled={page === 0}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <span>Seite {page + 1} / {totalPages} · Zeilen {(page * PAGE_SIZE + 1).toLocaleString()}–{Math.min((page + 1) * PAGE_SIZE, items.length).toLocaleString()}</span>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                    disabled={page === totalPages - 1}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
+                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronLeft size={18} /></button>
+                  <span>Seite {page + 1} / {totalPages} · {(page * PAGE_SIZE + 1).toLocaleString()}–{Math.min((page + 1) * PAGE_SIZE, items.length).toLocaleString()}</span>
+                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1} className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronRight size={18} /></button>
                 </div>
               )}
             </div>
@@ -763,8 +786,14 @@ export default function VoltFixer() {
                       const voltChanged = item.changed.includes(VOLT_COL);
                       const nameDEChanged = item.changed.includes("p_name[de]");
                       const nameNLChanged = item.changed.includes("p_name[nl]");
+                      const rowBg = item.isUnorderly && item.isShortDesc
+                        ? "bg-orange-50/60"
+                        : item.isUnorderly ? "bg-red-50/40"
+                        : item.isShortDesc ? "bg-orange-50/40"
+                        : hasChange ? "bg-indigo-50/30"
+                        : "bg-white";
                       return (
-                        <tr key={item.index} className={`border-b last:border-0 ${hasChange ? "bg-indigo-50/30" : "bg-white"}`}>
+                        <tr key={item.index} className={`border-b last:border-0 ${rowBg}`}>
                           <td className="px-3 py-1.5 text-gray-400">{item.index + 1}</td>
                           <td className="px-2 py-1.5">
                             <button
@@ -775,7 +804,11 @@ export default function VoltFixer() {
                               <Eye size={13} />
                             </button>
                           </td>
-                          <td className="px-3 py-1.5 text-gray-600 font-mono text-xs">{item.itemNr || "—"}</td>
+                          <td className="px-3 py-1.5 font-mono text-xs">
+                            <span className="text-gray-600">{item.itemNr || "—"}</span>
+                            {item.isUnorderly && <span className="ml-1 inline-block text-[10px] px-1 py-0 rounded bg-red-100 text-red-600 font-semibold leading-4">∅Tabelle</span>}
+                            {item.isShortDesc && <span className="ml-1 inline-block text-[10px] px-1 py-0 rounded bg-orange-100 text-orange-600 font-semibold leading-4">&lt;20W</span>}
+                          </td>
                           <td className={`px-3 py-1.5 ${voltChanged ? "text-red-400 line-through opacity-70" : "text-gray-500"}`}>
                             {item.voltOrig || "—"}
                           </td>

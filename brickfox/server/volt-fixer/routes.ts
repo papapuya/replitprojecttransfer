@@ -1011,13 +1011,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return plain.length > max ? plain.slice(0, max) + '…' : plain;
     };
 
-    // Kompakte Vorschau: NUR geänderte Zeilen, max. 500 Einträge
+    // Vorschau: geänderte + gefilterte Zeilen (unordentlich / kurz), max. 3000
     const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
-    const MAX_PREVIEW = 500;
+    const MAX_PREVIEW = 3000;
+    const unorderlySet = new Set(unorderlyIndices);
+    const shortDescSet = new Set(shortDescIndices);
     const previewItems: object[] = [];
     for (let i = 0; i < fixedRows.length && previewItems.length < MAX_PREVIEW; i++) {
-      const changed = changedCols[i];
-      if (!changed || changed.length === 0) continue;
+      const changed = changedCols[i] ?? [];
+      const isUnorderly = unorderlySet.has(i);
+      const isShortDesc = shortDescSet.has(i);
+      if (changed.length === 0 && !isUnorderly && !isShortDesc) continue;
       const orig = rows[i];
       const row = fixedRows[i];
       const itemNr = ITEM_NR_COLS.map(c => row[c]).find(v => v) || '';
@@ -1035,6 +1039,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         descNL: toPlainText(row['p_description[nl]'] ?? ''),
         descNLChanged: changed.includes('p_description[nl]'),
         changed,
+        isUnorderly,
+        isShortDesc,
       });
     }
 
