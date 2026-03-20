@@ -111,27 +111,11 @@ function hasDreiSpannung(html: string): boolean {
   return hasSpannung && hasEingang && hasAusgang;
 }
 
-// Erkennt "unordentliche" Produktbeschreibungen, die nicht der Standard-Struktur folgen.
-// Ordentliche Struktur: Intro → "Ihre Vorteile" (H2) → opt. "Technische Daten" (H2) → "Lieferumfang" (H2)
-// Unordentlich: fehlende Standard-Sektionen ODER extra H2-Überschriften die nicht zur Struktur gehören
+// Erkennt "unordentliche" Produktbeschreibungen.
+// Unordentlich = keine HTML-Tabelle (<table>) in p_description[de]
 function isUnorderly(html: string): boolean {
   if (!html || html.trim().length < 50) return false;
-
-  // Pflicht-Sektionen
-  const hasVorteile    = /Ihre\s+Vorteile\b/i.test(html);
-  const hasLieferumfang = /Lieferumfang/i.test(html);
-
-  // Erlaubte H2-Überschriften (Standard-Struktur)
-  const standardH2 = /^(?:Ihre\s+Vorteile|Technische\s+Daten|Lieferumfang|Kompatibilit[äa]t|Produkteigenschaften)/i;
-
-  // Prüfe ob nicht-standardisierte H2-Überschriften vorhanden sind
-  const h2Matches = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)];
-  const hasNonStandardH2 = h2Matches.some(m => {
-    const text = m[1].replace(/<[^>]+>/g, '').trim();
-    return text.length > 0 && !standardH2.test(text);
-  });
-
-  return !hasVorteile || !hasLieferumfang || hasNonStandardH2;
+  return !/<table[\s>]/i.test(html);
 }
 
 const jobStore = new Map<string, {
