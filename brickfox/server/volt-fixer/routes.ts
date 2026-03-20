@@ -149,21 +149,33 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
   // Bereits mit Punkt → unverändert
   if (trimmed.includes('.')) return { fixed: trimmed, changed: false };
   // Mit Komma → Komma durch Punkt ersetzen (z.B. 3,85 → 3.85)
+  // Aber: ganze Zahlen wie 12,0 → 12 (kein .0)
   if (trimmed.includes(',')) {
     const fixed = trimmed.replace(',', '.');
+    const asNum = parseFloat(fixed);
+    if (!isNaN(asNum) && Number.isInteger(asNum)) {
+      return { fixed: String(asNum), changed: true };
+    }
     return { fixed, changed: true };
   }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   if (trimmed.length === 1) return { fixed: trimmed, changed: false };
-  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 111→11.1, 144→14.4)
+
+  // Hilfsfunktion: "12.0" → "12" (ganze Zahlen ohne .0)
+  const stripWhole = (s: string): string => {
+    const n = parseFloat(s);
+    return (!isNaN(n) && Number.isInteger(n)) ? String(n) : s;
+  };
+
+  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 111→11.1, 144→14.4, 120→12)
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
     if (firstTwo >= 10 && firstTwo <= 24) {
-      return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
+      return { fixed: stripWhole(trimmed.slice(0, 2) + '.' + trimmed[2]), changed: true };
     }
   }
-  // Standard: Punkt nach erster Stelle (z.B. 385→3.85, 48→4.8, 36→3.6)
-  return { fixed: trimmed[0] + '.' + trimmed.slice(1), changed: true };
+  // Standard: Punkt nach erster Stelle (z.B. 385→3.85, 48→4.8, 36→3.6, 360→3.6)
+  return { fixed: stripWhole(trimmed[0] + '.' + trimmed.slice(1)), changed: true };
 }
 
 // Ersetzt Volt-Wert in Produktnamen (Plaintext), z.B. "385 V" → "3,85 V", "385 Volt" → "3,85 Volt"
@@ -282,9 +294,15 @@ function normalizeExtractedVolt(raw: string): string {
   // Bereichswert (z.B. "100-240", "12/24") → unverändert (kein Dezimal)
   if (/[-\/]/.test(raw)) return raw.replace(',', '.');
   // Dezimalwert (z.B. "3,7" oder "3.7") → Komma durch Punkt (Export-Format)
-  if (raw.includes(',') || raw.includes('.')) return raw.replace(',', '.');
-  // Ganzzahl → .0 anhängen (19 → 19.0, 24 → 24.0)
-  return raw + '.0';
+  // Aber: wenn Ergebnis eine ganze Zahl ist (z.B. "12,0" → 12.0 → 12), .0 weglassen
+  if (raw.includes(',') || raw.includes('.')) {
+    const withDot = raw.replace(',', '.');
+    const asNum = parseFloat(withDot);
+    if (!isNaN(asNum) && Number.isInteger(asNum)) return String(asNum);
+    return withDot;
+  }
+  // Ganzzahl → unverändert (19 bleibt 19, kein .0 anhängen)
+  return raw;
 }
 
 // Gruppiert Spannung-Zeilen in der technischen Tabelle:
