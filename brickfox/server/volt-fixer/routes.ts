@@ -968,8 +968,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return r;
     });
 
+    // Zeilen ohne p_item_number UND v_item_number aus dem Export entfernen (Brickfox-Import schlägt sonst fehl)
+    const csvRowsFiltered = csvRows.filter(row =>
+      ['p_item_number', 'v_item_number'].some(c => row[c]?.trim())
+    );
+
     // Korrigierte CSV bauen
-    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
+    const csvOut = Papa.unparse(csvRowsFiltered, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
     // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
