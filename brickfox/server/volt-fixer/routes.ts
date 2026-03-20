@@ -111,12 +111,36 @@ function hasDreiSpannung(html: string): boolean {
   return hasSpannung && hasEingang && hasAusgang;
 }
 
+// Erkennt "unordentliche" Produktbeschreibungen, die nicht der Standard-Struktur folgen.
+// Ordentliche Struktur: Intro → "Ihre Vorteile" (H2) → opt. "Technische Daten" (H2) → "Lieferumfang" (H2)
+// Unordentlich: fehlende Standard-Sektionen ODER extra H2-Überschriften die nicht zur Struktur gehören
+function isUnorderly(html: string): boolean {
+  if (!html || html.trim().length < 50) return false;
+
+  // Pflicht-Sektionen
+  const hasVorteile    = /Ihre\s+Vorteile\b/i.test(html);
+  const hasLieferumfang = /Lieferumfang/i.test(html);
+
+  // Erlaubte H2-Überschriften (Standard-Struktur)
+  const standardH2 = /^(?:Ihre\s+Vorteile|Technische\s+Daten|Lieferumfang|Kompatibilit[äa]t|Produkteigenschaften)/i;
+
+  // Prüfe ob nicht-standardisierte H2-Überschriften vorhanden sind
+  const h2Matches = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)];
+  const hasNonStandardH2 = h2Matches.some(m => {
+    const text = m[1].replace(/<[^>]+>/g, '').trim();
+    return text.length > 0 && !standardH2.test(text);
+  });
+
+  return !hasVorteile || !hasLieferumfang || hasNonStandardH2;
+}
+
 const jobStore = new Map<string, {
   csvBuffer: Buffer;
   fileName: string;
   expires: number;
   fixedRows: Record<string, string>[];
   dreiSpannungIndices: number[];
+  unorderlyIndices: number[];
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
@@ -958,6 +982,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .filter(({ html }) => hasDreiSpannung(html))
       .map(({ i }) => i);
 
+    // Unordentliche Beschreibungen: Zeilen mit p_description[de] die nicht der Standard-Struktur folgen
+    const unorderlyIndices: number[] = fixedRows
+      .map((row, i) => ({ i, html: row['p_description[de]'] || '' }))
+      .filter(({ html }) => isUnorderly(html))
+      .map(({ i }) => i);
+
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
     const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
@@ -967,6 +997,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       expires: Date.now() + 30 * 60 * 1000,
       fixedRows,
       dreiSpannungIndices,
+      unorderlyIndices,
       originalRows: rows,
       headers,
       changedCols,
@@ -1012,7 +1043,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nameNlTranslated, dreiSpannungCount: dreiSpannungIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, nameNlTranslated, dreiSpannungCount: dreiSpannungIndices.length, unorderlyCount: unorderlyIndices.length },
       previewItems,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),
@@ -1076,6 +1107,32 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
   const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_drei_spannung.csv');
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
+  res.send(csvBuffer);
+});
+
+// GET /api/volt-fixer/download-unorderly/:jobId
+// Exportiert nur Zeilen mit p_description[de] die nicht der Standard-Struktur folgen
+router.get('/download-unorderly/:jobId', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  if (job.unorderlyIndices.length === 0) {
+    return res.status(404).json({ error: 'Keine unordentlichen Beschreibungen gefunden' });
+  }
+
+  const filteredRows = job.unorderlyIndices.map(i => {
+    const row = { ...job.fixedRows[i] };
+    for (const col of DESC_COLS) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ');
+    }
+    return row;
+  });
+
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
+  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
+  const filteredFileName = job.fileName.replace(/\.csv$/i, '_unordentlich.csv');
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
