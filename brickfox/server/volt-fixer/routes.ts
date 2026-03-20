@@ -5,50 +5,6 @@ import iconv from 'iconv-lite';
 import crypto from 'crypto';
 import { deeplService } from '../services/deepl-service';
 
-/**
- * RFC-4180-konformer CSV-Serializer mit Semikolon-Trennzeichen.
- * Jedes Feld wird einzeln geprüft:
- *  - null/undefined → leerer String
- *  - enthält ; oder " oder Zeilenumbruch → in doppelte Anführungszeichen einschließen
- *  - " im Wert wird zu "" escaped
- * Jede Zeile hat exakt so viele Spalten wie der Header.
- */
-function serializeCsv(rows: Record<string, string>[], headers: string[]): string {
-  // Zeilenumbrüche werden IMMER entfernt (Brickfox unterstützt keine multi-line quoted fields).
-  // Nur ; und " lösen noch Quoting aus.
-  const escField = (val: unknown): string => {
-    const s = (val == null ? '' : String(val)).replace(/\r\n|\r|\n/g, ' ');
-    if (s.includes(';') || s.includes('"')) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
-    return s;
-  };
-  const lines: string[] = [];
-  lines.push(headers.map(escField).join(';'));
-  for (const row of rows) {
-    lines.push(headers.map(h => escField(row[h])).join(';'));
-  }
-  // Debug: erste zwei Zeilen loggen damit wir das Format sehen
-  console.log('[VoltFixer][CSV] Header (Anfang):', lines[0]?.slice(0, 300));
-  if (lines.length > 1) console.log('[VoltFixer][CSV] Zeile 2 (Anfang):', lines[1]?.slice(0, 300));
-
-  // Prüfung: jede Zeile muss exakt headers.length Felder haben
-  const headerCount = headers.length;
-  lines.slice(1).forEach((line, i) => {
-    // Felder zählen (quotes-aware, nur für Debug)
-    let count = 0, inQ = false;
-    for (let c = 0; c < line.length; c++) {
-      if (line[c] === '"') { inQ = !inQ; }
-      else if (line[c] === ';' && !inQ) { count++; }
-    }
-    count++; // letzte Spalte
-    if (count !== headerCount) {
-      console.warn(`[VoltFixer][serializeCsv] Zeile ${i + 2}: ${count} Felder erwartet ${headerCount}`);
-    }
-  });
-  return lines.join('\r\n');
-}
-
 /** Gibt die Textlänge eines HTML-Strings zurück (ohne Tags) */
 function htmlTextLength(html: string): number {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length;
@@ -154,7 +110,6 @@ function hasDreiSpannung(html: string): boolean {
   }
   return hasSpannung && hasEingang && hasAusgang;
 }
-
 
 const jobStore = new Map<string, {
   csvBuffer: Buffer;
@@ -617,11 +572,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     setProgress('parsing', 'CSV wird gelesen…', 5);
 
     const encoding = detectEncoding(req.file.buffer);
-    // BOM-Zeichen am Anfang entfernen – sonst landet \uFEFF im ersten Spaltennamen
-    const text = iconv.decode(req.file.buffer, encoding).replace(/^\uFEFF/, '');
-
-    // Debug: erste 300 Zeichen der Eingabe loggen
-    console.log('[VoltFixer][INPUT] Encoding:', encoding, '| Anfang:', JSON.stringify(text.slice(0, 300)));
+    const text = iconv.decode(req.file.buffer, encoding);
 
     const parsed = Papa.parse(text, {
       delimiter: ';',
@@ -987,18 +938,18 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
-    // Zeilenumbrüche aus Beschreibungs- und Namensfeldern entfernen (CSV-Kompatibilität)
-    const STRIP_NEWLINE_COLS = [...DESC_COLS, ...NAME_COLS];
+    // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
+    // Verhindert, dass mehrzeilige HTML-Felder im CSV über mehrere Zeilen verteilt werden
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
-      for (const col of STRIP_NEWLINE_COLS) {
-        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ').trim();
+      for (const col of DESC_COLS) {
+        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ');
       }
       return r;
     });
 
     // Korrigierte CSV bauen
-    const csvOut = serializeCsv(csvRows, headers);
+    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
     // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
@@ -1029,13 +980,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return plain.length > max ? plain.slice(0, max) + '…' : plain;
     };
 
-    // Vorschau: geänderte Zeilen, max. 3000
+    // Kompakte Vorschau: NUR geänderte Zeilen, max. 500 Einträge
     const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
-    const MAX_PREVIEW = 3000;
+    const MAX_PREVIEW = 500;
     const previewItems: object[] = [];
     for (let i = 0; i < fixedRows.length && previewItems.length < MAX_PREVIEW; i++) {
-      const changed = changedCols[i] ?? [];
-      if (changed.length === 0) continue;
+      const changed = changedCols[i];
+      if (!changed || changed.length === 0) continue;
       const orig = rows[i];
       const row = fixedRows[i];
       const itemNr = ITEM_NR_COLS.map(c => row[c]).find(v => v) || '';
@@ -1116,13 +1067,13 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
 
   const filteredRows = job.dreiSpannungIndices.map(i => {
     const row = { ...job.fixedRows[i] };
-    for (const col of [...DESC_COLS, ...NAME_COLS]) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ').trim();
+    for (const col of DESC_COLS) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ');
     }
     return row;
   });
 
-  const csvOut = serializeCsv(filteredRows, job.headers);
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_drei_spannung.csv');
 
@@ -1130,6 +1081,5 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
   res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
   res.send(csvBuffer);
 });
-
 
 export default router;
