@@ -597,7 +597,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     setProgress('parsing', 'CSV wird gelesen…', 5);
 
     const encoding = detectEncoding(req.file.buffer);
-    const text = iconv.decode(req.file.buffer, encoding);
+    // BOM-Zeichen am Anfang entfernen – sonst landet \uFEFF im ersten Spaltennamen
+    const text = iconv.decode(req.file.buffer, encoding).replace(/^\uFEFF/, '');
 
     const parsed = Papa.parse(text, {
       delimiter: ';',
