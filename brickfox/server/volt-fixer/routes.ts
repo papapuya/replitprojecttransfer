@@ -264,16 +264,16 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
 
 // Normalisiert einen aus Text extrahierten Volt-Wert für die p_attributes[akku_v][de]-Spalte.
 // Aus Text extrahierte Werte sind bereits korrekt (z.B. "19" aus "19 V" = wirklich 19 Volt).
-// Ganze Zahlen bekommen ,0 angehängt (19 → 19,0, 24 → 24,0).
 // Dezimalwerte: Punkt durch Komma ersetzen (3.7 → 3,7). Bereichswerte unverändert.
+// Ganze Zahlen bleiben unverändert (19 → 19, 24 → 24).
 function normalizeExtractedVolt(raw: string): string {
   if (!raw) return raw;
   // Bereichswert (z.B. "100-240", "12/24") → unverändert
   if (/[-\/]/.test(raw)) return raw.replace('.', ',');
   // Dezimalwert (z.B. "3,7" oder "3.7") → Punkt durch Komma
   if (raw.includes(',') || raw.includes('.')) return raw.replace('.', ',');
-  // Ganzzahl → ,0 anhängen (19 → 19,0, 24 → 24,0)
-  return raw + ',0';
+  // Ganzzahl → unverändert lassen (19 bleibt 19, nicht 19,0)
+  return raw;
 }
 
 // Gruppiert Spannung-Zeilen in der technischen Tabelle:
