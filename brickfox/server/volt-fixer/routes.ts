@@ -28,6 +28,10 @@ function serializeCsv(rows: Record<string, string>[], headers: string[]): string
   for (const row of rows) {
     lines.push(headers.map(h => escField(row[h])).join(';'));
   }
+  // Debug: erste zwei Zeilen loggen damit wir das Format sehen
+  console.log('[VoltFixer][CSV] Header (Anfang):', lines[0]?.slice(0, 300));
+  if (lines.length > 1) console.log('[VoltFixer][CSV] Zeile 2 (Anfang):', lines[1]?.slice(0, 300));
+
   // Prüfung: jede Zeile muss exakt headers.length Felder haben
   const headerCount = headers.length;
   lines.slice(1).forEach((line, i) => {
@@ -615,6 +619,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const encoding = detectEncoding(req.file.buffer);
     // BOM-Zeichen am Anfang entfernen – sonst landet \uFEFF im ersten Spaltennamen
     const text = iconv.decode(req.file.buffer, encoding).replace(/^\uFEFF/, '');
+
+    // Debug: erste 300 Zeichen der Eingabe loggen
+    console.log('[VoltFixer][INPUT] Encoding:', encoding, '| Anfang:', JSON.stringify(text.slice(0, 300)));
 
     const parsed = Papa.parse(text, {
       delimiter: ';',
