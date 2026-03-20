@@ -614,26 +614,40 @@ export default function VoltFixer() {
                 Drei-Spannung-Produkte ({result.stats.dreiSpannungCount!.toLocaleString()} Zeilen)
               </Button>
             )}
-            {(result.stats.unorderlyCount ?? 0) > 0 && (
-              <Button
-                onClick={() => window.open(`/api/volt-fixer/download-unorderly/${result.jobId}`, "_blank")}
-                variant="outline"
-                className="border-red-400 text-red-700 hover:bg-red-50 gap-2"
-              >
-                <Download size={16} />
-                Unordentliche Beschreibungen ({result.stats.unorderlyCount!.toLocaleString()} Zeilen)
-              </Button>
-            )}
-            {(result.stats.shortDescCount ?? 0) > 0 && (
-              <Button
-                onClick={() => window.open(`/api/volt-fixer/download-short-desc/${result.jobId}`, "_blank")}
-                variant="outline"
-                className="border-orange-400 text-orange-700 hover:bg-orange-50 gap-2"
-              >
-                <Download size={16} />
-                Kurze Beschreibungen &lt;20 Wörter ({result.stats.shortDescCount!.toLocaleString()} Zeilen)
-              </Button>
-            )}
+          </div>
+
+          {/* Filter-Exporte: immer sichtbar */}
+          <div className="flex flex-wrap gap-3">
+            {(() => {
+              const unorderly = result.stats.unorderlyCount ?? 0;
+              const short = result.stats.shortDescCount ?? 0;
+              return (
+                <>
+                  <Button
+                    onClick={() => unorderly > 0 && window.open(`/api/volt-fixer/download-unorderly/${result.jobId}`, "_blank")}
+                    variant="outline"
+                    disabled={unorderly === 0}
+                    className={unorderly > 0 ? "border-red-400 text-red-700 hover:bg-red-50 gap-2" : "border-gray-200 text-gray-400 gap-2 cursor-not-allowed"}
+                  >
+                    <Download size={16} />
+                    {unorderly > 0
+                      ? <>Filter: Keine Tabelle ({unorderly.toLocaleString()} Zeilen)</>
+                      : <>Filter: Keine Tabelle (0 gefunden)</>}
+                  </Button>
+                  <Button
+                    onClick={() => short > 0 && window.open(`/api/volt-fixer/download-short-desc/${result.jobId}`, "_blank")}
+                    variant="outline"
+                    disabled={short === 0}
+                    className={short > 0 ? "border-orange-400 text-orange-700 hover:bg-orange-50 gap-2" : "border-gray-200 text-gray-400 gap-2 cursor-not-allowed"}
+                  >
+                    <Download size={16} />
+                    {short > 0
+                      ? <>Filter: &lt;20 Wörter ({short.toLocaleString()} Zeilen)</>
+                      : <>Filter: &lt;20 Wörter (0 gefunden)</>}
+                  </Button>
+                </>
+              );
+            })()}
           </div>
 
           {/* Aus Produktnamen extrahierte Volt-Werte */}
