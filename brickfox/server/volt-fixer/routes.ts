@@ -980,7 +980,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     });
 
     // Korrigierte CSV bauen
-    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
+    const csvOut = Papa.unparse(csvRows, { delimiter: ';', header: true, columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
     // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
