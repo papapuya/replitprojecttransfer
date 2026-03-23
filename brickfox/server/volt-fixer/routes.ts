@@ -642,19 +642,24 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .slice(0, 20);
 
     const headers = parsed.meta.fields || [];
-    const itemNrCol = headers.find(h => h === 'p_item_number' || h === 'v_item_number') || '';
+    // Artikelnummer-Spalte robust finden (case-insensitive, getrimmt)
+    const itemNrCol = headers.find(h => {
+      const normalized = h.trim().toLowerCase();
+      return normalized === 'p_item_number' || normalized === 'v_item_number';
+    }) || '';
 
     // Fehlerhafte Zeilen überspringen:
     // 1. Zeilen die PapaParse als Fehler markiert hat (verschobene Spalten durch unquotierte Newlines)
-    // 2. Zeilen wo die Artikelnummer-Spalte HTML enthält (Fortsetzungszeilen einer kaputten Zeile)
-    const isHtmlFragment = (row: Record<string, string>) => {
-      const itemNr = (row[itemNrCol] ?? '').trim();
-      return itemNr.startsWith('<') || itemNr === '';
+    // 2. Zeilen wo die Artikelnummer-Spalte HTML enthält oder leer ist
+    const isBadRow = (row: Record<string, string>) => {
+      if (!itemNrCol) return false;
+      const itemNr = (row[itemNrCol] ?? '').replace(/\s/g, ''); // alle Whitespace inkl. \u00a0
+      return itemNr === '' || itemNr.startsWith('<');
     };
 
     const rows = (parsed.data as Record<string, string>[]).filter((row, i) => {
       if (errorRowIndices.has(i)) return false;
-      if (itemNrCol && isHtmlFragment(row)) return false;
+      if (isBadRow(row)) return false;
       return true;
     });
     const skippedCount = (parsed.data as Record<string, string>[]).length - rows.length;
