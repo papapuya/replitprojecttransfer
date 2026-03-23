@@ -477,20 +477,33 @@ function detectEncoding(buffer: Buffer): string {
   return 'utf-8';
 }
 
-// Erkennt und repariert Mojibake: UTF-8-Bytes die fälschlicherweise als Latin-1 interpretiert wurden.
-// Typische Muster: "Ã¼" statt "ü", "Ã¤" statt "ä", etc.
+// Erkennt und repariert Mojibake: UTF-8-Bytes die fälschlicherweise als Windows-1252 interpretiert wurden.
+// Direkte String-Ersetzung statt iconv-Roundtrip → ✅ und andere Sonderzeichen bleiben erhalten.
 function fixMojibake(text: string): string {
-  // Häufigste deutsche Mojibake-Sequenzen (UTF-8-Bytes als Latin-1 fehlinterpretiert)
-  const hasMojibake = /Ã¼|Ã¤|Ã¶|Ã\u009F|ÃŒ|Ã–|Ã„/.test(text);
-  if (!hasMojibake) return text;
-  try {
-    // Text zurück zu Latin-1-Bytes kodieren, dann als UTF-8 dekodieren
-    const latin1Bytes = iconv.encode(text, 'latin1');
-    const fixed = iconv.decode(latin1Bytes, 'utf-8');
-    // Nur verwenden wenn kein Replacement-Character entstanden ist
-    if (!fixed.includes('\uFFFD')) return fixed;
-  } catch {}
-  return text;
+  // Typische deutsche Mojibake-Sequenzen (UTF-8-Bytes als Windows-1252 fehlinterpretiert)
+  const MOJIBAKE_MAP: [string, string][] = [
+    // Kleinbuchstaben
+    ['Ã¤', 'ä'], ['Ã¼', 'ü'], ['Ã¶', 'ö'],
+    // Großbuchstaben – zweites Byte als CP1252-Zeichen
+    ['ÃŸ', 'ß'],   // 0xC3 0x9F → Ÿ (CP1252 0x9F)
+    ['Ã„', 'Ä'],   // 0xC3 0x84 → „ (CP1252 0x84)
+    ['Ãœ', 'Ü'],   // 0xC3 0x9C → œ (CP1252 0x9C)
+    ['Ã–', 'Ö'],   // 0xC3 0x96 → – (CP1252 0x96)
+    // Weitere häufige Zeichen
+    ['Ã©', 'é'], ['Ã¨', 'è'], ['Ãª', 'ê'], ['Ã«', 'ë'],
+    ['Ã ', 'à'], ['Ã¡', 'á'], ['Ã¢', 'â'], ['Ã£', 'ã'], ['Ã¥', 'å'],
+    ['Ã§', 'ç'], ['Ã¬', 'ì'], ['Ã­', 'í'], ['Ã®', 'î'], ['Ã¯', 'ï'],
+    ['Ã±', 'ñ'], ['Ã³', 'ó'], ['Ã´', 'ô'], ['Ãµ', 'õ'],
+    ['Ã¸', 'ø'], ['Ã¹', 'ù'], ['Ãº', 'ú'], ['Ã»', 'û'], ['Ã½', 'ý'],
+    // Anführungszeichen / Gedankenstriche (3-Byte-UTF-8 via CP1252)
+    ["â€˜", '\u2018'], ["â€™", '\u2019'],
+    ['â€œ', '\u201C'], ['â€\u009D', '\u201D'],
+    ['â€"', '\u2013'], ['â€"', '\u2014'],
+  ];
+  if (!MOJIBAKE_MAP.some(([from]) => text.includes(from))) return text;
+  let result = text;
+  for (const [from, to] of MOJIBAKE_MAP) result = result.split(from).join(to);
+  return result;
 }
 
 // Entfernt Tabellenzeilen deren Wert leer, '-', nur Nullen (z.B. '0000') oder reines Whitespace ist.
