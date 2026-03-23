@@ -117,6 +117,7 @@ const jobStore = new Map<string, {
   expires: number;
   fixedRows: Record<string, string>[];
   dreiSpannungIndices: number[];
+  kurzNameIndices: number[];
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
@@ -1014,6 +1015,14 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .filter(({ html }) => hasDreiSpannung(html))
       .map(({ i }) => i);
 
+    // Kurze/kaputte Namen erkennen: p_name[de] nach HTML-Bereinigung < 20 Zeichen oder leer
+    const stripHtmlForLen = (s: string) =>
+      s.replace(/<[^>]+>/g, '').replace(/&[a-zA-Z#0-9]+;/g, ' ').replace(/\s+/g, ' ').trim();
+    const kurzNameIndices: number[] = fixedRows
+      .map((row, i) => ({ i, name: stripHtmlForLen(row['p_name[de]'] || '') }))
+      .filter(({ name }) => name.length < 20)
+      .map(({ i }) => i);
+
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
     const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
@@ -1023,6 +1032,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       expires: Date.now() + 30 * 60 * 1000,
       fixedRows,
       dreiSpannungIndices,
+      kurzNameIndices,
       originalRows: rows,
       headers,
       changedCols,
@@ -1067,7 +1077,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, skippedCount },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, skippedCount, kurzNameCount: kurzNameIndices.length },
       previewItems,
       parseErrors,
       allChangedNames: allChangedNames.slice(0, 300),
@@ -1132,6 +1142,32 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
   const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_drei_spannung.csv');
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
+  res.send(csvBuffer);
+});
+
+// GET /api/volt-fixer/download-kurz-namen/:jobId
+// Exportiert Zeilen mit p_name[de] < 20 Zeichen (oder leer) — für Bulk-Generator
+router.get('/download-kurz-namen/:jobId', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  if (job.kurzNameIndices.length === 0) {
+    return res.status(404).json({ error: 'Keine Zeilen mit kurzem/leerem Produktnamen gefunden' });
+  }
+
+  const filteredRows = job.kurzNameIndices.map(i => {
+    const row = { ...job.fixedRows[i] };
+    for (const col of DESC_COLS) {
+      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ');
+    }
+    return row;
+  });
+
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
+  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
+  const filteredFileName = job.fileName.replace(/\.csv$/i, '_kurze_namen.csv');
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);

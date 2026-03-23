@@ -43,7 +43,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number; skippedCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number; skippedCount?: number; kurzNameCount?: number };
   previewItems: PreviewItem[];
   parseErrors: ParseError[];
   allChangedNames: ChangedNameEntry[];
@@ -588,6 +588,17 @@ export default function VoltFixer() {
               >
                 <Download size={16} />
                 Drei-Spannung-Produkte ({result.stats.dreiSpannungCount!.toLocaleString()} Zeilen)
+              </Button>
+            )}
+
+            {(result.stats.kurzNameCount ?? 0) > 0 && (
+              <Button
+                onClick={() => window.open(`/api/volt-fixer/download-kurz-namen/${result.jobId}`, "_blank")}
+                variant="outline"
+                className="border-violet-500 text-violet-700 hover:bg-violet-50 gap-2"
+              >
+                <Download size={16} />
+                Kurze/leere Produktnamen ({result.stats.kurzNameCount!.toLocaleString()} Zeilen) → Bulk-Generator
               </Button>
             )}
           </div>
