@@ -624,22 +624,48 @@ function restoreEmojiCheckmarks(html: string): string {
   return result;
 }
 
+/** Fügt ✅ am Anfang jedes <li>-Inhalts ein, das noch kein ✅ hat. */
+function addCheckmarksToListItems(ulHtml: string): string {
+  return ulHtml.replace(/(<li[^>]*>)(\s*)/gi, (_, tag, ws) => {
+    // Prüfe ob ✅ direkt nach dem Whitespace kommt – dafür brauchen wir den
+    // vollständigen Kontext. Stattdessen: einfach immer einfügen, dann Doppel entfernen.
+    return tag + ws + '✅ ';
+  }).replace(/✅\s+✅\s*/g, '✅ '); // Doppel-✅ verhindern
+}
+
 /**
- * Fügt <h2>Produkteigenschaften</h2> vor dem ersten <ul> mit ✅-Items ein,
- * falls noch keine solche Überschrift vorhanden ist.
+ * Sorgt dafür, dass das erste <ul> (Produkteigenschaften-Bereich, vor Lieferumfang)
+ * ✅ in allen <li>-Items hat und von <h2>Produkteigenschaften</h2> eingeleitet wird.
  */
 function ensureProduktEigenschaftenHeading(html: string): string {
   if (!html) return html;
-  if (/Produkteigenschaften/i.test(html)) return html; // bereits vorhanden
 
-  // Erstes <ul>...</ul> das ✅ enthält finden
+  const isDeliveryHeading = (textBefore: string): boolean =>
+    /(?:Lieferumfang|Leveringsomvang|Inhoud\s+leveringspakket|In\s+de\s+doos)\s*<\/h[23]>/i.test(
+      textBefore.slice(-300)
+    );
+
+  // Hilfsfunktion: verarbeite das gefundene <ul>-Match
+  const processUl = (ulMatch: string): string => addCheckmarksToListItems(ulMatch);
+
+  // Fall 1: Produkteigenschaften-Heading existiert bereits → nur ✅ in der direkt folgenden <ul> ergänzen
+  if (/Produkteigenschaften/i.test(html)) {
+    return html.replace(
+      /(<h[23][^>]*>[^<]*Produkteigenschaften[^<]*<\/h[23]>\s*)(<ul[^>]*>[\s\S]*?<\/ul>)/i,
+      (_, heading, ul) => heading + processUl(ul)
+    );
+  }
+
+  // Fall 2: Kein Heading → erstes <ul> suchen das NICHT nach einem Lieferumfang-Heading kommt
   const ulPattern = /<ul[^>]*>[\s\S]*?<\/ul>/gi;
   let m: RegExpExecArray | null;
   while ((m = ulPattern.exec(html)) !== null) {
-    if (m[0].includes('✅')) {
-      const pos = m.index;
-      return html.slice(0, pos) + '<h2>Produkteigenschaften</h2>' + html.slice(pos);
-    }
+    const before = html.slice(0, m.index);
+    if (isDeliveryHeading(before)) continue; // Lieferumfang-<ul> überspringen
+
+    const pos = m.index;
+    const updatedUl = processUl(m[0]);
+    return html.slice(0, pos) + '<h2>Produkteigenschaften</h2>' + updatedUl + html.slice(pos + m[0].length);
   }
   return html;
 }
