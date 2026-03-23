@@ -118,6 +118,7 @@ const jobStore = new Map<string, {
   fixedRows: Record<string, string>[];
   dreiSpannungIndices: number[];
   kurzNameIndices: number[];
+  missingTableIndices: number[];
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
@@ -1012,6 +1013,51 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
+    // ── Tabellen-Generierung für Produkte mit technischen Daten aber ohne <table> ──
+    // Erkennt: hat Volt-Wert ODER mAh/Wh im Namen/Beschreibung, aber keine HTML-Tabelle
+    const techPattern = /\d[\d,.]*\s*(m?ah|wh|volt|v\b)/i;
+    const missingTableIndices: number[] = fixedRows
+      .map((row, i) => ({ row, i }))
+      .filter(({ row }) => {
+        const desc = row['p_description[de]'] || '';
+        const name = row['p_name[de]'] || '';
+        const hasVolt = (row[VOLT_COL] || '').trim() !== '';
+        const plainDesc = desc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const hasTechData = hasVolt || techPattern.test(name) || techPattern.test(plainDesc);
+        const hasTable = desc.toLowerCase().includes('<table');
+        return hasTechData && !hasTable;
+      })
+      .map(({ i }) => i);
+
+    // Hilfsfunktion: Technische Datentabelle aus CSV-Attributen bauen
+    function buildTechTable(row: Record<string, string>): string {
+      const voltDot = (row[VOLT_COL] || '').trim();
+      const voltDisplay = voltDot ? voltDot.replace('.', ',') + ' V' : '';
+      const mah = (row['p_attributes[akku_mah][de]'] || '').trim();
+      const mahDisplay = mah ? mah.replace('.', ',') + ' mAh' : '';
+      const wh = (row['p_attributes[akku_wh][de]'] || '').trim();
+      const whDisplay = wh ? wh.replace('.', ',') + ' Wh' : '';
+      const ch = (row['p_attributes[akku_ch][de]'] || '').trim();
+
+      const rows: string[] = [];
+      if (voltDisplay) rows.push(`<tr><td>Spannung</td><td>${voltDisplay}</td></tr>`);
+      if (mahDisplay)  rows.push(`<tr><td>Kapazität</td><td>${mahDisplay}</td></tr>`);
+      if (whDisplay)   rows.push(`<tr><td>Energiegehalt</td><td>${whDisplay}</td></tr>`);
+      if (ch)          rows.push(`<tr><td>Chemisches System</td><td>${ch}</td></tr>`);
+
+      if (rows.length === 0) return '';
+      return `<h3>Technische Daten</h3><table>${rows.join('')}</table>`;
+    }
+
+    let tableGeneratedCount = 0;
+    for (const i of missingTableIndices) {
+      const table = buildTechTable(fixedRows[i]);
+      if (table) {
+        fixedRows[i]['p_description[de]'] = (fixedRows[i]['p_description[de]'] || '') + table;
+        tableGeneratedCount++;
+      }
+    }
+
     // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
     // Verhindert, dass mehrzeilige HTML-Felder im CSV über mehrere Zeilen verteilt werden
     const csvRows = fixedRows.map(row => {
@@ -1054,6 +1100,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       fixedRows,
       dreiSpannungIndices,
       kurzNameIndices,
+      missingTableIndices,
       originalRows: rows,
       headers,
       changedCols,
@@ -1098,7 +1145,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, skippedCount, kurzNameCount: kurzNameIndices.length, emptyDescCount },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, skippedCount, kurzNameCount: kurzNameIndices.length, emptyDescCount, tableGeneratedCount },
       previewItems,
       parseErrors,
       allChangedNames: allChangedNames.slice(0, 300),
