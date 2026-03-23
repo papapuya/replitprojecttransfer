@@ -1157,17 +1157,31 @@ router.get('/download-kurz-namen/:jobId', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Keine Zeilen mit kurzem/leerem Produktnamen gefunden' });
   }
 
-  const filteredRows = job.kurzNameIndices.map(i => {
-    const row = { ...job.fixedRows[i] };
-    for (const col of DESC_COLS) {
-      if (row[col]) row[col] = row[col].replace(/\r?\n/g, ' ');
-    }
-    return row;
-  });
+  // Artikelnummer-Spalte im Job bestimmen
+  const jobItemNrCol = job.headers.find(h => {
+    const n = h.trim().toLowerCase();
+    return n === 'p_item_number' || n === 'v_item_number';
+  }) || '';
+
+  const filteredRows = job.kurzNameIndices
+    .map(i => job.fixedRows[i])
+    // Zeilen mit leerem p_item_number entfernen
+    .filter(row => {
+      if (!jobItemNrCol) return true;
+      const itemNr = (row[jobItemNrCol] ?? '').replace(/\s/g, '');
+      return itemNr !== '' && !itemNr.startsWith('<');
+    })
+    .map(row => {
+      const r = { ...row };
+      for (const col of DESC_COLS) {
+        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ');
+      }
+      return r;
+    });
 
   const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
-  const filteredFileName = job.fileName.replace(/\.csv$/i, '_kurze_namen.csv');
+  const filteredFileName = job.fileName.replace(/\.csv$/i, '_kurze_beschreibungen.csv');
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
