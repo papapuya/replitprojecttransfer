@@ -1016,46 +1016,142 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     // ── Tabellen-Generierung für Produkte mit technischen Daten aber ohne <table> ──
     // Erkennt: hat Volt-Wert ODER mAh/Wh im Namen/Beschreibung, aber keine HTML-Tabelle
     const techPattern = /\d[\d,.]*\s*(m?ah|wh|volt|v\b)/i;
-    const missingTableIndices: number[] = fixedRows
-      .map((row, i) => ({ row, i }))
-      .filter(({ row }) => {
-        const desc = row['p_description[de]'] || '';
-        const name = row['p_name[de]'] || '';
-        const hasVolt = (row[VOLT_COL] || '').trim() !== '';
-        const plainDesc = desc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-        const hasTechData = hasVolt || techPattern.test(name) || techPattern.test(plainDesc);
-        const hasTable = desc.toLowerCase().includes('<table');
-        return hasTechData && !hasTable;
-      })
-      .map(({ i }) => i);
-
-    // Hilfsfunktion: Technische Datentabelle aus CSV-Attributen bauen
-    function buildTechTable(row: Record<string, string>): string {
-      const voltDot = (row[VOLT_COL] || '').trim();
-      const voltDisplay = voltDot ? voltDot.replace('.', ',') + ' V' : '';
-      const mah = (row['p_attributes[akku_mah][de]'] || '').trim();
-      const mahDisplay = mah ? mah.replace('.', ',') + ' mAh' : '';
-      const wh = (row['p_attributes[akku_wh][de]'] || '').trim();
-      const whDisplay = wh ? wh.replace('.', ',') + ' Wh' : '';
-      const ch = (row['p_attributes[akku_ch][de]'] || '').trim();
-
-      const rows: string[] = [];
-      if (voltDisplay) rows.push(`<tr><td>Spannung</td><td>${voltDisplay}</td></tr>`);
-      if (mahDisplay)  rows.push(`<tr><td>Kapazität</td><td>${mahDisplay}</td></tr>`);
-      if (whDisplay)   rows.push(`<tr><td>Energiegehalt</td><td>${whDisplay}</td></tr>`);
-      if (ch)          rows.push(`<tr><td>Chemisches System</td><td>${ch}</td></tr>`);
-
-      if (rows.length === 0) return '';
-      return `<h3>Technische Daten</h3><table>${rows.join('')}</table>`;
+    // ── Technische Daten aus Text extrahieren ──────────────────────────────────
+    interface TechData {
+      spannung?: string; kapazitaet?: string; energie?: string; leistung?: string;
+      system?: string; laenge?: string; breite?: string; hoehe?: string; gewicht?: string;
     }
 
-    let tableGeneratedCount = 0;
-    for (const i of missingTableIndices) {
-      const table = buildTechTable(fixedRows[i]);
-      if (table) {
-        fixedRows[i]['p_description[de]'] = (fixedRows[i]['p_description[de]'] || '') + table;
-        tableGeneratedCount++;
+    function extractTechFromText(src: string): TechData {
+      // HTML entfernen
+      const t = src.replace(/<[^>]+>/g, ' ').replace(/&[a-zA-Z#0-9]+;/g, ' ').replace(/\s+/g, ' ');
+      const d: TechData = {};
+
+      // Spannung: "3,7 Volt" / "3.7V" / "Spannung: 3,7"
+      const vM = t.match(/Spannung[:\s]+(\d[\d,.]+)\s*(V(?:olt)?)\b/i)
+              || t.match(/(\d[\d,.]+)\s*Volt\b/i);
+      if (vM) d.spannung = vM[1].replace('.', ',') + ' V';
+
+      // Kapazität: "900-1000mAh" / "1600 mAh" / "Kapazität: 900"
+      const mahM = t.match(/Kapazität[:\s]+([\d,.\s]+(?:-[\d,.]+)?)\s*m?Ah\b/i)
+                || t.match(/([\d][\d,.]*(?:-[\d][\d,.]*)?)\s*mAh\b/i);
+      if (mahM) {
+        const val = mahM[1].replace(/mAh/i, '').replace(/\s/g, '').trim();
+        d.kapazitaet = val + ' mAh';
       }
+
+      // Energiegehalt: "3,7Wh" / "max. 3,7 Wh"
+      const whM = t.match(/(\d[\d,.]*)\s*Wh\b/i);
+      if (whM) d.energie = whM[1] + ' Wh';
+
+      // Leistung (Watt, nicht Wh): "5 W" / "5W"  – nur wenn kein Wh-Kontext
+      const wattM = t.match(/(\d[\d,.]*)\s*W(?!h)\b/);
+      if (wattM) d.leistung = wattM[1] + ' W';
+
+      // Chemisches System: "System: Li-Ion Akku" / "Li-Ion" / "NiMH"
+      const sysM = t.match(/System[:\s]+([^\n,;<]+)/i)
+                || t.match(/\b(Li-Ion|Li-Polymer|LiPo|NiMH|NiCD|NiCd|Lithium[- ]Ion)\b/i);
+      if (sysM) d.system = sysM[1].trim();
+
+      // Maße (LxBxH): "50,3 x 39,9 x 4,7mm" / "Maße (LxBxH): ..."
+      const dimM = t.match(/Maße\s*\([^)]*\)[:\s]*([\d,.]+)\s*x\s*([\d,.]+)\s*x\s*([\d,.]+)\s*mm/i)
+                || t.match(/([\d]+[\d,.]*)\s*x\s*([\d]+[\d,.]*)\s*x\s*([\d]+[\d,.]*)\s*mm/i);
+      if (dimM) {
+        d.laenge = dimM[1] + ' mm';
+        d.breite = dimM[2] + ' mm';
+        d.hoehe  = dimM[3] + ' mm';
+      }
+
+      // Gewicht: "21 Gramm" / "21g" / "Gewicht: 21"
+      const gewM = t.match(/Gewicht[:\s]+([\d,.]+)\s*g(?:ramm)?\b/i)
+                || t.match(/([\d,.]+)\s*g(?:ramm)\b/i);
+      if (gewM) d.gewicht = gewM[1] + ' g';
+
+      return d;
+    }
+
+    function enrichTechTable(row: Record<string, string>): { changed: boolean } {
+      const descHtml = row['p_description[de]'] || '';
+      const name = row['p_name[de]'] || '';
+
+      // p_attributes bevorzugt, dann Text
+      const voltAttr = (row[VOLT_COL] || '').trim();
+      const fromText = extractTechFromText(name + ' ' + descHtml);
+
+      // Finale Werte (Attribute haben Vorrang)
+      const td: TechData = { ...fromText };
+      if (voltAttr) td.spannung = voltAttr.replace('.', ',') + ' V';
+      const mahAttr = (row['p_attributes[akku_mah][de]'] || '').trim();
+      if (mahAttr)  td.kapazitaet = mahAttr.replace('.', ',') + ' mAh';
+      const whAttr = (row['p_attributes[akku_wh][de]'] || '').trim();
+      if (whAttr)   td.energie = whAttr.replace('.', ',') + ' Wh';
+      const chAttr = (row['p_attributes[akku_ch][de]'] || '').trim();
+      if (chAttr)   td.system = chAttr;
+
+      // Hat überhaupt nutzbare Daten?
+      const hasAny = Object.values(td).some(v => v && v.trim());
+      if (!hasAny) return { changed: false };
+
+      // Gewünschte Tabellenzeilen in Reihenfolge
+      const wanted: Array<{ label: string; key: keyof TechData }> = [
+        { label: 'Spannung',          key: 'spannung'   },
+        { label: 'Kapazität',         key: 'kapazitaet' },
+        { label: 'Energiegehalt',     key: 'energie'    },
+        { label: 'Leistung',          key: 'leistung'   },
+        { label: 'Chemisches System', key: 'system'     },
+        { label: 'Länge',             key: 'laenge'     },
+        { label: 'Breite',            key: 'breite'     },
+        { label: 'Höhe',              key: 'hoehe'      },
+        { label: 'Gewicht',           key: 'gewicht'    },
+      ];
+
+      const hasTable = descHtml.toLowerCase().includes('<table');
+
+      if (!hasTable) {
+        // Neue Tabelle anhängen
+        const newRows = wanted
+          .filter(w => td[w.key])
+          .map(w => `<tr><td>${w.label}</td><td>${td[w.key]}</td></tr>`)
+          .join('');
+        if (!newRows) return { changed: false };
+        row['p_description[de]'] = descHtml + `<h3>Technische Daten</h3><table>${newRows}</table>`;
+        return { changed: true };
+      } else {
+        // Bestehende Tabelle erweitern: fehlende Zeilen ergänzen
+        // Prüfe welche Labels schon in der Tabelle stehen
+        const existingLabels = new Set<string>();
+        const tdLabelRe = /<td>([^<]+)<\/td>/gi;
+        let m: RegExpExecArray | null;
+        while ((m = tdLabelRe.exec(descHtml)) !== null) existingLabels.add(m[1].trim());
+
+        const missingRows = wanted
+          .filter(w => td[w.key] && !existingLabels.has(w.label))
+          .map(w => `<tr><td>${w.label}</td><td>${td[w.key]}</td></tr>`)
+          .join('');
+
+        if (!missingRows) return { changed: false };
+
+        // Einfügen vor </table>
+        row['p_description[de]'] = descHtml.replace(/<\/table>/i, missingRows + '</table>');
+        return { changed: true };
+      }
+    }
+
+    // Alle Produkte mit technischen Daten verarbeiten (mit ODER ohne Tabelle)
+    const missingTableIndices: number[] = [];
+    let tableGeneratedCount = 0;
+    for (let i = 0; i < fixedRows.length; i++) {
+      const row = fixedRows[i];
+      const desc = row['p_description[de]'] || '';
+      const name = row['p_name[de]'] || '';
+      const hasVolt = (row[VOLT_COL] || '').trim() !== '';
+      const plainDesc = desc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!hasVolt && !techPattern.test(name) && !techPattern.test(plainDesc)) continue;
+
+      if (!desc.toLowerCase().includes('<table')) missingTableIndices.push(i);
+
+      const { changed } = enrichTechTable(row);
+      if (changed) tableGeneratedCount++;
     }
 
     // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
