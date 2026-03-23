@@ -630,6 +630,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return res.status(400).json({ error: 'CSV konnte nicht geparst werden', details: parsed.errors[0]?.message });
     }
 
+    // Parse-Fehler sammeln (Zeilen mit Struktur-Problemen in der Original-CSV)
+    const parseErrors = parsed.errors
+      .filter(e => e.type !== 'Delimiter') // Delimiter-Infos ignorieren
+      .map(e => ({ row: (e.row ?? -1) + 2, message: e.message, code: e.code })) // +2: 1 für Header, 1 für 1-basiert
+      .slice(0, 20);
+
     const headers = parsed.meta.fields || [];
     const rows = parsed.data as Record<string, string>[];
 
@@ -1038,6 +1044,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       headers,
       stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length },
       previewItems,
+      parseErrors,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),
       fileName,
