@@ -611,6 +611,26 @@ function restoreEmojiCheckmarks(html: string): string {
   return result;
 }
 
+/**
+ * Fügt <h2>Produkteigenschaften</h2> vor dem ersten <ul> mit ✅-Items ein,
+ * falls noch keine solche Überschrift vorhanden ist.
+ */
+function ensureProduktEigenschaftenHeading(html: string): string {
+  if (!html) return html;
+  if (/Produkteigenschaften/i.test(html)) return html; // bereits vorhanden
+
+  // Erstes <ul>...</ul> das ✅ enthält finden
+  const ulPattern = /<ul[^>]*>[\s\S]*?<\/ul>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = ulPattern.exec(html)) !== null) {
+    if (m[0].includes('✅')) {
+      const pos = m.index;
+      return html.slice(0, pos) + '<h2>Produkteigenschaften</h2>' + html.slice(pos);
+    }
+  }
+  return html;
+}
+
 // GET /api/volt-fixer/progress/:jobId
 router.get('/progress/:jobId', (req: Request, res: Response) => {
   const p = progressStore.get(req.params.jobId);
@@ -940,6 +960,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         const reordered = ensureDeliveryAtEnd(newRow[col]);
         if (reordered !== newRow[col]) {
           newRow[col] = reordered;
+          if (!changed.includes(col)) changed.push(col);
+        }
+      }
+
+      // Produkteigenschaften-Überschrift sicherstellen (DE + NL)
+      // Läuft nach ensureDeliveryAtEnd, damit Lieferumfang-<ul> bereits am Ende ist
+      for (const col of ['p_description[de]', 'p_description[nl]']) {
+        if (!newRow[col]) continue;
+        const withHeading = ensureProduktEigenschaftenHeading(newRow[col]);
+        if (withHeading !== newRow[col]) {
+          newRow[col] = withHeading;
           if (!changed.includes(col)) changed.push(col);
         }
       }
