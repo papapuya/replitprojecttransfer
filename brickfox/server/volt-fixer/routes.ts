@@ -1040,6 +1040,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .filter(({ desc }) => desc.length < 20)
       .map(({ i }) => i);
 
+    const emptyDescCount = fixedRows
+      .filter(row => stripHtmlForLen(row['p_description[de]'] || '').length === 0)
+      .length;
+
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
     const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
@@ -1094,7 +1098,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, skippedCount, kurzNameCount: kurzNameIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, skippedCount, kurzNameCount: kurzNameIndices.length, emptyDescCount },
       previewItems,
       parseErrors,
       allChangedNames: allChangedNames.slice(0, 300),
