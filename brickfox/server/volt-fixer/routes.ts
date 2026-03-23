@@ -158,6 +158,9 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
   }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   if (trimmed.length === 1) return { fixed: trimmed, changed: false };
+  // Ganzzahlen 10–24 → gültige Volt-Werte (19V Notebook, 12V Auto, 20V Laptop, 24V Netzteil)
+  const intVal = parseInt(trimmed, 10);
+  if (intVal >= 10 && intVal <= 24) return { fixed: trimmed, changed: false };
   // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 111→11.1, 144→14.4)
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
