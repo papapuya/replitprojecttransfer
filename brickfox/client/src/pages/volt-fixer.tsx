@@ -589,25 +589,6 @@ export default function VoltFixer() {
             )}
           </div>
 
-          {/* Parse-Fehler aus der Original-CSV */}
-          {(result.parseErrors ?? []).length > 0 && (
-            <div className="border border-amber-300 bg-amber-50 rounded-xl p-4">
-              <p className="text-sm font-semibold text-amber-800 mb-2">
-                ⚠️ {result.parseErrors.length} Strukturfehler in der Original-CSV gefunden
-                <span className="ml-2 font-normal text-amber-600">— diese Zeilen lagen schon vor der Verarbeitung fehlerhaft vor</span>
-              </p>
-              <div className="divide-y divide-amber-200">
-                {result.parseErrors.map((e, i) => (
-                  <div key={i} className="py-1.5 flex items-center gap-4 text-xs text-amber-800">
-                    <span className="font-mono shrink-0 w-20">Zeile {e.row}</span>
-                    <span className="text-amber-600">{e.code}</span>
-                    <span>{e.message}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Spaltenvorschau – alle Zeilen */}
           <div>
             <div className="flex items-center justify-between mb-1">
