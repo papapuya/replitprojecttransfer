@@ -646,13 +646,13 @@ export default function VoltFixer() {
             </div>
           )}
 
-          {/* Spaltenvorschau – nur geänderte Zeilen */}
+          {/* Spaltenvorschau – alle Zeilen */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-lg font-semibold text-gray-800">
                 Spaltenvorschau
                 <span className="ml-2 text-sm font-normal text-gray-400">
-                  {items.length.toLocaleString()} geänderte Zeilen{items.length >= 500 ? " (max. 500 angezeigt)" : ""} · Klick auf <Eye size={12} className="inline" /> für Details
+                  {items.length.toLocaleString()} Zeilen{items.length >= 500 ? " (max. 500 angezeigt)" : ""} · Klick auf <Eye size={12} className="inline" /> für Details
                 </span>
               </h2>
               {totalPages > 1 && (
