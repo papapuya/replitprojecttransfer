@@ -598,7 +598,7 @@ export default function VoltFixer() {
                 className="border-violet-500 text-violet-700 hover:bg-violet-50 gap-2"
               >
                 <Download size={16} />
-                Kurze/leere Produktnamen ({result.stats.kurzNameCount!.toLocaleString()} Zeilen) → Bulk-Generator
+                Kurze/leere Beschreibungen ({result.stats.kurzNameCount!.toLocaleString()} Zeilen) → Bulk-Generator
               </Button>
             )}
           </div>

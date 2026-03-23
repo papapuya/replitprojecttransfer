@@ -1015,12 +1015,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .filter(({ html }) => hasDreiSpannung(html))
       .map(({ i }) => i);
 
-    // Kurze/kaputte Namen erkennen: p_name[de] nach HTML-Bereinigung < 20 Zeichen oder leer
+    // Kurze/leere Beschreibungen erkennen: p_description[de] nach HTML-Bereinigung < 20 Zeichen oder leer
     const stripHtmlForLen = (s: string) =>
       s.replace(/<[^>]+>/g, '').replace(/&[a-zA-Z#0-9]+;/g, ' ').replace(/\s+/g, ' ').trim();
     const kurzNameIndices: number[] = fixedRows
-      .map((row, i) => ({ i, name: stripHtmlForLen(row['p_name[de]'] || '') }))
-      .filter(({ name }) => name.length < 20)
+      .map((row, i) => ({ i, desc: stripHtmlForLen(row['p_description[de]'] || '') }))
+      .filter(({ desc }) => desc.length < 20)
       .map(({ i }) => i);
 
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
