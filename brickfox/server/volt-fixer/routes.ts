@@ -404,6 +404,38 @@ function setSpannungInHtml(html: string, targetVolt: string): { result: string; 
   return { result, changed };
 }
 
+// Entfernt alle CSS-Styles, class-Attribute und andere Styling-Attribute aus HTML-Tags.
+// Erlaubt sind nur strukturelle Attribute: class auf Tabellen-Tags (thlabel, data), href, src.
+// Entfernt: style="...", class="...", align, bgcolor, border, cellpadding, cellspacing, color, font, span-Elemente mit nur style.
+function stripHtmlStyles(html: string): { result: string; changed: boolean } {
+  if (!html) return { result: html, changed: false };
+  let result = html;
+
+  // Entferne style="..." Attribute aus allen Tags
+  result = result.replace(/\s+style\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+
+  // Entferne class="..." aus allen Tags AUSSER strukturellen Tabellen-Klassen (thlabel, data)
+  result = result.replace(/\s+class\s*=\s*"([^"]*)"/gi, (_match, cls) => {
+    const keep = cls.split(/\s+/).filter((c: string) => /^(thlabel|data)$/.test(c));
+    return keep.length > 0 ? ` class="${keep.join(' ')}"` : '';
+  });
+  result = result.replace(/\s+class\s*=\s*'([^']*)'/gi, (_match, cls) => {
+    const keep = cls.split(/\s+/).filter((c: string) => /^(thlabel|data)$/.test(c));
+    return keep.length > 0 ? ` class="${keep.join(' ')}"` : '';
+  });
+
+  // Entferne layout-Attribute auf Block-Elementen
+  result = result.replace(/\s+(?:align|bgcolor|border|cellpadding|cellspacing|color|width|height|valign)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+
+  // Ersetze <span>-Tags ohne Attribute durch ihren Inhalt (leere Spans entfernen)
+  result = result.replace(/<span>\s*<\/span>/gi, '');
+  // Entferne <span>-Wrapper die nur noch leere Attribute haben: <span > oder <span>
+  result = result.replace(/<span\s*>/gi, '<span>');
+
+  const changed = result !== html;
+  return { result, changed };
+}
+
 function detectEncoding(buffer: Buffer): string {
   // BOM-Erkennung
   if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) return 'utf-8';
@@ -613,6 +645,16 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         const restored = restoreEmojiCheckmarks(newRow[col]);
         if (restored !== newRow[col]) {
           newRow[col] = restored;
+          if (!changed.includes(col)) changed.push(col);
+        }
+      }
+
+      // HTML-Bereinigung: style="...", class="...", layout-Attribute entfernen
+      for (const col of DESC_COLS) {
+        if (!headers.includes(col) || !newRow[col]) continue;
+        const { result: cleaned, changed: sc } = stripHtmlStyles(newRow[col]);
+        if (sc) {
+          newRow[col] = cleaned;
           if (!changed.includes(col)) changed.push(col);
         }
       }
