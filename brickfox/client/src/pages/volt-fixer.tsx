@@ -41,7 +41,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number; ohneBeschreibungCount?: number };
+  stats: { total: number; mitBeschreibung?: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number; ohneBeschreibungCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -574,7 +574,7 @@ export default function VoltFixer() {
           <div className="flex flex-wrap gap-3">
             <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
               <Download size={16} />
-              Korrigierte CSV herunterladen ({result.stats.total.toLocaleString()} Zeilen)
+              Korrigierte CSV herunterladen ({(result.stats.mitBeschreibung ?? result.stats.total).toLocaleString()} Zeilen)
             </Button>
 
             {(result.stats.ohneBeschreibungCount ?? 0) > 0 && (
