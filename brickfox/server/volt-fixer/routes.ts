@@ -404,36 +404,6 @@ function setSpannungInHtml(html: string, targetVolt: string): { result: string; 
   return { result, changed };
 }
 
-// Entfernt style=, class= (außer auf th/td), id=, align= und andere Präsentations-Attribute aus HTML.
-// Behält class="thlabel" / class="data" auf <th> und <td> für Tabellen-Styling.
-// <style>-Blöcke werden komplett entfernt.
-function cleanHtmlStyles(html: string): string {
-  if (!html) return html;
-  // <style>-Blöcke entfernen
-  let result = html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
-  // Alle HTML-Tags verarbeiten: Attribute bereinigen
-  result = result.replace(/<([a-z][a-z0-9]*)\b([^>]*)>/gi, (match, tag, attrs) => {
-    const tagLower = tag.toLowerCase();
-    const isTableCell = tagLower === 'th' || tagLower === 'td';
-    // Attribute parsen und filtern
-    const cleaned = attrs
-      // style= immer entfernen
-      .replace(/\s+style\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-      // class= nur bei Nicht-Tabellenzellen entfernen
-      .replace(isTableCell ? /$/g : /\s+class\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-      // id= entfernen
-      .replace(/\s+id\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-      // align= entfernen (veraltetes Präsentationsattribut)
-      .replace(/\s+align\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-      // bgcolor= entfernen
-      .replace(/\s+bgcolor\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-      // width=/height= entfernen (nur auf Block-Elementen, nicht auf img)
-      .replace(tagLower === 'img' ? /$/g : /\s+(?:width|height)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
-    return `<${tag}${cleaned}>`;
-  });
-  return result;
-}
-
 function detectEncoding(buffer: Buffer): string {
   // BOM-Erkennung
   if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) return 'utf-8';
@@ -636,16 +606,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     for (const row of rows) {
       const newRow = { ...row };
       const changed: string[] = [];
-
-      // CSS-Bereinigung: style=, class= (außer th/td), id=, align= etc. entfernen
-      for (const col of DESC_COLS) {
-        if (!headers.includes(col) || !newRow[col]) continue;
-        const cleaned = cleanHtmlStyles(newRow[col]);
-        if (cleaned !== newRow[col]) {
-          newRow[col] = cleaned;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
 
       // Emoji-Wiederherstellung: '? ' → '✅ ' immer ausführen (Brickfox-Export kodiert ✅ als ?)
       for (const col of DESC_COLS) {
