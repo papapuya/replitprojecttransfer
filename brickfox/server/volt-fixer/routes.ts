@@ -113,6 +113,8 @@ function hasDreiSpannung(html: string): boolean {
 
 const jobStore = new Map<string, {
   csvBuffer: Buffer;
+  ohneBeschreibungBuffer: Buffer | null;
+  ohneBeschreibungCount: number;
   fileName: string;
   expires: number;
   fixedRows: Record<string, string>[];
@@ -954,9 +956,21 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return r;
     });
 
-    // Korrigierte CSV bauen
-    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
+    // Artikel ohne DE-Beschreibung herausfiltern
+    const mitBeschreibungRows = csvRows.filter(row => (row['p_description[de]'] ?? '').trim() !== '');
+    const ohneBeschreibungRows = csvRows.filter(row => (row['p_description[de]'] ?? '').trim() === '');
+    const ohneBeschreibungCount = ohneBeschreibungRows.length;
+
+    // Normaler Export: nur Artikel MIT Beschreibung
+    const csvOut = Papa.unparse(mitBeschreibungRows, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
+
+    // Separater Export: nur Artikel OHNE Beschreibung
+    let ohneBeschreibungBuffer: Buffer | null = null;
+    if (ohneBeschreibungCount > 0) {
+      const ohneCsvOut = Papa.unparse(ohneBeschreibungRows, { delimiter: ';', columns: headers });
+      ohneBeschreibungBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(ohneCsvOut, 'utf-8')]);
+    }
 
     // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
     const dreiSpannungIndices: number[] = fixedRows
@@ -969,6 +983,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
     jobStore.set(jobId, {
       csvBuffer,
+      ohneBeschreibungBuffer,
+      ohneBeschreibungCount,
       fileName,
       expires: Date.now() + 30 * 60 * 1000,
       fixedRows,
@@ -1017,7 +1033,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length },
+      stats: { total: mitBeschreibungRows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, ohneBeschreibungCount },
       previewItems,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),
@@ -1059,6 +1075,20 @@ router.get('/download/:jobId', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${job.fileName}"`);
   res.send(job.csvBuffer);
+});
+
+// GET /api/volt-fixer/download-ohne-beschreibung/:jobId
+// Exportiert nur Zeilen OHNE p_description[de]
+router.get('/download-ohne-beschreibung/:jobId', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  if (!job.ohneBeschreibungBuffer) {
+    return res.status(404).json({ error: 'Keine Artikel ohne Beschreibung gefunden' });
+  }
+  const filteredFileName = job.fileName.replace(/\.csv$/i, '_ohne_beschreibung.csv');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
+  res.send(job.ohneBeschreibungBuffer);
 });
 
 // GET /api/volt-fixer/download-drei-spannung/:jobId
