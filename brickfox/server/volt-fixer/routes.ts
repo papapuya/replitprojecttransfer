@@ -1108,6 +1108,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     interface TechData {
       spannung?: string; kapazitaet?: string; energie?: string; leistung?: string;
       system?: string; laenge?: string; breite?: string; hoehe?: string; gewicht?: string;
+      durchmesser?: string; zellengroesse?: string; stecksystem?: string;
     }
 
     function extractTechFromText(src: string): TechData {
@@ -1132,23 +1133,47 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       const whM = t.match(/(\d[\d,.]*)\s*Wh\b/i);
       if (whM) d.energie = whM[1] + ' Wh';
 
-      // Leistung (Watt, nicht Wh): "5 W" / "5W"  – nur wenn kein Wh-Kontext
+      // Leistung (Watt, nicht Wh): "5 W" / "5W"
       const wattM = t.match(/(\d[\d,.]*)\s*W(?!h)\b/);
       if (wattM) d.leistung = wattM[1] + ' W';
 
       // Chemisches System: "System: Li-Ion Akku" / "Li-Ion" / "NiMH"
       const sysM = t.match(/System[:\s]+([^\n,;<]+)/i)
-                || t.match(/\b(Li-Ion|Li-Polymer|LiPo|NiMH|NiCD|NiCd|Lithium[- ]Ion)\b/i);
+                || t.match(/\b(Li-Ion|Li-Polymer|LiPo|NiMH|NiCD|NiCd|Lithium[- ]Ion|Alkali)\b/i);
       if (sysM) d.system = sysM[1].trim();
 
-      // Maße (LxBxH): "50,3 x 39,9 x 4,7mm" / "Maße (LxBxH): ..."
-      const dimM = t.match(/Maße\s*\([^)]*\)[:\s]*([\d,.]+)\s*x\s*([\d,.]+)\s*x\s*([\d,.]+)\s*mm/i)
-                || t.match(/([\d]+[\d,.]*)\s*x\s*([\d]+[\d,.]*)\s*x\s*([\d]+[\d,.]*)\s*mm/i);
-      if (dimM) {
-        d.laenge = dimM[1] + ' mm';
-        d.breite = dimM[2] + ' mm';
-        d.hoehe  = dimM[3] + ' mm';
+      // Höhe/ Ø: "Höhe/ Ø 10,8x11,6mm" → Höhe: erste Zahl, Durchmesser: zweite Zahl
+      const hoeheDurchmesserM = t.match(/H[öo]he\s*[/\\]\s*[ØøÖÐ°]\s*([\d,.]+)\s*[xX×]\s*([\d,.]+)\s*mm/i);
+      if (hoeheDurchmesserM) {
+        d.hoehe       = hoeheDurchmesserM[1] + ' mm';
+        d.durchmesser = hoeheDurchmesserM[2] + ' mm';
+      } else {
+        // Höhe standalone: "Höhe: 10,8 mm"
+        const hoeheM = t.match(/H[öo]he[:\s]+([\d,.]+)\s*mm/i);
+        if (hoeheM) d.hoehe = hoeheM[1] + ' mm';
+        // Durchmesser standalone: "Ø 11,6 mm" / "Durchmesser: 11,6mm"
+        const durchmesserM = t.match(/(?:[ØøÖÐ°]|Durchmesser)[:\s]*([\d,.]+)\s*mm/i);
+        if (durchmesserM) d.durchmesser = durchmesserM[1] + ' mm';
       }
+
+      // Maße (LxBxH): "50,3 x 39,9 x 4,7mm" / "Maße (LxBxH): ..."
+      if (!d.hoehe) {
+        const dimM = t.match(/Maße\s*\([^)]*\)[:\s]*([\d,.]+)\s*x\s*([\d,.]+)\s*x\s*([\d,.]+)\s*mm/i)
+                  || t.match(/([\d]+[\d,.]*)\s*x\s*([\d]+[\d,.]*)\s*x\s*([\d]+[\d,.]*)\s*mm/i);
+        if (dimM) {
+          d.laenge = dimM[1] + ' mm';
+          d.breite = dimM[2] + ' mm';
+          d.hoehe  = dimM[3] + ' mm';
+        }
+      }
+
+      // Zellengröße / Zellgröße: "Zellengröße 1/3 N (1/3 Lady)"
+      const zelleM = t.match(/Zellen?gr[öo](?:ss|ß)e[:\s]+([^\n,<;]+)/i);
+      if (zelleM) d.zellengroesse = zelleM[1].trim();
+
+      // Stecksystem: "Stecksystem 3er Print"
+      const steckM = t.match(/Stecksystem[:\s]+([^\n,<;]+)/i);
+      if (steckM) d.stecksystem = steckM[1].trim();
 
       // Gewicht: "21 Gramm" / "21g" / "Gewicht: 21"
       const gewM = t.match(/Gewicht[:\s]+([\d,.]+)\s*g(?:ramm)?\b/i)
@@ -1182,15 +1207,18 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
       // Gewünschte Tabellenzeilen in Reihenfolge
       const wanted: Array<{ label: string; key: keyof TechData }> = [
-        { label: 'Spannung',          key: 'spannung'   },
-        { label: 'Kapazität',         key: 'kapazitaet' },
-        { label: 'Energiegehalt',     key: 'energie'    },
-        { label: 'Leistung',          key: 'leistung'   },
-        { label: 'Chemisches System', key: 'system'     },
-        { label: 'Länge',             key: 'laenge'     },
-        { label: 'Breite',            key: 'breite'     },
-        { label: 'Höhe',              key: 'hoehe'      },
-        { label: 'Gewicht',           key: 'gewicht'    },
+        { label: 'Spannung',          key: 'spannung'      },
+        { label: 'Kapazität',         key: 'kapazitaet'    },
+        { label: 'Energiegehalt',     key: 'energie'       },
+        { label: 'Leistung',          key: 'leistung'      },
+        { label: 'Chemisches System', key: 'system'        },
+        { label: 'Höhe',              key: 'hoehe'         },
+        { label: 'Durchmesser',       key: 'durchmesser'   },
+        { label: 'Länge',             key: 'laenge'        },
+        { label: 'Breite',            key: 'breite'        },
+        { label: 'Zellengröße',       key: 'zellengroesse' },
+        { label: 'Stecksystem',       key: 'stecksystem'   },
+        { label: 'Gewicht',           key: 'gewicht'       },
       ];
 
       const hasTable = descHtml.toLowerCase().includes('<table');
@@ -1230,6 +1258,45 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       }
     }
 
+    /**
+     * Entfernt den "Technische Daten:" Fließtext-Block aus der Beschreibung.
+     * Nur ausführen wenn bereits eine <table> vorhanden ist (Daten wurden übernommen).
+     * Entfernt:
+     *   1. <p>-Elemente die "Technische Daten:" als Klartext enthalten
+     *   2. Folgende <p>-Elemente die nur technische Spezifikationen enthalten
+     */
+    function removeTechDataFliestext(html: string): string {
+      if (!html || !html.toLowerCase().includes('<table')) return html;
+
+      let result = html;
+
+      // Schritt 1: <p> mit "Technische Daten:" Klartext (Fließtext-Header)
+      // Matched: <p>Technische Daten:</p> ODER <p>Technische Daten:<br>...specs...</p>
+      result = result.replace(
+        /<p[^>]*>(?:[^<]|<br[^>]*>)*?\bTechnische\s+Daten\s*:(?:[^<]|<br[^>]*>)*<\/p>\s*/gi,
+        ''
+      );
+
+      // Schritt 2: verbleibende Spec-only-<p> (direkt danach, nur Schlüssel-Wert-Technikdaten)
+      // Erkennungsmerkmal: ≥ 2 Technik-Keywords AND alle Segmente kurz (keine Sätze)
+      result = result.replace(/<p[^>]*>((?:[^<]|<br[^>]*>)*)<\/p>\s*/gi, (fullMatch, content) => {
+        const plain = content.replace(/<[^>]+>/g, '').trim();
+        if (!plain) return fullMatch;
+        const keywords = [
+          /Spannung/i, /Kapazit[äa]t/i, /System\s+\w/i, /H[öo]he/i,
+          /Gewicht/i, /Stecksystem/i, /Zellengr[öo]/i, /\dmAh/i, /Volt\b/i,
+        ];
+        const hits = keywords.filter(kw => kw.test(plain)).length;
+        if (hits < 2) return fullMatch; // Nicht genug Tech-Keywords → behalten
+        // Alle komma- oder br-getrennten Segmente prüfen: kurz = Tech-Daten
+        const segments = plain.split(/[,\n]/);
+        const maxLen = Math.max(...segments.map(s => s.trim().length));
+        return maxLen < 60 ? '' : fullMatch; // Kurze Segmente = Tech-Daten → löschen
+      });
+
+      return result;
+    }
+
     // Alle Produkte mit technischen Daten verarbeiten (mit ODER ohne Tabelle)
     const missingTableIndices: number[] = [];
     let tableGeneratedCount = 0;
@@ -1245,6 +1312,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
       const { changed } = enrichTechTable(row);
       if (changed) tableGeneratedCount++;
+
+      // Fließtext "Technische Daten:" entfernen (Daten sind jetzt in der Tabelle)
+      const cleaned = removeTechDataFliestext(row['p_description[de]'] || '');
+      if (cleaned !== row['p_description[de]']) row['p_description[de]'] = cleaned;
     }
 
     // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
