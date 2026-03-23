@@ -956,9 +956,15 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return r;
     });
 
-    // Artikel ohne DE-Beschreibung herausfiltern
-    const mitBeschreibungRows = csvRows.filter(row => (row['p_description[de]'] ?? '').trim() !== '');
-    const ohneBeschreibungRows = csvRows.filter(row => (row['p_description[de]'] ?? '').trim() === '');
+    // Nur gültige Zeilen berücksichtigen: mindestens eine Artikelnummer muss vorhanden sein.
+    // Zeilen ohne Artikelnummer sind Phantomzeilen aus mehrzeiligem HTML (CSV-Parsing-Artefakte).
+    const ID_COLS = ['p_item_number', 'v_item_number', 'p_id'];
+    const isValidRow = (row: Record<string, string>) =>
+      ID_COLS.some(col => (row[col] ?? '').trim() !== '');
+
+    const validRows = csvRows.filter(isValidRow);
+    const mitBeschreibungRows = validRows.filter(row => (row['p_description[de]'] ?? '').trim() !== '');
+    const ohneBeschreibungRows = validRows.filter(row => (row['p_description[de]'] ?? '').trim() === '');
     const ohneBeschreibungCount = ohneBeschreibungRows.length;
 
     // Normaler Export: nur Artikel MIT Beschreibung
@@ -1033,7 +1039,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: mitBeschreibungRows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, ohneBeschreibungCount },
+      stats: { total: validRows.length, mitBeschreibung: mitBeschreibungRows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, ohneBeschreibungCount },
       previewItems,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),
