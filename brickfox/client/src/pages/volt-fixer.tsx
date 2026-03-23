@@ -43,7 +43,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number; skippedCount?: number };
   previewItems: PreviewItem[];
   parseErrors: ParseError[];
   allChangedNames: ChangedNameEntry[];
@@ -567,6 +567,9 @@ export default function VoltFixer() {
               <Badge className="bg-teal-600 text-white">🇩🇪 {result.stats.deTranslated!.toLocaleString()} NL→DE übersetzt</Badge>
             )}
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
+            {(result.stats.skippedCount ?? 0) > 0 && (
+              <Badge variant="outline" className="border-amber-400 text-amber-700">{result.stats.skippedCount} fehlerhafte Zeilen übersprungen</Badge>
+            )}
           </div>
 
 
