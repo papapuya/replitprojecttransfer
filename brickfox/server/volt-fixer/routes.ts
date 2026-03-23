@@ -118,7 +118,6 @@ const jobStore = new Map<string, {
   fixedRows: Record<string, string>[];
   dreiSpannungIndices: number[];
   kurzNameIndices: number[];
-  missingTableIndices: number[];
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
@@ -477,35 +476,6 @@ function detectEncoding(buffer: Buffer): string {
   return 'utf-8';
 }
 
-// Erkennt und repariert Mojibake: UTF-8-Bytes die fälschlicherweise als Windows-1252 interpretiert wurden.
-// Direkte String-Ersetzung statt iconv-Roundtrip → ✅ und andere Sonderzeichen bleiben erhalten.
-function fixMojibake(text: string): string {
-  // Typische deutsche Mojibake-Sequenzen (UTF-8-Bytes als Windows-1252 fehlinterpretiert)
-  const MOJIBAKE_MAP: [string, string][] = [
-    // Kleinbuchstaben
-    ['Ã¤', 'ä'], ['Ã¼', 'ü'], ['Ã¶', 'ö'],
-    // Großbuchstaben – zweites Byte als CP1252-Zeichen
-    ['ÃŸ', 'ß'],   // 0xC3 0x9F → Ÿ (CP1252 0x9F)
-    ['Ã„', 'Ä'],   // 0xC3 0x84 → „ (CP1252 0x84)
-    ['Ãœ', 'Ü'],   // 0xC3 0x9C → œ (CP1252 0x9C)
-    ['Ã–', 'Ö'],   // 0xC3 0x96 → – (CP1252 0x96)
-    // Weitere häufige Zeichen
-    ['Ã©', 'é'], ['Ã¨', 'è'], ['Ãª', 'ê'], ['Ã«', 'ë'],
-    ['Ã ', 'à'], ['Ã¡', 'á'], ['Ã¢', 'â'], ['Ã£', 'ã'], ['Ã¥', 'å'],
-    ['Ã§', 'ç'], ['Ã¬', 'ì'], ['Ã­', 'í'], ['Ã®', 'î'], ['Ã¯', 'ï'],
-    ['Ã±', 'ñ'], ['Ã³', 'ó'], ['Ã´', 'ô'], ['Ãµ', 'õ'],
-    ['Ã¸', 'ø'], ['Ã¹', 'ù'], ['Ãº', 'ú'], ['Ã»', 'û'], ['Ã½', 'ý'],
-    // Anführungszeichen / Gedankenstriche (3-Byte-UTF-8 via CP1252)
-    ["â€˜", '\u2018'], ["â€™", '\u2019'],
-    ['â€œ', '\u201C'], ['â€\u009D', '\u201D'],
-    ['â€"', '\u2013'], ['â€"', '\u2014'],
-  ];
-  if (!MOJIBAKE_MAP.some(([from]) => text.includes(from))) return text;
-  let result = text;
-  for (const [from, to] of MOJIBAKE_MAP) result = result.split(from).join(to);
-  return result;
-}
-
 // Entfernt Tabellenzeilen deren Wert leer, '-', nur Nullen (z.B. '0000') oder reines Whitespace ist.
 // Gilt für alle Beschreibungen (DE + NL), betrifft in der Praxis v.a. NL-Tabellen mit Leereinträgen.
 function cleanEmptyTableRows(html: string): { result: string; changed: boolean } {
@@ -624,52 +594,6 @@ function restoreEmojiCheckmarks(html: string): string {
   return result;
 }
 
-/** Fügt ✅ am Anfang jedes <li>-Inhalts ein, das noch kein ✅ hat. */
-function addCheckmarksToListItems(ulHtml: string): string {
-  return ulHtml.replace(/(<li[^>]*>)(\s*)/gi, (_, tag, ws) => {
-    // Prüfe ob ✅ direkt nach dem Whitespace kommt – dafür brauchen wir den
-    // vollständigen Kontext. Stattdessen: einfach immer einfügen, dann Doppel entfernen.
-    return tag + ws + '✅ ';
-  }).replace(/✅\s+✅\s*/g, '✅ '); // Doppel-✅ verhindern
-}
-
-/**
- * Sorgt dafür, dass das erste <ul> (Produkteigenschaften-Bereich, vor Lieferumfang)
- * ✅ in allen <li>-Items hat und von <h2>Produkteigenschaften</h2> eingeleitet wird.
- */
-function ensureProduktEigenschaftenHeading(html: string): string {
-  if (!html) return html;
-
-  const isDeliveryHeading = (textBefore: string): boolean =>
-    /(?:Lieferumfang|Leveringsomvang|Inhoud\s+leveringspakket|In\s+de\s+doos)\s*<\/h[23]>/i.test(
-      textBefore.slice(-300)
-    );
-
-  // Hilfsfunktion: verarbeite das gefundene <ul>-Match
-  const processUl = (ulMatch: string): string => addCheckmarksToListItems(ulMatch);
-
-  // Fall 1: Produkteigenschaften-Heading existiert bereits → nur ✅ in der direkt folgenden <ul> ergänzen
-  if (/Produkteigenschaften/i.test(html)) {
-    return html.replace(
-      /(<h[23][^>]*>[^<]*Produkteigenschaften[^<]*<\/h[23]>\s*)(<ul[^>]*>[\s\S]*?<\/ul>)/i,
-      (_, heading, ul) => heading + processUl(ul)
-    );
-  }
-
-  // Fall 2: Kein Heading → erstes <ul> suchen das NICHT nach einem Lieferumfang-Heading kommt
-  const ulPattern = /<ul[^>]*>[\s\S]*?<\/ul>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = ulPattern.exec(html)) !== null) {
-    const before = html.slice(0, m.index);
-    if (isDeliveryHeading(before)) continue; // Lieferumfang-<ul> überspringen
-
-    const pos = m.index;
-    const updatedUl = processUl(m[0]);
-    return html.slice(0, pos) + '<h2>Produkteigenschaften</h2>' + updatedUl + html.slice(pos + m[0].length);
-  }
-  return html;
-}
-
 // GET /api/volt-fixer/progress/:jobId
 router.get('/progress/:jobId', (req: Request, res: Response) => {
   const p = progressStore.get(req.params.jobId);
@@ -695,8 +619,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     setProgress('parsing', 'CSV wird gelesen…', 5);
 
     const encoding = detectEncoding(req.file.buffer);
-    const rawText = iconv.decode(req.file.buffer, encoding);
-    const text = fixMojibake(rawText);
+    const text = iconv.decode(req.file.buffer, encoding);
 
     const parsed = Papa.parse(text, {
       delimiter: ';',
@@ -783,24 +706,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         const { result: cleaned, changed: sc } = stripHtmlStyles(newRow[col]);
         if (sc) {
           newRow[col] = cleaned;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
-
-      // Bold-Tags entfernen – AUSSER Abschnittsüberschriften (→ werden zu <h2>)
-      // Produkteigenschaften / Technische Daten / Lieferumfang bleiben als <h2> erhalten
-      for (const col of DESC_COLS) {
-        if (!headers.includes(col) || !newRow[col]) continue;
-        let noBold = newRow[col]
-          // <b>Produkteigenschaften</b> o.ä. → <h2>Produkteigenschaften</h2>
-          .replace(/<b[^>]*>(\s*(?:Produkteigenschaften|Technische\s+Daten|Lieferumfang|Leveringsomvang|Inhoud\s+leveringspakket)\s*)<\/b>/gi,
-            (_, txt) => `<h2>${txt.trim()}</h2>`)
-          .replace(/<strong[^>]*>(\s*(?:Produkteigenschaften|Technische\s+Daten|Lieferumfang|Leveringsomvang|Inhoud\s+leveringspakket)\s*)<\/strong>/gi,
-            (_, txt) => `<h2>${txt.trim()}</h2>`)
-          // alle übrigen <b> / <strong> entfernen
-          .replace(/<\/?(b|strong)(\s[^>]*)?>/gi, '');
-        if (noBold !== newRow[col]) {
-          newRow[col] = noBold;
           if (!changed.includes(col)) changed.push(col);
         }
       }
@@ -1003,17 +908,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
-      // Produkteigenschaften-Überschrift sicherstellen (DE + NL)
-      // Läuft nach ensureDeliveryAtEnd, damit Lieferumfang-<ul> bereits am Ende ist
-      for (const col of ['p_description[de]', 'p_description[nl]']) {
-        if (!newRow[col]) continue;
-        const withHeading = ensureProduktEigenschaftenHeading(newRow[col]);
-        if (withHeading !== newRow[col]) {
-          newRow[col] = withHeading;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
-
       // Produktnamen immer synchronisieren wenn Volt-Wert vorhanden
       if (newVolt) {
         const changedNameCols: Array<{ col: string; before: string; after: string }> = [];
@@ -1101,223 +995,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
-    // ── Tabellen-Generierung für Produkte mit technischen Daten aber ohne <table> ──
-    // Erkennt: hat Volt-Wert ODER mAh/Wh im Namen/Beschreibung, aber keine HTML-Tabelle
-    const techPattern = /\d[\d,.]*\s*(m?ah|wh|volt|v\b)/i;
-    // ── Technische Daten aus Text extrahieren ──────────────────────────────────
-    interface TechData {
-      spannung?: string; kapazitaet?: string; energie?: string; leistung?: string;
-      system?: string; laenge?: string; breite?: string; hoehe?: string; gewicht?: string;
-      durchmesser?: string; zellengroesse?: string; stecksystem?: string;
-    }
-
-    function extractTechFromText(src: string): TechData {
-      // HTML entfernen
-      const t = src.replace(/<[^>]+>/g, ' ').replace(/&[a-zA-Z#0-9]+;/g, ' ').replace(/\s+/g, ' ');
-      const d: TechData = {};
-
-      // Spannung: "3,7 Volt" / "3.7V" / "Spannung: 3,7"
-      const vM = t.match(/Spannung[:\s]+(\d[\d,.]+)\s*(V(?:olt)?)\b/i)
-              || t.match(/(\d[\d,.]+)\s*Volt\b/i);
-      if (vM) d.spannung = vM[1].replace('.', ',') + ' V';
-
-      // Kapazität: "900-1000mAh" / "1600 mAh" / "Kapazität: 900"
-      const mahM = t.match(/Kapazität[:\s]+([\d,.\s]+(?:-[\d,.]+)?)\s*m?Ah\b/i)
-                || t.match(/([\d][\d,.]*(?:-[\d][\d,.]*)?)\s*mAh\b/i);
-      if (mahM) {
-        const val = mahM[1].replace(/mAh/i, '').replace(/\s/g, '').trim();
-        d.kapazitaet = val + ' mAh';
-      }
-
-      // Energiegehalt: "3,7Wh" / "max. 3,7 Wh"
-      const whM = t.match(/(\d[\d,.]*)\s*Wh\b/i);
-      if (whM) d.energie = whM[1] + ' Wh';
-
-      // Leistung (Watt, nicht Wh): "5 W" / "5W"
-      const wattM = t.match(/(\d[\d,.]*)\s*W(?!h)\b/);
-      if (wattM) d.leistung = wattM[1] + ' W';
-
-      // Chemisches System: "System: Li-Ion Akku" / "Li-Ion" / "NiMH"
-      const sysM = t.match(/System[:\s]+([^\n,;<]+)/i)
-                || t.match(/\b(Li-Ion|Li-Polymer|LiPo|NiMH|NiCD|NiCd|Lithium[- ]Ion|Alkali)\b/i);
-      if (sysM) d.system = sysM[1].trim();
-
-      // Höhe/ Ø: "Höhe/ Ø 10,8x11,6mm" → Höhe: erste Zahl, Durchmesser: zweite Zahl
-      const hoeheDurchmesserM = t.match(/H[öo]he\s*[/\\]\s*[ØøÖÐ°]\s*([\d,.]+)\s*[xX×]\s*([\d,.]+)\s*mm/i);
-      if (hoeheDurchmesserM) {
-        d.hoehe       = hoeheDurchmesserM[1] + ' mm';
-        d.durchmesser = hoeheDurchmesserM[2] + ' mm';
-      } else {
-        // Höhe standalone: "Höhe: 10,8 mm"
-        const hoeheM = t.match(/H[öo]he[:\s]+([\d,.]+)\s*mm/i);
-        if (hoeheM) d.hoehe = hoeheM[1] + ' mm';
-        // Durchmesser standalone: "Ø 11,6 mm" / "Durchmesser: 11,6mm"
-        const durchmesserM = t.match(/(?:[ØøÖÐ°]|Durchmesser)[:\s]*([\d,.]+)\s*mm/i);
-        if (durchmesserM) d.durchmesser = durchmesserM[1] + ' mm';
-      }
-
-      // Maße (LxBxH): "50,3 x 39,9 x 4,7mm" / "Maße (LxBxH): ..."
-      if (!d.hoehe) {
-        const dimM = t.match(/Maße\s*\([^)]*\)[:\s]*([\d,.]+)\s*x\s*([\d,.]+)\s*x\s*([\d,.]+)\s*mm/i)
-                  || t.match(/([\d]+[\d,.]*)\s*x\s*([\d]+[\d,.]*)\s*x\s*([\d]+[\d,.]*)\s*mm/i);
-        if (dimM) {
-          d.laenge = dimM[1] + ' mm';
-          d.breite = dimM[2] + ' mm';
-          d.hoehe  = dimM[3] + ' mm';
-        }
-      }
-
-      // Zellengröße / Zellgröße: "Zellengröße 1/3 N (1/3 Lady)"
-      const zelleM = t.match(/Zellen?gr[öo](?:ss|ß)e[:\s]+([^\n,<;]+)/i);
-      if (zelleM) d.zellengroesse = zelleM[1].trim();
-
-      // Stecksystem: "Stecksystem 3er Print"
-      const steckM = t.match(/Stecksystem[:\s]+([^\n,<;]+)/i);
-      if (steckM) d.stecksystem = steckM[1].trim();
-
-      // Gewicht: "21 Gramm" / "21g" / "Gewicht: 21"
-      const gewM = t.match(/Gewicht[:\s]+([\d,.]+)\s*g(?:ramm)?\b/i)
-                || t.match(/([\d,.]+)\s*g(?:ramm)\b/i);
-      if (gewM) d.gewicht = gewM[1] + ' g';
-
-      return d;
-    }
-
-    function enrichTechTable(row: Record<string, string>): { changed: boolean } {
-      const descHtml = row['p_description[de]'] || '';
-      const name = row['p_name[de]'] || '';
-
-      // p_attributes bevorzugt, dann Text
-      const voltAttr = (row[VOLT_COL] || '').trim();
-      const fromText = extractTechFromText(name + ' ' + descHtml);
-
-      // Finale Werte (Attribute haben Vorrang)
-      const td: TechData = { ...fromText };
-      if (voltAttr) td.spannung = voltAttr.replace('.', ',') + ' V';
-      const mahAttr = (row['p_attributes[akku_mah][de]'] || '').trim();
-      if (mahAttr)  td.kapazitaet = mahAttr.replace('.', ',') + ' mAh';
-      const whAttr = (row['p_attributes[akku_wh][de]'] || '').trim();
-      if (whAttr)   td.energie = whAttr.replace('.', ',') + ' Wh';
-      const chAttr = (row['p_attributes[akku_ch][de]'] || '').trim();
-      if (chAttr)   td.system = chAttr;
-
-      // Hat überhaupt nutzbare Daten?
-      const hasAny = Object.values(td).some(v => v && v.trim());
-      if (!hasAny) return { changed: false };
-
-      // Gewünschte Tabellenzeilen in Reihenfolge
-      const wanted: Array<{ label: string; key: keyof TechData }> = [
-        { label: 'Spannung',          key: 'spannung'      },
-        { label: 'Kapazität',         key: 'kapazitaet'    },
-        { label: 'Energiegehalt',     key: 'energie'       },
-        { label: 'Leistung',          key: 'leistung'      },
-        { label: 'Chemisches System', key: 'system'        },
-        { label: 'Höhe',              key: 'hoehe'         },
-        { label: 'Durchmesser',       key: 'durchmesser'   },
-        { label: 'Länge',             key: 'laenge'        },
-        { label: 'Breite',            key: 'breite'        },
-        { label: 'Zellengröße',       key: 'zellengroesse' },
-        { label: 'Stecksystem',       key: 'stecksystem'   },
-        { label: 'Gewicht',           key: 'gewicht'       },
-      ];
-
-      const hasTable = descHtml.toLowerCase().includes('<table');
-
-      if (!hasTable) {
-        // Neue Tabelle anhängen
-        const newRows = wanted
-          .filter(w => td[w.key])
-          .map(w => `<tr><td>${w.label}</td><td>${td[w.key]}</td></tr>`)
-          .join('');
-        if (!newRows) return { changed: false };
-        row['p_description[de]'] = descHtml + `<h3>Technische Daten</h3><table>${newRows}</table>`;
-        return { changed: true };
-      } else {
-        // Bestehende Tabelle erweitern: zuerst leere Zeilen bereinigen, dann fehlende ergänzen
-        const { result: cleanedHtml } = cleanEmptyTableRows(descHtml);
-
-        // Prüfe welche Labels schon in der (bereinigten) Tabelle stehen
-        const existingLabels = new Set<string>();
-        const tdLabelRe = /<td>([^<]+)<\/td>/gi;
-        let m: RegExpExecArray | null;
-        while ((m = tdLabelRe.exec(cleanedHtml)) !== null) existingLabels.add(m[1].trim());
-
-        const missingRows = wanted
-          .filter(w => td[w.key] && !existingLabels.has(w.label))
-          .map(w => `<tr><td>${w.label}</td><td>${td[w.key]}</td></tr>`)
-          .join('');
-
-        const changed = cleanedHtml !== descHtml || missingRows.length > 0;
-        if (!changed) return { changed: false };
-
-        // Fehlende Zeilen vor </table> einfügen
-        row['p_description[de]'] = (missingRows
-          ? cleanedHtml.replace(/<\/table>/i, missingRows + '</table>')
-          : cleanedHtml);
-        return { changed: true };
-      }
-    }
-
-    /**
-     * Entfernt den "Technische Daten:" Fließtext-Block aus der Beschreibung.
-     * Nur ausführen wenn bereits eine <table> vorhanden ist (Daten wurden übernommen).
-     * Entfernt:
-     *   1. <p>-Elemente die "Technische Daten:" als Klartext enthalten
-     *   2. Folgende <p>-Elemente die nur technische Spezifikationen enthalten
-     */
-    function removeTechDataFliestext(html: string): string {
-      if (!html || !html.toLowerCase().includes('<table')) return html;
-
-      let result = html;
-
-      // Schritt 1: <p> mit "Technische Daten:" Klartext (Fließtext-Header)
-      // Matched: <p>Technische Daten:</p> ODER <p>Technische Daten:<br>...specs...</p>
-      result = result.replace(
-        /<p[^>]*>(?:[^<]|<br[^>]*>)*?\bTechnische\s+Daten\s*:(?:[^<]|<br[^>]*>)*<\/p>\s*/gi,
-        ''
-      );
-
-      // Schritt 2: verbleibende Spec-only-<p> (direkt danach, nur Schlüssel-Wert-Technikdaten)
-      // Erkennungsmerkmal: ≥ 2 Technik-Keywords AND alle Segmente kurz (keine Sätze)
-      result = result.replace(/<p[^>]*>((?:[^<]|<br[^>]*>)*)<\/p>\s*/gi, (fullMatch, content) => {
-        const plain = content.replace(/<[^>]+>/g, '').trim();
-        if (!plain) return fullMatch;
-        const keywords = [
-          /Spannung/i, /Kapazit[äa]t/i, /System\s+\w/i, /H[öo]he/i,
-          /Gewicht/i, /Stecksystem/i, /Zellengr[öo]/i, /\dmAh/i, /Volt\b/i,
-        ];
-        const hits = keywords.filter(kw => kw.test(plain)).length;
-        if (hits < 2) return fullMatch; // Nicht genug Tech-Keywords → behalten
-        // Alle komma- oder br-getrennten Segmente prüfen: kurz = Tech-Daten
-        const segments = plain.split(/[,\n]/);
-        const maxLen = Math.max(...segments.map(s => s.trim().length));
-        return maxLen < 60 ? '' : fullMatch; // Kurze Segmente = Tech-Daten → löschen
-      });
-
-      return result;
-    }
-
-    // Alle Produkte mit technischen Daten verarbeiten (mit ODER ohne Tabelle)
-    const missingTableIndices: number[] = [];
-    let tableGeneratedCount = 0;
-    for (let i = 0; i < fixedRows.length; i++) {
-      const row = fixedRows[i];
-      const desc = row['p_description[de]'] || '';
-      const name = row['p_name[de]'] || '';
-      const hasVolt = (row[VOLT_COL] || '').trim() !== '';
-      const plainDesc = desc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-      if (!hasVolt && !techPattern.test(name) && !techPattern.test(plainDesc)) continue;
-
-      if (!desc.toLowerCase().includes('<table')) missingTableIndices.push(i);
-
-      const { changed } = enrichTechTable(row);
-      if (changed) tableGeneratedCount++;
-
-      // Fließtext "Technische Daten:" entfernen (Daten sind jetzt in der Tabelle)
-      const cleaned = removeTechDataFliestext(row['p_description[de]'] || '');
-      if (cleaned !== row['p_description[de]']) row['p_description[de]'] = cleaned;
-    }
-
     // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
     // Verhindert, dass mehrzeilige HTML-Felder im CSV über mehrere Zeilen verteilt werden
     const csvRows = fixedRows.map(row => {
@@ -1346,10 +1023,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .filter(({ desc }) => desc.length < 20)
       .map(({ i }) => i);
 
-    const emptyDescCount = fixedRows
-      .filter(row => stripHtmlForLen(row['p_description[de]'] || '').length === 0)
-      .length;
-
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
     const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
@@ -1360,7 +1033,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       fixedRows,
       dreiSpannungIndices,
       kurzNameIndices,
-      missingTableIndices,
       originalRows: rows,
       headers,
       changedCols,
@@ -1405,7 +1077,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, skippedCount, kurzNameCount: kurzNameIndices.length, emptyDescCount, tableGeneratedCount },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, skippedCount, kurzNameCount: kurzNameIndices.length },
       previewItems,
       parseErrors,
       allChangedNames: allChangedNames.slice(0, 300),

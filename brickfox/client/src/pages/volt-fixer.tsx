@@ -43,7 +43,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number; skippedCount?: number; kurzNameCount?: number; emptyDescCount?: number; tableGeneratedCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number; skippedCount?: number; kurzNameCount?: number };
   previewItems: PreviewItem[];
   parseErrors: ParseError[];
   allChangedNames: ChangedNameEntry[];
@@ -557,9 +557,6 @@ export default function VoltFixer() {
               <Badge className="bg-orange-500 text-white">{result.stats.voltExtracted.toLocaleString()} aus Namen ergänzt</Badge>
             )}
             <Badge className="bg-green-600 text-white">{result.stats.descChanged.toLocaleString()} Beschreibungen aktualisiert</Badge>
-            {(result.stats.tableGeneratedCount ?? 0) > 0 && (
-              <Badge className="bg-emerald-600 text-white">🗂️ {result.stats.tableGeneratedCount!.toLocaleString()} Tabellen ergänzt</Badge>
-            )}
             {result.stats.nameChanged > 0 && (
               <Badge className="bg-purple-600 text-white">{result.stats.nameChanged.toLocaleString()} Namen aktualisiert</Badge>
             )}
@@ -572,12 +569,6 @@ export default function VoltFixer() {
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
             {(result.stats.skippedCount ?? 0) > 0 && (
               <Badge variant="outline" className="border-amber-400 text-amber-700">{result.stats.skippedCount} fehlerhafte Zeilen übersprungen</Badge>
-            )}
-            {(result.stats.emptyDescCount ?? 0) > 0 && (
-              <Badge variant="outline" className="border-red-400 text-red-700">{result.stats.emptyDescCount} leere Beschreibungen</Badge>
-            )}
-            {(result.stats.kurzNameCount ?? 0) > 0 && (
-              <Badge variant="outline" className="border-orange-400 text-orange-700">{result.stats.kurzNameCount} kaputte Beschreibungen (&lt;20 Zeichen)</Badge>
             )}
           </div>
 

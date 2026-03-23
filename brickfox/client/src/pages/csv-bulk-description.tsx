@@ -132,16 +132,15 @@ export default function CSVBulkDescription() {
   const existingProjects = projectsData?.projects || [];
   
   const [exportColumns, setExportColumns] = useState<ExportColumn[]>([
-    // Standard-Export-Reihenfolge: p_item_number, p_id, p_name[de], p_name[nl], p_description[de], p_description[nl], akku_v
-    { key: 'p_item_number', label: 'p_item_number', enabled: true },
+    // Standard-Export-Reihenfolge: p_id, p_name[de], p_name[nl], p_description[de], p_description[nl]
     { key: 'p_id', label: 'p_id', enabled: true },
     { key: 'produktname_neu', label: 'p_name[de]', enabled: true },
     { key: 'produktname_nl', label: 'p_name[nl]', enabled: true },
     { key: 'produktbeschreibung_html', label: 'p_description[de]', enabled: true },
     { key: 'produktbeschreibung_html_nl', label: 'p_description[nl]', enabled: true },
-    { key: 'akku_v', label: 'p_attributes[akku_v][de]', enabled: true },
     // Zusätzliche optionale Spalten
     { key: 'v_id', label: 'v_id', enabled: false },
+    { key: 'p_item_number', label: 'p_item_number', enabled: false },
     { key: 'produktname', label: 'p_name_original[de]', enabled: false },
     { key: 'produktbeschreibung', label: 'p_description_text[de]', enabled: false },
     { key: 'produktbeschreibung_original', label: 'p_description_original[de]', enabled: false },
