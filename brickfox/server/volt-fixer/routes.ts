@@ -476,6 +476,22 @@ function detectEncoding(buffer: Buffer): string {
   return 'utf-8';
 }
 
+// Erkennt und repariert Mojibake: UTF-8-Bytes die fälschlicherweise als Latin-1 interpretiert wurden.
+// Typische Muster: "Ã¼" statt "ü", "Ã¤" statt "ä", etc.
+function fixMojibake(text: string): string {
+  // Häufigste deutsche Mojibake-Sequenzen (UTF-8-Bytes als Latin-1 fehlinterpretiert)
+  const hasMojibake = /Ã¼|Ã¤|Ã¶|Ã\u009F|ÃŒ|Ã–|Ã„/.test(text);
+  if (!hasMojibake) return text;
+  try {
+    // Text zurück zu Latin-1-Bytes kodieren, dann als UTF-8 dekodieren
+    const latin1Bytes = iconv.encode(text, 'latin1');
+    const fixed = iconv.decode(latin1Bytes, 'utf-8');
+    // Nur verwenden wenn kein Replacement-Character entstanden ist
+    if (!fixed.includes('\uFFFD')) return fixed;
+  } catch {}
+  return text;
+}
+
 // Entfernt Tabellenzeilen deren Wert leer, '-', nur Nullen (z.B. '0000') oder reines Whitespace ist.
 // Gilt für alle Beschreibungen (DE + NL), betrifft in der Praxis v.a. NL-Tabellen mit Leereinträgen.
 function cleanEmptyTableRows(html: string): { result: string; changed: boolean } {
@@ -619,7 +635,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     setProgress('parsing', 'CSV wird gelesen…', 5);
 
     const encoding = detectEncoding(req.file.buffer);
-    const text = iconv.decode(req.file.buffer, encoding);
+    const rawText = iconv.decode(req.file.buffer, encoding);
+    const text = fixMojibake(rawText);
 
     const parsed = Papa.parse(text, {
       delimiter: ';',
