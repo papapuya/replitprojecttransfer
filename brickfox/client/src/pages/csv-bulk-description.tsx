@@ -1368,15 +1368,6 @@ export default function CSVBulkDescription() {
                   </h3>
                   <div className="flex flex-wrap items-center gap-2">
                   <Button
-                    onClick={reset}
-                    size="sm"
-                    variant="outline"
-                    className="gap-1 text-gray-600"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Neue CSV hochladen
-                  </Button>
-                  <Button
                     onClick={() => setShowSaveDialog(true)}
                     disabled={rawData.length === 0}
                     size="sm"
