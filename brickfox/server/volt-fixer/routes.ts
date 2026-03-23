@@ -1060,10 +1060,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         itemNr,
         voltOrig: orig[VOLT_COL] ?? '',
         voltNew: row[VOLT_COL] ?? '',
-        nameDEOrig: orig['p_name[de]'] ?? '',
-        nameDE: row['p_name[de]'] ?? '',
-        nameNLOrig: orig['p_name[nl]'] ?? '',
-        nameNL: row['p_name[nl]'] ?? '',
+        nameDEOrig: toPlainText(orig['p_name[de]'] ?? ''),
+        nameDE: toPlainText(row['p_name[de]'] ?? ''),
+        nameNLOrig: toPlainText(orig['p_name[nl]'] ?? ''),
+        nameNL: toPlainText(row['p_name[nl]'] ?? ''),
         descDE: toPlainText(row['p_description[de]'] ?? ''),
         descDEChanged: changed.includes('p_description[de]'),
         descNL: toPlainText(row['p_description[nl]'] ?? ''),
@@ -1174,7 +1174,22 @@ router.get('/download-kurz-namen/:jobId', (req: Request, res: Response) => {
     .map(row => {
       const r = { ...row };
       for (const col of DESC_COLS) {
-        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ');
+        if (r[col]) {
+          // HTML-Tags entfernen → lesbarer Plaintext für Excel / Bulk-Generator
+          r[col] = r[col]
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/p>/gi, '\n')
+            .replace(/<\/li>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&[a-z]+;/gi, ' ')
+            .replace(/\r?\n/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        }
       }
       return r;
     });
