@@ -149,8 +149,16 @@ setInterval(() => {
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   const trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
-  // Bereits Punkt → unverändert (korrekte Spaltenformat)
-  if (trimmed.includes('.')) return { fixed: trimmed, changed: false };
+  // Punkt vorhanden
+  if (trimmed.includes('.')) {
+    // Trailing .0 entfernen: 12.0 → 12, 3.0 → 3 (numerisch identisch, sauberer)
+    if (/^\d+\.0$/.test(trimmed)) {
+      const stripped = trimmed.slice(0, -2);
+      return { fixed: stripped, changed: true };
+    }
+    // Anderer Dezimalwert → unverändert (korrekte Spaltenformat)
+    return { fixed: trimmed, changed: false };
+  }
   // Komma → in Punkt umwandeln (1,6 → 1.6, 3,7 → 3.7)
   if (trimmed.includes(',')) {
     const fixed = trimmed.replace(',', '.');
@@ -289,8 +297,19 @@ function normalizeExtractedVolt(raw: string): string {
   // Bereichswert (z.B. "100-240", "12/24") → unverändert
   if (/[-\/]/.test(raw)) return raw;
   // Dezimalwert: Komma durch Punkt ersetzen (3,7 → 3.7, 1,6 → 1.6)
-  if (raw.includes(',')) return raw.replace(',', '.');
-  // Bereits Punkt oder Ganzzahl → unverändert
+  if (raw.includes(',')) {
+    const dotted = raw.replace(',', '.');
+    // Trailing .0 ebenfalls entfernen (12,0 → 12)
+    if (/^\d+\.0$/.test(dotted)) return dotted.slice(0, -2);
+    return dotted;
+  }
+  // Bereits Punkt vorhanden
+  if (raw.includes('.')) {
+    // Trailing .0 entfernen (12.0 → 12)
+    if (/^\d+\.0$/.test(raw)) return raw.slice(0, -2);
+    return raw;
+  }
+  // Ganzzahl → unverändert
   return raw;
 }
 
