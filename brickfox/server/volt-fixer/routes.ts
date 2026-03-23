@@ -117,7 +117,6 @@ const jobStore = new Map<string, {
   expires: number;
   fixedRows: Record<string, string>[];
   dreiSpannungIndices: number[];
-  kurzNameIndices: number[];
   originalRows: Record<string, string>[];
   headers: string[];
   changedCols: string[][];
@@ -144,69 +143,46 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-// Spalten-Format: Dezimalwerte mit Punkt (1.6, 3.7). Komma-Werte werden in Punkt umgewandelt.
-// Zahlen ohne Dezimalzeichen: Punkt nach korrekter Stelle einfügen (385→3.85, 36→3.6).
-// Ganzzahlen (single digit oder bereits gültig) bleiben unverändert.
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   const trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
-  // Punkt vorhanden
-  if (trimmed.includes('.')) {
-    // Trailing .0 entfernen: 12.0 → 12, 3.0 → 3 (numerisch identisch, sauberer)
-    if (/^\d+\.0$/.test(trimmed)) {
-      const stripped = trimmed.slice(0, -2);
-      return { fixed: stripped, changed: true };
-    }
-    // Anderer Dezimalwert → unverändert (korrekte Spaltenformat)
-    return { fixed: trimmed, changed: false };
-  }
-  // Komma → in Punkt umwandeln (1,6 → 1.6, 3,7 → 3.7)
-  if (trimmed.includes(',')) {
-    const fixed = trimmed.replace(',', '.');
-    return { fixed, changed: true };
-  }
+  if (trimmed.includes(',') || trimmed.includes('.')) return { fixed: trimmed, changed: false };
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   if (trimmed.length === 1) return { fixed: trimmed, changed: false };
-  // Ganzzahlen 10–24 → gültige Volt-Werte (19V Notebook, 12V Auto, 20V Laptop, 24V Netzteil)
-  const intVal = parseInt(trimmed, 10);
-  if (intVal >= 10 && intVal <= 24) return { fixed: trimmed, changed: false };
-  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 111→11.1, 144→14.4)
+  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX,Y (z.B. 111→11,1, 144→14,4, 222→22,2, 108→10,8)
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
     if (firstTwo >= 10 && firstTwo <= 24) {
-      return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
+      return { fixed: trimmed.slice(0, 2) + ',' + trimmed[2], changed: true };
     }
   }
-  // Standard: Punkt nach erster Stelle (z.B. 385→3.85, 48→4.8, 36→3.6)
-  return { fixed: trimmed[0] + '.' + trimmed.slice(1), changed: true };
+  // Standard: Komma nach erster Stelle (z.B. 385→3,85, 48→4,8, 36→3,6)
+  return { fixed: trimmed[0] + ',' + trimmed.slice(1), changed: true };
 }
 
-// Ersetzt Volt-Wert in Produktnamen (Plaintext).
-// oldVolt/newVolt sind im Spaltenformat (Punkt: 3.7). Im Text wird Kommaformat verwendet (3,7 V).
+// Ersetzt Volt-Wert in Produktnamen (Plaintext), z.B. "385 V" → "3,85 V", "385 Volt" → "3,85 Volt"
 function replaceSpannungInName(text: string, oldVolt: string, newVolt: string): { result: string; changed: boolean } {
-  if (!text || !oldVolt || !newVolt) return { result: text, changed: false };
-  const displayOld = oldVolt.replace('.', ',');
-  const displayNew = newVolt.replace('.', ',');
-  if (displayOld === displayNew) return { result: text, changed: false };
-  const escaped = displayOld.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!text || !oldVolt || !newVolt || oldVolt === newVolt) return { result: text, changed: false };
+  const escaped = oldVolt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`\\b${escaped}(\\s*V(?:olt)?)\\b`, 'g');
   let changed = false;
   const result = text.replace(regex, (_match, suffix) => {
     changed = true;
-    return displayNew + suffix;
+    return newVolt + suffix;
   });
   return { result, changed };
 }
 
-// Synchronisiert JEDE Volt-Angabe im Namen auf den Zielwert.
-// targetVolt ist im Spaltenformat (Punkt: 3.7), im Text wird Kommaformat verwendet (3,7 V).
+// Synchronisiert JEDE Volt-Angabe im Namen auf den Zielwert (z.B. "385V" → "3,85V" wenn targetVolt="3,85")
+// Wird benutzt wenn der Volt-Wert in der Spalte bereits korrekt ist, aber der Name noch eine
+// andere Schreibweise enthält.
 function syncVoltInName(text: string, targetVolt: string): { result: string; changed: boolean } {
   if (!text || !targetVolt) return { result: text, changed: false };
-  // Anzeigeformat: Spalte nutzt Punkt (3.7), Text nutzt Komma (3,7)
-  const displayVolt = targetVolt.replace('.', ',');
   let changed = false;
   let result = text;
   if (targetVolt.includes('-') || targetVolt.includes('/')) {
+    // Bereichswert: Format normalisieren → immer "X V" (Leerzeichen, Volt→V)
+    // z.B. "100-240V" → "100-240 V", "12/24 Volt" → "12/24 V"
     result = text.replace(/\b(\d+(?:[,.]?\d+)?[-\/]\d+(?:[,.]?\d+)?)\s*(V(?:olt)?)\b/gi, (_match, range, _unit) => {
       const normalized = range + ' V';
       if (normalized === _match.trim()) return _match;
@@ -214,12 +190,11 @@ function syncVoltInName(text: string, targetVolt: string): { result: string; cha
       return normalized;
     });
   } else {
+    // Einfacher Wert: falsche Schreibweisen ersetzen
     result = text.replace(/\b(\d+(?:[,\.]\d+)?)(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
-      // Vergleich im Anzeigeformat (Komma)
-      const normNum = num.replace('.', ',');
-      if (normNum === displayVolt) return _match;
+      if (num === targetVolt) return _match;
       changed = true;
-      return displayVolt + suffix;
+      return targetVolt + suffix;
     });
   }
   return { result, changed };
@@ -240,15 +215,12 @@ function extractVoltFromName(name: string): string | null {
 }
 
 // Synchronisiert alle Volt-Werte im Fließtext einer HTML-Beschreibung auf den Zielwert.
-// targetVolt ist im Spaltenformat (Punkt: 3.7), im Text wird Kommaformat verwendet (3,7 V).
 // Eingangs- und Ausgangsspannung-Tabellenzeilen werden NICHT verändert.
 // Bereichswerte (100-240V) werden nicht angefasst.
 function syncVoltInHtmlText(html: string, targetVolt: string): { result: string; changed: boolean } {
   if (!html || !targetVolt || targetVolt.includes('-') || targetVolt.includes('/')) {
     return { result: html, changed: false };
   }
-  // Anzeigeformat: Spalte nutzt Punkt (3.7), Text nutzt Komma (3,7)
-  const displayVolt = targetVolt.replace('.', ',');
   const protectedLabel = /(?:eingangs|ausgangs)(?:spannung|spanning)/i;
   let changed = false;
 
@@ -259,9 +231,9 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
         if (tag !== undefined) return tag;
         if (!num || !unit) return m;
         const norm = num.replace('.', ',');
-        if (norm === displayVolt || /[-\/]/.test(num)) return m;
+        if (norm === targetVolt || /[-\/]/.test(num)) return m;
         changed = true;
-        return displayVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
+        return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
       });
 
   // Schritt 1: Tabellen-Zeilen einzeln verarbeiten – Eingangs-/Ausgangsspannung schützen
@@ -282,35 +254,25 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
       if (tag !== undefined) return tag;
       if (!num || !unit) return m;
       const norm = num.replace('.', ',');
-      if (norm === displayVolt || /[-\/]/.test(num)) return m;
+      if (norm === targetVolt || /[-\/]/.test(num)) return m;
       changed = true;
-      return displayVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
+      return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
     });
 
   return { result, changed };
 }
 
 // Normalisiert einen aus Text extrahierten Volt-Wert für die p_attributes[akku_v][de]-Spalte.
-// Spaltenformat: Dezimalwert mit Punkt (1.6, 3.7). Komma wird durch Punkt ersetzt.
+// Aus Text extrahierte Werte sind bereits korrekt (z.B. "19" aus "19 V" = wirklich 19 Volt).
+// Dezimalwerte: Punkt durch Komma ersetzen (3.7 → 3,7). Bereichswerte unverändert.
 // Ganze Zahlen bleiben unverändert (19 → 19, 24 → 24).
 function normalizeExtractedVolt(raw: string): string {
   if (!raw) return raw;
   // Bereichswert (z.B. "100-240", "12/24") → unverändert
-  if (/[-\/]/.test(raw)) return raw;
-  // Dezimalwert: Komma durch Punkt ersetzen (3,7 → 3.7, 1,6 → 1.6)
-  if (raw.includes(',')) {
-    const dotted = raw.replace(',', '.');
-    // Trailing .0 ebenfalls entfernen (12,0 → 12)
-    if (/^\d+\.0$/.test(dotted)) return dotted.slice(0, -2);
-    return dotted;
-  }
-  // Bereits Punkt vorhanden
-  if (raw.includes('.')) {
-    // Trailing .0 entfernen (12.0 → 12)
-    if (/^\d+\.0$/.test(raw)) return raw.slice(0, -2);
-    return raw;
-  }
-  // Ganzzahl → unverändert
+  if (/[-\/]/.test(raw)) return raw.replace('.', ',');
+  // Dezimalwert (z.B. "3,7" oder "3.7") → Punkt durch Komma
+  if (raw.includes(',') || raw.includes('.')) return raw.replace('.', ',');
+  // Ganzzahl → unverändert lassen (19 bleibt 19, nicht 19,0)
   return raw;
 }
 
@@ -388,32 +350,32 @@ function extractVoltFromDesc(html: string): string | null {
 function setSpannungInHtml(html: string, targetVolt: string): { result: string; changed: boolean } {
   if (!html || !targetVolt) return { result: html, changed: false };
 
-  // Anzeigeformat: Spalte nutzt Punkt (3.7), HTML nutzt Komma (3,7 V)
-  const displayVolt = targetVolt.replace('.', ',');
-
   // Spannung-Zeilen: DE (Spannung/Nennspannung) + NL (Spanning/Nennspanning)
   const spannungRegex = /(<(?:td|th)[^>]*>\s*(?:Nenn)?[Ss]pann(?:ung|ing)(?:\s*V)?\s*<\/(?:td|th)>\s*<(?:td|th)[^>]*>)([^<]*)(< *\/(?:td|th)>)/gi;
   let changed = false;
   let result = html.replace(spannungRegex, (_match, before, value, after) => {
     const currentVal = value.trim();
-    const expectedWithUnit = displayVolt + ' V';
-    if (currentVal === expectedWithUnit || currentVal === displayVolt) {
+    const expectedWithUnit = targetVolt + ' V';
+    if (currentVal === expectedWithUnit || currentVal === targetVolt) {
       return before + value + after;
     }
     changed = true;
     const suffix = currentVal.endsWith(' V') ? ' V' : (currentVal.endsWith('V') ? 'V' : ' V');
-    return before + displayVolt + suffix + after;
+    return before + targetVolt + suffix + after;
   });
 
   // Falls keine Spannung-Zeile gefunden wurde aber eine Tabelle existiert → Zeile einfügen
+  // Auch NL "Spanning" erkennen, damit keine doppelte Zeile eingefügt wird
   const hasSpannungRow = /(?:Nenn)?[Ss]pann(?:ung|ing)(?:\s*V)?/.test(html);
   if (!changed && !hasSpannungRow) {
-    const tbodyInsert = result.replace(/(<tbody[^>]*>)/, `$1<tr><th class="thlabel"> Spannung V</th><td class="data"> ${displayVolt} V</td></tr>`);
+    // Füge Spannung-Zeile als erste Zeile nach <tbody> ein (oder vor dem ersten <tr>)
+    const tbodyInsert = result.replace(/(<tbody[^>]*>)/, `$1<tr><th class="thlabel"> Spannung V</th><td class="data"> ${targetVolt} V</td></tr>`);
     if (tbodyInsert !== result) {
       result = tbodyInsert;
       changed = true;
     } else {
-      const trInsert = result.replace(/(<table[^>]*>[\s\S]*?)(<tr\b)/, `$1<tr><th class="thlabel"> Spannung V</th><td class="data"> ${displayVolt} V</td></tr>$2`);
+      // Fallback: vor dem ersten <tr> in der Tabelle einfügen
+      const trInsert = result.replace(/(<table[^>]*>[\s\S]*?)(<tr\b)/, `$1<tr><th class="thlabel"> Spannung V</th><td class="data"> ${targetVolt} V</td></tr>$2`);
       if (trInsert !== result) {
         result = trInsert;
         changed = true;
@@ -421,38 +383,6 @@ function setSpannungInHtml(html: string, targetVolt: string): { result: string; 
     }
   }
 
-  return { result, changed };
-}
-
-// Entfernt alle CSS-Styles, class-Attribute und andere Styling-Attribute aus HTML-Tags.
-// Erlaubt sind nur strukturelle Attribute: class auf Tabellen-Tags (thlabel, data), href, src.
-// Entfernt: style="...", class="...", align, bgcolor, border, cellpadding, cellspacing, color, font, span-Elemente mit nur style.
-function stripHtmlStyles(html: string): { result: string; changed: boolean } {
-  if (!html) return { result: html, changed: false };
-  let result = html;
-
-  // Entferne style="..." Attribute aus allen Tags
-  result = result.replace(/\s+style\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-
-  // Entferne class="..." aus allen Tags AUSSER strukturellen Tabellen-Klassen (thlabel, data)
-  result = result.replace(/\s+class\s*=\s*"([^"]*)"/gi, (_match, cls) => {
-    const keep = cls.split(/\s+/).filter((c: string) => /^(thlabel|data)$/.test(c));
-    return keep.length > 0 ? ` class="${keep.join(' ')}"` : '';
-  });
-  result = result.replace(/\s+class\s*=\s*'([^']*)'/gi, (_match, cls) => {
-    const keep = cls.split(/\s+/).filter((c: string) => /^(thlabel|data)$/.test(c));
-    return keep.length > 0 ? ` class="${keep.join(' ')}"` : '';
-  });
-
-  // Entferne layout-Attribute auf Block-Elementen
-  result = result.replace(/\s+(?:align|bgcolor|border|cellpadding|cellspacing|color|width|height|valign)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-
-  // Ersetze <span>-Tags ohne Attribute durch ihren Inhalt (leere Spans entfernen)
-  result = result.replace(/<span>\s*<\/span>/gi, '');
-  // Entferne <span>-Wrapper die nur noch leere Attribute haben: <span > oder <span>
-  result = result.replace(/<span\s*>/gi, '<span>');
-
-  const changed = result !== html;
   return { result, changed };
 }
 
@@ -631,39 +561,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return res.status(400).json({ error: 'CSV konnte nicht geparst werden', details: parsed.errors[0]?.message });
     }
 
-    // Fehlerhafte Zeilen-Indizes sammeln (Zeilenumbrüche ohne Anführungszeichen → verschobene Spalten)
-    const errorRowIndices = new Set(
-      parsed.errors
-        .filter(e => e.row != null && e.type !== 'Delimiter')
-        .map(e => e.row as number)
-    );
-    const parseErrors = parsed.errors
-      .filter(e => e.type !== 'Delimiter')
-      .map(e => ({ row: (e.row ?? -1) + 2, message: e.message, code: e.code }))
-      .slice(0, 20);
-
     const headers = parsed.meta.fields || [];
-    // Artikelnummer-Spalte robust finden (case-insensitive, getrimmt)
-    const itemNrCol = headers.find(h => {
-      const normalized = h.trim().toLowerCase();
-      return normalized === 'p_item_number' || normalized === 'v_item_number';
-    }) || '';
-
-    // Fehlerhafte Zeilen überspringen:
-    // 1. Zeilen die PapaParse als Fehler markiert hat (verschobene Spalten durch unquotierte Newlines)
-    // 2. Zeilen wo die Artikelnummer-Spalte HTML enthält oder leer ist
-    const isBadRow = (row: Record<string, string>) => {
-      if (!itemNrCol) return false;
-      const itemNr = (row[itemNrCol] ?? '').replace(/\s/g, ''); // alle Whitespace inkl. \u00a0
-      return itemNr === '' || itemNr.startsWith('<');
-    };
-
-    const rows = (parsed.data as Record<string, string>[]).filter((row, i) => {
-      if (errorRowIndices.has(i)) return false;
-      if (isBadRow(row)) return false;
-      return true;
-    });
-    const skippedCount = (parsed.data as Record<string, string>[]).length - rows.length;
+    const rows = parsed.data as Record<string, string>[];
 
     setProgress('fixing', 'Volt-Werte werden korrigiert…', 15, `${rows.length.toLocaleString('de-DE')} Zeilen`);
 
@@ -696,16 +595,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         const restored = restoreEmojiCheckmarks(newRow[col]);
         if (restored !== newRow[col]) {
           newRow[col] = restored;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
-
-      // HTML-Bereinigung: style="...", class="...", layout-Attribute entfernen
-      for (const col of DESC_COLS) {
-        if (!headers.includes(col) || !newRow[col]) continue;
-        const { result: cleaned, changed: sc } = stripHtmlStyles(newRow[col]);
-        if (sc) {
-          newRow[col] = cleaned;
           if (!changed.includes(col)) changed.push(col);
         }
       }
@@ -1006,21 +895,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     });
 
     // Korrigierte CSV bauen
-    const csvOut = Papa.unparse(csvRows, { delimiter: ';', header: true, columns: headers });
+    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
     // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
     const dreiSpannungIndices: number[] = fixedRows
       .map((row, i) => ({ i, html: row['p_description[de]'] || '' }))
       .filter(({ html }) => hasDreiSpannung(html))
-      .map(({ i }) => i);
-
-    // Kurze/leere Beschreibungen erkennen: p_description[de] nach HTML-Bereinigung < 20 Zeichen oder leer
-    const stripHtmlForLen = (s: string) =>
-      s.replace(/<[^>]+>/g, '').replace(/&[a-zA-Z#0-9]+;/g, ' ').replace(/\s+/g, ' ').trim();
-    const kurzNameIndices: number[] = fixedRows
-      .map((row, i) => ({ i, desc: stripHtmlForLen(row['p_description[de]'] || '') }))
-      .filter(({ desc }) => desc.length < 20)
       .map(({ i }) => i);
 
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
@@ -1032,7 +913,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       expires: Date.now() + 30 * 60 * 1000,
       fixedRows,
       dreiSpannungIndices,
-      kurzNameIndices,
       originalRows: rows,
       headers,
       changedCols,
@@ -1046,12 +926,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return plain.length > max ? plain.slice(0, max) + '…' : plain;
     };
 
-    // Vorschau: alle Zeilen (max. 500), geänderte werden hervorgehoben
+    // Kompakte Vorschau: NUR geänderte Zeilen, max. 500 Einträge
     const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
     const MAX_PREVIEW = 500;
     const previewItems: object[] = [];
     for (let i = 0; i < fixedRows.length && previewItems.length < MAX_PREVIEW; i++) {
-      const changed = changedCols[i] ?? [];
+      const changed = changedCols[i];
+      if (!changed || changed.length === 0) continue;
       const orig = rows[i];
       const row = fixedRows[i];
       const itemNr = ITEM_NR_COLS.map(c => row[c]).find(v => v) || '';
@@ -1077,9 +958,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length, skippedCount, kurzNameCount: kurzNameIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length },
       previewItems,
-      parseErrors,
       allChangedNames: allChangedNames.slice(0, 300),
       allExtractedVolt: allExtractedVolt.slice(0, 300),
       fileName,
@@ -1142,46 +1022,6 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
   const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_drei_spannung.csv');
-
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
-  res.send(csvBuffer);
-});
-
-// GET /api/volt-fixer/download-kurz-namen/:jobId
-// Exportiert Zeilen mit p_name[de] < 20 Zeichen (oder leer) — für Bulk-Generator
-router.get('/download-kurz-namen/:jobId', (req: Request, res: Response) => {
-  const job = jobStore.get(req.params.jobId);
-  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
-  if (job.kurzNameIndices.length === 0) {
-    return res.status(404).json({ error: 'Keine Zeilen mit kurzem/leerem Produktnamen gefunden' });
-  }
-
-  // Artikelnummer-Spalte im Job bestimmen
-  const jobItemNrCol = job.headers.find(h => {
-    const n = h.trim().toLowerCase();
-    return n === 'p_item_number' || n === 'v_item_number';
-  }) || '';
-
-  const filteredRows = job.kurzNameIndices
-    .map(i => job.fixedRows[i])
-    // Zeilen mit leerem p_item_number entfernen
-    .filter(row => {
-      if (!jobItemNrCol) return true;
-      const itemNr = (row[jobItemNrCol] ?? '').replace(/\s/g, '');
-      return itemNr !== '' && !itemNr.startsWith('<');
-    })
-    .map(row => {
-      const r = { ...row };
-      for (const col of DESC_COLS) {
-        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ');
-      }
-      return r;
-    });
-
-  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
-  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
-  const filteredFileName = job.fileName.replace(/\.csv$/i, '_kurze_beschreibungen.csv');
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
