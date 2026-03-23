@@ -728,6 +728,24 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
+      // Bold-Tags entfernen – AUSSER Abschnittsüberschriften (→ werden zu <h2>)
+      // Produkteigenschaften / Technische Daten / Lieferumfang bleiben als <h2> erhalten
+      for (const col of DESC_COLS) {
+        if (!headers.includes(col) || !newRow[col]) continue;
+        let noBold = newRow[col]
+          // <b>Produkteigenschaften</b> o.ä. → <h2>Produkteigenschaften</h2>
+          .replace(/<b[^>]*>(\s*(?:Produkteigenschaften|Technische\s+Daten|Lieferumfang|Leveringsomvang|Inhoud\s+leveringspakket)\s*)<\/b>/gi,
+            (_, txt) => `<h2>${txt.trim()}</h2>`)
+          .replace(/<strong[^>]*>(\s*(?:Produkteigenschaften|Technische\s+Daten|Lieferumfang|Leveringsomvang|Inhoud\s+leveringspakket)\s*)<\/strong>/gi,
+            (_, txt) => `<h2>${txt.trim()}</h2>`)
+          // alle übrigen <b> / <strong> entfernen
+          .replace(/<\/?(b|strong)(\s[^>]*)?>/gi, '');
+        if (noBold !== newRow[col]) {
+          newRow[col] = noBold;
+          if (!changed.includes(col)) changed.push(col);
+        }
+      }
+
       const voltVal = (row[VOLT_COL] ?? '').trim();
       let newVolt = voltVal;
       let voltWasChanged = false;
