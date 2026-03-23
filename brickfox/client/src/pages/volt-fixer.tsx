@@ -43,7 +43,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number; skippedCount?: number; kurzNameCount?: number; emptyDescCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number; skippedCount?: number; kurzNameCount?: number; emptyDescCount?: number; tableGeneratedCount?: number };
   previewItems: PreviewItem[];
   parseErrors: ParseError[];
   allChangedNames: ChangedNameEntry[];
@@ -557,6 +557,9 @@ export default function VoltFixer() {
               <Badge className="bg-orange-500 text-white">{result.stats.voltExtracted.toLocaleString()} aus Namen ergänzt</Badge>
             )}
             <Badge className="bg-green-600 text-white">{result.stats.descChanged.toLocaleString()} Beschreibungen aktualisiert</Badge>
+            {(result.stats.tableGeneratedCount ?? 0) > 0 && (
+              <Badge className="bg-emerald-600 text-white">🗂️ {result.stats.tableGeneratedCount!.toLocaleString()} Tabellen ergänzt</Badge>
+            )}
             {result.stats.nameChanged > 0 && (
               <Badge className="bg-purple-600 text-white">{result.stats.nameChanged.toLocaleString()} Namen aktualisiert</Badge>
             )}
