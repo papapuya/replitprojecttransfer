@@ -1117,22 +1117,27 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         row['p_description[de]'] = descHtml + `<h3>Technische Daten</h3><table>${newRows}</table>`;
         return { changed: true };
       } else {
-        // Bestehende Tabelle erweitern: fehlende Zeilen ergänzen
-        // Prüfe welche Labels schon in der Tabelle stehen
+        // Bestehende Tabelle erweitern: zuerst leere Zeilen bereinigen, dann fehlende ergänzen
+        const { result: cleanedHtml } = cleanEmptyTableRows(descHtml);
+
+        // Prüfe welche Labels schon in der (bereinigten) Tabelle stehen
         const existingLabels = new Set<string>();
         const tdLabelRe = /<td>([^<]+)<\/td>/gi;
         let m: RegExpExecArray | null;
-        while ((m = tdLabelRe.exec(descHtml)) !== null) existingLabels.add(m[1].trim());
+        while ((m = tdLabelRe.exec(cleanedHtml)) !== null) existingLabels.add(m[1].trim());
 
         const missingRows = wanted
           .filter(w => td[w.key] && !existingLabels.has(w.label))
           .map(w => `<tr><td>${w.label}</td><td>${td[w.key]}</td></tr>`)
           .join('');
 
-        if (!missingRows) return { changed: false };
+        const changed = cleanedHtml !== descHtml || missingRows.length > 0;
+        if (!changed) return { changed: false };
 
-        // Einfügen vor </table>
-        row['p_description[de]'] = descHtml.replace(/<\/table>/i, missingRows + '</table>');
+        // Fehlende Zeilen vor </table> einfügen
+        row['p_description[de]'] = (missingRows
+          ? cleanedHtml.replace(/<\/table>/i, missingRows + '</table>')
+          : cleanedHtml);
         return { changed: true };
       }
     }
