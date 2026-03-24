@@ -148,13 +148,9 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
   if (!trimmed) return { fixed: trimmed, changed: false };
   if (trimmed.includes(',') || trimmed.includes('.')) return { fixed: trimmed, changed: false };
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
-  if (trimmed.length === 1) return { fixed: trimmed, changed: false };
-  // 2-stellige Zahlen: nur bekannte Dezimal-Akkuspannungen korrigieren.
-  // Alle anderen 2-stelligen Werte (19, 20, 24 ...) sind ganze Volt-Werte → unverändert.
-  if (trimmed.length === 2) {
-    const KNOWN_DECIMAL_2DIGIT = new Set(['12', '15', '16', '36', '37', '42', '48', '60', '72', '84', '96']);
-    if (!KNOWN_DECIMAL_2DIGIT.has(trimmed)) return { fixed: trimmed, changed: false };
-  }
+  // 1- und 2-stellige Zahlen sind immer ganze Volt-Werte → unverändert lassen.
+  // (12 → 12, 19 → 19, 20 → 20, 36 → 36 usw.)
+  if (trimmed.length <= 2) return { fixed: trimmed, changed: false };
   // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX,Y (z.B. 111→11,1, 144→14,4, 222→22,2, 108→10,8)
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
