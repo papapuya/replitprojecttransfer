@@ -659,24 +659,11 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('fixing', 'Volt-Werte werden korrigiert…', 15, `${rows.length.toLocaleString('de-DE')} Zeilen`);
 
-    let voltChanged = 0, voltSkipped = 0, descChanged = 0, nameChanged = 0, voltExtracted = 0, nlTranslated = 0, deTranslated = 0;
-    // (runWithConcurrency wird für DeepL-Batch nicht mehr benötigt, bleibt aber als Hilfsfunktion erhalten)
-    const nlTranslationQueue: Array<{ rowIndex: number }> = [];
-    const deTranslationQueue: Array<{ rowIndex: number }> = [];
+    let voltChanged = 0, voltSkipped = 0, voltExtracted = 0;
     const fixedRows: Record<string, string>[] = [];
     const changedCols: string[][] = [];
-    // Alle geänderten Namen (für vollständige Anzeige im Frontend)
-    const allChangedNames: Array<{
-      itemNr: string;
-      cols: Array<{ col: string; before: string; after: string }>;
-    }> = [];
-    // Alle aus Produktnamen extrahierten Volt-Werte
-    const allExtractedVolt: Array<{
-      itemNr: string;
-      extractedVolt: string;
-      fromName: string;
-      fromCol: string;
-    }> = [];
+    const allChangedNames: Array<{ itemNr: string; cols: Array<{ col: string; before: string; after: string }> }> = [];
+    const allExtractedVolt: Array<{ itemNr: string; extractedVolt: string; fromName: string; fromCol: string }> = [];
 
     // Nicht-elektronische Produkte: kein sinnvoller Volt-Wert möglich → Volt-Verarbeitung überspringen
     const NON_ELECTRONIC_KEYWORDS = [
@@ -689,21 +676,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       const newRow = { ...row };
       const changed: string[] = [];
 
-      // Emoji-Wiederherstellung: '? ' → '✅ ' immer ausführen (Brickfox-Export kodiert ✅ als ?)
-      for (const col of DESC_COLS) {
-        if (!headers.includes(col) || !newRow[col]) continue;
-        const restored = restoreEmojiCheckmarks(newRow[col]);
-        if (restored !== newRow[col]) {
-          newRow[col] = restored;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
-      const productNameForCheck = NAME_COLS
-        .map(col => (row[col] || '').toLowerCase())
-        .join(' ');
-      const isNonElectronic = NON_ELECTRONIC_KEYWORDS.some(kw => productNameForCheck.includes(kw));
-
-      if (isNonElectronic) {
+      // Nicht-elektronische Produkte: Volt-Verarbeitung überspringen, alles unverändert lassen
+      const productNameForCheck = NAME_COLS.map(col => (row[col] || '').toLowerCase()).join(' ');
+      if (NON_ELECTRONIC_KEYWORDS.some(kw => productNameForCheck.includes(kw))) {
         fixedRows.push(newRow);
         changedCols.push(changed);
         voltSkipped++;
@@ -711,12 +686,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       }
 
       const voltVal = (row[VOLT_COL] ?? '').trim();
-      let newVolt = voltVal;
-      let voltWasChanged = false;
 
       if (!voltVal) {
         // Volt-Spalte leer → Suche in Reihenfolge: 1) Produktname, 2) Spannung-Tabellenzeile, 3) Fließtext
-        // Hohe Volt-Werte (≥100V, AC-Netzspannung wie 110-240V) werden immer übersprungen.
         let extracted: string | null = null;
         let extractedFromCol = '';
         let extractedFromName = '';
@@ -727,53 +699,35 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           const nameVal = row[col];
           if (!nameVal) continue;
           const found = extractVoltFromName(nameVal);
-          if (found) {
-            extracted = found;
-            extractedFromCol = col;
-            extractedFromName = nameVal;
-            break;
-          }
+          if (found) { extracted = found; extractedFromCol = col; extractedFromName = nameVal; break; }
         }
 
         // Stufe 2: Spannung/Nennspannung-Zeile in der HTML-Tabelle durchsuchen
         if (!extracted) {
           for (const col of DESC_COLS) {
             if (!headers.includes(col)) continue;
-            const descVal = newRow[col] || row[col];
+            const descVal = row[col];
             if (!descVal) continue;
             const found = extractVoltFromTable(descVal);
-            if (found) {
-              extracted = found;
-              extractedFromCol = col;
-              extractedFromName = '(Tabelle: Spannung)';
-              break;
-            }
+            if (found) { extracted = found; extractedFromCol = col; extractedFromName = '(Tabelle: Spannung)'; break; }
           }
         }
 
-        // Stufe 3: Fließtext (außerhalb Tabellen) durchsuchen — ohne AC-Netzspannungen
+        // Stufe 3: Fließtext (außerhalb Tabellen) — ohne AC-Netzspannungen
         if (!extracted) {
           for (const col of DESC_COLS) {
             if (!headers.includes(col)) continue;
-            const descVal = newRow[col] || row[col];
+            const descVal = row[col];
             if (!descVal) continue;
             const found = extractVoltFromBodyText(descVal);
-            if (found) {
-              extracted = found;
-              extractedFromCol = col;
-              extractedFromName = descVal.replace(/<[^>]+>/g, ' ').substring(0, 80);
-              break;
-            }
+            if (found) { extracted = found; extractedFromCol = col; extractedFromName = descVal.replace(/<[^>]+>/g, ' ').substring(0, 80); break; }
           }
         }
 
         if (extracted) {
-          // Volt-Spalte befüllen
           newRow[VOLT_COL] = extracted;
           changed.push(VOLT_COL);
           voltExtracted++;
-          newVolt = extracted;
-          voltWasChanged = true;
           allExtractedVolt.push({
             itemNr: row['p_item_number'] || row['v_item_number'] || '',
             extractedVolt: extracted,
@@ -785,8 +739,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       } else {
         const { fixed: fv, changed: wc } = fixVolt(voltVal);
-        newVolt = fv;
-        voltWasChanged = wc;
         if (wc) {
           voltChanged++;
           newRow[VOLT_COL] = fv;
@@ -794,226 +746,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
-      // Beschreibungen IMMER aktualisieren wenn Volt-Wert vorhanden (auch wenn bereits korrekt in Spalte)
-      // WICHTIG: newRow[col] verwenden (bereits emoji-wiederhergestellt), nicht das Original descVal
-      if (newVolt) {
-        for (const col of DESC_COLS) {
-          const descVal = newRow[col] || row[col];
-          if (!descVal) continue;
-
-          // Eingangs-/Ausgangsspannung-Werte VOR der Verarbeitung sichern
-          const protectedVoltCells = extractProtectedVoltCells(descVal);
-
-          // Text-Format (Komma) für Beschreibungen/Namen (Spalte nutzt Punkt: 3.85 → Text: 3,85)
-          const textVolt = voltToText(newVolt);
-
-          // 1) Spannung-Tabellenzeile aktualisieren
-          const { result: htmlAfterTable, changed: dc } = setSpannungInHtml(descVal, textVolt);
-          if (dc) {
-            newRow[col] = htmlAfterTable;
-            if (!changed.includes(col)) changed.push(col);
-            descChanged++;
-          }
-
-          // 2) Fließtext synchronisieren: alle Volt-Werte im Text auf Zielwert setzen
-          //    (wie syncVoltInName – ersetzt auch "3,6 Volt" → "3,7 Volt" wenn Spalte "3,7" hat)
-          const { result: htmlAfterText, changed: tc } = syncVoltInHtmlText(
-            newRow[col] || descVal,
-            textVolt
-          );
-          if (tc) {
-            newRow[col] = htmlAfterText;
-            if (!changed.includes(col)) changed.push(col);
-          }
-
-          // 3) Eingangs-/Ausgangsspannung-Originalwerte wiederherstellen (dürfen nie geändert werden)
-          const htmlRestored = restoreProtectedVoltCells(newRow[col] || descVal, protectedVoltCells);
-          if (htmlRestored !== (newRow[col] || descVal)) {
-            newRow[col] = htmlRestored;
-            if (!changed.includes(col)) changed.push(col);
-          }
-        }
-      }
-
-      // NL-spezifisch: "Technische specificaties" als <ul> → echte <table> konvertieren
-      // und "extra informatie"-Abschnitt komplett entfernen
-      if (headers.includes('p_description[nl]') && newRow['p_description[nl]']) {
-        const { result: nlConverted, changed: nc } = convertNlTechSpecToTable(newRow['p_description[nl]']);
-        if (nc) {
-          newRow['p_description[nl]'] = nlConverted;
-          if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
-        }
-        const { result: nlCleaned, changed: ec } = removeExtraInformatie(newRow['p_description[nl]']);
-        if (ec) {
-          newRow['p_description[nl]'] = nlCleaned;
-          if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
-        }
-      }
-
-      // Leere Tabellenzeilen entfernen (Wert ist '-', '0000', leer) → saubere Tabellen
-      for (const col of DESC_COLS) {
-        if (!headers.includes(col) || !newRow[col]) continue;
-        const { result: cleaned, changed: cc } = cleanEmptyTableRows(newRow[col]);
-        if (cc) {
-          newRow[col] = cleaned;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
-
-      // Spannung-Zeilen in der Tabelle aufsteigend nach Volt-Wert sortieren
-      // (z.B. Spannung 3,6V → Ausgangsspannung 4,2V → Eingangsspannung 12V)
-      for (const col of DESC_COLS) {
-        if (!headers.includes(col) || !newRow[col]) continue;
-        const { result: sorted, changed: sc } = sortVoltageTableRows(newRow[col]);
-        if (sc) {
-          newRow[col] = sorted;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
-
-      // NL-Tabellenwerte aus DE übernehmen (NL-Labels bleiben erhalten, nur Werte werden synchronisiert)
-      if (headers.includes('p_description[de]') && headers.includes('p_description[nl]')) {
-        const deHtml = newRow['p_description[de]'];
-        const nlHtml = newRow['p_description[nl]'];
-        if (deHtml && nlHtml) {
-          const { result: nlSynced, changed: ts } = syncTableValuesFromDe(deHtml, nlHtml);
-          if (ts) {
-            newRow['p_description[nl]'] = nlSynced;
-            if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
-          }
-        }
-      }
-
-      // Intelligente Beschreibungs-Angleichung: reichhaltigere Beschreibung als Basis
-      if (useDeForNL && headers.includes('p_description[de]') && headers.includes('p_description[nl]')) {
-        const deDesc = newRow['p_description[de]'] || '';
-        const nlDesc = newRow['p_description[nl]'] || '';
-        const deHasH2 = /<h2\b/i.test(deDesc);
-        const nlHasH2 = /<h2\b/i.test(nlDesc);
-        const deLen   = htmlTextLength(deDesc);
-        const nlLen   = htmlTextLength(nlDesc);
-
-        if (deHasH2 && !nlHasH2) {
-          // Nur DE vollständig → DE nach NL übersetzen
-          newRow['p_description[nl]'] = deDesc;
-          if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
-          descChanged++;
-          nlTranslationQueue.push({ rowIndex: fixedRows.length });
-        } else if (nlHasH2 && !deHasH2) {
-          // Nur NL vollständig → NL nach DE übersetzen
-          newRow['p_description[de]'] = nlDesc;
-          if (!changed.includes('p_description[de]')) changed.push('p_description[de]');
-          descChanged++;
-          deTranslationQueue.push({ rowIndex: fixedRows.length });
-        } else if (deHasH2 && nlHasH2 && nlLen > deLen + 100) {
-          // Beide vollständig, aber NL deutlich länger → NL als Basis, DE übersetzen
-          newRow['p_description[de]'] = nlDesc;
-          if (!changed.includes('p_description[de]')) changed.push('p_description[de]');
-          descChanged++;
-          deTranslationQueue.push({ rowIndex: fixedRows.length });
-        } else if (deHasH2 && nlHasH2 && deLen > nlLen + 100) {
-          // Beide vollständig, aber DE deutlich länger → DE als Basis, NL übersetzen
-          newRow['p_description[nl]'] = deDesc;
-          if (!changed.includes('p_description[nl]')) changed.push('p_description[nl]');
-          descChanged++;
-          nlTranslationQueue.push({ rowIndex: fixedRows.length });
-        }
-      }
-
-      // Lieferumfang ans Ende verschieben (DE + NL)
-      for (const col of ['p_description[de]', 'p_description[nl]']) {
-        if (!newRow[col]) continue;
-        const reordered = ensureDeliveryAtEnd(newRow[col]);
-        if (reordered !== newRow[col]) {
-          newRow[col] = reordered;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
-
-      // Produktnamen immer synchronisieren wenn Volt-Wert vorhanden
-      if (newVolt) {
-        const changedNameCols: Array<{ col: string; before: string; after: string }> = [];
-        for (const col of NAME_COLS) {
-          if (!headers.includes(col)) continue;
-          const nameVal = row[col];
-          if (!nameVal) continue;
-          let result = nameVal;
-          let nc = false;
-          if (voltWasChanged) {
-            // Volt-Wert wurde korrigiert → alten Wert direkt suchen und ersetzen
-            // voltVal in Text-Format (Komma) umwandeln damit er im Namen gefunden wird
-            ({ result, changed: nc } = replaceSpannungInName(nameVal, voltToText(voltVal), voltToText(newVolt)));
-          }
-          // Zusätzlich: alle verbleibenden Volt-Angaben auf Zielwert synchronisieren
-          // (deckt Fälle ab wo voltWasChanged=false aber Name z.B. "385V" statt "3,85V" enthält)
-          const { result: synced, changed: sc } = syncVoltInName(result, voltToText(newVolt));
-          if (sc) { result = synced; nc = true; }
-          if (nc) {
-            changedNameCols.push({ col, before: nameVal, after: result });
-            newRow[col] = result;
-            if (!changed.includes(col)) changed.push(col);
-            nameChanged++;
-          }
-        }
-        if (changedNameCols.length > 0) {
-          allChangedNames.push({
-            itemNr: row['p_item_number'] || row['v_item_number'] || '',
-            cols: changedNameCols,
-          });
-        }
-      }
-
-      // Finaler Emoji-Pass: sicherstellen dass ✅ in ALLEN Beschreibungen korrekt steht
-      // (deckt Fälle ab wo spätere Verarbeitungsschritte ✅ überschrieben haben)
-      for (const col of DESC_COLS) {
-        if (!headers.includes(col) || !newRow[col]) continue;
-        const restored = restoreEmojiCheckmarks(newRow[col]);
-        if (restored !== newRow[col]) {
-          newRow[col] = restored;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
-
       fixedRows.push(newRow);
       changedCols.push(changed);
-    }
-
-    // DE→NL Übersetzungen via DeepL (Batch, alle auf einmal)
-    if (useDeForNL && nlTranslationQueue.length > 0) {
-      console.log(`[VoltFixer] DeepL DE→NL: ${nlTranslationQueue.length} Beschreibungen...`);
-      setProgress('translating-nl', 'DE → NL wird übersetzt…', 40, `${nlTranslationQueue.length.toLocaleString('de-DE')} Beschreibungen`);
-      const htmlList = nlTranslationQueue.map(({ rowIndex }) => fixedRows[rowIndex]['p_description[nl]'] || '');
-      const total = nlTranslationQueue.length;
-      const translated = await deeplService.translateBatch(htmlList, (done) => {
-        const pct = Math.round(40 + (done / total) * 35);
-        setProgress('translating-nl', 'DE → NL wird übersetzt…', pct, `${done.toLocaleString('de-DE')} / ${total.toLocaleString('de-DE')}`);
-      });
-      nlTranslationQueue.forEach(({ rowIndex }, i) => {
-        if (translated[i]) {
-          fixedRows[rowIndex]['p_description[nl]'] = ensureDeliveryAtEnd(translated[i]);
-          nlTranslated++;
-        }
-      });
-      console.log(`[VoltFixer] ${nlTranslated} DE→NL übersetzt.`);
-    }
-
-    // NL→DE Übersetzungen via DeepL (Batch, alle auf einmal)
-    if (useDeForNL && deTranslationQueue.length > 0) {
-      console.log(`[VoltFixer] DeepL NL→DE: ${deTranslationQueue.length} Beschreibungen...`);
-      setProgress('translating-de', 'NL → DE wird übersetzt…', 76, `${deTranslationQueue.length.toLocaleString('de-DE')} Beschreibungen`);
-      const htmlList = deTranslationQueue.map(({ rowIndex }) => fixedRows[rowIndex]['p_description[de]'] || '');
-      const total = deTranslationQueue.length;
-      const translated = await deeplService.translateBatchToDE(htmlList, (done) => {
-        const pct = Math.round(76 + (done / total) * 15);
-        setProgress('translating-de', 'NL → DE wird übersetzt…', pct, `${done.toLocaleString('de-DE')} / ${total.toLocaleString('de-DE')}`);
-      });
-      deTranslationQueue.forEach(({ rowIndex }, i) => {
-        if (translated[i]) {
-          fixedRows[rowIndex]['p_description[de]'] = ensureDeliveryAtEnd(translated[i]);
-          deTranslated++;
-        }
-      });
-      console.log(`[VoltFixer] ${deTranslated} NL→DE übersetzt.`);
     }
 
     // ─── CSV Qualitätsprüfung ───
@@ -1134,7 +868,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length },
       previewItems,
       allChangedNames,
       allExtractedVolt,
