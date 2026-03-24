@@ -43,7 +43,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; descChanged: number; nameChanged: number; voltExtracted: number; nlTranslated?: number; deTranslated?: number; dreiSpannungCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; voltExtracted: number; dreiSpannungCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -555,16 +555,6 @@ export default function VoltFixer() {
             <Badge className="bg-indigo-600 text-white">{result.stats.voltChanged.toLocaleString()} Volt-Werte korrigiert</Badge>
             {result.stats.voltExtracted > 0 && (
               <Badge className="bg-orange-500 text-white">{result.stats.voltExtracted.toLocaleString()} aus Namen ergänzt</Badge>
-            )}
-            <Badge className="bg-green-600 text-white">{result.stats.descChanged.toLocaleString()} Beschreibungen aktualisiert</Badge>
-            {result.stats.nameChanged > 0 && (
-              <Badge className="bg-purple-600 text-white">{result.stats.nameChanged.toLocaleString()} Namen aktualisiert</Badge>
-            )}
-            {(result.stats.nlTranslated ?? 0) > 0 && (
-              <Badge className="bg-sky-600 text-white">🇳🇱 {result.stats.nlTranslated!.toLocaleString()} DE→NL übersetzt</Badge>
-            )}
-            {(result.stats.deTranslated ?? 0) > 0 && (
-              <Badge className="bg-teal-600 text-white">🇩🇪 {result.stats.deTranslated!.toLocaleString()} NL→DE übersetzt</Badge>
             )}
             <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
           </div>
