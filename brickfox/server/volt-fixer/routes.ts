@@ -157,6 +157,11 @@ function normalizeRangeVolt(raw: string): string {
   return dotted.replace(/(\d+)\.0(?=[-\/]|$)/g, '$1');
 }
 
+// Entfernt überflüssige ".0" Dezimalstelle aus Volt-Spaltenwerten (6.0 → 6, 10.0 → 10, aber 3.85 bleibt)
+function stripTrailingZeroVolt(val: string): string {
+  return val.replace(/^(\d+)\.0$/, '$1');
+}
+
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   const trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
@@ -165,26 +170,42 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
     const normalized = normalizeRangeVolt(trimmed);
     return { fixed: normalized, changed: normalized !== trimmed };
   }
-  // Wert hat Komma (altes Dezimalformat) → in Punkt-Format konvertieren
+  // Wert hat Komma → in Punkt-Format konvertieren, dann überflüssiges ".0" entfernen (6,0 → 6)
   if (trimmed.includes(',')) {
     const dotFormat = trimmed.replace(',', '.');
-    return { fixed: dotFormat, changed: true };
+    const stripped = stripTrailingZeroVolt(dotFormat);
+    return { fixed: stripped, changed: stripped !== trimmed };
   }
-  // Wert hat bereits Punkt → korrekt, unverändert
-  if (trimmed.includes('.')) return { fixed: trimmed, changed: false };
+  // Wert hat bereits Punkt → überflüssiges ".0" entfernen falls vorhanden (6.0 → 6)
+  if (trimmed.includes('.')) {
+    const stripped = stripTrailingZeroVolt(trimmed);
+    return { fixed: stripped, changed: stripped !== trimmed };
+  }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   // 1- und 2-stellige Zahlen sind immer ganze Volt-Werte → unverändert lassen.
-  // (12 → 12, 19 → 19, 20 → 20, 36 → 36 usw.)
   if (trimmed.length <= 2) return { fixed: trimmed, changed: false };
-  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 111→11.1, 144→14.4, 222→22.2, 108→10.8)
+  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 108→10.8, 111→11.1, 144→14.4)
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
     if (firstTwo >= 10 && firstTwo <= 24) {
       return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
     }
   }
-  // Standard: Punkt nach erster Stelle (z.B. 385→3.85, 370→3.70)
-  return { fixed: trimmed[0] + '.' + trimmed.slice(1), changed: true };
+  // Sonstige Zahlen (z.B. 385, 370 usw.) → nicht verändern, kein 3.85 generieren
+  return { fixed: trimmed, changed: false };
+}
+
+// Entfernt überflüssige ",0" / ".0" Dezimalstellen in Volt-Angaben innerhalb von HTML-Beschreibungen.
+// Zielgerichtete Änderung: NUR "6,0 V" → "6 V", "12,0 V" → "12 V" usw.
+// Alle anderen Inhalte der Beschreibung bleiben vollständig unverändert.
+function stripDecimalZeroInDesc(html: string): { result: string; changed: boolean } {
+  if (!html) return { result: html, changed: false };
+  let changed = false;
+  const result = html.replace(/\b(\d+)[,.]0(\s*V(?:olt)?)\b/gi, (_match, num, suffix) => {
+    changed = true;
+    return num + suffix;
+  });
+  return { result, changed };
 }
 
 // Ersetzt Volt-Wert in Produktnamen (Plaintext), z.B. "385 V" → "3,85 V", "385 Volt" → "3,85 Volt"
@@ -743,6 +764,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           voltChanged++;
           newRow[VOLT_COL] = fv;
           changed.push(VOLT_COL);
+        }
+      }
+
+      // Beschreibungen: NUR überflüssige ",0 V" / ".0 V" Muster entfernen (6,0 V → 6 V)
+      // Alle anderen Inhalte bleiben vollständig unverändert.
+      for (const col of DESC_COLS) {
+        if (!headers.includes(col) || !newRow[col]) continue;
+        const { result: cleaned, changed: dc } = stripDecimalZeroInDesc(newRow[col]);
+        if (dc) {
+          newRow[col] = cleaned;
+          if (!changed.includes(col)) changed.push(col);
         }
       }
 
