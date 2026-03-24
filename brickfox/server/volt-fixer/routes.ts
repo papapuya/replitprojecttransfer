@@ -145,14 +145,27 @@ setInterval(() => {
 
 // Konvertiert Spaltenwert (Punkt-Format) in Text-Format (Komma) für Beschreibungen/Namen.
 // Spalte: "3.85" → Text: "3,85". Ganze Zahlen unverändert: "20" → "20".
+// Alle Punkte werden ersetzt (z.B. "10.8" → "10,8").
 function voltToText(columnVolt: string): string {
-  return columnVolt.replace('.', ',');
+  return columnVolt.replace(/\./g, ',');
+}
+
+// Normalisiert Bereichsangaben: Komma→Punkt, ".0" am Ende jedes Teils entfernen.
+// z.B. "9.0-12,0" → "9-12", "9.0-12.0" → "9-12", "100-240" → "100-240"
+function normalizeRangeVolt(raw: string): string {
+  const dotted = raw.replace(/,/g, '.');
+  return dotted.replace(/(\d+)\.0(?=[-\/]|$)/g, '$1');
 }
 
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   const trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
-  // Wert hat Komma (altes Format) → in Punkt-Format konvertieren
+  // Bereichswert (enthält - oder /) → normalisieren: "9.0-12,0" → "9-12"
+  if (/[-\/]/.test(trimmed)) {
+    const normalized = normalizeRangeVolt(trimmed);
+    return { fixed: normalized, changed: normalized !== trimmed };
+  }
+  // Wert hat Komma (altes Dezimalformat) → in Punkt-Format konvertieren
   if (trimmed.includes(',')) {
     const dotFormat = trimmed.replace(',', '.');
     return { fixed: dotFormat, changed: true };
@@ -195,13 +208,14 @@ function syncVoltInName(text: string, targetVolt: string): { result: string; cha
   let changed = false;
   let result = text;
   if (targetVolt.includes('-') || targetVolt.includes('/')) {
-    // Bereichswert: Format normalisieren → immer "X V" (Leerzeichen, Volt→V)
-    // z.B. "100-240V" → "100-240 V", "12/24 Volt" → "12/24 V"
+    // Bereichswert: gefundenen Bereich normalisieren und durch targetVolt ersetzen
+    // z.B. "9.0-12,0 V" → "9-12 V", "9.0-12.0V" → "9-12 V"
     result = text.replace(/\b(\d+(?:[,.]?\d+)?[-\/]\d+(?:[,.]?\d+)?)\s*(V(?:olt)?)\b/gi, (_match, range, _unit) => {
-      const normalized = range + ' V';
-      if (normalized === _match.trim()) return _match;
+      const normalized = normalizeRangeVolt(range);
+      const expected = targetVolt + ' V';
+      if (normalized === targetVolt && _match.trim() === expected) return _match;
       changed = true;
-      return normalized;
+      return targetVolt + ' V';
     });
   } else {
     // Einfacher Wert: falsche Schreibweisen ersetzen
@@ -282,8 +296,8 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
 // Ganze Zahlen bleiben unverändert (19 → 19, 24 → 24).
 function normalizeExtractedVolt(raw: string): string {
   if (!raw) return raw;
-  // Bereichswert (z.B. "100-240", "12/24") → Komma durch Punkt ersetzen
-  if (/[-\/]/.test(raw)) return raw.replace(',', '.');
+  // Bereichswert (z.B. "100-240", "12/24", "9,0-12,0") → normalizeRangeVolt anwenden
+  if (/[-\/]/.test(raw)) return normalizeRangeVolt(raw);
   // Dezimalwert (z.B. "3,7" oder "3.7") → Komma durch Punkt (Spaltenformat)
   if (raw.includes(',')) return raw.replace(',', '.');
   if (raw.includes('.')) return raw; // bereits Punkt-Format
@@ -945,11 +959,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return plain.length > max ? plain.slice(0, max) + '…' : plain;
     };
 
-    // Kompakte Vorschau: NUR geänderte Zeilen, max. 500 Einträge
+    // Vorschau: ALLE geänderten Zeilen (kein Limit)
     const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
-    const MAX_PREVIEW = 500;
     const previewItems: object[] = [];
-    for (let i = 0; i < fixedRows.length && previewItems.length < MAX_PREVIEW; i++) {
+    for (let i = 0; i < fixedRows.length; i++) {
       const changed = changedCols[i];
       if (!changed || changed.length === 0) continue;
       const orig = rows[i];
@@ -979,8 +992,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       headers,
       stats: { total: rows.length, voltChanged, voltSkipped, descChanged, nameChanged, voltExtracted, nlTranslated, deTranslated, dreiSpannungCount: dreiSpannungIndices.length },
       previewItems,
-      allChangedNames: allChangedNames.slice(0, 300),
-      allExtractedVolt: allExtractedVolt.slice(0, 300),
+      allChangedNames,
+      allExtractedVolt,
       fileName,
     });
   } catch (err: any) {
