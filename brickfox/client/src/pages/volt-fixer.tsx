@@ -43,7 +43,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; voltExtracted: number; dreiSpannungCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -556,7 +556,16 @@ export default function VoltFixer() {
             {result.stats.voltExtracted > 0 && (
               <Badge className="bg-orange-500 text-white">{result.stats.voltExtracted.toLocaleString()} aus Namen ergänzt</Badge>
             )}
-            <Badge variant="outline" className="text-gray-400">{result.stats.voltSkipped.toLocaleString()} leer (übersprungen)</Badge>
+            {(result.stats.voltSkipped - (result.stats.voltSkippedNonElectronic ?? 0)) > 0 && (
+              <Badge variant="outline" className="text-gray-400">
+                {(result.stats.voltSkipped - (result.stats.voltSkippedNonElectronic ?? 0)).toLocaleString()} kein Volt gefunden
+              </Badge>
+            )}
+            {(result.stats.voltSkippedNonElectronic ?? 0) > 0 && (
+              <Badge variant="outline" className="text-gray-400">
+                {result.stats.voltSkippedNonElectronic!.toLocaleString()} nicht-elektronisch
+              </Badge>
+            )}
           </div>
 
 
@@ -580,26 +589,40 @@ export default function VoltFixer() {
           </div>
 
           {/* CSV Qualitätsprüfung */}
-          {(result.csvIssues ?? []).length > 0 ? (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
-                CSV Qualitätsprüfung
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                  <AlertCircle size={11} /> {result.csvIssues!.length.toLocaleString()} Problem{result.csvIssues!.length !== 1 ? 'e' : ''}
-                </span>
-              </h2>
-              <div className="border border-amber-200 rounded-xl overflow-hidden shadow-sm divide-y divide-amber-100 max-h-64 overflow-y-auto">
-                {result.csvIssues!.map((issue, i) => (
-                  <div key={i} className="flex items-start gap-3 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-sm">
-                    <span className="shrink-0 text-xs font-mono text-amber-500 pt-0.5 w-14 text-right">Z.{issue.row}</span>
-                    <span className="shrink-0 text-xs font-mono text-gray-500 w-24 truncate pt-0.5">{issue.itemNr || '—'}</span>
-                    <span className="font-semibold text-amber-800 shrink-0 w-44">{issue.type}</span>
-                    <span className="text-gray-600 truncate">{issue.detail}</span>
-                  </div>
-                ))}
+          {(result.csvIssues ?? []).length > 0 ? (() => {
+            const criticalIssues = result.csvIssues!.filter(x => x.type.startsWith('Kaputtes HTML'));
+            const warningIssues = result.csvIssues!.filter(x => !x.type.startsWith('Kaputtes HTML'));
+            return (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                  CSV Qualitätsprüfung
+                  {criticalIssues.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                      <AlertCircle size={11} /> {criticalIssues.length.toLocaleString()} Kaputtes HTML
+                    </span>
+                  )}
+                  {warningIssues.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                      <AlertCircle size={11} /> {warningIssues.length.toLocaleString()} Warnung{warningIssues.length !== 1 ? 'en' : ''}
+                    </span>
+                  )}
+                </h2>
+                <div className="border border-red-200 rounded-xl overflow-hidden shadow-sm divide-y divide-gray-100 max-h-72 overflow-y-auto">
+                  {result.csvIssues!.map((issue, i) => {
+                    const isCritical = issue.type.startsWith('Kaputtes HTML');
+                    return (
+                      <div key={i} className={`flex items-start gap-3 px-4 py-2.5 text-sm ${isCritical ? 'bg-red-50 hover:bg-red-100' : 'bg-amber-50 hover:bg-amber-100'}`}>
+                        <span className={`shrink-0 text-xs font-mono pt-0.5 w-14 text-right ${isCritical ? 'text-red-500' : 'text-amber-500'}`}>Z.{issue.row}</span>
+                        <span className="shrink-0 text-xs font-mono text-gray-500 w-24 truncate pt-0.5">{issue.itemNr || '—'}</span>
+                        <span className={`font-semibold shrink-0 w-44 ${isCritical ? 'text-red-800' : 'text-amber-800'}`}>{issue.type}</span>
+                        <span className="text-gray-600 truncate">{issue.detail}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ) : result.csvIssues !== undefined ? (
+            );
+          })() : result.csvIssues !== undefined ? (
             <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
               <CheckCircle size={15} className="text-green-500" />
               CSV Qualitätsprüfung: Keine Probleme gefunden
