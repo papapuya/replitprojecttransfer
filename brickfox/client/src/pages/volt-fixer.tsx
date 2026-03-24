@@ -37,6 +37,8 @@ type ExtractedVoltEntry = {
   fromCol: string;
 };
 
+type CsvIssue = { row: number; itemNr: string; type: string; detail: string };
+
 type Result = {
   jobId: string;
   headers: string[];
@@ -45,6 +47,7 @@ type Result = {
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
+  csvIssues?: CsvIssue[];
 };
 
 type DetailData = {
@@ -585,6 +588,33 @@ export default function VoltFixer() {
               </Button>
             )}
           </div>
+
+          {/* CSV Qualitätsprüfung */}
+          {(result.csvIssues ?? []).length > 0 ? (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                CSV Qualitätsprüfung
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                  <AlertCircle size={11} /> {result.csvIssues!.length.toLocaleString()} Problem{result.csvIssues!.length !== 1 ? 'e' : ''}
+                </span>
+              </h2>
+              <div className="border border-amber-200 rounded-xl overflow-hidden shadow-sm divide-y divide-amber-100 max-h-64 overflow-y-auto">
+                {result.csvIssues!.map((issue, i) => (
+                  <div key={i} className="flex items-start gap-3 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-sm">
+                    <span className="shrink-0 text-xs font-mono text-amber-500 pt-0.5 w-14 text-right">Z.{issue.row}</span>
+                    <span className="shrink-0 text-xs font-mono text-gray-500 w-24 truncate pt-0.5">{issue.itemNr || '—'}</span>
+                    <span className="font-semibold text-amber-800 shrink-0 w-44">{issue.type}</span>
+                    <span className="text-gray-600 truncate">{issue.detail}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : result.csvIssues !== undefined ? (
+            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
+              <CheckCircle size={15} className="text-green-500" />
+              CSV Qualitätsprüfung: Keine Probleme gefunden
+            </div>
+          ) : null}
 
           {/* Spaltenvorschau – nur geänderte Zeilen */}
           <div>

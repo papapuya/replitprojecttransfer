@@ -1016,6 +1016,49 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       console.log(`[VoltFixer] ${deTranslated} NL→DE übersetzt.`);
     }
 
+    // ─── CSV Qualitätsprüfung ───
+    setProgress('validating', 'CSV wird geprüft…', 91);
+    type CsvIssue = { row: number; itemNr: string; type: string; detail: string };
+    const csvIssues: CsvIssue[] = [];
+    const ITEM_NR_COLS_V = ['p_item_number', 'v_item_number'];
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const itemNr = ITEM_NR_COLS_V.map(c => r[c]).find(v => v?.trim()) ?? '';
+
+      // 1) Leere Artikelnummer
+      if (!itemNr) {
+        csvIssues.push({ row: i + 2, itemNr: '—', type: 'Leere Artikelnummer', detail: 'p_item_number und v_item_number sind beide leer' });
+      }
+
+      // 2) Leerer Produktname DE
+      if (headers.includes('p_name[de]') && !(r['p_name[de]'] ?? '').trim()) {
+        csvIssues.push({ row: i + 2, itemNr, type: 'Leerer Produktname', detail: 'p_name[de] ist leer' });
+      }
+
+      // 3) Leere DE-Beschreibung (wenn Spalte vorhanden)
+      if (headers.includes('p_description[de]')) {
+        const deDesc = (r['p_description[de]'] ?? '').trim();
+        if (!deDesc) {
+          csvIssues.push({ row: i + 2, itemNr, type: 'Leere Beschreibung (DE)', detail: 'p_description[de] ist leer' });
+        } else {
+          // Defekte Beschreibung: HTML vorhanden aber kaum Text (< 30 Zeichen Plaintext)
+          const plainLen = deDesc.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim().length;
+          if (plainLen < 30 && deDesc.length > 10) {
+            csvIssues.push({ row: i + 2, itemNr, type: 'Beschreibung zu kurz (DE)', detail: `Nur ${plainLen} Zeichen Plaintext — möglicherweise defekt` });
+          }
+        }
+      }
+
+      // 4) Leere NL-Beschreibung (wenn Spalte vorhanden)
+      if (headers.includes('p_description[nl]')) {
+        const nlDesc = (r['p_description[nl]'] ?? '').trim();
+        if (!nlDesc) {
+          csvIssues.push({ row: i + 2, itemNr, type: 'Leere Beschreibung (NL)', detail: 'p_description[nl] ist leer' });
+        }
+      }
+    }
+
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
     // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
@@ -1095,6 +1138,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       previewItems,
       allChangedNames,
       allExtractedVolt,
+      csvIssues,
       fileName,
     });
   } catch (err: any) {
