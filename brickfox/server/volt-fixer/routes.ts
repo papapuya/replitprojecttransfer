@@ -195,6 +195,22 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
   return { fixed: trimmed, changed: false };
 }
 
+// Prüft ob eine HTML-Beschreibung unbalancierte Tags hat (z.B. <table> ohne </table>).
+// Gibt Liste der betroffenen Tags zurück, leer = OK.
+function findUnbalancedHtmlTags(html: string): string[] {
+  if (!html) return [];
+  const TAGS = ['table', 'tr', 'td', 'th', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'p', 'strong', 'em', 'b', 'i'];
+  const unbalanced: string[] = [];
+  for (const tag of TAGS) {
+    const open = (html.match(new RegExp(`<${tag}[\\s>]`, 'gi')) ?? []).length;
+    const close = (html.match(new RegExp(`<\\/${tag}>`, 'gi')) ?? []).length;
+    if (open !== close) unbalanced.push(`<${tag}> (${open}× auf, ${close}× zu)`);
+  }
+  // Abgebrochener Tag am Ende: HTML endet mit "<..." ohne schließendes ">"
+  if (/<[^>]*$/.test(html.slice(-50))) unbalanced.push('abgebrochener Tag am Ende');
+  return unbalanced;
+}
+
 // Entfernt überflüssige ",0" / ".0" Dezimalstellen in Volt-Angaben innerhalb von HTML-Beschreibungen.
 // Zielgerichtete Änderung: NUR "6,0 V" → "6 V", "12,0 V" → "12 V" usw.
 // Alle anderen Inhalte der Beschreibung bleiben vollständig unverändert.
@@ -680,7 +696,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('fixing', 'Volt-Werte werden korrigiert…', 15, `${rows.length.toLocaleString('de-DE')} Zeilen`);
 
-    let voltChanged = 0, voltSkipped = 0, voltExtracted = 0;
+    let voltChanged = 0, voltSkipped = 0, voltSkippedNonElectronic = 0, voltExtracted = 0;
     const fixedRows: Record<string, string>[] = [];
     const changedCols: string[][] = [];
     const allChangedNames: Array<{ itemNr: string; cols: Array<{ col: string; before: string; after: string }> }> = [];
@@ -703,6 +719,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         fixedRows.push(newRow);
         changedCols.push(changed);
         voltSkipped++;
+        voltSkippedNonElectronic++;
         continue;
       }
 
@@ -802,7 +819,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         csvIssues.push({ row: i + 2, itemNr, type: 'Leerer Produktname', detail: 'p_name[de] ist leer' });
       }
 
-      // 3) Leere DE-Beschreibung (wenn Spalte vorhanden)
+      // 3) Leere / defekte DE-Beschreibung
       if (headers.includes('p_description[de]')) {
         const deDesc = (r['p_description[de]'] ?? '').trim();
         if (!deDesc) {
@@ -813,14 +830,24 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           if (plainLen < 30 && deDesc.length > 10) {
             csvIssues.push({ row: i + 2, itemNr, type: 'Beschreibung zu kurz (DE)', detail: `Nur ${plainLen} Zeichen Plaintext — möglicherweise defekt` });
           }
+          // Kaputtes HTML: unbalancierte Tags
+          const badTags = findUnbalancedHtmlTags(deDesc);
+          if (badTags.length > 0) {
+            csvIssues.push({ row: i + 2, itemNr, type: 'Kaputtes HTML (DE)', detail: `Unbalancierte Tags: ${badTags.join(', ')}` });
+          }
         }
       }
 
-      // 4) Leere NL-Beschreibung (wenn Spalte vorhanden)
+      // 4) Leere / defekte NL-Beschreibung
       if (headers.includes('p_description[nl]')) {
         const nlDesc = (r['p_description[nl]'] ?? '').trim();
         if (!nlDesc) {
           csvIssues.push({ row: i + 2, itemNr, type: 'Leere Beschreibung (NL)', detail: 'p_description[nl] ist leer' });
+        } else {
+          const badTagsNl = findUnbalancedHtmlTags(nlDesc);
+          if (badTagsNl.length > 0) {
+            csvIssues.push({ row: i + 2, itemNr, type: 'Kaputtes HTML (NL)', detail: `Unbalancierte Tags: ${badTagsNl.join(', ')}` });
+          }
         }
       }
     }
@@ -900,7 +927,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, voltSkippedNonElectronic, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length },
       previewItems,
       allChangedNames,
       allExtractedVolt,
