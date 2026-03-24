@@ -650,6 +650,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       fromCol: string;
     }> = [];
 
+    // Nicht-elektronische Produkte: kein sinnvoller Volt-Wert möglich → Volt-Verarbeitung überspringen
+    const NON_ELECTRONIC_KEYWORDS = [
+      'beutel', 'papier', 'staubbeutel', 'wischtuch', 'putztuch', 'reinigungstuch',
+      'mikrofasertuch', 'mikrofaser tuch', 'servietten', 'tüten', 'filterbeutel',
+      'staubsaugerbeutel', 'ersatzbeutel',
+    ];
+
     for (const row of rows) {
       const newRow = { ...row };
       const changed: string[] = [];
@@ -662,6 +669,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           newRow[col] = restored;
           if (!changed.includes(col)) changed.push(col);
         }
+      }
+      const productNameForCheck = NAME_COLS
+        .map(col => (row[col] || '').toLowerCase())
+        .join(' ');
+      const isNonElectronic = NON_ELECTRONIC_KEYWORDS.some(kw => productNameForCheck.includes(kw));
+
+      if (isNonElectronic) {
+        fixedRows.push(newRow);
+        changedCols.push(changed);
+        voltSkipped++;
+        continue;
       }
 
       const voltVal = (row[VOLT_COL] ?? '').trim();
