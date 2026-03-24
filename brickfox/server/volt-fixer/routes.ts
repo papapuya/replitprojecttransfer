@@ -143,23 +143,35 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// Konvertiert Spaltenwert (Punkt-Format) in Text-Format (Komma) für Beschreibungen/Namen.
+// Spalte: "3.85" → Text: "3,85". Ganze Zahlen unverändert: "20" → "20".
+function voltToText(columnVolt: string): string {
+  return columnVolt.replace('.', ',');
+}
+
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   const trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
-  if (trimmed.includes(',') || trimmed.includes('.')) return { fixed: trimmed, changed: false };
+  // Wert hat Komma (altes Format) → in Punkt-Format konvertieren
+  if (trimmed.includes(',')) {
+    const dotFormat = trimmed.replace(',', '.');
+    return { fixed: dotFormat, changed: true };
+  }
+  // Wert hat bereits Punkt → korrekt, unverändert
+  if (trimmed.includes('.')) return { fixed: trimmed, changed: false };
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   // 1- und 2-stellige Zahlen sind immer ganze Volt-Werte → unverändert lassen.
   // (12 → 12, 19 → 19, 20 → 20, 36 → 36 usw.)
   if (trimmed.length <= 2) return { fixed: trimmed, changed: false };
-  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX,Y (z.B. 111→11,1, 144→14,4, 222→22,2, 108→10,8)
+  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 111→11.1, 144→14.4, 222→22.2, 108→10.8)
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
     if (firstTwo >= 10 && firstTwo <= 24) {
-      return { fixed: trimmed.slice(0, 2) + ',' + trimmed[2], changed: true };
+      return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
     }
   }
-  // Standard: Komma nach erster Stelle (z.B. 385→3,85, 36→3,6, 48→4,8)
-  return { fixed: trimmed[0] + ',' + trimmed.slice(1), changed: true };
+  // Standard: Punkt nach erster Stelle (z.B. 385→3.85, 370→3.70)
+  return { fixed: trimmed[0] + '.' + trimmed.slice(1), changed: true };
 }
 
 // Ersetzt Volt-Wert in Produktnamen (Plaintext), z.B. "385 V" → "3,85 V", "385 Volt" → "3,85 Volt"
@@ -265,15 +277,16 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
 }
 
 // Normalisiert einen aus Text extrahierten Volt-Wert für die p_attributes[akku_v][de]-Spalte.
-// Aus Text extrahierte Werte sind bereits korrekt (z.B. "19" aus "19 V" = wirklich 19 Volt).
-// Dezimalwerte: Punkt durch Komma ersetzen (3.7 → 3,7). Bereichswerte unverändert.
+// Spaltenformat: Punkt als Dezimaltrennzeichen (3.7), Text/Namen: Komma (3,7 V).
+// Aus Text extrahierte Werte: Komma/Punkt → Punkt-Format für Spalte.
 // Ganze Zahlen bleiben unverändert (19 → 19, 24 → 24).
 function normalizeExtractedVolt(raw: string): string {
   if (!raw) return raw;
-  // Bereichswert (z.B. "100-240", "12/24") → unverändert
-  if (/[-\/]/.test(raw)) return raw.replace('.', ',');
-  // Dezimalwert (z.B. "3,7" oder "3.7") → Punkt durch Komma
-  if (raw.includes(',') || raw.includes('.')) return raw.replace('.', ',');
+  // Bereichswert (z.B. "100-240", "12/24") → Komma durch Punkt ersetzen
+  if (/[-\/]/.test(raw)) return raw.replace(',', '.');
+  // Dezimalwert (z.B. "3,7" oder "3.7") → Komma durch Punkt (Spaltenformat)
+  if (raw.includes(',')) return raw.replace(',', '.');
+  if (raw.includes('.')) return raw; // bereits Punkt-Format
   // Ganzzahl → unverändert lassen (19 bleibt 19, nicht 19,0)
   return raw;
 }
@@ -676,8 +689,11 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           // Eingangs-/Ausgangsspannung-Werte VOR der Verarbeitung sichern
           const protectedVoltCells = extractProtectedVoltCells(descVal);
 
+          // Text-Format (Komma) für Beschreibungen/Namen (Spalte nutzt Punkt: 3.85 → Text: 3,85)
+          const textVolt = voltToText(newVolt);
+
           // 1) Spannung-Tabellenzeile aktualisieren
-          const { result: htmlAfterTable, changed: dc } = setSpannungInHtml(descVal, newVolt);
+          const { result: htmlAfterTable, changed: dc } = setSpannungInHtml(descVal, textVolt);
           if (dc) {
             newRow[col] = htmlAfterTable;
             if (!changed.includes(col)) changed.push(col);
@@ -688,7 +704,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           //    (wie syncVoltInName – ersetzt auch "3,6 Volt" → "3,7 Volt" wenn Spalte "3,7" hat)
           const { result: htmlAfterText, changed: tc } = syncVoltInHtmlText(
             newRow[col] || descVal,
-            newVolt
+            textVolt
           );
           if (tc) {
             newRow[col] = htmlAfterText;
@@ -810,11 +826,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           let nc = false;
           if (voltWasChanged) {
             // Volt-Wert wurde korrigiert → alten Wert direkt suchen und ersetzen
-            ({ result, changed: nc } = replaceSpannungInName(nameVal, voltVal, newVolt));
+            // voltVal in Text-Format (Komma) umwandeln damit er im Namen gefunden wird
+            ({ result, changed: nc } = replaceSpannungInName(nameVal, voltToText(voltVal), voltToText(newVolt)));
           }
           // Zusätzlich: alle verbleibenden Volt-Angaben auf Zielwert synchronisieren
           // (deckt Fälle ab wo voltWasChanged=false aber Name z.B. "385V" statt "3,85V" enthält)
-          const { result: synced, changed: sc } = syncVoltInName(result, newVolt);
+          const { result: synced, changed: sc } = syncVoltInName(result, voltToText(newVolt));
           if (sc) { result = synced; nc = true; }
           if (nc) {
             changedNameCols.push({ col, before: nameVal, after: result });
