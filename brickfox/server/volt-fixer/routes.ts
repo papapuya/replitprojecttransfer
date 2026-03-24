@@ -451,6 +451,27 @@ function setSpannungInHtml(html: string, targetVolt: string): { result: string; 
   return { result, changed };
 }
 
+// Repariert UTF-8 Mojibake in Texten (z.B. "fÃ¼r" → "für").
+// Entsteht wenn UTF-8-Dateien als Latin-1 gelesen und zurückgespeichert wurden.
+function repairMojibake(text: string): string {
+  if (!text) return text;
+  const replacements: [string, string][] = [
+    ['Ã¤', 'ä'], ['Ã¶', 'ö'], ['Ã¼', 'ü'],
+    ['Ã„', 'Ä'], ['Ã–', 'Ö'], ['Ãœ', 'Ü'],
+    ['ÃŸ', 'ß'], ['Ã©', 'é'], ['Ã¨', 'è'],
+    ['Ã ', 'à'], ['Ãª', 'ê'], ['Ã€', 'À'], ['Ã‰', 'É'],
+    ['â€™', '\u2019'], ['â€œ', '\u201C'], ['â€\u009D', '\u201D'],
+    ['â€"', '\u2013'], ['â€"', '\u2014'],
+    ['Â°', '°'], ['Â·', '·'], ['Â½', '½'], ['Â¼', '¼'], ['Â¾', '¾'],
+    ['â„¢', '™'], ['Â®', '®'], ['Â©', '©'],
+  ];
+  let result = text;
+  for (const [from, to] of replacements) {
+    if (result.includes(from)) result = result.split(from).join(to);
+  }
+  return result;
+}
+
 function detectEncoding(buffer: Buffer): string {
   // BOM-Erkennung
   if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) return 'utf-8';
@@ -627,7 +648,14 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     }
 
     const headers = parsed.meta.fields || [];
-    const rows = parsed.data as Record<string, string>[];
+    // Mojibake reparieren: "fÃ¼r" → "für" (entsteht wenn UTF-8-CSVs als Latin-1 gelesen wurden)
+    const rows = (parsed.data as Record<string, string>[]).map(row => {
+      const fixed: Record<string, string> = {};
+      for (const key of Object.keys(row)) {
+        fixed[key] = repairMojibake(row[key]);
+      }
+      return fixed;
+    });
 
     setProgress('fixing', 'Volt-Werte werden korrigiert…', 15, `${rows.length.toLocaleString('de-DE')} Zeilen`);
 
