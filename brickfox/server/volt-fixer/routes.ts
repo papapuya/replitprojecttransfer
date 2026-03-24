@@ -242,41 +242,37 @@ function isAcMainsVolt(raw: string): boolean {
 }
 
 // Extrahiert Volt-Wert aus Produktnamen.
-// Einfache Werte: "3,85V" → "3.85", "19V" → "19"
-// Hohe Werte (≥ 100V, AC-Netzspannung) werden übersprungen.
+// Jeder Wert wird übernommen — wenn der Name "110-240V" enthält, IST das Produkt ein Ladegerät.
 function extractVoltFromName(name: string): string | null {
   if (!name) return null;
-  // Alle Volt-Werte sammeln (Bereichswerte + Einzelwerte)
   const allMatches = [...name.matchAll(/\b(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*V(?:olt)?\b/gi)];
   for (const m of allMatches) {
     const normalized = normalizeExtractedVolt(m[1]);
-    if (!isAcMainsVolt(normalized)) return normalized;
+    if (normalized) return normalized;
   }
   return null;
 }
 
 // Extrahiert Volt-Wert aus der Spannung/Nennspannung-Zeile der HTML-Tabelle.
-// Eingangsspannung (Ladegerät) wird ignoriert.
+// Jeder Wert wird übernommen — Tabellenzeile ist die offizielle Produktspannung.
+// Eingangsspannung (Label "Eingangsspannung") wird übersprungen.
 function extractVoltFromTable(html: string): string | null {
   if (!html) return null;
-  // Alle <tr>-Zeilen durchsuchen
   const trMatches = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
   for (const trMatch of trMatches) {
     const trContent = trMatch[1];
-    // Label-Zelle lesen
     const labelMatch = trContent.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
     if (!labelMatch) continue;
     const label = labelMatch[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
     // Nur "Spannung" / "Nennspannung" / "Spanning" — NICHT Eingangs-/Ausgangsspannung
     if (!/^(?:nenn)?spann(?:ung|ing)$/.test(label)) continue;
-    // Wert-Zelle lesen
     const cells = [...trContent.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
     if (cells.length < 2) continue;
     const valueCell = cells[1][1].replace(/<[^>]+>/g, '').trim();
     const m = valueCell.match(/\b(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*(?:V(?:olt)?)?\b/i);
     if (!m) continue;
     const normalized = normalizeExtractedVolt(m[1]);
-    if (!isAcMainsVolt(normalized)) return normalized;
+    if (normalized) return normalized;
   }
   return null;
 }
