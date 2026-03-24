@@ -586,73 +586,13 @@ export default function VoltFixer() {
             )}
           </div>
 
-          {/* Aus Produktnamen extrahierte Volt-Werte */}
-          {(result.allExtractedVolt ?? []).length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-1">
-                Volt-Werte aus Produktnamen ergänzt
-                <span className="ml-2 text-sm font-normal text-gray-400">
-                  {result.allExtractedVolt.length.toLocaleString()} Produkte · Volt-Spalte war leer
-                </span>
-              </h2>
-              <div className="border rounded-xl overflow-hidden shadow-sm divide-y max-h-[400px] overflow-y-auto">
-                {result.allExtractedVolt.map((entry, i) => (
-                  <div key={i} className="px-4 py-3 bg-white hover:bg-orange-50 flex items-start gap-4">
-                    <div className="shrink-0">
-                      <p className="text-xs text-gray-400 font-mono">{entry.itemNr || `Zeile ${i + 1}`}</p>
-                      <span className="text-xs text-gray-400">{NAME_COL_LABELS[entry.fromCol] ?? entry.fromCol}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-700 truncate">{entry.fromName}</p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className="text-xs text-gray-400">Eingetragen:</span>
-                      <p className="text-base font-bold text-orange-600">{entry.extractedVolt} V</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Geänderte Namen */}
-          {result.allChangedNames.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-1">
-                Geänderte Produktnamen
-                <span className="ml-2 text-sm font-normal text-gray-400">{result.allChangedNames.length.toLocaleString()} Produkte</span>
-              </h2>
-              <div className="border rounded-xl overflow-hidden shadow-sm divide-y max-h-[600px] overflow-y-auto">
-                {result.allChangedNames.map((entry, i) => (
-                  <div key={i} className="px-4 py-3 bg-white hover:bg-gray-50">
-                    <p className="text-xs text-gray-400 mb-2 font-mono">{entry.itemNr || `Zeile ${i + 1}`}</p>
-                    <div className="space-y-2">
-                      {entry.cols.map(({ col, before, after }) => (
-                        <div key={col} className="flex flex-col gap-1">
-                          <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">{NAME_COL_LABELS[col] ?? col}</span>
-                          <div className="flex items-start gap-3 text-sm">
-                            <span className="text-red-400 line-through opacity-80 flex-1">{before || "—"}</span>
-                            <span className="text-gray-400 shrink-0">→</span>
-                            <span className="text-indigo-700 font-medium flex-1 inline-flex items-center gap-1">
-                              <CheckCircle size={13} className="shrink-0 text-indigo-500" />{after || "—"}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Spaltenvorschau – nur geänderte Zeilen */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-lg font-semibold text-gray-800">
                 Spaltenvorschau
                 <span className="ml-2 text-sm font-normal text-gray-400">
-                  {items.length.toLocaleString()} geänderte Zeilen{items.length >= 500 ? " (max. 500 angezeigt)" : ""} · Klick auf <Eye size={12} className="inline" /> für Details
+                  {items.length.toLocaleString()} geänderte Zeilen · Klick auf <Eye size={12} className="inline" /> für Details
                 </span>
               </h2>
               {totalPages > 1 && (
