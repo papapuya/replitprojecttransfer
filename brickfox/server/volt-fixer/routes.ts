@@ -228,18 +228,71 @@ function syncVoltInName(text: string, targetVolt: string): { result: string; cha
   return { result, changed };
 }
 
+// Prüft ob ein Volt-Wert eine AC-Netzspannung (Ladegerät-Eingang) ist und übersprungen werden soll.
+// Werte ≥ 100 (z.B. 110, 230, 110-240) sind Netzspannungen, keine Produkt-Spannungen.
+function isAcMainsVolt(raw: string): boolean {
+  if (!raw) return false;
+  if (/[-\/]/.test(raw)) {
+    // Bereichswert: beide Teile prüfen
+    const parts = raw.split(/[-\/]/).map(p => parseFloat(p.replace(',', '.')));
+    return parts.some(p => !isNaN(p) && p >= 100);
+  }
+  const val = parseFloat(raw.replace(',', '.'));
+  return !isNaN(val) && val >= 100;
+}
+
 // Extrahiert Volt-Wert aus Produktnamen.
-// Erkennt auch Bereichsangaben: "100-240V" → "100-240", "12/24 Volt" → "12/24"
-// Einfache Werte: "3,85V" → "3,85", "385V" → "3,85"
+// Einfache Werte: "3,85V" → "3.85", "19V" → "19"
+// Hohe Werte (≥ 100V, AC-Netzspannung) werden übersprungen.
 function extractVoltFromName(name: string): string | null {
   if (!name) return null;
-  // Bereichs-Muster zuerst (X-YV oder X/YV, z.B. 100-240V, 12/24 Volt)
-  const rangeMatch = name.match(/\b(\d+(?:[,.]\d+)?[-\/]\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
-  if (rangeMatch) return normalizeExtractedVolt(rangeMatch[1]);
-  // Einfacher Wert (z.B. 3,7 V, 19V, 24 Volt)
-  const simpleMatch = name.match(/\b(\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
-  if (!simpleMatch) return null;
-  return normalizeExtractedVolt(simpleMatch[1]);
+  // Alle Volt-Werte sammeln (Bereichswerte + Einzelwerte)
+  const allMatches = [...name.matchAll(/\b(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*V(?:olt)?\b/gi)];
+  for (const m of allMatches) {
+    const normalized = normalizeExtractedVolt(m[1]);
+    if (!isAcMainsVolt(normalized)) return normalized;
+  }
+  return null;
+}
+
+// Extrahiert Volt-Wert aus der Spannung/Nennspannung-Zeile der HTML-Tabelle.
+// Eingangsspannung (Ladegerät) wird ignoriert.
+function extractVoltFromTable(html: string): string | null {
+  if (!html) return null;
+  // Alle <tr>-Zeilen durchsuchen
+  const trMatches = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
+  for (const trMatch of trMatches) {
+    const trContent = trMatch[1];
+    // Label-Zelle lesen
+    const labelMatch = trContent.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+    if (!labelMatch) continue;
+    const label = labelMatch[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
+    // Nur "Spannung" / "Nennspannung" / "Spanning" — NICHT Eingangs-/Ausgangsspannung
+    if (!/^(?:nenn)?spann(?:ung|ing)$/.test(label)) continue;
+    // Wert-Zelle lesen
+    const cells = [...trContent.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const valueCell = cells[1][1].replace(/<[^>]+>/g, '').trim();
+    const m = valueCell.match(/\b(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*(?:V(?:olt)?)?\b/i);
+    if (!m) continue;
+    const normalized = normalizeExtractedVolt(m[1]);
+    if (!isAcMainsVolt(normalized)) return normalized;
+  }
+  return null;
+}
+
+// Extrahiert Volt-Wert aus dem Fließtext (außerhalb von Tabellen) der HTML-Beschreibung.
+// Hohe Werte (≥ 100V, z.B. "110-240 V Ladegerät") werden übersprungen.
+function extractVoltFromBodyText(html: string): string | null {
+  if (!html) return null;
+  // Tabellen komplett entfernen
+  const bodyText = html.replace(/<table[^>]*>[\s\S]*?<\/table>/gi, ' ').replace(/<[^>]+>/g, ' ');
+  const allMatches = [...bodyText.matchAll(/\b(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*V(?:olt)?\b/gi)];
+  for (const m of allMatches) {
+    const normalized = normalizeExtractedVolt(m[1]);
+    if (!isAcMainsVolt(normalized)) return normalized;
+  }
+  return null;
 }
 
 // Synchronisiert alle Volt-Werte im Fließtext einer HTML-Beschreibung auf den Zielwert.
@@ -359,19 +412,6 @@ function sortVoltageTableRows(html: string): { result: string; changed: boolean 
   return { result, changed };
 }
 
-// Extrahiert den Volt-Wert aus einem HTML-Beschreibungstext (HTML-Tags werden ignoriert).
-function extractVoltFromDesc(html: string): string | null {
-  if (!html) return null;
-  // HTML-Tags entfernen → Plaintext
-  const text = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ');
-  // Bereichs-Muster zuerst (z.B. 100-240V, 12/24 Volt)
-  const rangeMatch = text.match(/\b(\d+(?:[,.]\d+)?[-\/]\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
-  if (rangeMatch) return normalizeExtractedVolt(rangeMatch[1]);
-  // Einfacher Wert (z.B. 3,7 V, 3.7V, 19 Volt, 24V)
-  const simpleMatch = text.match(/\b(\d+(?:[,.]\d+)?)\s*V(?:olt)?\b/i);
-  if (!simpleMatch) return null;
-  return normalizeExtractedVolt(simpleMatch[1]);
-}
 
 // Setzt den Spannung/Nennspannung-Wert in der HTML-Tabelle immer auf den korrekten Volt-Wert.
 // Erkennt DE ("Spannung", "Nennspannung") und NL ("Spanning", "Nennspanning").
@@ -633,10 +673,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       let voltWasChanged = false;
 
       if (!voltVal) {
-        // Volt-Spalte leer → versuche aus Produktnamen zu extrahieren
+        // Volt-Spalte leer → Suche in Reihenfolge: 1) Produktname, 2) Spannung-Tabellenzeile, 3) Fließtext
+        // Hohe Volt-Werte (≥100V, AC-Netzspannung wie 110-240V) werden immer übersprungen.
         let extracted: string | null = null;
         let extractedFromCol = '';
         let extractedFromName = '';
+
+        // Stufe 1: Produktnamen durchsuchen
         for (const col of NAME_COLS) {
           if (!headers.includes(col)) continue;
           const nameVal = row[col];
@@ -650,13 +693,29 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           }
         }
 
-        // Fallback: in der Produktbeschreibung suchen
+        // Stufe 2: Spannung/Nennspannung-Zeile in der HTML-Tabelle durchsuchen
         if (!extracted) {
           for (const col of DESC_COLS) {
             if (!headers.includes(col)) continue;
             const descVal = newRow[col] || row[col];
             if (!descVal) continue;
-            const found = extractVoltFromDesc(descVal);
+            const found = extractVoltFromTable(descVal);
+            if (found) {
+              extracted = found;
+              extractedFromCol = col;
+              extractedFromName = '(Tabelle: Spannung)';
+              break;
+            }
+          }
+        }
+
+        // Stufe 3: Fließtext (außerhalb Tabellen) durchsuchen — ohne AC-Netzspannungen
+        if (!extracted) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const descVal = newRow[col] || row[col];
+            if (!descVal) continue;
+            const found = extractVoltFromBodyText(descVal);
             if (found) {
               extracted = found;
               extractedFromCol = col;
