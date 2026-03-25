@@ -199,12 +199,16 @@ function stripTrailingZeroVolt(val: string): string {
 }
 
 function fixVolt(val: string): { fixed: string; changed: boolean } {
-  const trimmed = val.trim();
+  let trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
+  // Bereich + Datenmüll nach Leerzeichen entfernen (z.B. "100-240 73676" → "100-240")
+  const rangeJunkMatch = trimmed.match(/^(\d+(?:[,.]?\d+)?[-\/]\d+(?:[,.]?\d+)?)\s+\d+/);
+  const hadJunk = !!rangeJunkMatch;
+  if (hadJunk) trimmed = rangeJunkMatch![1];
   // Bereichswert (enthält - oder /) → normalisieren: "9.0-12,0" → "9-12"
   if (/[-\/]/.test(trimmed)) {
     const normalized = normalizeRangeVolt(trimmed);
-    return { fixed: normalized, changed: normalized !== trimmed };
+    return { fixed: normalized, changed: hadJunk || normalized !== val.trim() };
   }
   // Wert hat Komma → in Punkt-Format konvertieren, dann überflüssiges ".0" entfernen (6,0 → 6)
   if (trimmed.includes(',')) {
