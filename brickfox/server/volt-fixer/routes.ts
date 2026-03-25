@@ -1114,10 +1114,9 @@ router.get('/download/:jobId', (req: Request, res: Response) => {
   };
 
   const filteredRows = job.fixedRows
-    .filter((row, i) => {
+    .filter((_row, i) => {
       const changed = job.changedCols[i] ?? [];
-      if (changed.length === 0) return false;
-      return /<[a-z]/i.test(row['p_description[de]'] ?? '');
+      return changed.length > 0;
     })
     .filter(isValidPItemNr)
     .map(row => {
