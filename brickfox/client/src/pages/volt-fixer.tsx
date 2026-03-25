@@ -493,7 +493,10 @@ export default function VoltFixer() {
     }
   };
 
-  const items = result?.previewItems ?? [];
+  const [showOnlyChanged, setShowOnlyChanged] = useState(false);
+  const allItems = result?.previewItems ?? [];
+  const items = showOnlyChanged ? allItems.filter(it => it.changed.length > 0) : allItems;
+  const changedCount = allItems.filter(it => it.changed.length > 0).length;
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
   const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -654,34 +657,48 @@ export default function VoltFixer() {
             </div>
           ) : null}
 
-          {/* Spaltenvorschau – nur geänderte Zeilen */}
+          {/* Spaltenvorschau */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-lg font-semibold text-gray-800">
                 Spaltenvorschau
                 <span className="ml-2 text-sm font-normal text-gray-400">
-                  {items.length.toLocaleString()} geänderte Zeilen · Klick auf <Eye size={12} className="inline" /> für Details
+                  {items.length.toLocaleString()} Zeilen
+                  {changedCount > 0 && ` · ${changedCount.toLocaleString()} geändert`}
+                  {" "}· Klick auf <Eye size={12} className="inline" /> für Details
                 </span>
               </h2>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <button
-                    onClick={() => setPage(p => Math.max(0, p - 1))}
-                    disabled={page === 0}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <span>Seite {page + 1} / {totalPages} · Zeilen {(page * PAGE_SIZE + 1).toLocaleString()}–{Math.min((page + 1) * PAGE_SIZE, items.length).toLocaleString()}</span>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                    disabled={page === totalPages - 1}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { setShowOnlyChanged(v => !v); setPage(0); }}
+                  className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+                    showOnlyChanged
+                      ? "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700"
+                      : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  {showOnlyChanged ? "Nur Geänderte" : "Alle anzeigen"}
+                </button>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <button
+                      onClick={() => setPage(p => Math.max(0, p - 1))}
+                      disabled={page === 0}
+                      className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <span>Seite {page + 1} / {totalPages} · Zeilen {(page * PAGE_SIZE + 1).toLocaleString()}–{Math.min((page + 1) * PAGE_SIZE, items.length).toLocaleString()}</span>
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                      disabled={page === totalPages - 1}
+                      className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="border rounded-xl overflow-hidden shadow-sm">
