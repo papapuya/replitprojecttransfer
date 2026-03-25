@@ -2,13 +2,11 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check, Save, Trash2, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { processVoltFile } from "@/lib/volt-processor";
 
 const VOLT_COL = "p_attributes[akku_v][de]";
-const DESC_COLS = ["p_description[de]", "p_description[nl]"];
-const NAME_COLS = ["p_name[de]", "p_name[nl]"];
 // Volt-Werte >= 1000 sind unrealistisch und werden nicht angezeigt
 const isUnrealisticVolt = (v: string) => { const n = Number(v.replace(',', '.')); return v !== '' && !isNaN(n) && n >= 1000; };
-const NAME_COL_LABELS: Record<string, string> = { "p_name[de]": "DE", "p_name[nl]": "NL" };
 const PAGE_SIZE = 500;
 
 type PreviewItem = {
@@ -53,7 +51,8 @@ type SaveMeta = {
 };
 
 type Result = {
-  jobId: string;
+  jobId?: string;
+  csvBlob?: Blob;
   headers: string[];
   fileName: string;
   stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; htmlCorrectedCount?: number };
@@ -111,22 +110,27 @@ function DetailModal({
   index,
   rowNum,
   onClose,
+  localData,
 }: {
-  jobId: string;
+  jobId?: string;
   index: number;
   rowNum: number;
   onClose: () => void;
+  localData?: DetailData;
 }) {
-  const [data, setData] = useState<DetailData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DetailData | null>(localData ?? null);
+  const [loading, setLoading] = useState(!localData);
   const [err, setErr] = useState("");
 
-  useState(() => {
+  useEffect(() => {
+    if (localData) return;
+    if (!jobId) { setErr("Keine Daten verfügbar"); setLoading(false); return; }
     fetch(`/api/volt-fixer/detail/${jobId}/${index}`)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => { setErr("Fehler beim Laden"); setLoading(false); });
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   return (
@@ -356,16 +360,13 @@ export default function VoltFixer() {
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<{ index: number; rowNum: number } | null>(null);
   const [restoreEmoji, setRestoreEmoji] = useState(false);
-  const [useDeForNL, setUseDeForNL] = useState(false);
   const [progress, setProgress] = useState<ProgressState | null>(null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const currentJobIdRef = useRef<string | null>(null);
-  const waitingStartRef = useRef<number | null>(null);
-  const xhrActiveRef = useRef<boolean>(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [editingVolt, setEditingVolt] = useState<{ index: number; value: string } | null>(null);
   const [patchSaving, setPatchSaving] = useState(false);
+  const [detailLocalData, setDetailLocalData] = useState<DetailData | null>(null);
+
 
   // Saves (Projektübersicht)
   const [saves, setSaves] = useState<SaveMeta[]>([]);
@@ -421,164 +422,44 @@ export default function VoltFixer() {
     await loadSaves();
   };
 
-  // Fortschritt alle 1 Sekunde abrufen während Upload läuft
-  useEffect(() => {
-    if (!loading || !currentJobIdRef.current) return;
-    const id = currentJobIdRef.current;
-    waitingStartRef.current = null;
-    const interval = setInterval(async () => {
-      try {
-        const r = await fetch(`/api/volt-fixer/progress/${id}`);
-        if (!r.ok) return;
-        const p: ProgressState = await r.json();
-        if (p.step === 'waiting') {
-          // Zombie-Timeout: nur wenn kein aktiver XHR mehr läuft
-          // (z.B. nach Server-Neustart mit altem jobId)
-          if (!xhrActiveRef.current) {
-            if (waitingStartRef.current === null) waitingStartRef.current = Date.now();
-            if (Date.now() - waitingStartRef.current > 30000) {
-              clearInterval(interval);
-              setError('Zeitüberschreitung. Bitte Seite neu laden und Datei erneut hochladen.');
-              setProgress(null);
-              setLoading(false);
-              currentJobIdRef.current = null;
-            }
-          }
-          return;
-        }
-        waitingStartRef.current = null;
-        setProgress(p);
-
-        if (p.step === 'done') {
-          clearInterval(interval);
-          // Ergebnis vom Server holen
-          const res = await fetch(`/api/volt-fixer/result/${id}`);
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            setError(err.error || 'Ergebnis konnte nicht geladen werden');
-            setLoading(false);
-            currentJobIdRef.current = null;
-            return;
-          }
-          const data = await res.json();
-          setResult(data);
-          setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
-          setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-          setLoading(false);
-          currentJobIdRef.current = null;
-        }
-
-        if (p.step === 'error') {
-          clearInterval(interval);
-          setError(p.stepLabel || 'Fehler bei der Verarbeitung');
-          setProgress(null);
-          setLoading(false);
-          currentJobIdRef.current = null;
-        }
-      } catch { /* ignorieren */ }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [loading]);
-
-  const uploadFile = async (file: File) => {
-    const clientJobId = crypto.randomUUID();
-    currentJobIdRef.current = clientJobId;
-    xhrActiveRef.current = true;
-    waitingStartRef.current = null;
-
+  // Browser-seitige Verarbeitung (kein Upload, kein Server)
+  const processLocally = async (file: File) => {
     setLoading(true);
     setError("");
     setResult(null);
     setPage(0);
-    const origMBStr = (file.size / 1024 / 1024).toFixed(1);
 
-    // ── Schritt 1: Client-seitig gzip komprimieren ──────────────────────
-    setProgress({ step: 'uploading', stepLabel: 'Datei wird komprimiert…', percent: 2, detail: `${origMBStr} MB → wird kleiner…` });
-
-    let uploadBlob: Blob;
-    let compressed = false;
     try {
-      const raw = await file.arrayBuffer();
-      const cs = new CompressionStream('gzip');
-      const writer = cs.writable.getWriter();
-      writer.write(raw);
-      writer.close();
-      const compressedBuffer = await new Response(cs.readable).arrayBuffer();
-      uploadBlob = new Blob([compressedBuffer], { type: 'application/octet-stream' });
-      compressed = true;
-      const compMBStr = (uploadBlob.size / 1024 / 1024).toFixed(1);
-      setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: 5, detail: `${origMBStr} MB → ${compMBStr} MB (komprimiert)` });
-    } catch {
-      // Fallback: unkomprimiert hochladen
-      uploadBlob = file;
-      setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: 5, detail: `${origMBStr} MB` });
-    }
+      const processorResult = await processVoltFile(file, {
+        restoreEmoji,
+        onProgress: (step, label, percent, detail) => {
+          setProgress({ step, stepLabel: label, percent, detail: detail ?? '' });
+        },
+      });
 
-    const totalMBStr = (uploadBlob.size / 1024 / 1024).toFixed(1);
+      setResult({
+        csvBlob: processorResult.csvBlob,
+        headers: processorResult.headers,
+        fileName: processorResult.fileName,
+        stats: processorResult.stats,
+        previewItems: processorResult.previewItems,
+        allChangedNames: processorResult.allChangedNames,
+        allExtractedVolt: processorResult.allExtractedVolt,
+        csvIssues: processorResult.csvIssues,
+      });
 
-    // ── Schritt 2: Hochladen ─────────────────────────────────────────────
-    const formData = new FormData();
-    formData.append("file", uploadBlob, file.name);
-    formData.append("restoreEmoji", String(restoreEmoji));
-    formData.append("useDeForNL", String(useDeForNL));
-    formData.append("clientJobId", clientJobId);
-    formData.append("compressed", String(compressed));
-
-    const xhr = new XMLHttpRequest();
-
-    // Datei-Übertragungsfortschritt 5–48%
-    xhr.upload.onprogress = (e) => {
-      if (!e.lengthComputable) return;
-      const pct = Math.round(5 + (e.loaded / e.total) * 43);
-      const loadedMB = (e.loaded / 1024 / 1024).toFixed(1);
-      setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: pct, detail: `${loadedMB} / ${totalMBStr} MB` });
-    };
-
-    // Alle Bytes gesendet, warte auf Server-Bestätigung
-    xhr.upload.onload = () => {
-      setProgress({ step: 'uploading', stepLabel: 'Server empfängt Datei…', percent: 50, detail: 'Bitte warten…' });
-    };
-
-    xhr.onload = () => {
-      xhrActiveRef.current = false;
-      try {
-        const data = JSON.parse(xhr.responseText);
-        if (xhr.status >= 400) {
-          setError(data.error || "Upload fehlgeschlagen");
-          setProgress(null);
-          setLoading(false);
-          currentJobIdRef.current = null;
-          return;
-        }
-        // Erfolg: Server hat { jobId } geantwortet
-        // Progress-Polling übernimmt ab hier
-      } catch {
-        setError("Ungültige Server-Antwort");
-        setProgress(null);
-        setLoading(false);
-        currentJobIdRef.current = null;
-      }
-    };
-
-    xhr.onerror = () => {
-      xhrActiveRef.current = false;
-      setError("Netzwerkfehler beim Upload. Bitte prüfe deine Verbindung.");
+      setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Fehler bei der Verarbeitung');
       setProgress(null);
+    } finally {
       setLoading(false);
-      currentJobIdRef.current = null;
-    };
-
-    xhr.open("POST", "/api/volt-fixer/upload");
-    xhr.send(formData);
+    }
   };
 
   const handleFile = (file: File) => {
-    if (useDeForNL) {
-      // Kostenbestätigung erforderlich
-      setPendingFile(file);
-    } else {
-      uploadFile(file);
-    }
+    processLocally(file);
   };
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -596,24 +477,29 @@ export default function VoltFixer() {
 
   const download = () => {
     if (!result) return;
-    window.open(`/api/volt-fixer/download/${result.jobId}`, "_blank");
+    if (result.csvBlob) {
+      const url = URL.createObjectURL(result.csvBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } else if (result.jobId) {
+      window.open(`/api/volt-fixer/download/${result.jobId}`, "_blank");
+    }
   };
 
   const openDetail = useCallback((index: number, rowNum: number) => {
+    setDetailLocalData(null);
     setDetail({ index, rowNum });
   }, []);
 
   const saveVoltEdit = async (index: number, newVolt: string) => {
     if (!result) return;
     setPatchSaving(true);
-    try {
-      const res = await fetch(`/api/volt-fixer/patch-volt/${result.jobId}/${index}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ volt: newVolt }),
-      });
-      if (!res.ok) throw new Error("Fehler beim Speichern");
-      // previewItems lokal aktualisieren
+    const updatePreviewState = () => {
       setResult(prev => {
         if (!prev) return prev;
         return {
@@ -631,6 +517,19 @@ export default function VoltFixer() {
           ),
         };
       });
+    };
+    try {
+      if (result.jobId && !result.csvBlob) {
+        // Server-geladenes Projekt → über API patchen
+        const res = await fetch(`/api/volt-fixer/patch-volt/${result.jobId}/${index}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ volt: newVolt }),
+        });
+        if (!res.ok) throw new Error("Fehler beim Speichern");
+      }
+      // Immer: lokalen Preview-State aktualisieren
+      updatePreviewState();
     } catch {
       // Fehler still ignorieren — Wert bleibt im Input
     } finally {
@@ -733,13 +632,13 @@ export default function VoltFixer() {
             {/* Schritt-Indikatoren */}
             <div className="flex justify-between text-xs text-gray-400">
               {[
-                { key: 'uploading', label: 'Hochladen' },
-                { key: 'parsing',   label: 'Lesen' },
-                { key: 'fixing',    label: 'Korrigieren' },
-                { key: 'building',  label: 'Aufbereiten' },
+                { key: 'parsing',    label: 'Lesen' },
+                { key: 'fixing',     label: 'Korrigieren' },
+                { key: 'validating', label: 'Prüfen' },
+                { key: 'building',   label: 'Aufbereiten' },
               ].map(({ key, label }) => {
-                const steps = ['uploading','parsing','fixing','building','done'];
-                const current = progress?.step ?? 'uploading';
+                const steps = ['parsing','fixing','validating','building','done'];
+                const current = progress?.step ?? 'parsing';
                 const currentIdx = steps.indexOf(current);
                 const thisIdx = steps.indexOf(key);
                 const isDone = current === 'done' || (currentIdx > thisIdx && thisIdx !== -1);
@@ -810,16 +709,18 @@ export default function VoltFixer() {
               )}
             </Button>
 
-            <Button
-              onClick={() => { setSaveName(""); setSaveDialogOpen(true); }}
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50 gap-2"
-            >
-              <Save size={16} />
-              Projekt speichern
-            </Button>
+            {result.jobId && !result.csvBlob && (
+              <Button
+                onClick={() => { setSaveName(""); setSaveDialogOpen(true); }}
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 gap-2"
+              >
+                <Save size={16} />
+                Projekt speichern
+              </Button>
+            )}
 
-            {(result.stats.dreiSpannungCount ?? 0) > 0 && (
+            {(result.stats.dreiSpannungCount ?? 0) > 0 && result.jobId && !result.csvBlob && (
               <Button
                 onClick={() => window.open(`/api/volt-fixer/download-drei-spannung/${result.jobId}`, "_blank")}
                 variant="outline"
@@ -1094,20 +995,8 @@ export default function VoltFixer() {
           jobId={result.jobId}
           index={detail.index}
           rowNum={detail.rowNum}
-          onClose={() => setDetail(null)}
-        />
-      )}
-
-      {/* Kosten-Bestätigung */}
-      {pendingFile && (
-        <CostConfirmDialog
-          fileSizeMB={pendingFile.size / 1024 / 1024}
-          onConfirm={() => {
-            const f = pendingFile;
-            setPendingFile(null);
-            uploadFile(f);
-          }}
-          onCancel={() => setPendingFile(null)}
+          onClose={() => { setDetail(null); setDetailLocalData(null); }}
+          localData={detailLocalData ?? undefined}
         />
       )}
     </div>
