@@ -132,7 +132,8 @@ function rebuildCsvBuffer(job: { fixedRows: Record<string,string>[]; headers: st
     if (/&/.test(v)) return false;
     if (/\s/.test(v)) return false;
     if (/,/.test(v)) return false;
-    if (/^\d+(\.\d+)?$/.test(v)) return false;
+    if (/^\d+\.\d+$/.test(v)) return false;   // Dezimalzahlen (3.7, 10.8): ablehnen
+    if (/^\d{1,2}$/.test(v)) return false;     // 1-2 stellige Integer: ablehnen
     return true;
   };
   const csvRows = job.fixedRows.map(row => {
@@ -830,8 +831,10 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Satzfragment in p_item_number', detail: `Enthält Leerzeichen: ${pItemNr.slice(0, 50)}` });
       } else if (/,/.test(pItemNr)) {
         csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Volt-Fragment in p_item_number', detail: `Enthält Komma: ${pItemNr.slice(0, 50)}` });
-      } else if (/^\d+(\.\d+)?$/.test(pItemNr)) {
-        csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Volt-Fragment in p_item_number', detail: `Reine Dezimalzahl: ${pItemNr.slice(0, 50)}` });
+      } else if (/^\d+\.\d+$/.test(pItemNr)) {
+        csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Volt-Fragment in p_item_number', detail: `Dezimalzahl (Volt-Wert): ${pItemNr.slice(0, 50)}` });
+      } else if (/^\d{1,2}$/.test(pItemNr)) {
+        csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Volt-Fragment in p_item_number', detail: `Zu kurze Zahl (Volt-Wert): ${pItemNr.slice(0, 50)}` });
       }
 
       // 2) Leerer Produktname DE
@@ -882,7 +885,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       if (/&/.test(v)) return false;
       if (/\s/.test(v)) return false;
       if (/,/.test(v)) return false;
-      if (/^\d+(\.\d+)?$/.test(v)) return false;
+      if (/^\d+\.\d+$/.test(v)) return false;   // Dezimalzahlen (3.7, 10.8): ablehnen
+      if (/^\d{1,2}$/.test(v)) return false;     // 1-2 stellige Integer: ablehnen
       return true;
     };
 
