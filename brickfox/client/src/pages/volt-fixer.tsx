@@ -360,6 +360,7 @@ export default function VoltFixer() {
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const currentJobIdRef = useRef<string | null>(null);
+  const waitingStartRef = useRef<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [editingVolt, setEditingVolt] = useState<{ index: number; value: string } | null>(null);
@@ -423,12 +424,24 @@ export default function VoltFixer() {
   useEffect(() => {
     if (!loading || !currentJobIdRef.current) return;
     const id = currentJobIdRef.current;
+    waitingStartRef.current = null;
     const interval = setInterval(async () => {
       try {
         const r = await fetch(`/api/volt-fixer/progress/${id}`);
         if (!r.ok) return;
         const p: ProgressState = await r.json();
-        if (p.step === 'waiting') return;
+        if (p.step === 'waiting') {
+          if (waitingStartRef.current === null) waitingStartRef.current = Date.now();
+          if (Date.now() - waitingStartRef.current > 20000) {
+            clearInterval(interval);
+            setError('Zeitüberschreitung: Die Verarbeitung wurde nicht gestartet. Bitte Seite neu laden und Datei erneut hochladen.');
+            setProgress(null);
+            setLoading(false);
+            currentJobIdRef.current = null;
+          }
+          return;
+        }
+        waitingStartRef.current = null;
         setProgress(p);
 
         if (p.step === 'done') {
