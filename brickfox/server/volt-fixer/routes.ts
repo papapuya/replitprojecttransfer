@@ -860,18 +860,23 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
-    // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
+    // Zeilenumbrüche aus ALLEN Feldern entfernen (CSV-Kompatibilität)
+    // Betrifft nicht nur Beschreibungen: auch HTML-Entities wie &nbsp; enden auf ";" und
+    // brechen sonst die semikolon-getrennte CSV-Struktur wenn Zeilenumbrüche vorhanden sind.
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
-      for (const col of DESC_COLS) {
-        if (r[col]) r[col] = r[col].replace(/\r?\n/g, ' ');
+      for (const key of Object.keys(r)) {
+        if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
       }
       return r;
     });
 
-    // Saubere CSV (ohne kaputte HTML-Zeilen) + kaputte CSV (nur kaputte Zeilen)
-    const csvRowsClean = csvRows.filter((_, i) => !brokenHtmlIndices.has(i));
-    const csvRowsBroken = csvRows.filter((_, i) => brokenHtmlIndices.has(i));
+    // Saubere CSV: kaputte HTML-Zeilen raus + Zeilen ohne Artikelnummer raus (Fragment-Zeilen aus defektem Original-CSV)
+    const ITEM_COLS_EXPORT = ['p_item_number', 'v_item_number'];
+    const hasItemNr = (row: Record<string, string>) => ITEM_COLS_EXPORT.some(c => row[c]?.trim());
+
+    const csvRowsClean = csvRows.filter((row, i) => !brokenHtmlIndices.has(i) && hasItemNr(row));
+    const csvRowsBroken = csvRows.filter((row, i) => brokenHtmlIndices.has(i) && hasItemNr(row));
 
     const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
