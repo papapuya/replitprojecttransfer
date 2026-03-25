@@ -562,9 +562,9 @@ export default function VoltFixer() {
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
   const [showNoHtml, setShowNoHtml] = useState(false);
   const allItems = result?.previewItems ?? [];
-  const noHtmlChangedCount = allItems.filter(it => it.changed.length > 0 && it.hasHtml === false).length;
+  const noHtmlChangedCount = allItems.filter(it => it.hasHtml === false).length;
   const items = showNoHtml
-    ? allItems.filter(it => it.changed.length > 0 && it.hasHtml === false)
+    ? allItems.filter(it => it.hasHtml === false)
     : showOnlyChanged
       ? allItems.filter(it => it.changed.length > 0)
       : allItems;
@@ -981,7 +981,7 @@ export default function VoltFixer() {
                             )}
                           </td>
                           <td className={`px-3 py-1.5 max-w-sm ${item.descDEChanged ? "bg-green-50/60" : ""}`}>
-                            {item.changed.length > 0 && item.hasHtml === false && (
+                            {item.hasHtml === false && (
                               <span className="inline-block mb-0.5 px-1.5 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-700 border border-red-200">
                                 kein HTML
                               </span>
