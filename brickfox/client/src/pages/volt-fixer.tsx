@@ -108,6 +108,44 @@ function CopyButton({ text, label = "HTML kopieren" }: { text: string; label?: s
   );
 }
 
+// Beschreibungs-Ansicht mit Tabs: Fließtext ↔ HTML-Quelltext
+function DescriptionView({ html, changed, label, bg = "gray" }: { html: string; changed?: boolean; label: string; bg?: "gray" | "indigo" }) {
+  const [tab, setTab] = useState<"preview" | "source">("preview");
+  const bgClass = bg === "indigo"
+    ? "bg-indigo-50 border-indigo-200"
+    : "bg-gray-50 border-gray-200";
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-2">
+        <h3 className="text-sm font-bold text-gray-700">{label}</h3>
+        {changed && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+        <div className="ml-auto flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+          <button
+            onClick={() => setTab("preview")}
+            className={`px-3 py-1 font-medium transition-colors ${tab === "preview" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+          >Fließtext</button>
+          <button
+            onClick={() => setTab("source")}
+            className={`px-3 py-1 font-medium transition-colors border-l border-gray-200 ${tab === "source" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+          >HTML</button>
+        </div>
+      </div>
+      {tab === "preview" ? (
+        <div className={`p-4 border rounded-xl overflow-y-auto max-h-72 html-preview ${bgClass}`}
+          dangerouslySetInnerHTML={{ __html: html }} />
+      ) : (
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
+            <CopyButton text={html} label="Kopieren" />
+          </div>
+          <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-72 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">{html}</pre>
+        </div>
+      )}
+    </section>
+  );
+}
+
 // Detail-Modal
 function DetailModal({
   jobId,
@@ -235,94 +273,28 @@ function DetailModal({
                   </section>
                 )}
 
-                {/* ── 1. Original Text Deutsch ── */}
-                {origDE && (
-                  <section>
-                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b">Original Text Deutsch</h3>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl overflow-y-auto max-h-96 html-preview mb-3"
-                      dangerouslySetInnerHTML={{ __html: origDE }} />
-                    <div className="rounded-xl border border-gray-200 overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
-                        <CopyButton text={origDE} label="Kopieren" />
-                      </div>
-                      <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-52 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
-                        {origDE}
-                      </pre>
-                    </div>
-                  </section>
+                {/* ── 1+2. Beschreibung Deutsch ── */}
+                {(origDE || fixedDE) && (
+                  deChanged ? (
+                    <>
+                      <DescriptionView html={origDE} label="Original Text Deutsch" bg="gray" />
+                      <DescriptionView html={fixedDE} label="Geänderter Text Deutsch" changed bg="indigo" />
+                    </>
+                  ) : (
+                    <DescriptionView html={fixedDE || origDE} label="Produktbeschreibung Deutsch" bg="gray" />
+                  )
                 )}
 
-                {/* ── 2. Geänderter Text Deutsch ── */}
-                {fixedDE && (
-                  <section>
-                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b flex items-center gap-2">
-                      Geänderter Text Deutsch
-                      {deChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
-                    </h3>
-
-                    {/* Fließtext */}
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
-                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl overflow-y-auto max-h-96 html-preview mb-3"
-                      dangerouslySetInnerHTML={{ __html: fixedDE }} />
-
-                    {/* HTML-Quelltext */}
-                    <div className="rounded-xl border border-gray-200 overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
-                        <CopyButton text={fixedDE} label="Kopieren" />
-                      </div>
-                      <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-52 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
-                        {fixedDE}
-                      </pre>
-                    </div>
-                  </section>
-                )}
-
-                {/* ── 3. Original Text Niederländisch ── */}
-                {origNL && (
-                  <section>
-                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b">Original Text Niederländisch</h3>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl overflow-y-auto max-h-64 html-preview mb-3"
-                      dangerouslySetInnerHTML={{ __html: origNL }} />
-                    <div className="rounded-xl border border-gray-200 overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
-                        <CopyButton text={origNL} label="Kopieren" />
-                      </div>
-                      <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-52 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
-                        {origNL}
-                      </pre>
-                    </div>
-                  </section>
-                )}
-
-                {/* ── 4. Geänderter Text Niederländisch ── */}
-                {fixedNL && (
-                  <section>
-                    <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b flex items-center gap-2">
-                      Geänderter Text Niederländisch
-                      {nlChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
-                    </h3>
-
-                    {/* Fließtext */}
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
-                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl overflow-y-auto max-h-96 html-preview mb-3"
-                      dangerouslySetInnerHTML={{ __html: fixedNL }} />
-
-                    {/* HTML-Quelltext */}
-                    <div className="rounded-xl border border-gray-200 overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
-                        <CopyButton text={fixedNL} label="Kopieren" />
-                      </div>
-                      <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-52 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
-                        {fixedNL}
-                      </pre>
-                    </div>
-                  </section>
+                {/* ── 3+4. Beschreibung Niederländisch ── */}
+                {(origNL || fixedNL) && (
+                  nlChanged ? (
+                    <>
+                      <DescriptionView html={origNL} label="Original Text Niederländisch" bg="gray" />
+                      <DescriptionView html={fixedNL} label="Geänderter Text Niederländisch" changed bg="indigo" />
+                    </>
+                  ) : (
+                    <DescriptionView html={fixedNL || origNL} label="Produktbeschreibung Niederländisch" bg="gray" />
+                  )
                 )}
 
                 {/* ── 5. Volt-Wert ── */}
@@ -535,6 +507,7 @@ export default function VoltFixer() {
     // Wenn lokale Daten verfügbar (Browser-Verarbeitung), direkt aus previewItem bauen
     if (result?.csvBlob) {
       const item = result.previewItems.find(p => p.index === index);
+      console.log('[openDetail] item found:', !!item, 'descDEFull len:', item?.descDEFull?.length, 'descDEOrig len:', item?.descDEOrig?.length);
       if (item) {
         const row: Record<string, string> = {
           'p_item_number': item.itemNr,
@@ -554,6 +527,7 @@ export default function VoltFixer() {
           'p_description[de]': item.descDEOrig ?? '',
           'p_description[nl]': item.descNLOrig ?? '',
         };
+        console.log('[openDetail] row descDE len:', row['p_description[de]'].length, 'orig descDE len:', original['p_description[de]'].length);
         setDetailLocalData({
           row,
           original,
