@@ -65,8 +65,19 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Keine Datei hochgeladen' });
 
-    // UTF-8 oder Latin-1 dekodieren
-    let raw = req.file.buffer.toString('utf-8');
+    // Kodierung erkennen: UTF-8 oder Windows-1252/Latin-1?
+    // Wenn viele Replacement-Zeichen (U+FFFD) im UTF-8-Versuch → Latin-1 verwenden
+    const utf8Attempt = req.file.buffer.toString('utf-8');
+    const replacementCount = (utf8Attempt.match(/\uFFFD/g) ?? []).length;
+    let raw: string;
+    if (replacementCount > 5) {
+      // Windows-1252 / Latin-1 → wird automatisch als UTF-8 weiterverarbeitet
+      raw = req.file.buffer.toString('latin1');
+      console.log(`[CsvRepair] Kodierung: Latin-1/Windows-1252 erkannt (${replacementCount} kaputte Zeichen in UTF-8)`);
+    } else {
+      raw = utf8Attempt;
+      console.log(`[CsvRepair] Kodierung: UTF-8`);
+    }
     // BOM entfernen
     if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
 
