@@ -224,8 +224,18 @@ function DetailModal({
                 {origDE && (
                   <section>
                     <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b">Original Text Deutsch</h3>
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl overflow-y-auto max-h-96 html-preview"
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl overflow-y-auto max-h-96 html-preview mb-3"
                       dangerouslySetInnerHTML={{ __html: origDE }} />
+                    <div className="rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
+                        <CopyButton text={origDE} label="Kopieren" />
+                      </div>
+                      <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-52 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
+                        {origDE}
+                      </pre>
+                    </div>
                   </section>
                 )}
 
@@ -259,8 +269,18 @@ function DetailModal({
                 {origNL && (
                   <section>
                     <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b">Original Text Niederländisch</h3>
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl overflow-y-auto max-h-64 html-preview"
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fließtext</p>
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl overflow-y-auto max-h-64 html-preview mb-3"
                       dangerouslySetInnerHTML={{ __html: origNL }} />
+                    <div className="rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
+                        <CopyButton text={origNL} label="Kopieren" />
+                      </div>
+                      <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-52 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">
+                        {origNL}
+                      </pre>
+                    </div>
                   </section>
                 )}
 
