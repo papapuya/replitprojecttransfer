@@ -200,6 +200,15 @@ function stripTrailingZeroVolt(val: string): string {
   return val.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
 }
 
+function roundToTwoDecimals(val: string): string {
+  // Rundet auf max. 2 Nachkommastellen und entfernt trailing Nullen:
+  // "1.065" → "1.07", "1.121" → "1.12", "3.850" → "3.85", "3.7" → "3.7"
+  const num = parseFloat(val);
+  if (isNaN(num)) return val;
+  const rounded = Math.round(num * 100) / 100;
+  return stripTrailingZeroVolt(rounded.toString());
+}
+
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   let trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
@@ -213,16 +222,18 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
     const normalized = normalizeRangeVolt(trimmed);
     return { fixed: normalized, changed: hadJunk || normalized !== val.trim() };
   }
-  // Wert hat Komma → in Punkt-Format konvertieren, dann trailing zeros entfernen (6,0 → 6, 2,200 → 2.2)
+  // Wert hat Komma → in Punkt-Format konvertieren, auf 2 Nachkommastellen runden, trailing zeros entfernen
+  // Bsp: "6,0" → "6", "2,200" → "2.2", "1,065" → "1.07"
   if (trimmed.includes(',')) {
     const dotFormat = trimmed.replace(',', '.');
-    const stripped = stripTrailingZeroVolt(dotFormat);
-    return { fixed: stripped, changed: hadJunk || stripped !== trimmed };
+    const rounded = roundToTwoDecimals(dotFormat);
+    return { fixed: rounded, changed: hadJunk || rounded !== trimmed };
   }
-  // Wert hat bereits Punkt → trailing zeros entfernen (6.0 → 6, 2.200 → 2.2, 4.00 → 4)
+  // Wert hat bereits Punkt → auf 2 Nachkommastellen runden, trailing zeros entfernen
+  // Bsp: "6.0" → "6", "2.200" → "2.2", "1.065" → "1.07", "3.850" → "3.85"
   if (trimmed.includes('.')) {
-    const stripped = stripTrailingZeroVolt(trimmed);
-    return { fixed: stripped, changed: hadJunk || stripped !== val.trim() };
+    const rounded = roundToTwoDecimals(trimmed);
+    return { fixed: rounded, changed: hadJunk || rounded !== val.trim() };
   }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   // 1- und 2-stellige Zahlen sind immer ganze Volt-Werte → unverändert lassen.
