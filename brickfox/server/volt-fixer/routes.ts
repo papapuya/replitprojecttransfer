@@ -696,7 +696,49 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     setProgress('parsing', 'CSV wird gelesen…', 5);
 
     const encoding = detectEncoding(req.file.buffer);
-    const text = iconv.decode(req.file.buffer, encoding);
+    let text = iconv.decode(req.file.buffer, encoding);
+    // BOM entfernen
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+    // ─── Pre-Processing: fragmentierte Zeilen zusammenführen ─────────────────
+    // Brickfox-Exporte haben HTML in p_description[de/nl] mit echten Zeilenumbrüchen.
+    // Papa.parse würde diese als neue Zeilen interpretieren → HTML wird abgeschnitten.
+    // Lösung: erst Zeilen zusammenführen (wie CSV-Reparatur), dann parsen.
+    {
+      const rawLines = text.split(/\r?\n/);
+      const headerLine = rawLines[0] || '';
+      const headerCols = headerLine.split(';').map(h => h.replace(/^"|"$/g, '').trim());
+      // p_item_number oder v_item_number als Anker für neue Produktzeilen
+      let itemNrIdx = headerCols.findIndex(h => h === 'p_item_number');
+      if (itemNrIdx < 0) itemNrIdx = headerCols.findIndex(h => h === 'v_item_number');
+      if (itemNrIdx < 0) itemNrIdx = 0;
+
+      const looksLikeProductRow = (line: string): boolean => {
+        const field = line.split(';')[itemNrIdx] ?? '';
+        const v = field.replace(/^"|"$/g, '').trim();
+        if (!v) return false;
+        if (/<|>/.test(v) || /&[a-zA-Z#]/.test(v) || /\s/.test(v) || /,/.test(v)) return false;
+        if (/^\d{1,2}$/.test(v)) return false;
+        return true;
+      };
+
+      const mergedLines: string[] = [headerLine];
+      let mergedCount = 0;
+      for (let i = 1; i < rawLines.length; i++) {
+        const line = rawLines[i];
+        if (!line.trim() || /^;+$/.test(line.trim())) continue;
+        if (looksLikeProductRow(line)) {
+          mergedLines.push(line);
+        } else if (mergedLines.length > 1) {
+          mergedLines[mergedLines.length - 1] += ' ' + line;
+          mergedCount++;
+        }
+      }
+      if (mergedCount > 0) {
+        console.log(`[VoltFixer] Pre-merge: ${mergedCount} fragmentierte Zeilen zusammengeführt`);
+        text = mergedLines.join('\n');
+      }
+    }
 
     const parsed = Papa.parse(text, {
       delimiter: ';',
