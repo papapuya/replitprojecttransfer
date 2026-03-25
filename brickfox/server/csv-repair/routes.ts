@@ -30,7 +30,22 @@ interface RepairStats {
   invalidItemNrRemoved: number;
 }
 
-// ─── Artikelnummer-Validierung (gleiche Logik wie Volt-Fixer) ─────────────────
+// ─── Zeilen-Erkennung: Beginnt diese Zeile ein neues Produkt? ─────────────────
+// Lax: Akzeptiert auch rein numerische IDs (z.B. "123456").
+// Nur eindeutige HTML-Fragmente (Tags, Entities, Leerzeichen im Feld) werden abgelehnt.
+function looksLikeNewProductRow(firstField: string): boolean {
+  const f = firstField.trim();
+  if (!f) return false;           // leeres erstes Feld → Fragment
+  if (/<|>/.test(f)) return false; // HTML-Tag → Fragment
+  if (/&[a-zA-Z#]/.test(f)) return false; // HTML-Entity (&amp; &nbsp; etc.)
+  if (/\s/.test(f)) return false;  // Leerzeichen → Satzfragment
+  if (/,/.test(f)) return false;   // Komma → Volt-Wert (3,7 V)
+  return true;
+}
+
+// ─── Endfilter: Ist p_item_number eine echte Artikelnummer? ──────────────────
+// Strikt: Entfernt Volt-Werte (3.7, 10.8) und kurze Dezimalzahlen.
+// Erlaubt aber rein numerische Artikelnummern (z.B. "123456").
 function isValidPItemNr(v: string): boolean {
   const val = v.trim();
   if (!val) return false;
@@ -38,7 +53,10 @@ function isValidPItemNr(v: string): boolean {
   if (/&/.test(val)) return false;
   if (/\s/.test(val)) return false;
   if (/,/.test(val)) return false;
-  if (/^\d+(\.\d+)?$/.test(val)) return false;
+  // Dezimalzahlen (Volt-Werte wie 3.7, 10.8, 14.4): ablehnen
+  if (/^\d+\.\d+$/.test(val)) return false;
+  // Sehr kurze Integer (1–2 Stellen, z.B. "3", "12"): ablehnen
+  if (/^\d{1,2}$/.test(val)) return false;
   return true;
 }
 
@@ -86,7 +104,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 
       const firstField = line.split(';')[0];
 
-      if (isValidPItemNr(firstField)) {
+      if (looksLikeNewProductRow(firstField)) {
         // Neue Produktzeile
         mergedLines.push(line);
       } else {
