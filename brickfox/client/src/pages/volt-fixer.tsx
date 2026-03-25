@@ -573,7 +573,7 @@ export default function VoltFixer() {
           <div className="flex flex-wrap gap-3">
             <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
               <Download size={16} />
-              Saubere CSV ({(result.stats.total - (result.stats.brokenRowCount ?? 0)).toLocaleString()} Zeilen)
+              Saubere CSV herunterladen
             </Button>
 
             {(result.stats.brokenRowCount ?? 0) > 0 && (
