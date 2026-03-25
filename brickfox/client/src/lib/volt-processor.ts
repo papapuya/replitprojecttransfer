@@ -35,8 +35,12 @@ export interface PreviewItem {
   nameNLOrig: string;
   nameNL: string;
   descDE: string;
+  descDEOrig: string;
+  descDEFull: string;
   descDEChanged: boolean;
   descNL: string;
+  descNLOrig: string;
+  descNLFull: string;
   descNLChanged: boolean;
   hasHtml: boolean;
   changed: string[];
@@ -495,8 +499,12 @@ export async function processVoltFile(
       nameNLOrig: orig['p_name[nl]'] ?? '',
       nameNL: row['p_name[nl]'] ?? '',
       descDE: toPlainText(row['p_description[de]'] ?? ''),
+      descDEOrig: orig['p_description[de]'] ?? '',
+      descDEFull: row['p_description[de]'] ?? '',
       descDEChanged: changed.includes('p_description[de]'),
       descNL: toPlainText(row['p_description[nl]'] ?? ''),
+      descNLOrig: orig['p_description[nl]'] ?? '',
+      descNLFull: row['p_description[nl]'] ?? '',
       descNLChanged: changed.includes('p_description[nl]'),
       hasHtml: /<[a-z]/i.test(row['p_description[de]'] ?? ''),
       changed,

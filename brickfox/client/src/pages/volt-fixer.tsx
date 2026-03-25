@@ -20,8 +20,12 @@ type PreviewItem = {
   nameNLOrig: string;
   nameNL: string;
   descDE: string;
+  descDEOrig?: string;
+  descDEFull?: string;
   descDEChanged: boolean;
   descNL: string;
+  descNLOrig?: string;
+  descNLFull?: string;
   descNLChanged: boolean;
   hasHtml?: boolean;
   changed: string[];
@@ -493,8 +497,38 @@ export default function VoltFixer() {
 
   const openDetail = useCallback((index: number, rowNum: number) => {
     setDetailLocalData(null);
+    // Wenn lokale Daten verfügbar (Browser-Verarbeitung), direkt aus previewItem bauen
+    if (result?.csvBlob) {
+      const item = result.previewItems.find(p => p.index === index);
+      if (item) {
+        const row: Record<string, string> = {
+          'p_item_number': item.itemNr,
+          'p_id': item.pId,
+          [VOLT_COL]: item.voltNew,
+          'p_name[de]': item.nameDE,
+          'p_name[nl]': item.nameNL,
+          'p_description[de]': item.descDEFull ?? '',
+          'p_description[nl]': item.descNLFull ?? '',
+        };
+        const original: Record<string, string> = {
+          'p_item_number': item.itemNr,
+          'p_id': item.pId,
+          [VOLT_COL]: item.voltOrig,
+          'p_name[de]': item.nameDEOrig,
+          'p_name[nl]': item.nameNLOrig,
+          'p_description[de]': item.descDEOrig ?? '',
+          'p_description[nl]': item.descNLOrig ?? '',
+        };
+        setDetailLocalData({
+          row,
+          original,
+          changed: item.changed,
+          headers: result.headers,
+        });
+      }
+    }
     setDetail({ index, rowNum });
-  }, []);
+  }, [result]);
 
   const saveVoltEdit = async (index: number, newVolt: string) => {
     if (!result) return;
