@@ -564,13 +564,18 @@ export default function VoltFixer() {
 
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
   const [showNoHtml, setShowNoHtml] = useState(false);
+  const [voltFilter, setVoltFilter] = useState('');
   const allItems = result?.previewItems ?? [];
   const noHtmlChangedCount = allItems.filter(it => it.hasHtml === false).length;
-  const items = showNoHtml
+  const baseItems = showNoHtml
     ? allItems.filter(it => it.hasHtml === false)
     : showOnlyChanged
       ? allItems.filter(it => it.changed.length > 0)
       : allItems;
+  const voltFilterTrimmed = voltFilter.trim().toLowerCase();
+  const items = voltFilterTrimmed
+    ? baseItems.filter(it => it.voltNew.toLowerCase().includes(voltFilterTrimmed))
+    : baseItems;
   const changedCount = allItems.filter(it => it.changed.length > 0).length;
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
   const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -867,6 +872,23 @@ export default function VoltFixer() {
                 </span>
               </h2>
               <div className="flex items-center gap-3">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={voltFilter}
+                    onChange={e => { setVoltFilter(e.target.value); setPage(0); }}
+                    placeholder="Volt filtern…"
+                    className="text-xs pl-3 pr-7 py-1.5 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 w-32"
+                  />
+                  {voltFilter && (
+                    <button
+                      onClick={() => { setVoltFilter(''); setPage(0); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={() => { setShowNoHtml(false); setShowOnlyChanged(v => !v); setPage(0); }}
                   className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
