@@ -762,6 +762,14 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         return fixed;
       });
 
+    // Diagnose: zeigt ob HTML nach dem Parsen noch vorhanden ist
+    const descSample = rows.slice(0, 3).map((r, i) => {
+      const d = (r['p_description[de]'] ?? '').trim();
+      const hasHtml = /<[a-z]/i.test(d);
+      return `Zeile${i+1}: ${hasHtml ? 'HTML' : 'Plaintext'} (${d.substring(0, 80)})`;
+    });
+    console.log(`[VoltFixer] Beschreibungs-Diagnose:\n${descSample.join('\n')}`);
+
     setProgress('fixing', 'Volt-Werte werden korrigiert…', 15, `${rows.length.toLocaleString('de-DE')} Zeilen`);
 
     let voltChanged = 0, voltSkipped = 0, voltSkippedNonElectronic = 0, voltExtracted = 0;
