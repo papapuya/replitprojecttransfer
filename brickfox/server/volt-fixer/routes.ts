@@ -695,10 +695,16 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('parsing', 'CSV wird gelesen…', 5);
 
+    // Event-Loop freigeben bevor wir mit der schweren Arbeit beginnen
+    await new Promise(resolve => setImmediate(resolve));
+
     const encoding = detectEncoding(req.file.buffer);
     let text = iconv.decode(req.file.buffer, encoding);
     // BOM entfernen
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+    setProgress('parsing', 'CSV wird geparst…', 8);
+    await new Promise(resolve => setImmediate(resolve));
 
     const parsed = Papa.parse(text, {
       delimiter: ';',
@@ -710,17 +716,25 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return res.status(400).json({ error: 'CSV konnte nicht geparst werden', details: parsed.errors[0]?.message });
     }
 
+    setProgress('parsing', 'Zeichen werden repariert…', 11);
+    await new Promise(resolve => setImmediate(resolve));
+
     const headers = parsed.meta.fields || [];
-    // Mojibake reparieren + komplett leere Zeilen entfernen (Brickfox-Export enthält oft Leerzeilen mit nur Semikolons)
-    const rows = (parsed.data as Record<string, string>[])
-      .filter(row => Object.values(row).some(v => typeof v === 'string' && v.trim() !== ''))
-      .map(row => {
-        const fixed: Record<string, string> = {};
-        for (const key of Object.keys(row)) {
-          fixed[key] = repairMojibake(row[key]);
-        }
-        return fixed;
-      });
+    const rawData = (parsed.data as Record<string, string>[])
+      .filter(row => Object.values(row).some(v => typeof v === 'string' && v.trim() !== ''));
+
+    // Mojibake in Chunks reparieren damit der Event-Loop nicht blockiert wird
+    const rows: Record<string, string>[] = [];
+    for (let i = 0; i < rawData.length; i++) {
+      const fixed: Record<string, string> = {};
+      for (const key of Object.keys(rawData[i])) {
+        fixed[key] = repairMojibake(rawData[i][key]);
+      }
+      rows.push(fixed);
+      if (i % 2000 === 0 && i > 0) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+    }
 
     setProgress('fixing', 'Volt-Werte werden korrigiert…', 15, `${rows.length.toLocaleString('de-DE')} Zeilen`);
 
@@ -737,7 +751,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       'staubsaugerbeutel', 'ersatzbeutel',
     ];
 
-    for (const row of rows) {
+    for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+      // Alle 2000 Zeilen Event-Loop freigeben + Progress aktualisieren
+      if (rowIdx > 0 && rowIdx % 2000 === 0) {
+        await new Promise(resolve => setImmediate(resolve));
+        setProgress('fixing', 'Volt-Werte werden korrigiert…', 15 + Math.round(70 * rowIdx / rows.length), `${rowIdx.toLocaleString('de-DE')} / ${rows.length.toLocaleString('de-DE')} Zeilen`);
+      }
+      const row = rows[rowIdx];
       const newRow = { ...row };
       const changed: string[] = [];
 
@@ -941,10 +961,16 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return plain.length > max ? plain.slice(0, max) + '…' : plain;
     };
 
+    setProgress('done', 'Vorschau wird erstellt…', 92);
+    await new Promise(resolve => setImmediate(resolve));
+
     // Vorschau: ALLE Zeilen (geändert + unverändert)
     const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
     const previewItems: object[] = [];
     for (let i = 0; i < fixedRows.length; i++) {
+      if (i > 0 && i % 2000 === 0) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
       const changed = changedCols[i] ?? [];
       const orig = rows[i];
       const row = fixedRows[i];
