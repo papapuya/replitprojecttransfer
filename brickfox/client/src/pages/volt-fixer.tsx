@@ -360,6 +360,7 @@ export default function VoltFixer() {
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const currentJobIdRef = useRef<string | null>(null);
+  const currentXhrRef = useRef<XMLHttpRequest | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [editingVolt, setEditingVolt] = useState<{ index: number; value: string } | null>(null);
@@ -454,6 +455,7 @@ export default function VoltFixer() {
     formData.append("clientJobId", clientJobId);
 
     const xhr = new XMLHttpRequest();
+    currentXhrRef.current = xhr;
 
     // Echter Upload-Fortschritt (0–30%)
     xhr.upload.onprogress = (e) => {
@@ -478,6 +480,7 @@ export default function VoltFixer() {
       } finally {
         setLoading(false);
         currentJobIdRef.current = null;
+        currentXhrRef.current = null;
       }
     };
 
@@ -486,10 +489,30 @@ export default function VoltFixer() {
       setProgress(null);
       setLoading(false);
       currentJobIdRef.current = null;
+      currentXhrRef.current = null;
+    };
+
+    xhr.ontimeout = () => {
+      setError("Zeitüberschreitung beim Upload — bitte erneut versuchen");
+      setProgress(null);
+      setLoading(false);
+      currentJobIdRef.current = null;
+      currentXhrRef.current = null;
     };
 
     xhr.open("POST", "/api/volt-fixer/upload");
     xhr.send(formData);
+  };
+
+  const cancelUpload = () => {
+    if (currentXhrRef.current) {
+      currentXhrRef.current.abort();
+      currentXhrRef.current = null;
+    }
+    currentJobIdRef.current = null;
+    setLoading(false);
+    setProgress(null);
+    setError("");
   };
 
   const handleFile = (file: File) => {
@@ -681,6 +704,13 @@ export default function VoltFixer() {
               <span className="text-sm font-bold text-indigo-600 shrink-0">
                 {progress?.percent ?? 0}%
               </span>
+              <button
+                onClick={cancelUpload}
+                className="ml-2 text-xs text-gray-400 hover:text-red-500 underline shrink-0"
+                title="Upload abbrechen"
+              >
+                Abbrechen
+              </button>
             </div>
             {/* Fortschrittsbalken */}
             <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
