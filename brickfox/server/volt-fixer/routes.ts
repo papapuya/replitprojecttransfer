@@ -195,45 +195,31 @@ function normalizeRangeVolt(raw: string): string {
 
 // Entfernt überflüssige ".0" Dezimalstelle aus Volt-Spaltenwerten (6.0 → 6, 10.0 → 10, aber 3.85 bleibt)
 function stripTrailingZeroVolt(val: string): string {
-  // Entfernt ALLE trailing Nullen nach dem Dezimalpunkt:
-  // "4.00" → "4", "2.200" → "2.2", "7.100" → "7.1", "2.50" → "2.5"
-  return val.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
-}
-
-function roundToTwoDecimals(val: string): string {
-  // Rundet auf max. 2 Nachkommastellen und entfernt trailing Nullen:
-  // "1.065" → "1.07", "1.121" → "1.12", "3.850" → "3.85", "3.7" → "3.7"
-  const num = parseFloat(val);
-  if (isNaN(num)) return val;
-  const rounded = Math.round(num * 100) / 100;
-  return stripTrailingZeroVolt(rounded.toString());
+  return val.replace(/^(\d+)\.0$/, '$1');
 }
 
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   let trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
-  // Datenmüll nach Leerzeichen entfernen – gilt für Bereichswerte UND einfache Dezimalwerte:
-  // "100-240 73676" → "100-240", "3.6 65476" → "3.6", "1.2 19892" → "1.2"
-  const junkMatch = trimmed.match(/^(\d+(?:[,.]?\d+)?(?:[-\/]\d+(?:[,.]?\d+)?)?)\s+\d+/);
-  let hadJunk = !!junkMatch;
-  if (hadJunk) trimmed = junkMatch![1];
+  // Bereich + Datenmüll nach Leerzeichen entfernen (z.B. "100-240 73676" → "100-240")
+  const rangeJunkMatch = trimmed.match(/^(\d+(?:[,.]?\d+)?[-\/]\d+(?:[,.]?\d+)?)\s+\d+/);
+  const hadJunk = !!rangeJunkMatch;
+  if (hadJunk) trimmed = rangeJunkMatch![1];
   // Bereichswert (enthält - oder /) → normalisieren: "9.0-12,0" → "9-12"
   if (/[-\/]/.test(trimmed)) {
     const normalized = normalizeRangeVolt(trimmed);
     return { fixed: normalized, changed: hadJunk || normalized !== val.trim() };
   }
-  // Wert hat Komma → in Punkt-Format konvertieren, auf 2 Nachkommastellen runden, trailing zeros entfernen
-  // Bsp: "6,0" → "6", "2,200" → "2.2", "1,065" → "1.07"
+  // Wert hat Komma → in Punkt-Format konvertieren, dann überflüssiges ".0" entfernen (6,0 → 6)
   if (trimmed.includes(',')) {
     const dotFormat = trimmed.replace(',', '.');
-    const rounded = roundToTwoDecimals(dotFormat);
-    return { fixed: rounded, changed: hadJunk || rounded !== trimmed };
+    const stripped = stripTrailingZeroVolt(dotFormat);
+    return { fixed: stripped, changed: stripped !== trimmed };
   }
-  // Wert hat bereits Punkt → auf 2 Nachkommastellen runden, trailing zeros entfernen
-  // Bsp: "6.0" → "6", "2.200" → "2.2", "1.065" → "1.07", "3.850" → "3.85"
+  // Wert hat bereits Punkt → überflüssiges ".0" entfernen falls vorhanden (6.0 → 6)
   if (trimmed.includes('.')) {
-    const rounded = roundToTwoDecimals(trimmed);
-    return { fixed: rounded, changed: hadJunk || rounded !== val.trim() };
+    const stripped = stripTrailingZeroVolt(trimmed);
+    return { fixed: stripped, changed: stripped !== trimmed };
   }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   // 1- und 2-stellige Zahlen sind immer ganze Volt-Werte → unverändert lassen.
@@ -245,7 +231,7 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
       return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
     }
   }
-  // Sonstige Zahlen (z.B. 385, 370 usw.) → nicht verändern
+  // Sonstige Zahlen (z.B. 385, 370 usw.) → nicht verändern, kein 3.85 generieren
   return { fixed: trimmed, changed: false };
 }
 
@@ -815,9 +801,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
       const voltVal = (row[VOLT_COL] ?? '').trim();
 
-      // Unrealistische Werte (>= 1000 oder = 0) sind kein gültiger Volt-Wert → sofort leeren
+      // Unrealistisch hohe Zahlen (>= 1000) sind kein gültiger Volt-Wert → sofort leeren, keine Extraktion
       const voltAsNum = Number(voltVal.replace(',', '.'));
-      const isUnrealisticVolt = voltVal !== '' && !isNaN(voltAsNum) && (voltAsNum >= 1000 || voltAsNum === 0);
+      const isUnrealisticVolt = voltVal !== '' && !isNaN(voltAsNum) && voltAsNum >= 1000;
 
       if (isUnrealisticVolt) {
         newRow[VOLT_COL] = '';
@@ -952,9 +938,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
       for (const key of Object.keys(r)) {
-        if (r[key] && typeof r[key] === 'string') {
-          r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
-        }
+        if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
       }
       return r;
     });
@@ -1139,10 +1123,7 @@ router.get('/download/:jobId', (req: Request, res: Response) => {
       return r;
     });
 
-  const noDesc = req.query.noDesc === '1';
-  const EXCLUDED_COLS = ['p_id', 'p_extern_id', ...(noDesc ? ['p_description[de]', 'p_description[nl]'] : [])];
-  const exportHeaders = job.headers.filter(h => !EXCLUDED_COLS.includes(h));
-  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: exportHeaders });
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const cleanFileName = job.fileName.replace(/\.csv$/i, '_sauber.csv');
 
@@ -1181,10 +1162,7 @@ router.get('/download-no-html/:jobId', (req: Request, res: Response) => {
       return r;
     });
 
-  const noDesc = req.query.noDesc === '1';
-  const EXCLUDED_COLS = ['p_id', 'p_extern_id', ...(noDesc ? ['p_description[de]', 'p_description[nl]'] : [])];
-  const exportHeaders = job.headers.filter(h => !EXCLUDED_COLS.includes(h));
-  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: exportHeaders });
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
   const noHtmlFileName = job.fileName.replace(/\.csv$/i, '_kein_html.csv');
 
