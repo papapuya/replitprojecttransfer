@@ -687,13 +687,14 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 
   const restoreEmoji = req.body?.restoreEmoji === 'true';
   const useDeForNL   = req.body?.useDeForNL === 'true';
+  const isCompressed = req.body?.compressed === 'true';
   const jobId = (req.body?.clientJobId as string | undefined) || crypto.randomBytes(16).toString('hex');
 
   // Fortschritt initialisieren
   const setProgress = (step: string, stepLabel: string, percent: number, detail = '') => {
     progressStore.set(jobId, { step, stepLabel, percent, detail, expires: Date.now() + 30 * 60 * 1000 });
   };
-  setProgress('parsing', 'CSV wird gelesen…', 5);
+  setProgress('parsing', 'CSV wird entpackt…', 5);
 
   // Sofort antworten – Browser muss nicht auf Verarbeitung warten
   res.json({ jobId });
@@ -701,11 +702,22 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
   // Gesamte Verarbeitung im Hintergrund
   setImmediate(async () => { try {
     const _t0 = Date.now();
-    console.log(`[VoltFixer] Empfangen: ${req.file!.originalname} (${(req.file!.size/1024/1024).toFixed(1)} MB)`);
+    console.log(`[VoltFixer] Empfangen: ${req.file!.originalname} (${(req.file!.size/1024/1024).toFixed(1)} MB, compressed=${isCompressed})`);
     await new Promise(resolve => setImmediate(resolve));
 
-    const encoding = detectEncoding(req.file!.buffer);
-    let text = iconv.decode(req.file!.buffer, encoding);
+    // Gzip dekomprimieren falls nötig
+    let rawBuffer = req.file!.buffer;
+    if (isCompressed) {
+      setProgress('parsing', 'CSV wird entpackt…', 6);
+      await new Promise(resolve => setImmediate(resolve));
+      rawBuffer = await new Promise<Buffer>((resolve, reject) =>
+        zlib.gunzip(rawBuffer, (err, result) => err ? reject(err) : resolve(result))
+      );
+      console.log(`[VoltFixer] Entpackt: ${(rawBuffer.length/1024/1024).toFixed(1)} MB`);
+    }
+
+    const encoding = detectEncoding(rawBuffer);
+    let text = iconv.decode(rawBuffer, encoding);
     // BOM entfernen
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
 
@@ -718,7 +730,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       header: true,
       skipEmptyLines: true,
     });
-    console.log(`[VoltFixer] Papa.parse: ${Date.now() - t1}ms (${parsed.data.length} Zeilen, ${(req.file!.size / 1024 / 1024).toFixed(1)} MB)`);
+    console.log(`[VoltFixer] Papa.parse: ${Date.now() - t1}ms (${parsed.data.length} Zeilen, ${(rawBuffer.length / 1024 / 1024).toFixed(1)} MB)`);
 
     if (parsed.errors.length > 0 && parsed.data.length === 0) {
       throw new Error('CSV konnte nicht geparst werden: ' + (parsed.errors[0]?.message ?? ''));

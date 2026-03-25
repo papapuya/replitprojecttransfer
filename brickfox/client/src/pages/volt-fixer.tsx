@@ -361,7 +361,7 @@ export default function VoltFixer() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const currentJobIdRef = useRef<string | null>(null);
   const waitingStartRef = useRef<number | null>(null);
-  const uploadReceivedRef = useRef<boolean>(false);
+  const xhrActiveRef = useRef<boolean>(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [editingVolt, setEditingVolt] = useState<{ index: number; value: string } | null>(null);
@@ -432,12 +432,13 @@ export default function VoltFixer() {
         if (!r.ok) return;
         const p: ProgressState = await r.json();
         if (p.step === 'waiting') {
-          // Zombie-Timeout: nur starten nachdem der Upload beim Server ankam
-          if (uploadReceivedRef.current) {
+          // Zombie-Timeout: nur wenn kein aktiver XHR mehr läuft
+          // (z.B. nach Server-Neustart mit altem jobId)
+          if (!xhrActiveRef.current) {
             if (waitingStartRef.current === null) waitingStartRef.current = Date.now();
             if (Date.now() - waitingStartRef.current > 30000) {
               clearInterval(interval);
-              setError('Zeitüberschreitung: Verarbeitung nicht gestartet. Bitte Datei erneut hochladen.');
+              setError('Zeitüberschreitung. Bitte Seite neu laden und Datei erneut hochladen.');
               setProgress(null);
               setLoading(false);
               currentJobIdRef.current = null;
@@ -479,35 +480,67 @@ export default function VoltFixer() {
     return () => clearInterval(interval);
   }, [loading]);
 
-  const uploadFile = (file: File) => {
+  const uploadFile = async (file: File) => {
     const clientJobId = crypto.randomUUID();
     currentJobIdRef.current = clientJobId;
-    uploadReceivedRef.current = false;
+    xhrActiveRef.current = true;
+    waitingStartRef.current = null;
 
     setLoading(true);
     setError("");
     setResult(null);
     setPage(0);
-    setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: 1, detail: `0 / ${(file.size / 1024 / 1024).toFixed(1)} MB` });
+    const origMBStr = (file.size / 1024 / 1024).toFixed(1);
 
+    // ── Schritt 1: Client-seitig gzip komprimieren ──────────────────────
+    setProgress({ step: 'uploading', stepLabel: 'Datei wird komprimiert…', percent: 2, detail: `${origMBStr} MB → wird kleiner…` });
+
+    let uploadBlob: Blob;
+    let compressed = false;
+    try {
+      const raw = await file.arrayBuffer();
+      const cs = new CompressionStream('gzip');
+      const writer = cs.writable.getWriter();
+      writer.write(raw);
+      writer.close();
+      const compressedBuffer = await new Response(cs.readable).arrayBuffer();
+      uploadBlob = new Blob([compressedBuffer], { type: 'application/octet-stream' });
+      compressed = true;
+      const compMBStr = (uploadBlob.size / 1024 / 1024).toFixed(1);
+      setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: 5, detail: `${origMBStr} MB → ${compMBStr} MB (komprimiert)` });
+    } catch {
+      // Fallback: unkomprimiert hochladen
+      uploadBlob = file;
+      setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: 5, detail: `${origMBStr} MB` });
+    }
+
+    const totalMBStr = (uploadBlob.size / 1024 / 1024).toFixed(1);
+
+    // ── Schritt 2: Hochladen ─────────────────────────────────────────────
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", uploadBlob, file.name);
     formData.append("restoreEmoji", String(restoreEmoji));
     formData.append("useDeForNL", String(useDeForNL));
     formData.append("clientJobId", clientJobId);
+    formData.append("compressed", String(compressed));
 
     const xhr = new XMLHttpRequest();
 
-    // Echter Upload-Fortschritt (0–30%)
+    // Datei-Übertragungsfortschritt 5–48%
     xhr.upload.onprogress = (e) => {
       if (!e.lengthComputable) return;
-      const pct = Math.max(1, Math.round((e.loaded / e.total) * 30));
+      const pct = Math.round(5 + (e.loaded / e.total) * 43);
       const loadedMB = (e.loaded / 1024 / 1024).toFixed(1);
-      const totalMB  = (e.total  / 1024 / 1024).toFixed(1);
-      setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: pct, detail: `${loadedMB} / ${totalMB} MB` });
+      setProgress({ step: 'uploading', stepLabel: 'Datei wird hochgeladen…', percent: pct, detail: `${loadedMB} / ${totalMBStr} MB` });
+    };
+
+    // Alle Bytes gesendet, warte auf Server-Bestätigung
+    xhr.upload.onload = () => {
+      setProgress({ step: 'uploading', stepLabel: 'Server empfängt Datei…', percent: 50, detail: 'Bitte warten…' });
     };
 
     xhr.onload = () => {
+      xhrActiveRef.current = false;
       try {
         const data = JSON.parse(xhr.responseText);
         if (xhr.status >= 400) {
@@ -517,10 +550,8 @@ export default function VoltFixer() {
           currentJobIdRef.current = null;
           return;
         }
-        // Erfolg: Server hat { jobId } geantwortet – Upload ist beim Server angekommen
-        // Ab jetzt läuft der Zombie-Timer falls Progress auf "waiting" bleibt
-        uploadReceivedRef.current = true;
-        // Progress-Polling übernimmt ab hier und holt das Ergebnis wenn fertig
+        // Erfolg: Server hat { jobId } geantwortet
+        // Progress-Polling übernimmt ab hier
       } catch {
         setError("Ungültige Server-Antwort");
         setProgress(null);
@@ -530,7 +561,8 @@ export default function VoltFixer() {
     };
 
     xhr.onerror = () => {
-      setError("Netzwerkfehler beim Upload");
+      xhrActiveRef.current = false;
+      setError("Netzwerkfehler beim Upload. Bitte prüfe deine Verbindung.");
       setProgress(null);
       setLoading(false);
       currentJobIdRef.current = null;
