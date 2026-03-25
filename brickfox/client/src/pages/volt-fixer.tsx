@@ -514,9 +514,12 @@ export default function VoltFixer() {
     if (file) handleFile(file);
   };
 
+  const [exportWithDesc, setExportWithDesc] = useState(true);
+
   const download = () => {
     if (!result) return;
-    window.open(`/api/volt-fixer/download/${result.jobId}`, "_blank");
+    const params = exportWithDesc ? '' : '?noDesc=1';
+    window.open(`/api/volt-fixer/download/${result.jobId}${params}`, "_blank");
   };
 
   const openDetail = useCallback((index: number, rowNum: number) => {
@@ -725,6 +728,17 @@ export default function VoltFixer() {
 
 
           {/* Download + Speichern */}
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={exportWithDesc}
+                onChange={e => setExportWithDesc(e.target.checked)}
+                className="w-4 h-4 accent-indigo-600"
+              />
+              Mit Beschreibung
+            </label>
+          </div>
           <div className="flex flex-wrap gap-3">
             <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
               <Download size={16} />
@@ -738,7 +752,10 @@ export default function VoltFixer() {
 
             {noHtmlChangedCount > 0 && (
               <Button
-                onClick={() => window.open(`/api/volt-fixer/download-no-html/${result.jobId}`, "_blank")}
+                onClick={() => {
+                  const params = exportWithDesc ? '' : '?noDesc=1';
+                  window.open(`/api/volt-fixer/download-no-html/${result.jobId}${params}`, "_blank");
+                }}
                 variant="outline"
                 className="border-red-300 text-red-700 hover:bg-red-50 gap-2"
               >
