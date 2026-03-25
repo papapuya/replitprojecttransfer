@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check, Save, Trash2, FolderOpen, ListFilter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -567,7 +568,9 @@ export default function VoltFixer() {
   const [voltFilterOpen, setVoltFilterOpen] = useState(false);
   const [voltFilterSearch, setVoltFilterSearch] = useState('');
   const [voltFilterIncluded, setVoltFilterIncluded] = useState<Set<string> | null>(null);
+  const [voltFilterPos, setVoltFilterPos] = useState({ top: 0, left: 0 });
   const voltFilterRef = useRef<HTMLDivElement>(null);
+  const voltFilterBtnRef = useRef<HTMLButtonElement>(null);
 
   const allItems = result?.previewItems ?? [];
 
@@ -956,69 +959,19 @@ export default function VoltFixer() {
                           <span>Volt (nachher)</span>
                           <div ref={voltFilterRef} className="relative">
                             <button
-                              onClick={() => setVoltFilterOpen(v => !v)}
+                              ref={voltFilterBtnRef}
+                              onClick={() => {
+                                if (voltFilterBtnRef.current) {
+                                  const r = voltFilterBtnRef.current.getBoundingClientRect();
+                                  setVoltFilterPos({ top: r.bottom + 4, left: r.left });
+                                }
+                                setVoltFilterOpen(v => !v);
+                              }}
                               className={`p-0.5 rounded transition-colors ${voltFilterIncluded !== null ? 'text-indigo-700 bg-indigo-200' : 'text-indigo-400 hover:bg-indigo-200'}`}
                               title="Filtern"
                             >
                               <ListFilter size={13} />
                             </button>
-                            {voltFilterOpen && (
-                              <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-56 font-normal text-gray-800">
-                                <div className="p-2 border-b border-gray-100">
-                                  <input
-                                    type="text"
-                                    value={voltFilterSearch}
-                                    onChange={e => setVoltFilterSearch(e.target.value)}
-                                    placeholder="Suchen…"
-                                    className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                                    autoFocus
-                                  />
-                                </div>
-                                <div className="px-3 py-2 border-b border-gray-100">
-                                  <label className="flex items-center gap-2 text-xs cursor-pointer font-medium">
-                                    <input
-                                      type="checkbox"
-                                      checked={voltFilterIncluded === null}
-                                      onChange={() => { setVoltFilterIncluded(null); setPage(0); }}
-                                      className="w-3.5 h-3.5 accent-indigo-600"
-                                    />
-                                    (Alles auswählen)
-                                  </label>
-                                </div>
-                                <div className="max-h-64 overflow-y-auto">
-                                  {uniqueVoltValues
-                                    .filter(v => !voltFilterSearch || v.toLowerCase().includes(voltFilterSearch.toLowerCase()))
-                                    .map(v => (
-                                      <label key={v} className="flex items-center gap-2 px-3 py-1 text-xs cursor-pointer hover:bg-gray-50">
-                                        <input
-                                          type="checkbox"
-                                          checked={voltFilterIncluded === null || voltFilterIncluded.has(v)}
-                                          onChange={e => {
-                                            const next = voltFilterIncluded === null
-                                              ? new Set(uniqueVoltValues)
-                                              : new Set(voltFilterIncluded);
-                                            if (e.target.checked) next.add(v); else next.delete(v);
-                                            setVoltFilterIncluded(next.size === uniqueVoltValues.length ? null : next);
-                                            setPage(0);
-                                          }}
-                                          className="w-3.5 h-3.5 accent-indigo-600"
-                                        />
-                                        <span className="font-mono">{v || '—'}</span>
-                                      </label>
-                                    ))}
-                                </div>
-                                {voltFilterIncluded !== null && (
-                                  <div className="px-3 py-2 border-t border-gray-100">
-                                    <button
-                                      onClick={() => { setVoltFilterIncluded(null); setPage(0); }}
-                                      className="text-xs text-indigo-600 hover:underline"
-                                    >
-                                      Filter zurücksetzen
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
                           </div>
                         </div>
                       </th>
@@ -1183,6 +1136,68 @@ export default function VoltFixer() {
           }}
           onCancel={() => setPendingFile(null)}
         />
+      )}
+
+      {/* Volt-Filter Dropdown – als Portal gerendert, damit overflow:hidden nicht abschneidet */}
+      {voltFilterOpen && createPortal(
+        <div
+          ref={voltFilterRef}
+          style={{ position: 'fixed', top: voltFilterPos.top, left: voltFilterPos.left, zIndex: 9999 }}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl w-56 text-xs text-gray-800"
+        >
+          <div className="p-2 border-b border-gray-100">
+            <input
+              type="text"
+              value={voltFilterSearch}
+              onChange={e => setVoltFilterSearch(e.target.value)}
+              placeholder="Suchen…"
+              className="w-full px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              autoFocus
+            />
+          </div>
+          <div className="px-3 py-2 border-b border-gray-100">
+            <label className="flex items-center gap-2 cursor-pointer font-medium">
+              <input
+                type="checkbox"
+                checked={voltFilterIncluded === null}
+                onChange={() => { setVoltFilterIncluded(null); setPage(0); }}
+                className="w-3.5 h-3.5 accent-indigo-600"
+              />
+              (Alles auswählen)
+            </label>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {uniqueVoltValues
+              .filter(v => !voltFilterSearch || v.toLowerCase().includes(voltFilterSearch.toLowerCase()))
+              .map(v => (
+                <label key={v} className="flex items-center gap-2 px-3 py-1 cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={voltFilterIncluded === null || voltFilterIncluded.has(v)}
+                    onChange={e => {
+                      const next = voltFilterIncluded === null ? new Set(uniqueVoltValues) : new Set(voltFilterIncluded);
+                      if (e.target.checked) next.add(v); else next.delete(v);
+                      setVoltFilterIncluded(next.size === uniqueVoltValues.length ? null : next);
+                      setPage(0);
+                    }}
+                    className="w-3.5 h-3.5 accent-indigo-600"
+                  />
+                  <span className="font-mono">{v || '—'}</span>
+                </label>
+              ))}
+          </div>
+          {voltFilterIncluded !== null && (
+            <div className="px-3 py-2 border-t border-gray-100">
+              <button
+                onClick={() => { setVoltFilterIncluded(null); setPage(0); }}
+                className="text-indigo-600 hover:underline"
+              >
+                Filter zurücksetzen
+              </button>
+            </div>
+          )}
+        </div>,
+        document.body
       )}
     </div>
   );
