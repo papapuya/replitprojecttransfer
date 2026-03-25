@@ -979,7 +979,7 @@ export default function VoltFixer() {
                                     <input
                                       type="checkbox"
                                       checked={voltFilterIncluded === null}
-                                      onChange={() => { setVoltFilterIncluded(voltFilterIncluded === null ? new Set() : null); setPage(0); }}
+                                      onChange={() => { setVoltFilterIncluded(null); setPage(0); }}
                                       className="w-3.5 h-3.5 accent-indigo-600"
                                     />
                                     (Alles auswählen)
