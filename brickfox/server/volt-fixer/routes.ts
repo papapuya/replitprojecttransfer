@@ -980,7 +980,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       return plain.length > max ? plain.slice(0, max) + '…' : plain;
     };
 
-    setProgress('done', 'Vorschau wird erstellt…', 92);
+    setProgress('building', 'Vorschau wird erstellt…', 92);
     await new Promise(resolve => setImmediate(resolve));
 
     // Vorschau: ALLE Zeilen (geändert + unverändert)
