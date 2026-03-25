@@ -11,6 +11,7 @@ const PAGE_SIZE = 500;
 
 type PreviewItem = {
   index: number;
+  pId: string;
   itemNr: string;
   voltOrig: string;
   voltNew: string;
@@ -690,6 +691,7 @@ export default function VoltFixer() {
                     <tr className="bg-gray-50 border-b">
                       <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">#</th>
                       <th className="px-2 py-2 w-8"></th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">p_id</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Artikel-Nr.</th>
                       <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (nachher)</th>
@@ -718,6 +720,7 @@ export default function VoltFixer() {
                               <Eye size={13} />
                             </button>
                           </td>
+                          <td className="px-3 py-1.5 text-gray-400 font-mono text-xs">{item.pId || "—"}</td>
                           <td className="px-3 py-1.5 text-gray-600 font-mono text-xs">{item.itemNr || "—"}</td>
                           <td className={`px-3 py-1.5 ${voltChanged ? "text-red-400 line-through opacity-70" : "text-gray-500"}`}>
                             {item.voltOrig || "—"}

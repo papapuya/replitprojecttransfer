@@ -926,6 +926,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       const itemNr = ITEM_NR_COLS.map(c => row[c]).find(v => v) || '';
       previewItems.push({
         index: i,
+        pId: row['p_id'] ?? '',
         itemNr,
         voltOrig: orig[VOLT_COL] ?? '',
         voltNew: row[VOLT_COL] ?? '',
