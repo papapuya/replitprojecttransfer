@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 const VOLT_COL = "p_attributes[akku_v][de]";
 const DESC_COLS = ["p_description[de]", "p_description[nl]"];
 const NAME_COLS = ["p_name[de]", "p_name[nl]"];
+// Volt-Werte >= 1000 sind unrealistisch und werden nicht angezeigt
+const isUnrealisticVolt = (v: string) => { const n = Number(v.replace(',', '.')); return v !== '' && !isNaN(n) && n >= 1000; };
 const NAME_COL_LABELS: Record<string, string> = { "p_name[de]": "DE", "p_name[nl]": "NL" };
 const PAGE_SIZE = 500;
 
@@ -893,7 +895,7 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 text-gray-400 font-mono text-xs">{item.pId || "—"}</td>
                           <td className="px-3 py-1.5 text-gray-600 font-mono text-xs">{item.itemNr || "—"}</td>
                           <td className={`px-3 py-1.5 ${voltChanged ? "text-red-400 line-through opacity-70" : "text-gray-500"}`}>
-                            {item.voltOrig || "—"}
+                            {isUnrealisticVolt(item.voltOrig) ? "—" : (item.voltOrig || "—")}
                           </td>
                           <td className={`px-1 py-1 font-semibold ${voltChanged ? "text-indigo-700" : "text-gray-700"}`}>
                             {editingVolt?.index === item.index ? (
@@ -971,7 +973,7 @@ export default function VoltFixer() {
                             ) : <span className="text-gray-300">—</span>}
                           </td>
                           <td className="px-3 py-1.5 bg-indigo-50/40 font-mono text-xs text-indigo-700">
-                            {item.voltOrig || <span className="text-gray-300">—</span>}
+                            {isUnrealisticVolt(item.voltOrig) ? <span className="text-gray-300">—</span> : (item.voltOrig || <span className="text-gray-300">—</span>)}
                           </td>
                         </tr>
                       );

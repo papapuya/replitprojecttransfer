@@ -747,8 +747,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
       const voltVal = (row[VOLT_COL] ?? '').trim();
 
-      if (!voltVal) {
-        // Volt-Spalte leer → Suche in Reihenfolge: 1) Produktname, 2) Spannung-Tabellenzeile, 3) Fließtext
+      // Unrealistisch hohe Zahlen (>= 1000) sind kein gültiger Volt-Wert → wie leer behandeln
+      const voltAsNum = Number(voltVal.replace(',', '.'));
+      const isUnrealisticVolt = voltVal !== '' && !isNaN(voltAsNum) && voltAsNum >= 1000;
+
+      if (!voltVal || isUnrealisticVolt) {
+        // Volt-Spalte leer (oder unrealistisch) → Suche in Reihenfolge: 1) Produktname, 2) Spannung-Tabellenzeile, 3) Fließtext
         let extracted: string | null = null;
         let extractedFromCol = '';
         let extractedFromName = '';
@@ -794,6 +798,11 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
             fromName: extractedFromName,
             fromCol: extractedFromCol,
           });
+        } else if (isUnrealisticVolt) {
+          // Kein gültiger Wert gefunden & Originalwert war unrealistisch → Spalte leeren
+          newRow[VOLT_COL] = '';
+          changed.push(VOLT_COL);
+          voltChanged++;
         } else {
           voltSkipped++;
         }
