@@ -685,14 +685,16 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     }
 
     const headers = parsed.meta.fields || [];
-    // Mojibake reparieren: "fÃ¼r" → "für" (entsteht wenn UTF-8-CSVs als Latin-1 gelesen wurden)
-    const rows = (parsed.data as Record<string, string>[]).map(row => {
-      const fixed: Record<string, string> = {};
-      for (const key of Object.keys(row)) {
-        fixed[key] = repairMojibake(row[key]);
-      }
-      return fixed;
-    });
+    // Mojibake reparieren + komplett leere Zeilen entfernen (Brickfox-Export enthält oft Leerzeilen mit nur Semikolons)
+    const rows = (parsed.data as Record<string, string>[])
+      .filter(row => Object.values(row).some(v => typeof v === 'string' && v.trim() !== ''))
+      .map(row => {
+        const fixed: Record<string, string> = {};
+        for (const key of Object.keys(row)) {
+          fixed[key] = repairMojibake(row[key]);
+        }
+        return fixed;
+      });
 
     setProgress('fixing', 'Volt-Werte werden korrigiert…', 15, `${rows.length.toLocaleString('de-DE')} Zeilen`);
 
