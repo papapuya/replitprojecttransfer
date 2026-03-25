@@ -66,19 +66,20 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Keine Datei hochgeladen' });
 
-    // Kodierung erkennen: UTF-8 oder Windows-1252/Latin-1?
-    // Wenn viele Replacement-Zeichen (U+FFFD) im UTF-8-Versuch → Latin-1 verwenden
-    const utf8Attempt = req.file.buffer.toString('utf-8');
-    const replacementCount = (utf8Attempt.match(/\uFFFD/g) ?? []).length;
-    let raw: string;
-    if (replacementCount > 5) {
-      // Windows-1252 / Latin-1 → wird automatisch als UTF-8 weiterverarbeitet
-      raw = req.file.buffer.toString('latin1');
-      console.log(`[CsvRepair] Kodierung: Latin-1/Windows-1252 erkannt (${replacementCount} kaputte Zeichen in UTF-8)`);
-    } else {
-      raw = utf8Attempt;
-      console.log(`[CsvRepair] Kodierung: UTF-8`);
+    // Kodierung erkennen – gleiche Logik wie Volt-Fixer:
+    // Prüfe ob Bytes > 0x7F vorhanden sind; wenn ja, teste UTF-8-Validität.
+    // Falls ungültige UTF-8-Sequenzen → Windows-1252 dekodieren (via iconv).
+    const buf = req.file.buffer;
+    const encodingSample = buf.slice(0, Math.min(1000, buf.length));
+    let highBytes = 0;
+    for (const b of encodingSample) { if (b > 0x7F) highBytes++; }
+    let detectedEncoding = 'utf-8';
+    if (highBytes > 0) {
+      const decoded = buf.toString('utf-8');
+      detectedEncoding = decoded.includes('\uFFFD') ? 'windows-1252' : 'utf-8';
     }
+    let raw: string = iconv.decode(buf, detectedEncoding);
+    console.log(`[CsvRepair] Kodierung erkannt: ${detectedEncoding} (highBytes=${highBytes})`);
     // BOM entfernen
     if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
 
