@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check, Save, Trash2, FolderOpen } from "lucide-react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check, Save, Trash2, FolderOpen, ListFilter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -564,17 +564,42 @@ export default function VoltFixer() {
 
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
   const [showNoHtml, setShowNoHtml] = useState(false);
-  const [voltFilter, setVoltFilter] = useState('');
+  const [voltFilterOpen, setVoltFilterOpen] = useState(false);
+  const [voltFilterSearch, setVoltFilterSearch] = useState('');
+  const [voltFilterIncluded, setVoltFilterIncluded] = useState<Set<string> | null>(null);
+  const voltFilterRef = useRef<HTMLDivElement>(null);
+
   const allItems = result?.previewItems ?? [];
+
+  const uniqueVoltValues = useMemo(() => {
+    const vals = [...new Set(allItems.map(it => it.voltNew))].sort((a, b) => {
+      const na = parseFloat(a.replace(',', '.'));
+      const nb = parseFloat(b.replace(',', '.'));
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b, 'de');
+    });
+    return vals;
+  }, [allItems]);
+
+  useEffect(() => {
+    if (!voltFilterOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (voltFilterRef.current && !voltFilterRef.current.contains(e.target as Node)) {
+        setVoltFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [voltFilterOpen]);
+
   const noHtmlChangedCount = allItems.filter(it => it.hasHtml === false).length;
   const baseItems = showNoHtml
     ? allItems.filter(it => it.hasHtml === false)
     : showOnlyChanged
       ? allItems.filter(it => it.changed.length > 0)
       : allItems;
-  const voltFilterTrimmed = voltFilter.trim().toLowerCase();
-  const items = voltFilterTrimmed
-    ? baseItems.filter(it => it.voltNew.toLowerCase().includes(voltFilterTrimmed))
+  const items = voltFilterIncluded !== null
+    ? baseItems.filter(it => voltFilterIncluded.has(it.voltNew))
     : baseItems;
   const changedCount = allItems.filter(it => it.changed.length > 0).length;
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
@@ -872,23 +897,6 @@ export default function VoltFixer() {
                 </span>
               </h2>
               <div className="flex items-center gap-3">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={voltFilter}
-                    onChange={e => { setVoltFilter(e.target.value); setPage(0); }}
-                    placeholder="Volt filtern…"
-                    className="text-xs pl-3 pr-7 py-1.5 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 w-32"
-                  />
-                  {voltFilter && (
-                    <button
-                      onClick={() => { setVoltFilter(''); setPage(0); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
                 <button
                   onClick={() => { setShowNoHtml(false); setShowOnlyChanged(v => !v); setPage(0); }}
                   className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
@@ -943,7 +951,77 @@ export default function VoltFixer() {
                       <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">p_id</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Artikel-Nr.</th>
                       <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (nachher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">
+                        <div className="flex items-center gap-1">
+                          <span>Volt (nachher)</span>
+                          <div ref={voltFilterRef} className="relative">
+                            <button
+                              onClick={() => setVoltFilterOpen(v => !v)}
+                              className={`p-0.5 rounded transition-colors ${voltFilterIncluded !== null ? 'text-indigo-700 bg-indigo-200' : 'text-indigo-400 hover:bg-indigo-200'}`}
+                              title="Filtern"
+                            >
+                              <ListFilter size={13} />
+                            </button>
+                            {voltFilterOpen && (
+                              <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-56 font-normal text-gray-800">
+                                <div className="p-2 border-b border-gray-100">
+                                  <input
+                                    type="text"
+                                    value={voltFilterSearch}
+                                    onChange={e => setVoltFilterSearch(e.target.value)}
+                                    placeholder="Suchen…"
+                                    className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                    autoFocus
+                                  />
+                                </div>
+                                <div className="px-3 py-2 border-b border-gray-100">
+                                  <label className="flex items-center gap-2 text-xs cursor-pointer font-medium">
+                                    <input
+                                      type="checkbox"
+                                      checked={voltFilterIncluded === null}
+                                      onChange={() => { setVoltFilterIncluded(null); setPage(0); }}
+                                      className="w-3.5 h-3.5 accent-indigo-600"
+                                    />
+                                    (Alles auswählen)
+                                  </label>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto">
+                                  {uniqueVoltValues
+                                    .filter(v => !voltFilterSearch || v.toLowerCase().includes(voltFilterSearch.toLowerCase()))
+                                    .map(v => (
+                                      <label key={v} className="flex items-center gap-2 px-3 py-1 text-xs cursor-pointer hover:bg-gray-50">
+                                        <input
+                                          type="checkbox"
+                                          checked={voltFilterIncluded === null || voltFilterIncluded.has(v)}
+                                          onChange={e => {
+                                            const next = voltFilterIncluded === null
+                                              ? new Set(uniqueVoltValues)
+                                              : new Set(voltFilterIncluded);
+                                            if (e.target.checked) next.add(v); else next.delete(v);
+                                            setVoltFilterIncluded(next.size === uniqueVoltValues.length ? null : next);
+                                            setPage(0);
+                                          }}
+                                          className="w-3.5 h-3.5 accent-indigo-600"
+                                        />
+                                        <span className="font-mono">{v || '—'}</span>
+                                      </label>
+                                    ))}
+                                </div>
+                                {voltFilterIncluded !== null && (
+                                  <div className="px-3 py-2 border-t border-gray-100">
+                                    <button
+                                      onClick={() => { setVoltFilterIncluded(null); setPage(0); }}
+                                      className="text-xs text-indigo-600 hover:underline"
+                                    >
+                                      Filter zurücksetzen
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name DE</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name NL</th>
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">Beschreibung DE</th>
