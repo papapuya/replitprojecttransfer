@@ -63,6 +63,7 @@ import webhooksRouter from './webhooks-supabase';
 import mappingRouter from './routes-mapping';
 import akkushopGeneratorRouter from './akkushop-generator/routes';
 import voltFixerRouter from './volt-fixer/routes';
+import csvRepairRouter from './csv-repair/routes';
 import { pdfParserService } from './services/pdf-parser';
 import { deeplService } from './services/deepl-service';
 
@@ -3562,6 +3563,9 @@ Beispiel Antwort:
 
   // Volt-Komma Fixer
   app.use('/api/volt-fixer', voltFixerRouter);
+
+  // CSV-Reparatur
+  app.use('/api/csv-repair', csvRepairRouter);
 
   // Weight estimation endpoint
   app.post('/api/estimate-weight', requireAuth, async (req, res) => {

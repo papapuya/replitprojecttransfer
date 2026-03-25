@@ -46,6 +46,7 @@ import PriceMatcher from "@/pages/price-matcher";
 import AkkushopGenerator from "@/pages/akkushop-generator";
 import DescriptionAnalyzer from "@/pages/description-analyzer";
 import VoltFixer from "@/pages/volt-fixer";
+import CsvRepair from "@/pages/csv-repair";
 
 function Router() {
   return (
@@ -197,6 +198,11 @@ function Router() {
       <Route path="/volt-fixer">
         <ProtectedRoute>
           <VoltFixer />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/csv-repair">
+        <ProtectedRoute>
+          <CsvRepair />
         </ProtectedRoute>
       </Route>
       
