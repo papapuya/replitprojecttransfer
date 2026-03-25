@@ -43,7 +43,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; brokenRowCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -573,8 +573,19 @@ export default function VoltFixer() {
           <div className="flex flex-wrap gap-3">
             <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
               <Download size={16} />
-              Korrigierte CSV herunterladen ({result.stats.total.toLocaleString()} Zeilen)
+              Saubere CSV ({(result.stats.total - (result.stats.brokenRowCount ?? 0)).toLocaleString()} Zeilen)
             </Button>
+
+            {(result.stats.brokenRowCount ?? 0) > 0 && (
+              <Button
+                onClick={() => window.open(`/api/volt-fixer/download-broken/${result.jobId}`, "_blank")}
+                variant="outline"
+                className="border-red-400 text-red-700 hover:bg-red-50 gap-2"
+              >
+                <Download size={16} />
+                Kaputtes HTML ({result.stats.brokenRowCount!.toLocaleString()} Zeilen)
+              </Button>
+            )}
 
             {(result.stats.dreiSpannungCount ?? 0) > 0 && (
               <Button

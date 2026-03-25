@@ -804,6 +804,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     type CsvIssue = { row: number; itemNr: string; type: string; detail: string };
     const csvIssues: CsvIssue[] = [];
     const ITEM_NR_COLS_V = ['p_item_number', 'v_item_number'];
+    // Indizes (0-basiert in fixedRows) der Zeilen mit kaputtem HTML
+    const brokenHtmlIndices = new Set<number>();
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -834,6 +836,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           const badTags = findUnbalancedHtmlTags(deDesc);
           if (badTags.length > 0) {
             csvIssues.push({ row: i + 2, itemNr, type: 'Kaputtes HTML (DE)', detail: `Unbalancierte Tags: ${badTags.join(', ')}` });
+            brokenHtmlIndices.add(i);
           }
         }
       }
@@ -847,6 +850,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
           const badTagsNl = findUnbalancedHtmlTags(nlDesc);
           if (badTagsNl.length > 0) {
             csvIssues.push({ row: i + 2, itemNr, type: 'Kaputtes HTML (NL)', detail: `Unbalancierte Tags: ${badTagsNl.join(', ')}` });
+            brokenHtmlIndices.add(i);
           }
         }
       }
@@ -855,7 +859,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
     // Zeilenumbrüche aus HTML-Beschreibungsfeldern entfernen (CSV-Kompatibilität)
-    // Verhindert, dass mehrzeilige HTML-Felder im CSV über mehrere Zeilen verteilt werden
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
       for (const col of DESC_COLS) {
@@ -864,9 +867,18 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return r;
     });
 
-    // Korrigierte CSV bauen
-    const csvOut = Papa.unparse(csvRows, { delimiter: ';', columns: headers });
+    // Saubere CSV (ohne kaputte HTML-Zeilen) + kaputte CSV (nur kaputte Zeilen)
+    const csvRowsClean = csvRows.filter((_, i) => !brokenHtmlIndices.has(i));
+    const csvRowsBroken = csvRows.filter((_, i) => brokenHtmlIndices.has(i));
+
+    const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
+
+    let csvBufferBroken: Buffer | null = null;
+    if (csvRowsBroken.length > 0) {
+      const csvOutBroken = Papa.unparse(csvRowsBroken, { delimiter: ';', columns: headers });
+      csvBufferBroken = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOutBroken, 'utf-8')]);
+    }
 
     // Drei-Spannung-Produkte erkennen (Spannung + Eingangsspannung + Ausgangsspannung in DE-Beschreibung)
     const dreiSpannungIndices: number[] = fixedRows
@@ -876,10 +888,14 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
     const jobId = crypto.randomBytes(16).toString('hex');
-    const fileName = (req.file.originalname || 'output').replace(/\.csv$/i, '_volt_fixed.csv');
+    const baseName = (req.file.originalname || 'output').replace(/\.csv$/i, '');
+    const fileName = baseName + '_volt_fixed.csv';
+    const fileNameBroken = baseName + '_kaputtes_html.csv';
     jobStore.set(jobId, {
       csvBuffer,
+      csvBufferBroken,
       fileName,
+      fileNameBroken,
       expires: Date.now() + 30 * 60 * 1000,
       fixedRows,
       dreiSpannungIndices,
@@ -927,7 +943,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, voltSkippedNonElectronic, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length },
+      stats: { total: rows.length, voltChanged, voltSkipped, voltSkippedNonElectronic, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length, brokenRowCount: brokenHtmlIndices.size },
       previewItems,
       allChangedNames,
       allExtractedVolt,
@@ -970,6 +986,17 @@ router.get('/download/:jobId', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${job.fileName}"`);
   res.send(job.csvBuffer);
+});
+
+// GET /api/volt-fixer/download-broken/:jobId
+// Exportiert nur Zeilen mit kaputtem HTML (zur Nachbearbeitung)
+router.get('/download-broken/:jobId', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  if (!job.csvBufferBroken) return res.status(404).json({ error: 'Keine Zeilen mit kaputtem HTML gefunden' });
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${job.fileNameBroken}"`);
+  res.send(job.csvBufferBroken);
 });
 
 // GET /api/volt-fixer/download-drei-spannung/:jobId
