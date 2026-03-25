@@ -120,6 +120,8 @@ interface JobResultCache {
   allChangedNames: object[];
   allExtractedVolt: object[];
   csvIssues: object[];
+  headers: string[];
+  fileName: string;
 }
 
 const jobStore = new Map<string, {
@@ -679,27 +681,28 @@ router.get('/progress/:jobId', (req: Request, res: Response) => {
 });
 
 // POST /api/volt-fixer/upload
-router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei hochgeladen' });
 
-    const restoreEmoji = req.body?.restoreEmoji === 'true';
-    const useDeForNL   = req.body?.useDeForNL === 'true';
-    const clientJobId  = req.body?.clientJobId as string | undefined;
+  const restoreEmoji = req.body?.restoreEmoji === 'true';
+  const useDeForNL   = req.body?.useDeForNL === 'true';
+  const jobId = (req.body?.clientJobId as string | undefined) || crypto.randomBytes(16).toString('hex');
 
-    // Fortschritt initialisieren
-    const setProgress = (step: string, stepLabel: string, percent: number, detail = '') => {
-      if (!clientJobId) return;
-      progressStore.set(clientJobId, { step, stepLabel, percent, detail, expires: Date.now() + 30 * 60 * 1000 });
-    };
+  // Fortschritt initialisieren
+  const setProgress = (step: string, stepLabel: string, percent: number, detail = '') => {
+    progressStore.set(jobId, { step, stepLabel, percent, detail, expires: Date.now() + 30 * 60 * 1000 });
+  };
+  setProgress('parsing', 'CSV wird gelesen…', 5);
 
-    setProgress('parsing', 'CSV wird gelesen…', 5);
+  // Sofort antworten – Browser muss nicht auf Verarbeitung warten
+  res.json({ jobId });
 
-    // Event-Loop freigeben bevor wir mit der schweren Arbeit beginnen
+  // Gesamte Verarbeitung im Hintergrund
+  setImmediate(async () => { try {
     await new Promise(resolve => setImmediate(resolve));
 
-    const encoding = detectEncoding(req.file.buffer);
-    let text = iconv.decode(req.file.buffer, encoding);
+    const encoding = detectEncoding(req.file!.buffer);
+    let text = iconv.decode(req.file!.buffer, encoding);
     // BOM entfernen
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
 
@@ -939,8 +942,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       .map(({ i }) => i);
 
     // Job speichern (30 Minuten) – inkl. aller Zeilen für Detail-Endpoint
-    const jobId = crypto.randomBytes(16).toString('hex');
-    const baseName = (req.file.originalname || 'output').replace(/\.csv$/i, '');
+    const baseName = (req.file!.originalname || 'output').replace(/\.csv$/i, '');
     const fileName = baseName + '_volt_fixed.csv';
     jobStore.set(jobId, {
       csvBuffer,
@@ -994,9 +996,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       });
     }
 
-    setProgress('done', 'Fertig!', 100);
-
-    // Ergebnis im Job cachen (für Speicherfunktion)
+    // Ergebnis im Job cachen – Frontend holt es per /result/:jobId
     const htmlCorrectedCount = fixedRows.filter((row, i) => {
       const changed = changedCols[i] ?? [];
       return changed.length > 0 && /<[a-z]/i.test(row['p_description[de]'] ?? '');
@@ -1004,23 +1004,23 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const resultStats = { total: rows.length, voltChanged, voltSkipped, voltSkippedNonElectronic, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length, htmlCorrectedCount };
     const currentJob = jobStore.get(jobId);
     if (currentJob) {
-      currentJob.resultCache = { stats: resultStats, previewItems, allChangedNames, allExtractedVolt, csvIssues };
+      currentJob.resultCache = { stats: resultStats, previewItems, allChangedNames, allExtractedVolt, csvIssues, headers, fileName };
     }
 
-    res.json({
-      jobId,
-      headers,
-      stats: resultStats,
-      previewItems,
-      allChangedNames,
-      allExtractedVolt,
-      csvIssues,
-      fileName,
-    });
+    setProgress('done', 'Fertig!', 100);
   } catch (err: any) {
     console.error('[VoltFixer] Upload error:', err);
-    res.status(500).json({ error: err.message || 'Interner Fehler' });
+    progressStore.set(jobId, { step: 'error', stepLabel: 'Fehler: ' + (err.message || 'Interner Fehler'), percent: 0, detail: '', expires: Date.now() + 5 * 60 * 1000 });
   }
+  }); // end setImmediate
+});
+
+// GET /api/volt-fixer/result/:jobId — Ergebnis nach abgeschlossener Hintergrundverarbeitung
+router.get('/result/:jobId', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  if (!job.resultCache) return res.status(202).json({ error: 'Noch nicht fertig' });
+  res.json({ jobId: req.params.jobId, ...job.resultCache });
 });
 
 // GET /api/volt-fixer/detail/:jobId/:index — vollständige Zeile für Auge-Modal
