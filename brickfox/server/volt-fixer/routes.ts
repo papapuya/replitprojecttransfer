@@ -115,7 +115,7 @@ function hasDreiSpannung(html: string): boolean {
 }
 
 interface JobResultCache {
-  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount: number; htmlCorrectedCount: number };
   previewItems: object[];
   allChangedNames: object[];
   allExtractedVolt: object[];
@@ -1018,7 +1018,11 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     setProgress('done', 'Fertig!', 100);
 
     // Ergebnis im Job cachen (für Speicherfunktion)
-    const resultStats = { total: rows.length, voltChanged, voltSkipped, voltSkippedNonElectronic, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length };
+    const htmlCorrectedCount = fixedRows.filter((row, i) => {
+      const changed = changedCols[i] ?? [];
+      return changed.length > 0 && /<[a-z]/i.test(row['p_description[de]'] ?? '');
+    }).length;
+    const resultStats = { total: rows.length, voltChanged, voltSkipped, voltSkippedNonElectronic, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length, htmlCorrectedCount };
     const currentJob = jobStore.get(jobId);
     if (currentJob) {
       currentJob.resultCache = { stats: resultStats, previewItems, allChangedNames, allExtractedVolt, csvIssues };
@@ -1091,12 +1095,45 @@ router.patch('/patch-volt/:jobId/:index', (req: Request, res: Response) => {
 });
 
 // GET /api/volt-fixer/download/:jobId
+// Exportiert nur korrigierte Zeilen (Volt geändert) MIT HTML in p_description[de]
 router.get('/download/:jobId', (req: Request, res: Response) => {
   const job = jobStore.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+
+  const isValidPItemNr = (row: Record<string, string>): boolean => {
+    const v = (row['p_item_number'] ?? '').trim();
+    if (!v) return false;
+    if (/<|>/.test(v)) return false;
+    if (/&/.test(v)) return false;
+    if (/\s/.test(v)) return false;
+    if (/,/.test(v)) return false;
+    if (/^\d+\.\d+$/.test(v)) return false;
+    if (/^\d{1,2}$/.test(v)) return false;
+    return true;
+  };
+
+  const filteredRows = job.fixedRows
+    .filter((row, i) => {
+      const changed = job.changedCols[i] ?? [];
+      if (changed.length === 0) return false;
+      return /<[a-z]/i.test(row['p_description[de]'] ?? '');
+    })
+    .filter(isValidPItemNr)
+    .map(row => {
+      const r = { ...row };
+      for (const key of Object.keys(r)) {
+        if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+      }
+      return r;
+    });
+
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
+  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
+  const cleanFileName = job.fileName.replace(/\.csv$/i, '_sauber.csv');
+
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${job.fileName}"`);
-  res.send(job.csvBuffer);
+  res.setHeader('Content-Disposition', `attachment; filename="${cleanFileName}"`);
+  res.send(csvBuffer);
 });
 
 
