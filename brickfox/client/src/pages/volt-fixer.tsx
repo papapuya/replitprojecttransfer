@@ -55,7 +55,7 @@ type Result = {
   jobId: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; htmlCorrectedCount?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -722,6 +722,11 @@ export default function VoltFixer() {
             <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
               <Download size={16} />
               Saubere CSV herunterladen
+              {(result.stats.htmlCorrectedCount ?? 0) > 0 && (
+                <span className="ml-1 bg-white/20 rounded px-1.5 py-0.5 text-xs font-semibold">
+                  {result.stats.htmlCorrectedCount!.toLocaleString('de-DE')} Zeilen
+                </span>
+              )}
             </Button>
 
             <Button
