@@ -361,6 +361,7 @@ export default function VoltFixer() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const currentJobIdRef = useRef<string | null>(null);
   const waitingStartRef = useRef<number | null>(null);
+  const uploadReceivedRef = useRef<boolean>(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [editingVolt, setEditingVolt] = useState<{ index: number; value: string } | null>(null);
@@ -431,13 +432,16 @@ export default function VoltFixer() {
         if (!r.ok) return;
         const p: ProgressState = await r.json();
         if (p.step === 'waiting') {
-          if (waitingStartRef.current === null) waitingStartRef.current = Date.now();
-          if (Date.now() - waitingStartRef.current > 20000) {
-            clearInterval(interval);
-            setError('Zeitüberschreitung: Die Verarbeitung wurde nicht gestartet. Bitte Seite neu laden und Datei erneut hochladen.');
-            setProgress(null);
-            setLoading(false);
-            currentJobIdRef.current = null;
+          // Zombie-Timeout: nur starten nachdem der Upload beim Server ankam
+          if (uploadReceivedRef.current) {
+            if (waitingStartRef.current === null) waitingStartRef.current = Date.now();
+            if (Date.now() - waitingStartRef.current > 30000) {
+              clearInterval(interval);
+              setError('Zeitüberschreitung: Verarbeitung nicht gestartet. Bitte Datei erneut hochladen.');
+              setProgress(null);
+              setLoading(false);
+              currentJobIdRef.current = null;
+            }
           }
           return;
         }
@@ -478,6 +482,7 @@ export default function VoltFixer() {
   const uploadFile = (file: File) => {
     const clientJobId = crypto.randomUUID();
     currentJobIdRef.current = clientJobId;
+    uploadReceivedRef.current = false;
 
     setLoading(true);
     setError("");
@@ -510,8 +515,11 @@ export default function VoltFixer() {
           setProgress(null);
           setLoading(false);
           currentJobIdRef.current = null;
+          return;
         }
-        // Erfolg: Server antwortet nur mit { jobId }
+        // Erfolg: Server hat { jobId } geantwortet – Upload ist beim Server angekommen
+        // Ab jetzt läuft der Zombie-Timer falls Progress auf "waiting" bleibt
+        uploadReceivedRef.current = true;
         // Progress-Polling übernimmt ab hier und holt das Ergebnis wenn fertig
       } catch {
         setError("Ungültige Server-Antwort");
