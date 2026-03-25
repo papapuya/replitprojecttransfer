@@ -915,12 +915,11 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return plain.length > max ? plain.slice(0, max) + '…' : plain;
     };
 
-    // Vorschau: ALLE geänderten Zeilen (kein Limit)
+    // Vorschau: ALLE Zeilen (geändert + unverändert)
     const ITEM_NR_COLS = ['p_item_number', 'v_item_number'];
     const previewItems: object[] = [];
     for (let i = 0; i < fixedRows.length; i++) {
-      const changed = changedCols[i];
-      if (!changed || changed.length === 0) continue;
+      const changed = changedCols[i] ?? [];
       const orig = rows[i];
       const row = fixedRows[i];
       const itemNr = ITEM_NR_COLS.map(c => row[c]).find(v => v) || '';
