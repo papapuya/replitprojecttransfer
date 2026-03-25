@@ -675,6 +675,7 @@ function restoreEmojiCheckmarks(html: string): string {
 
 // GET /api/volt-fixer/progress/:jobId
 router.get('/progress/:jobId', (req: Request, res: Response) => {
+  res.set('Cache-Control', 'no-store');
   const p = progressStore.get(req.params.jobId);
   if (!p) return res.json({ step: 'waiting', stepLabel: 'Warte auf Start…', percent: 0, detail: '' });
   res.json({ step: p.step, stepLabel: p.stepLabel, percent: p.percent, detail: p.detail });
@@ -699,6 +700,8 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 
   // Gesamte Verarbeitung im Hintergrund
   setImmediate(async () => { try {
+    const _t0 = Date.now();
+    console.log(`[VoltFixer] Empfangen: ${req.file!.originalname} (${(req.file!.size/1024/1024).toFixed(1)} MB)`);
     await new Promise(resolve => setImmediate(resolve));
 
     const encoding = detectEncoding(req.file!.buffer);
@@ -709,14 +712,16 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
     setProgress('parsing', 'CSV wird geparst…', 8);
     await new Promise(resolve => setImmediate(resolve));
 
+    const t1 = Date.now();
     const parsed = Papa.parse(text, {
       delimiter: ';',
       header: true,
       skipEmptyLines: true,
     });
+    console.log(`[VoltFixer] Papa.parse: ${Date.now() - t1}ms (${parsed.data.length} Zeilen, ${(req.file!.size / 1024 / 1024).toFixed(1)} MB)`);
 
     if (parsed.errors.length > 0 && parsed.data.length === 0) {
-      return res.status(400).json({ error: 'CSV konnte nicht geparst werden', details: parsed.errors[0]?.message });
+      throw new Error('CSV konnte nicht geparst werden: ' + (parsed.errors[0]?.message ?? ''));
     }
 
     setProgress('parsing', 'Zeichen werden repariert…', 11);
@@ -1007,6 +1012,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       currentJob.resultCache = { stats: resultStats, previewItems, allChangedNames, allExtractedVolt, csvIssues, headers, fileName };
     }
 
+    console.log(`[VoltFixer] Fertig! Gesamt: ${Date.now() - _t0}ms`);
     setProgress('done', 'Fertig!', 100);
   } catch (err: any) {
     console.error('[VoltFixer] Upload error:', err);
