@@ -138,6 +138,8 @@ const jobStore = new Map<string, {
 }>();
 
 // Hilfsfunktion: CSV-Puffer aus fixedRows neu generieren (nach Patch)
+const HTML_EXPORT_COLS = new Set(['p_description[de]', 'p_description[nl]']);
+
 function rebuildCsvBuffer(job: { fixedRows: Record<string,string>[]; headers: string[] }): Buffer {
   const isValidPItemNr = (row: Record<string, string>): boolean => {
     const v = (row['p_item_number'] ?? '').trim();
@@ -153,7 +155,9 @@ function rebuildCsvBuffer(job: { fixedRows: Record<string,string>[]; headers: st
   const csvRows = job.fixedRows.map(row => {
     const r = { ...row };
     for (const key of Object.keys(r)) {
-      if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+      if (r[key] && !HTML_EXPORT_COLS.has(key)) {
+        r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+      }
     }
     return r;
   });
@@ -924,13 +928,13 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
-    // Zeilenumbrüche aus ALLEN Feldern entfernen (CSV-Kompatibilität)
-    // Betrifft nicht nur Beschreibungen: auch HTML-Entities wie &nbsp; enden auf ";" und
-    // brechen sonst die semikolon-getrennte CSV-Struktur wenn Zeilenumbrüche vorhanden sind.
+    // Nur Nicht-HTML-Spalten bereinigen — p_description[de/nl] werden unverändert übernommen
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
       for (const key of Object.keys(r)) {
-        if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+        if (r[key] && !HTML_EXPORT_COLS.has(key)) {
+          r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+        }
       }
       return r;
     });

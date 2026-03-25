@@ -451,10 +451,14 @@ export async function processVoltFile(
   onProgress('building', 'Ergebnis wird aufbereitet…', 93);
   await yield_();
 
+  // HTML-Beschreibungsspalten unverändert lassen — Zeilenumbrüche sind Teil des HTML
+  const HTML_COLS = new Set(['p_description[de]', 'p_description[nl]']);
   const csvRows = fixedRows.map(row => {
     const r = { ...row };
     for (const key of Object.keys(r)) {
-      if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+      if (r[key] && !HTML_COLS.has(key)) {
+        r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+      }
     }
     return r;
   });

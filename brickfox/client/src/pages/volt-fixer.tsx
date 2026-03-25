@@ -126,6 +126,14 @@ function DetailModal({
   const [loading, setLoading] = useState(!localData);
   const [err, setErr] = useState("");
 
+  // Sync falls localData nach erstem Render ankommt (React-Batching)
+  useEffect(() => {
+    if (localData) {
+      setData(localData);
+      setLoading(false);
+    }
+  }, [localData]);
+
   useEffect(() => {
     if (localData) return;
     if (!jobId) { setErr("Keine Daten verfügbar"); setLoading(false); return; }
@@ -217,6 +225,13 @@ function DetailModal({
                         </div>
                       )}
                     </div>
+                  </section>
+                )}
+
+                {/* Hinweis wenn Beschreibungsdaten fehlen */}
+                {!origDE && !fixedDE && localData && (
+                  <section>
+                    <p className="text-sm text-gray-400 italic">Keine Produktbeschreibung in den CSV-Daten vorhanden oder Datei wurde vor dem letzten Update verarbeitet — bitte Datei neu hochladen.</p>
                   </section>
                 )}
 
