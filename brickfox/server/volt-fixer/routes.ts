@@ -1138,6 +1138,44 @@ router.get('/download/:jobId', (req: Request, res: Response) => {
 });
 
 
+// GET /api/volt-fixer/download-no-html/:jobId
+// Exportiert alle Zeilen OHNE HTML in p_description[de] – mit korrigierten Volt-Werten
+router.get('/download-no-html/:jobId', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+
+  const isValidPItemNr = (row: Record<string, string>): boolean => {
+    const v = (row['p_item_number'] ?? '').trim();
+    if (!v) return false;
+    if (/<|>/.test(v)) return false;
+    if (/&/.test(v)) return false;
+    if (/\s/.test(v)) return false;
+    if (/,/.test(v)) return false;
+    if (/^\d+\.\d+$/.test(v)) return false;
+    if (/^\d{1,2}$/.test(v)) return false;
+    return true;
+  };
+
+  const filteredRows = job.fixedRows
+    .filter(row => !/<[a-z]/i.test(row['p_description[de]'] ?? ''))
+    .filter(isValidPItemNr)
+    .map(row => {
+      const r = { ...row };
+      for (const key of Object.keys(r)) {
+        if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+      }
+      return r;
+    });
+
+  const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
+  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
+  const noHtmlFileName = job.fileName.replace(/\.csv$/i, '_kein_html.csv');
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${noHtmlFileName}"`);
+  res.send(csvBuffer);
+});
+
 // ── Gespeicherte Projekte (Saves) ────────────────────────────────────────────
 
 const SAVES_DIR = path.join(process.cwd(), 'saves', 'volt-fixer');
