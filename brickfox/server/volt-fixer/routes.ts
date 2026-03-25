@@ -871,12 +871,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return r;
     });
 
-    // Saubere CSV: kaputte HTML-Zeilen raus + Zeilen ohne Artikelnummer raus (Fragment-Zeilen aus defektem Original-CSV)
-    const ITEM_COLS_EXPORT = ['p_item_number', 'v_item_number'];
-    const hasItemNr = (row: Record<string, string>) => ITEM_COLS_EXPORT.some(c => row[c]?.trim());
-
-    const csvRowsClean = csvRows.filter((row, i) => !brokenHtmlIndices.has(i) && hasItemNr(row));
-    const csvRowsBroken = csvRows.filter((row, i) => brokenHtmlIndices.has(i) && hasItemNr(row));
+    // Saubere CSV (ohne kaputte HTML-Zeilen), kaputte CSV (nur kaputte Zeilen)
+    const csvRowsClean = csvRows.filter((_, i) => !brokenHtmlIndices.has(i));
+    const csvRowsBroken = csvRows.filter((_, i) => brokenHtmlIndices.has(i));
 
     const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
