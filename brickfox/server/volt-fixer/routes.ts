@@ -156,7 +156,8 @@ function rebuildCsvBuffer(job: { fixedRows: Record<string,string>[]; headers: st
     return r;
   });
   const clean = csvRows.filter(row => isValidPItemNr(row));
-  return Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(Papa.unparse(clean, { delimiter: ';', columns: job.headers }), 'utf-8')]);
+  const csvOut = Papa.unparse(clean, { delimiter: ';', columns: job.headers });
+  return iconv.encode(csvOut, 'win1252');
 }
 
 // Fortschritts-Speicher für laufende Jobs
@@ -1032,7 +1033,7 @@ router.patch('/patch-volt/:jobId/:index', (req: Request, res: Response) => {
 router.get('/download/:jobId', (req: Request, res: Response) => {
   const job = jobStore.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Type', 'text/csv; charset=windows-1252');
   res.setHeader('Content-Disposition', `attachment; filename="${job.fileName}"`);
   res.send(job.csvBuffer);
 });
@@ -1196,10 +1197,10 @@ router.get('/download-drei-spannung/:jobId', (req: Request, res: Response) => {
   });
 
   const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: job.headers });
-  const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
+  const csvBuffer = iconv.encode(csvOut, 'win1252');
   const filteredFileName = job.fileName.replace(/\.csv$/i, '_drei_spannung.csv');
 
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Type', 'text/csv; charset=windows-1252');
   res.setHeader('Content-Disposition', `attachment; filename="${filteredFileName}"`);
   res.send(csvBuffer);
 });
