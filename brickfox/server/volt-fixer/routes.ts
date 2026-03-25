@@ -799,12 +799,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       'staubsaugerbeutel', 'ersatzbeutel',
     ];
 
-    // DIAGNOSE: alle einzigartigen Rohwerte der Volt-Spalte vor jeder Verarbeitung loggen
-    {
-      const rawVoltValues = [...new Set(rows.map(r => (r[VOLT_COL] ?? '').trim()))].filter(v => v !== '').sort();
-      console.log(`[VOLT-DIAGNOSE] Einzigartige Rohwerte in "${VOLT_COL}" (${rawVoltValues.length} Stück):`, rawVoltValues);
-    }
-
     for (const row of rows) {
       const newRow = { ...row };
       const changed: string[] = [];
@@ -819,21 +813,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         continue;
       }
 
-      const rawVoltCell = row[VOLT_COL];
-      // Nicht-String Werte (z.B. Arrays durch kaputte CSV-Quotes) sofort in String konvertieren
-      const voltVal = (rawVoltCell == null ? '' : typeof rawVoltCell === 'string' ? rawVoltCell : String(rawVoltCell)).trim();
-
-      // Offensichtlich kein Volt-Wert: HTML-Inhalt, EAN-Codes oder Satzfragmente → sofort leeren
-      // Kriterien: länger als 20 Zeichen, enthält HTML-Entities oder """ oder Buchstaben (außer gültigen Einheiten)
-      const isGarbageVolt = voltVal.length > 20
-        || /&lt;|&gt;|&amp;|"""|<[a-z]/i.test(voltVal)
-        || /[a-df-wyzA-DF-WYZ]/.test(voltVal); // Buchstaben die nicht 'e','E','V','v' sind (keine Einheiten)
-
-      if (isGarbageVolt && voltVal !== '') {
-        newRow[VOLT_COL] = '';
-        changed.push(VOLT_COL);
-        voltChanged++;
-      } else {
+      const voltVal = (row[VOLT_COL] ?? '').trim();
 
       // Unrealistische Werte (>= 1000 oder = 0) sind kein gültiger Volt-Wert → sofort leeren
       const voltAsNum = Number(voltVal.replace(',', '.'));
@@ -967,14 +947,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     setProgress('building', 'Ergebnis wird aufbereitet…', 93);
 
     // Zeilenumbrüche aus ALLEN Feldern entfernen (CSV-Kompatibilität)
-    // Felder die kein String sind (z.B. Arrays durch CSV-Parser bei kaputten Anführungszeichen)
-    // werden erst in String konvertiert.
+    // Betrifft nicht nur Beschreibungen: auch HTML-Entities wie &nbsp; enden auf ";" und
+    // brechen sonst die semikolon-getrennte CSV-Struktur wenn Zeilenumbrüche vorhanden sind.
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
       for (const key of Object.keys(r)) {
-        const val = r[key];
-        const str = val == null ? '' : typeof val === 'string' ? val : String(val);
-        r[key] = str.replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+        if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
       }
       return r;
     });
