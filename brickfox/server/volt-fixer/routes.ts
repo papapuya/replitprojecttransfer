@@ -813,9 +813,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       const r = rows[i];
       const itemNr = ITEM_NR_COLS_V.map(c => r[c]).find(v => v?.trim()) ?? '';
 
-      // 1) Leere Artikelnummer
-      if (!itemNr) {
-        csvIssues.push({ row: i + 2, itemNr: '—', type: 'Leere Artikelnummer', detail: 'p_item_number und v_item_number sind beide leer' });
+      // 1) Leere oder ungültige p_item_number
+      const pItemNr = (r['p_item_number'] ?? '').trim();
+      if (!pItemNr) {
+        csvIssues.push({ row: i + 2, itemNr: '—', type: 'Leere p_item_number', detail: 'p_item_number ist leer' });
+      } else if (/<|>/.test(pItemNr)) {
+        csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'HTML-Fragment in p_item_number', detail: `Enthält HTML: ${pItemNr.slice(0, 50)}` });
       }
 
       // 2) Leerer Produktname DE
@@ -871,9 +874,18 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return r;
     });
 
-    // Saubere CSV (ohne kaputte HTML-Zeilen), kaputte CSV (nur kaputte Zeilen)
-    const csvRowsClean = csvRows.filter((_, i) => !brokenHtmlIndices.has(i));
-    const csvRowsBroken = csvRows.filter((_, i) => brokenHtmlIndices.has(i));
+    // Prüft ob p_item_number gültig ist: nicht leer, kein HTML-Fragment (z.B. </p>", <td>, ...)
+    const isValidPItemNr = (row: Record<string, string>): boolean => {
+      const v = (row['p_item_number'] ?? '').trim();
+      if (!v) return false;
+      if (/<|>/.test(v)) return false; // HTML-Tags oder Fragmente
+      return true;
+    };
+
+    // Saubere CSV: kaputtes HTML raus + ungültige p_item_number raus
+    // Kaputte/Problem-CSV: kaputtes HTML ODER ungültige p_item_number
+    const csvRowsClean  = csvRows.filter((row, i) => !brokenHtmlIndices.has(i) && isValidPItemNr(row));
+    const csvRowsBroken = csvRows.filter((row, i) => brokenHtmlIndices.has(i) || !isValidPItemNr(row));
 
     const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
