@@ -25,6 +25,7 @@ type PreviewItem = {
   descDEChanged: boolean;
   descNL: string;
   descNLChanged: boolean;
+  hasHtml?: boolean;
   changed: string[];
 };
 
@@ -559,8 +560,14 @@ export default function VoltFixer() {
   };
 
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
+  const [showNoHtml, setShowNoHtml] = useState(false);
   const allItems = result?.previewItems ?? [];
-  const items = showOnlyChanged ? allItems.filter(it => it.changed.length > 0) : allItems;
+  const noHtmlChangedCount = allItems.filter(it => it.changed.length > 0 && it.hasHtml === false).length;
+  const items = showNoHtml
+    ? allItems.filter(it => it.changed.length > 0 && it.hasHtml === false)
+    : showOnlyChanged
+      ? allItems.filter(it => it.changed.length > 0)
+      : allItems;
   const changedCount = allItems.filter(it => it.changed.length > 0).length;
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
   const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -830,15 +837,27 @@ export default function VoltFixer() {
               </h2>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => { setShowOnlyChanged(v => !v); setPage(0); }}
+                  onClick={() => { setShowNoHtml(false); setShowOnlyChanged(v => !v); setPage(0); }}
                   className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
-                    showOnlyChanged
+                    showOnlyChanged && !showNoHtml
                       ? "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700"
                       : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
                   }`}
                 >
-                  {showOnlyChanged ? "Nur Geänderte" : "Alle anzeigen"}
+                  {showOnlyChanged && !showNoHtml ? "Nur Geänderte" : "Alle anzeigen"}
                 </button>
+                {noHtmlChangedCount > 0 && (
+                  <button
+                    onClick={() => { setShowNoHtml(v => !v); setShowOnlyChanged(false); setPage(0); }}
+                    className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+                      showNoHtml
+                        ? "bg-red-600 text-white border-red-600 hover:bg-red-700"
+                        : "bg-white text-red-600 border-red-300 hover:bg-red-50"
+                    }`}
+                  >
+                    Kein HTML ({noHtmlChangedCount.toLocaleString('de-DE')})
+                  </button>
+                )}
                 {totalPages > 1 && (
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <button
@@ -962,6 +981,11 @@ export default function VoltFixer() {
                             )}
                           </td>
                           <td className={`px-3 py-1.5 max-w-sm ${item.descDEChanged ? "bg-green-50/60" : ""}`}>
+                            {item.changed.length > 0 && item.hasHtml === false && (
+                              <span className="inline-block mb-0.5 px-1.5 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-700 border border-red-200">
+                                kein HTML
+                              </span>
+                            )}
                             {item.descDE ? (
                               <span className={`block truncate ${item.descDEChanged ? "text-green-800 font-medium" : "text-gray-600"}`}>
                                 {item.descDEChanged && <CheckCircle size={10} className="inline mr-1 text-green-600" />}
