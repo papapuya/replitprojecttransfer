@@ -819,6 +819,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         csvIssues.push({ row: i + 2, itemNr: '—', type: 'Leere p_item_number', detail: 'p_item_number ist leer' });
       } else if (/<|>/.test(pItemNr)) {
         csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'HTML-Fragment in p_item_number', detail: `Enthält HTML: ${pItemNr.slice(0, 50)}` });
+      } else if (/&/.test(pItemNr)) {
+        csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'HTML-Entity in p_item_number', detail: `Enthält Entity: ${pItemNr.slice(0, 50)}` });
+      } else if (/\s/.test(pItemNr)) {
+        csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Satzfragment in p_item_number', detail: `Enthält Leerzeichen: ${pItemNr.slice(0, 50)}` });
+      } else if (/,/.test(pItemNr)) {
+        csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Volt-Fragment in p_item_number', detail: `Enthält Komma: ${pItemNr.slice(0, 50)}` });
       }
 
       // 2) Leerer Produktname DE
@@ -874,11 +880,19 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return r;
     });
 
-    // Prüft ob p_item_number gültig ist: nicht leer, kein HTML-Fragment (z.B. </p>", <td>, ...)
+    // Prüft ob p_item_number gültig ist:
+    // Echte Artikelnummern (z.B. "ACN-6011525F", "SWB01-USBC") haben:
+    //  - keine HTML-Tags (<, >)
+    //  - keine HTML-Entities (&amp; &nbsp; etc.)
+    //  - keine Leerzeichen (Satzfragmente haben immer Leerzeichen)
+    //  - kein Komma (Volt-Werte wie "3,7" sollen raus)
     const isValidPItemNr = (row: Record<string, string>): boolean => {
       const v = (row['p_item_number'] ?? '').trim();
       if (!v) return false;
-      if (/<|>/.test(v)) return false; // HTML-Tags oder Fragmente
+      if (/<|>/.test(v)) return false;   // HTML-Tags
+      if (/&/.test(v)) return false;     // HTML-Entities (&amp; &nbsp; ...)
+      if (/\s/.test(v)) return false;    // Leerzeichen → kein Satzfragment
+      if (/,/.test(v)) return false;     // Komma → kein Volt-Wert (3,7)
       return true;
     };
 
