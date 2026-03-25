@@ -181,9 +181,12 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       invalidItemNrRemoved,
     };
 
-    // ─── CSV-Ausgabe erstellen (Windows-1252 für Excel-Kompatibilität) ────────
+    // ─── CSV-Ausgabe erstellen (UTF-8 mit BOM) ───────────────────────────────
     const csvOut = Papa.unparse(rows, { delimiter: ';', columns: headers });
-    const csvBuffer = iconv.encode(csvOut, 'win1252');
+    const csvBuffer = Buffer.concat([
+      Buffer.from('\uFEFF', 'utf-8'),
+      Buffer.from(csvOut, 'utf-8'),
+    ]);
 
     const jobId = crypto.randomBytes(16).toString('hex');
     const baseName = (req.file.originalname || 'output').replace(/\.csv$/i, '');
@@ -207,7 +210,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 router.get('/download/:jobId', (req: Request, res: Response) => {
   const job = jobStore.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
-  res.setHeader('Content-Type', 'text/csv; charset=windows-1252');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${job.fileName}"`);
   res.send(job.csvBuffer);
 });
