@@ -195,31 +195,34 @@ function normalizeRangeVolt(raw: string): string {
 
 // Entfernt überflüssige ".0" Dezimalstelle aus Volt-Spaltenwerten (6.0 → 6, 10.0 → 10, aber 3.85 bleibt)
 function stripTrailingZeroVolt(val: string): string {
-  return val.replace(/^(\d+)\.0$/, '$1');
+  // Entfernt ALLE trailing Nullen nach dem Dezimalpunkt:
+  // "4.00" → "4", "2.200" → "2.2", "7.100" → "7.1", "2.50" → "2.5"
+  return val.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
 }
 
 function fixVolt(val: string): { fixed: string; changed: boolean } {
   let trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
-  // Bereich + Datenmüll nach Leerzeichen entfernen (z.B. "100-240 73676" → "100-240")
-  const rangeJunkMatch = trimmed.match(/^(\d+(?:[,.]?\d+)?[-\/]\d+(?:[,.]?\d+)?)\s+\d+/);
-  const hadJunk = !!rangeJunkMatch;
-  if (hadJunk) trimmed = rangeJunkMatch![1];
+  // Datenmüll nach Leerzeichen entfernen – gilt für Bereichswerte UND einfache Dezimalwerte:
+  // "100-240 73676" → "100-240", "3.6 65476" → "3.6", "1.2 19892" → "1.2"
+  const junkMatch = trimmed.match(/^(\d+(?:[,.]?\d+)?(?:[-\/]\d+(?:[,.]?\d+)?)?)\s+\d+/);
+  let hadJunk = !!junkMatch;
+  if (hadJunk) trimmed = junkMatch![1];
   // Bereichswert (enthält - oder /) → normalisieren: "9.0-12,0" → "9-12"
   if (/[-\/]/.test(trimmed)) {
     const normalized = normalizeRangeVolt(trimmed);
     return { fixed: normalized, changed: hadJunk || normalized !== val.trim() };
   }
-  // Wert hat Komma → in Punkt-Format konvertieren, dann überflüssiges ".0" entfernen (6,0 → 6)
+  // Wert hat Komma → in Punkt-Format konvertieren, dann trailing zeros entfernen (6,0 → 6, 2,200 → 2.2)
   if (trimmed.includes(',')) {
     const dotFormat = trimmed.replace(',', '.');
     const stripped = stripTrailingZeroVolt(dotFormat);
-    return { fixed: stripped, changed: stripped !== trimmed };
+    return { fixed: stripped, changed: hadJunk || stripped !== trimmed };
   }
-  // Wert hat bereits Punkt → überflüssiges ".0" entfernen falls vorhanden (6.0 → 6)
+  // Wert hat bereits Punkt → trailing zeros entfernen (6.0 → 6, 2.200 → 2.2, 4.00 → 4)
   if (trimmed.includes('.')) {
     const stripped = stripTrailingZeroVolt(trimmed);
-    return { fixed: stripped, changed: stripped !== trimmed };
+    return { fixed: stripped, changed: hadJunk || stripped !== val.trim() };
   }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   // 1- und 2-stellige Zahlen sind immer ganze Volt-Werte → unverändert lassen.
@@ -231,7 +234,7 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
       return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
     }
   }
-  // Sonstige Zahlen (z.B. 385, 370 usw.) → nicht verändern, kein 3.85 generieren
+  // Sonstige Zahlen (z.B. 385, 370 usw.) → nicht verändern
   return { fixed: trimmed, changed: false };
 }
 
@@ -801,9 +804,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
       const voltVal = (row[VOLT_COL] ?? '').trim();
 
-      // Unrealistisch hohe Zahlen (>= 1000) sind kein gültiger Volt-Wert → sofort leeren, keine Extraktion
+      // Unrealistische Werte (>= 1000 oder = 0) sind kein gültiger Volt-Wert → sofort leeren
       const voltAsNum = Number(voltVal.replace(',', '.'));
-      const isUnrealisticVolt = voltVal !== '' && !isNaN(voltAsNum) && voltAsNum >= 1000;
+      const isUnrealisticVolt = voltVal !== '' && !isNaN(voltAsNum) && (voltAsNum >= 1000 || voltAsNum === 0);
 
       if (isUnrealisticVolt) {
         newRow[VOLT_COL] = '';
