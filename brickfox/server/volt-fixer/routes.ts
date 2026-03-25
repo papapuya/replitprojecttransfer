@@ -842,17 +842,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         csvIssues.push({ row: i + 2, itemNr, type: 'Leerer Produktname', detail: 'p_name[de] ist leer' });
       }
 
-      // 3) Leere / defekte DE-Beschreibung
-      if (headers.includes('p_description[de]')) {
-        const deDesc = (r['p_description[de]'] ?? '').trim();
-        if (!deDesc) {
-          csvIssues.push({ row: i + 2, itemNr, type: 'Leere Beschreibung (DE)', detail: 'p_description[de] ist leer' });
-        } else {
-          const plainLen = deDesc.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim().length;
-          if (plainLen < 30 && deDesc.length > 10) {
-            csvIssues.push({ row: i + 2, itemNr, type: 'Beschreibung zu kurz (DE)', detail: `Nur ${plainLen} Zeichen Plaintext — möglicherweise defekt` });
-          }
-        }
+      // 3) Leere DE-Beschreibung
+      if (headers.includes('p_description[de]') && !(r['p_description[de]'] ?? '').trim()) {
+        csvIssues.push({ row: i + 2, itemNr, type: 'Leere Beschreibung (DE)', detail: 'p_description[de] ist leer' });
       }
 
       // 4) Leere NL-Beschreibung
