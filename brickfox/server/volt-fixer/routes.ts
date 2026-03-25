@@ -952,7 +952,9 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const csvRows = fixedRows.map(row => {
       const r = { ...row };
       for (const key of Object.keys(r)) {
-        if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+        if (r[key] && typeof r[key] === 'string') {
+          r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+        }
       }
       return r;
     });
