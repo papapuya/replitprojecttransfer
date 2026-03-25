@@ -799,6 +799,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       'staubsaugerbeutel', 'ersatzbeutel',
     ];
 
+    // DIAGNOSE: alle einzigartigen Rohwerte der Volt-Spalte vor jeder Verarbeitung loggen
+    {
+      const rawVoltValues = [...new Set(rows.map(r => (r[VOLT_COL] ?? '').trim()))].filter(v => v !== '').sort();
+      console.log(`[VOLT-DIAGNOSE] Einzigartige Rohwerte in "${VOLT_COL}" (${rawVoltValues.length} Stück):`, rawVoltValues);
+    }
+
     for (const row of rows) {
       const newRow = { ...row };
       const changed: string[] = [];
