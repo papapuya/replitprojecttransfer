@@ -736,6 +736,20 @@ export default function VoltFixer() {
               )}
             </Button>
 
+            {noHtmlChangedCount > 0 && (
+              <Button
+                onClick={() => window.open(`/api/volt-fixer/download-no-html/${result.jobId}`, "_blank")}
+                variant="outline"
+                className="border-red-300 text-red-700 hover:bg-red-50 gap-2"
+              >
+                <Download size={16} />
+                Kein HTML exportieren
+                <span className="ml-1 bg-red-100 rounded px-1.5 py-0.5 text-xs font-semibold">
+                  {noHtmlChangedCount.toLocaleString('de-DE')} Zeilen
+                </span>
+              </Button>
+            )}
+
             <Button
               onClick={() => { setSaveName(""); setSaveDialogOpen(true); }}
               variant="outline"
