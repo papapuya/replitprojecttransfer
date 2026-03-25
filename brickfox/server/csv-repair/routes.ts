@@ -80,14 +80,18 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 
     const headerLine = rawLines[0];
 
-    // Anzahl Spalten aus dem Header bestimmen
-    const expectedCols = headerLine.split(';').length;
+    // Spaltenindex von p_item_number bestimmen
+    const headerCols = headerLine.split(';').map(h => h.trim());
+    const pItemNrIdx = headerCols.findIndex(h => h === 'p_item_number');
+    // Fallback: Spalte 0 wenn p_item_number nicht im Header gefunden
+    const itemNrColIdx = pItemNrIdx >= 0 ? pItemNrIdx : 0;
+
+    console.log(`[CsvRepair] Header-Spalten: ${headerCols.length}, p_item_number-Index: ${pItemNrIdx}, Rohe Zeilen: ${rawLines.length}`);
 
     // ─── Zeilen zusammenführen ────────────────────────────────────────────────
-    // Eine Zeile gilt als "Zeilenbeginn" (neues Produkt) wenn:
-    //   - der erste Wert vor dem ersten ; eine gültige Artikelnummer ist
-    //   - ODER es die Headerzeile ist
-    // Alle anderen Zeilen werden an die vorherige angehängt (Zeilenumbruch im HTML)
+    // Eine Zeile gilt als "Zeilenbeginn" (neues Produkt) wenn der Wert in der
+    // p_item_number-Spalte eine gültige Artikelnummer ist.
+    // Alle anderen Zeilen werden an die vorherige angehängt (Zeilenumbruch im HTML).
 
     const mergedLines: string[] = [headerLine];
     let emptyLinesRemoved = 0;
@@ -102,15 +106,17 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
         continue;
       }
 
-      const firstField = line.split(';')[0];
+      const fields = line.split(';');
+      const itemNrField = fields[itemNrColIdx] ?? '';
 
-      if (looksLikeNewProductRow(firstField)) {
+      if (looksLikeNewProductRow(itemNrField)) {
         // Neue Produktzeile
         mergedLines.push(line);
       } else {
-        // Fragment einer vorherigen Zeile — zusammenführen
+        // Fragment einer vorherigen Zeile — mit Leerzeichen zusammenfügen
+        // WICHTIG: kein \n hier, da Papa.parse sonst erneut aufteilt!
         if (mergedLines.length > 1) {
-          mergedLines[mergedLines.length - 1] += '\n' + line;
+          mergedLines[mergedLines.length - 1] += ' ' + line;
           rowsMerged++;
         } else {
           // Kein vorheriger Datensatz — Header-Fragment ignorieren
@@ -130,6 +136,11 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
     const headers = parsed.meta.fields ?? [];
     let rows = parsed.data;
 
+    console.log(`[CsvRepair] Nach Papa.parse: ${rows.length} Zeilen, ${mergedLines.length - 1} gemergte Produkte`);
+    // Erste 3 p_item_number-Werte loggen zur Diagnose
+    const sample = rows.slice(0, 3).map(r => r['p_item_number'] ?? '(leer)');
+    console.log(`[CsvRepair] Erste p_item_numbers: ${JSON.stringify(sample)}`);
+
     // Nochmals komplett leere Zeilen filtern
     rows = rows.filter(row => Object.values(row).some(v => (v ?? '').trim() !== ''));
 
@@ -137,6 +148,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
     const beforeFilter = rows.length;
     rows = rows.filter(row => isValidPItemNr(row['p_item_number'] ?? ''));
     const invalidItemNrRemoved = beforeFilter - rows.length;
+    console.log(`[CsvRepair] Nach Filter: ${rows.length} gültige Zeilen, ${invalidItemNrRemoved} entfernt`);
 
     // Zeilenumbrüche aus ALLEN Feldern entfernen (CSV-Sicherheit)
     rows = rows.map(row => {
