@@ -426,11 +426,36 @@ export default function VoltFixer() {
     const interval = setInterval(async () => {
       try {
         const r = await fetch(`/api/volt-fixer/progress/${id}`);
-        if (r.ok) {
-          const p: ProgressState = await r.json();
-          // "waiting" nicht anzeigen wenn wir bereits eine höhere Prozentzahl haben
-          if (p.step === 'waiting') return;
-          setProgress(p);
+        if (!r.ok) return;
+        const p: ProgressState = await r.json();
+        if (p.step === 'waiting') return;
+        setProgress(p);
+
+        if (p.step === 'done') {
+          clearInterval(interval);
+          // Ergebnis vom Server holen
+          const res = await fetch(`/api/volt-fixer/result/${id}`);
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            setError(err.error || 'Ergebnis konnte nicht geladen werden');
+            setLoading(false);
+            currentJobIdRef.current = null;
+            return;
+          }
+          const data = await res.json();
+          setResult(data);
+          setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
+          setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+          setLoading(false);
+          currentJobIdRef.current = null;
+        }
+
+        if (p.step === 'error') {
+          clearInterval(interval);
+          setError(p.stepLabel || 'Fehler bei der Verarbeitung');
+          setProgress(null);
+          setLoading(false);
+          currentJobIdRef.current = null;
         }
       } catch { /* ignorieren */ }
     }, 1000);
@@ -467,15 +492,17 @@ export default function VoltFixer() {
     xhr.onload = () => {
       try {
         const data = JSON.parse(xhr.responseText);
-        if (xhr.status >= 400) throw new Error(data.error || "Upload fehlgeschlagen");
-        setResult(data);
-        setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
-        // Zum Ergebnis scrollen
-        setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-      } catch (e: any) {
-        setError(e.message || "Unbekannter Fehler");
+        if (xhr.status >= 400) {
+          setError(data.error || "Upload fehlgeschlagen");
+          setProgress(null);
+          setLoading(false);
+          currentJobIdRef.current = null;
+        }
+        // Erfolg: Server antwortet nur mit { jobId }
+        // Progress-Polling übernimmt ab hier und holt das Ergebnis wenn fertig
+      } catch {
+        setError("Ungültige Server-Antwort");
         setProgress(null);
-      } finally {
         setLoading(false);
         currentJobIdRef.current = null;
       }
