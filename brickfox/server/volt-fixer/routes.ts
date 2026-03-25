@@ -864,17 +864,6 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
         }
       }
 
-      // Beschreibungen: NUR überflüssige ",0 V" / ".0 V" Muster entfernen (6,0 V → 6 V)
-      // Alle anderen Inhalte bleiben vollständig unverändert.
-      for (const col of DESC_COLS) {
-        if (!headers.includes(col) || !newRow[col]) continue;
-        const { result: cleaned, changed: dc } = stripDecimalZeroInDesc(newRow[col]);
-        if (dc) {
-          newRow[col] = cleaned;
-          if (!changed.includes(col)) changed.push(col);
-        }
-      }
-
       fixedRows.push(newRow);
       changedCols.push(changed);
     }

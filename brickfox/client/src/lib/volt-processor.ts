@@ -404,15 +404,6 @@ export async function processVoltFile(
       }
     }
 
-    for (const col of DESC_COLS) {
-      if (!headers.includes(col) || !newRow[col]) continue;
-      const { result: cleaned, changed: dc } = stripDecimalZeroInDesc(newRow[col]);
-      if (dc) {
-        newRow[col] = cleaned;
-        if (!changed.includes(col)) changed.push(col);
-      }
-    }
-
     fixedRows.push(newRow);
     changedCols.push(changed);
   }
