@@ -1123,7 +1123,8 @@ router.get('/download/:jobId', (req: Request, res: Response) => {
       return r;
     });
 
-  const EXCLUDED_COLS = ['p_id', 'p_extern_id'];
+  const noDesc = req.query.noDesc === '1';
+  const EXCLUDED_COLS = ['p_id', 'p_extern_id', ...(noDesc ? ['p_description[de]', 'p_description[nl]'] : [])];
   const exportHeaders = job.headers.filter(h => !EXCLUDED_COLS.includes(h));
   const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: exportHeaders });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
@@ -1164,7 +1165,8 @@ router.get('/download-no-html/:jobId', (req: Request, res: Response) => {
       return r;
     });
 
-  const EXCLUDED_COLS = ['p_id', 'p_extern_id'];
+  const noDesc = req.query.noDesc === '1';
+  const EXCLUDED_COLS = ['p_id', 'p_extern_id', ...(noDesc ? ['p_description[de]', 'p_description[nl]'] : [])];
   const exportHeaders = job.headers.filter(h => !EXCLUDED_COLS.includes(h));
   const csvOut = Papa.unparse(filteredRows, { delimiter: ';', columns: exportHeaders });
   const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
