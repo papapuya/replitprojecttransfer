@@ -1011,6 +1011,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         descDEChanged: changed.includes('p_description[de]'),
         descNL: toPlainText(row['p_description[nl]'] ?? ''),
         descNLChanged: changed.includes('p_description[nl]'),
+        hasHtml: /<[a-z]/i.test(row['p_description[de]'] ?? ''),
         changed,
       });
     }
