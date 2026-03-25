@@ -3,6 +3,9 @@ import multer from 'multer';
 import Papa from 'papaparse';
 import iconv from 'iconv-lite';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import zlib from 'zlib';
 import { deeplService } from '../services/deepl-service';
 
 /** Gibt die Textlänge eines HTML-Strings zurück (ohne Tags) */
@@ -111,6 +114,14 @@ function hasDreiSpannung(html: string): boolean {
   return hasSpannung && hasEingang && hasAusgang;
 }
 
+interface JobResultCache {
+  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount: number };
+  previewItems: object[];
+  allChangedNames: object[];
+  allExtractedVolt: object[];
+  csvIssues: object[];
+}
+
 const jobStore = new Map<string, {
   csvBuffer: Buffer;
   fileName: string;
@@ -121,6 +132,7 @@ const jobStore = new Map<string, {
   headers: string[];
   changedCols: string[][];
   restoreEmoji: boolean;
+  resultCache?: JobResultCache;
 }>();
 
 // Hilfsfunktion: CSV-Puffer aus fixedRows neu generieren (nach Patch)
@@ -943,10 +955,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 
     setProgress('done', 'Fertig!', 100);
 
+    // Ergebnis im Job cachen (für Speicherfunktion)
+    const resultStats = { total: rows.length, voltChanged, voltSkipped, voltSkippedNonElectronic, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length };
+    const currentJob = jobStore.get(jobId);
+    if (currentJob) {
+      currentJob.resultCache = { stats: resultStats, previewItems, allChangedNames, allExtractedVolt, csvIssues };
+    }
+
     res.json({
       jobId,
       headers,
-      stats: { total: rows.length, voltChanged, voltSkipped, voltSkippedNonElectronic, voltExtracted, dreiSpannungCount: dreiSpannungIndices.length },
+      stats: resultStats,
       previewItems,
       allChangedNames,
       allExtractedVolt,
@@ -1018,6 +1037,146 @@ router.get('/download/:jobId', (req: Request, res: Response) => {
   res.send(job.csvBuffer);
 });
 
+
+// ── Gespeicherte Projekte (Saves) ────────────────────────────────────────────
+
+const SAVES_DIR = path.join(process.cwd(), 'saves', 'volt-fixer');
+const SAVES_INDEX = path.join(SAVES_DIR, 'index.json');
+
+interface SaveMeta {
+  id: string;
+  name: string;
+  savedAt: string;
+  fileName: string;
+  totalRows: number;
+  changedRows: number;
+}
+
+function ensureSavesDir() {
+  if (!fs.existsSync(SAVES_DIR)) fs.mkdirSync(SAVES_DIR, { recursive: true });
+}
+
+function readSavesIndex(): SaveMeta[] {
+  try {
+    if (!fs.existsSync(SAVES_INDEX)) return [];
+    return JSON.parse(fs.readFileSync(SAVES_INDEX, 'utf-8')) as SaveMeta[];
+  } catch { return []; }
+}
+
+function writeSavesIndex(index: SaveMeta[]) {
+  fs.writeFileSync(SAVES_INDEX, JSON.stringify(index, null, 2), 'utf-8');
+}
+
+// GET /api/volt-fixer/saves — Liste aller gespeicherten Projekte
+router.get('/saves', (_req: Request, res: Response) => {
+  res.json(readSavesIndex());
+});
+
+// POST /api/volt-fixer/save — Aktuellen Job speichern
+router.post('/save', (req: Request, res: Response) => {
+  const { jobId, name } = req.body as { jobId?: string; name?: string };
+  if (!jobId || !name) return res.status(400).json({ error: 'jobId und name erforderlich' });
+  const job = jobStore.get(jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+
+  ensureSavesDir();
+  const saveId = crypto.randomUUID();
+  const index = readSavesIndex();
+
+  const changedRows = job.changedCols.filter(c => c && c.length > 0).length;
+  const meta: SaveMeta = {
+    id: saveId,
+    name: name.trim(),
+    savedAt: new Date().toISOString(),
+    fileName: job.fileName,
+    totalRows: job.fixedRows.length,
+    changedRows,
+  };
+
+  const saveData = {
+    meta,
+    resultData: {
+      headers: job.headers,
+      fileName: job.fileName,
+      ...(job.resultCache ?? {}),
+    },
+    jobData: {
+      csvBufferBase64: job.csvBuffer.toString('base64'),
+      fixedRows: job.fixedRows,
+      originalRows: job.originalRows,
+      headers: job.headers,
+      changedCols: job.changedCols,
+      dreiSpannungIndices: job.dreiSpannungIndices,
+      restoreEmoji: job.restoreEmoji,
+      fileName: job.fileName,
+    },
+  };
+
+  const compressed = zlib.gzipSync(JSON.stringify(saveData));
+  fs.writeFileSync(path.join(SAVES_DIR, `${saveId}.json.gz`), compressed);
+
+  index.push(meta);
+  writeSavesIndex(index);
+
+  res.json(meta);
+});
+
+// POST /api/volt-fixer/saves/:saveId/load — Gespeicherten Job laden
+router.post('/saves/:saveId/load', (req: Request, res: Response) => {
+  const { saveId } = req.params;
+  const filePath = path.join(SAVES_DIR, `${saveId}.json.gz`);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Gespeichertes Projekt nicht gefunden' });
+
+  try {
+    const compressed = fs.readFileSync(filePath);
+    const raw = zlib.gunzipSync(compressed).toString('utf-8');
+    const saveData = JSON.parse(raw) as {
+      meta: SaveMeta;
+      resultData: Record<string, unknown>;
+      jobData: {
+        csvBufferBase64: string;
+        fixedRows: Record<string, string>[];
+        originalRows: Record<string, string>[];
+        headers: string[];
+        changedCols: string[][];
+        dreiSpannungIndices: number[];
+        restoreEmoji: boolean;
+        fileName: string;
+      };
+    };
+
+    const { jobData, resultData } = saveData;
+    const newJobId = crypto.randomUUID();
+    const expires = Date.now() + 30 * 60 * 1000;
+
+    jobStore.set(newJobId, {
+      csvBuffer: Buffer.from(jobData.csvBufferBase64, 'base64'),
+      fileName: jobData.fileName,
+      expires,
+      fixedRows: jobData.fixedRows,
+      originalRows: jobData.originalRows,
+      headers: jobData.headers,
+      changedCols: jobData.changedCols,
+      dreiSpannungIndices: jobData.dreiSpannungIndices,
+      restoreEmoji: jobData.restoreEmoji,
+    });
+
+    res.json({ jobId: newJobId, ...resultData });
+  } catch (e) {
+    res.status(500).json({ error: 'Fehler beim Laden des Projekts' });
+  }
+});
+
+// DELETE /api/volt-fixer/saves/:saveId — Gespeichertes Projekt löschen
+router.delete('/saves/:saveId', (req: Request, res: Response) => {
+  const { saveId } = req.params;
+  const filePath = path.join(SAVES_DIR, `${saveId}.json.gz`);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+  const index = readSavesIndex().filter(m => m.id !== saveId);
+  writeSavesIndex(index);
+  res.json({ ok: true });
+});
 
 // GET /api/volt-fixer/download-drei-spannung/:jobId
 // Exportiert nur Zeilen mit Spannung + Eingangsspannung + Ausgangsspannung in der DE-Beschreibung

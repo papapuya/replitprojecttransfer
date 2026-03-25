@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check, Save, Trash2, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -39,6 +39,15 @@ type ExtractedVoltEntry = {
 };
 
 type CsvIssue = { row: number; itemNr: string; type: string; detail: string };
+
+type SaveMeta = {
+  id: string;
+  name: string;
+  savedAt: string;
+  fileName: string;
+  totalRows: number;
+  changedRows: number;
+};
 
 type Result = {
   jobId: string;
@@ -353,6 +362,60 @@ export default function VoltFixer() {
   const [editingVolt, setEditingVolt] = useState<{ index: number; value: string } | null>(null);
   const [patchSaving, setPatchSaving] = useState(false);
 
+  // Saves (Projektübersicht)
+  const [saves, setSaves] = useState<SaveMeta[]>([]);
+  const [savesLoading, setSavesLoading] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [loadingSaveId, setLoadingSaveId] = useState<string | null>(null);
+
+  const loadSaves = useCallback(async () => {
+    setSavesLoading(true);
+    try {
+      const r = await fetch('/api/volt-fixer/saves');
+      if (r.ok) setSaves((await r.json() as SaveMeta[]).reverse());
+    } catch { /* ignore */ } finally { setSavesLoading(false); }
+  }, []);
+
+  useEffect(() => { loadSaves(); }, [loadSaves]);
+
+  const handleSave = async () => {
+    if (!result || !saveName.trim()) return;
+    setIsSaving(true);
+    try {
+      const r = await fetch('/api/volt-fixer/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: result.jobId, name: saveName.trim() }),
+      });
+      if (r.ok) {
+        setSaveDialogOpen(false);
+        setSaveName("");
+        await loadSaves();
+      }
+    } catch { /* ignore */ } finally { setIsSaving(false); }
+  };
+
+  const handleLoadSave = async (saveId: string) => {
+    setLoadingSaveId(saveId);
+    setError("");
+    try {
+      const r = await fetch(`/api/volt-fixer/saves/${saveId}/load`, { method: 'POST' });
+      if (!r.ok) { setError('Fehler beim Laden des Projekts'); return; }
+      const data = await r.json() as Result;
+      setResult(data);
+      setPage(0);
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    } catch { setError('Fehler beim Laden des Projekts'); } finally { setLoadingSaveId(null); }
+  };
+
+  const handleDeleteSave = async (saveId: string) => {
+    if (!confirm('Dieses Projekt wirklich löschen?')) return;
+    await fetch(`/api/volt-fixer/saves/${saveId}`, { method: 'DELETE' });
+    await loadSaves();
+  };
+
   // Fortschritt alle 1 Sekunde abrufen während Upload läuft
   useEffect(() => {
     if (!loading || !currentJobIdRef.current) return;
@@ -510,6 +573,47 @@ export default function VoltFixer() {
         </p>
       </div>
 
+      {/* Projektübersicht */}
+      {(saves.length > 0 || savesLoading) && (
+        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <FolderOpen size={16} className="text-indigo-600" />
+            <h2 className="text-sm font-semibold text-gray-700">Gespeicherte Projekte</h2>
+            <span className="ml-auto text-xs text-gray-400">{saves.length} Projekt{saves.length !== 1 ? 'e' : ''}</span>
+          </div>
+          {savesLoading ? (
+            <div className="flex items-center gap-2 px-4 py-3 text-sm text-gray-400"><Loader2 size={14} className="animate-spin" /> Lade…</div>
+          ) : (
+            <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+              {saves.map(s => (
+                <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 group">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {s.fileName} · {s.totalRows.toLocaleString()} Zeilen · {s.changedRows.toLocaleString()} geändert · {new Date(s.savedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleLoadSave(s.id)}
+                    disabled={loadingSaveId === s.id}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 font-medium shrink-0"
+                  >
+                    {loadingSaveId === s.id ? <Loader2 size={12} className="animate-spin" /> : <FolderOpen size={12} />}
+                    Laden
+                  </button>
+                  <button
+                    onClick={() => handleDeleteSave(s.id)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Upload */}
       <div
         className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
@@ -611,11 +715,20 @@ export default function VoltFixer() {
           </div>
 
 
-          {/* Download */}
+          {/* Download + Speichern */}
           <div className="flex flex-wrap gap-3">
             <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
               <Download size={16} />
               Saubere CSV herunterladen
+            </Button>
+
+            <Button
+              onClick={() => { setSaveName(""); setSaveDialogOpen(true); }}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 gap-2"
+            >
+              <Save size={16} />
+              Projekt speichern
             </Button>
 
             {(result.stats.dreiSpannungCount ?? 0) > 0 && (
@@ -629,6 +742,46 @@ export default function VoltFixer() {
               </Button>
             )}
           </div>
+
+          {/* Speichern-Dialog */}
+          {saveDialogOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSaveDialogOpen(false)}>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-gray-900">Projekt speichern</h2>
+                  <button onClick={() => setSaveDialogOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+                </div>
+                <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                  <span className="font-medium text-gray-700">{result.fileName}</span>
+                  <span className="mx-1">·</span>{result.stats.total.toLocaleString()} Zeilen
+                  <span className="mx-1">·</span>{result.stats.voltChanged.toLocaleString()} Volt geändert
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Projektname</label>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="z.B. Akkushop Export März 2026"
+                    value={saveName}
+                    onChange={e => setSaveName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && saveName.trim()) handleSave(); }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => setSaveDialogOpen(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium text-sm">Abbrechen</button>
+                  <button
+                    onClick={handleSave}
+                    disabled={!saveName.trim() || isSaving}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 font-medium text-sm"
+                  >
+                    {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    Speichern
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* CSV Qualitätsprüfung */}
           {(result.csvIssues ?? []).length > 0 ? (
