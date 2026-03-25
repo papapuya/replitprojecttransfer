@@ -507,7 +507,6 @@ export default function VoltFixer() {
     // Wenn lokale Daten verfügbar (Browser-Verarbeitung), direkt aus previewItem bauen
     if (result?.csvBlob) {
       const item = result.previewItems.find(p => p.index === index);
-      console.log('[openDetail] item found:', !!item, 'descDEFull len:', item?.descDEFull?.length, 'descDEOrig len:', item?.descDEOrig?.length);
       if (item) {
         const row: Record<string, string> = {
           'p_item_number': item.itemNr,
@@ -515,8 +514,8 @@ export default function VoltFixer() {
           [VOLT_COL]: item.voltNew,
           'p_name[de]': item.nameDE,
           'p_name[nl]': item.nameNL,
-          'p_description[de]': item.descDEFull ?? '',
-          'p_description[nl]': item.descNLFull ?? '',
+          'p_description[de]': item.descDEOrig ?? '',
+          'p_description[nl]': item.descNLOrig ?? '',
         };
         const original: Record<string, string> = {
           'p_item_number': item.itemNr,
@@ -527,7 +526,6 @@ export default function VoltFixer() {
           'p_description[de]': item.descDEOrig ?? '',
           'p_description[nl]': item.descNLOrig ?? '',
         };
-        console.log('[openDetail] row descDE len:', row['p_description[de]'].length, 'orig descDE len:', original['p_description[de]'].length);
         setDetailLocalData({
           row,
           original,
