@@ -825,6 +825,8 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Satzfragment in p_item_number', detail: `Enthält Leerzeichen: ${pItemNr.slice(0, 50)}` });
       } else if (/,/.test(pItemNr)) {
         csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Volt-Fragment in p_item_number', detail: `Enthält Komma: ${pItemNr.slice(0, 50)}` });
+      } else if (/^\d+(\.\d+)?$/.test(pItemNr)) {
+        csvIssues.push({ row: i + 2, itemNr: pItemNr.slice(0, 30), type: 'Volt-Fragment in p_item_number', detail: `Reine Dezimalzahl: ${pItemNr.slice(0, 50)}` });
       }
 
       // 2) Leerer Produktname DE
@@ -880,19 +882,18 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       return r;
     });
 
-    // Prüft ob p_item_number gültig ist:
-    // Echte Artikelnummern (z.B. "ACN-6011525F", "SWB01-USBC") haben:
-    //  - keine HTML-Tags (<, >)
-    //  - keine HTML-Entities (&amp; &nbsp; etc.)
-    //  - keine Leerzeichen (Satzfragmente haben immer Leerzeichen)
-    //  - kein Komma (Volt-Werte wie "3,7" sollen raus)
+    // Prüft ob p_item_number gültig ist.
+    // Echte Artikelnummern (z.B. "ACN-6011525F", "SWB01-USBC", "1300-0021") enthalten:
+    //  - mindestens einen Buchstaben ODER mindestens einen Bindestrich ODER mindestens 4 Ziffern
+    //  - KEINE HTML-Tags, Entities, Leerzeichen oder Kommas
     const isValidPItemNr = (row: Record<string, string>): boolean => {
       const v = (row['p_item_number'] ?? '').trim();
       if (!v) return false;
-      if (/<|>/.test(v)) return false;   // HTML-Tags
-      if (/&/.test(v)) return false;     // HTML-Entities (&amp; &nbsp; ...)
-      if (/\s/.test(v)) return false;    // Leerzeichen → kein Satzfragment
-      if (/,/.test(v)) return false;     // Komma → kein Volt-Wert (3,7)
+      if (/<|>/.test(v)) return false;        // HTML-Tags
+      if (/&/.test(v)) return false;          // HTML-Entities (&amp; &nbsp; ...)
+      if (/\s/.test(v)) return false;         // Leerzeichen → Satzfragment
+      if (/,/.test(v)) return false;          // Komma → Volt-Wert (3,7 V)
+      if (/^\d+(\.\d+)?$/.test(v)) return false; // Reine Zahl/Dezimalzahl → Volt-Wert (3.7, 10.8)
       return true;
     };
 
