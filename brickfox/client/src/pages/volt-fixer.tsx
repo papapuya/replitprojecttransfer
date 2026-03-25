@@ -349,6 +349,8 @@ export default function VoltFixer() {
   const currentJobIdRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const [editingVolt, setEditingVolt] = useState<{ index: number; value: string } | null>(null);
+  const [patchSaving, setPatchSaving] = useState(false);
 
   // Fortschritt alle 1 Sekunde abrufen während Upload läuft
   useEffect(() => {
@@ -453,6 +455,42 @@ export default function VoltFixer() {
   const openDetail = useCallback((index: number, rowNum: number) => {
     setDetail({ index, rowNum });
   }, []);
+
+  const saveVoltEdit = async (index: number, newVolt: string) => {
+    if (!result) return;
+    setPatchSaving(true);
+    try {
+      const res = await fetch(`/api/volt-fixer/patch-volt/${result.jobId}/${index}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ volt: newVolt }),
+      });
+      if (!res.ok) throw new Error("Fehler beim Speichern");
+      // previewItems lokal aktualisieren
+      setResult(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          previewItems: prev.previewItems.map(item =>
+            item.index === index
+              ? {
+                  ...item,
+                  voltNew: newVolt,
+                  changed: newVolt
+                    ? item.changed.includes(VOLT_COL) ? item.changed : [...item.changed, VOLT_COL]
+                    : item.changed.filter(c => c !== VOLT_COL),
+                }
+              : item
+          ),
+        };
+      });
+    } catch {
+      // Fehler still ignorieren — Wert bleibt im Input
+    } finally {
+      setPatchSaving(false);
+      setEditingVolt(null);
+    }
+  };
 
   const items = result?.previewItems ?? [];
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
@@ -709,9 +747,44 @@ export default function VoltFixer() {
                           <td className={`px-3 py-1.5 ${voltChanged ? "text-red-400 line-through opacity-70" : "text-gray-500"}`}>
                             {item.voltOrig || "—"}
                           </td>
-                          <td className={`px-3 py-1.5 font-semibold ${voltChanged ? "text-indigo-700" : "text-gray-700"}`}>
-                            {voltChanged && <CheckCircle size={10} className="inline mr-1 text-indigo-500" />}
-                            {item.voltNew || "—"}
+                          <td className={`px-1 py-1 font-semibold ${voltChanged ? "text-indigo-700" : "text-gray-700"}`}>
+                            {editingVolt?.index === item.index ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  autoFocus
+                                  className="w-20 px-2 py-0.5 text-xs border border-indigo-400 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                                  value={editingVolt.value}
+                                  onChange={e => setEditingVolt({ index: item.index, value: e.target.value })}
+                                  onKeyDown={e => {
+                                    if (e.key === "Enter") saveVoltEdit(item.index, editingVolt.value);
+                                    if (e.key === "Escape") setEditingVolt(null);
+                                  }}
+                                  disabled={patchSaving}
+                                />
+                                <button
+                                  onClick={() => saveVoltEdit(item.index, editingVolt.value)}
+                                  disabled={patchSaving}
+                                  className="text-xs px-1.5 py-0.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+                                  title="Speichern"
+                                >✓</button>
+                                <button
+                                  onClick={() => setEditingVolt(null)}
+                                  disabled={patchSaving}
+                                  className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
+                                  title="Abbrechen"
+                                >✕</button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingVolt({ index: item.index, value: item.voltNew })}
+                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${voltChanged ? "text-indigo-700" : "text-gray-500"}`}
+                                title="Klicken zum Bearbeiten"
+                              >
+                                {voltChanged && <CheckCircle size={10} className="inline shrink-0 text-indigo-500" />}
+                                <span className="font-mono text-xs">{item.voltNew || <span className="text-gray-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              </button>
+                            )}
                           </td>
                           <td className="px-3 py-1.5 max-w-xs">
                             {nameDEChanged ? (

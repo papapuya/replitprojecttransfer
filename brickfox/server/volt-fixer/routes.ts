@@ -113,7 +113,9 @@ function hasDreiSpannung(html: string): boolean {
 
 const jobStore = new Map<string, {
   csvBuffer: Buffer;
+  csvBufferBroken: Buffer | null;
   fileName: string;
+  fileNameBroken: string;
   expires: number;
   fixedRows: Record<string, string>[];
   dreiSpannungIndices: number[];
@@ -121,7 +123,35 @@ const jobStore = new Map<string, {
   headers: string[];
   changedCols: string[][];
   restoreEmoji: boolean;
+  brokenHtmlIndices: Set<number>;
 }>();
+
+// Hilfsfunktion: CSV-Puffer aus fixedRows neu generieren (nach Patch)
+function rebuildCsvBuffers(job: { fixedRows: Record<string,string>[]; headers: string[]; brokenHtmlIndices: Set<number> }) {
+  const isValidPItemNr = (row: Record<string, string>): boolean => {
+    const v = (row['p_item_number'] ?? '').trim();
+    if (!v) return false;
+    if (/<|>/.test(v)) return false;
+    if (/&/.test(v)) return false;
+    if (/\s/.test(v)) return false;
+    if (/,/.test(v)) return false;
+    if (/^\d+(\.\d+)?$/.test(v)) return false;
+    return true;
+  };
+  // Zeilenumbrüche aus allen Feldern entfernen
+  const csvRows = job.fixedRows.map(row => {
+    const r = { ...row };
+    for (const key of Object.keys(r)) {
+      if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+    }
+    return r;
+  });
+  const clean  = csvRows.filter((row, i) => !job.brokenHtmlIndices.has(i) && isValidPItemNr(row));
+  const broken = csvRows.filter((row, i) => job.brokenHtmlIndices.has(i) || !isValidPItemNr(row));
+  const make = (rows: Record<string,string>[]) =>
+    Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(Papa.unparse(rows, { delimiter: ';', columns: job.headers }), 'utf-8')]);
+  return { csvBuffer: make(clean), csvBufferBroken: broken.length ? make(broken) : null };
+}
 
 // Fortschritts-Speicher für laufende Jobs
 const progressStore = new Map<string, {
@@ -934,6 +964,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       headers,
       changedCols,
       restoreEmoji,
+      brokenHtmlIndices,
     });
 
     // Hilfsfunktion: HTML → plain text (abgekürzt)
@@ -1008,6 +1039,35 @@ router.get('/detail/:jobId/:index', (req: Request, res: Response) => {
     changed: job.changedCols[idx] || [],
     headers: job.headers,
   });
+});
+
+// PATCH /api/volt-fixer/patch-volt/:jobId/:index — Volt-Wert einer Zeile manuell korrigieren
+router.patch('/patch-volt/:jobId/:index', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  const idx = parseInt(req.params.index, 10);
+  if (isNaN(idx) || idx < 0 || idx >= job.fixedRows.length) {
+    return res.status(400).json({ error: 'Ungültiger Index' });
+  }
+  const { volt } = req.body as { volt?: string };
+  if (typeof volt !== 'string') return res.status(400).json({ error: 'volt fehlt' });
+
+  // Volt-Wert in fixedRows aktualisieren
+  job.fixedRows[idx][VOLT_COL] = volt.trim();
+
+  // changedCols aktualisieren
+  if (volt.trim() && !job.changedCols[idx].includes(VOLT_COL)) {
+    job.changedCols[idx] = [...job.changedCols[idx], VOLT_COL];
+  } else if (!volt.trim()) {
+    job.changedCols[idx] = job.changedCols[idx].filter(c => c !== VOLT_COL);
+  }
+
+  // CSV-Puffer neu generieren
+  const { csvBuffer, csvBufferBroken } = rebuildCsvBuffers(job);
+  job.csvBuffer = csvBuffer;
+  job.csvBufferBroken = csvBufferBroken;
+
+  res.json({ ok: true, voltNew: volt.trim() });
 });
 
 // GET /api/volt-fixer/download/:jobId
