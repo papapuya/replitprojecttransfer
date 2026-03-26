@@ -43,6 +43,7 @@ Strikte Regeln:
 - Keine werblichen Superlative ("einzigartig", "revolutionär", "perfekt", "ideal")
 - Keine Wiederholungen – jeder Satz bringt einen neuen Inhalt
 - Sachlich und technisch – wie ein informativer Produktdatenblatt-Text
+- Wenn die Produktdaten zu wenig hergeben um den Zielumfang zu erreichen, dürfen allgemeine aber sachlich zutreffende Aussagen ergänzt werden, z.B.: "geeignet für vielseitige Anwendungen", "robuste Verarbeitung", "einfache Handhabung" – nur wenn sie zum Produkttyp passen
 - Ausschließlich Deutsch
 - Kein Markdown, nur reines HTML
 - Keine <html>, <head>, <body> oder <style> Tags
