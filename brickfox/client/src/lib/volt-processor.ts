@@ -16,6 +16,8 @@ export interface VoltProcessorResult {
     htmlCorrectedCount: number;
     mahExtracted: number;
     mahSkipped: number;
+    whExtracted: number;
+    whSkipped: number;
   };
   previewItems: PreviewItem[];
   allChangedNames: ChangedName[];
@@ -36,6 +38,8 @@ export interface PreviewItem {
   voltNew: string;
   mahOrig: string;
   mahNew: string;
+  whOrig: string;
+  whNew: string;
   nameDEOrig: string;
   nameDE: string;
   nameNLOrig: string;
@@ -73,6 +77,7 @@ export interface CsvIssue {
 
 const VOLT_COL = 'p_attributes[akku_v][de]';
 const MAH_COL  = 'p_attributes[akku_mah][de]';
+const WH_COL   = 'p_attributes[akku_wh][de]';
 const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
 const NAME_COLS = ['p_name[de]', 'p_name[nl]'];
 
@@ -409,6 +414,46 @@ function extractMahFromTable(html: string): string | null {
   return null;
 }
 
+// ─── Wh Extraktion ───────────────────────────────────────────────────────────
+
+function normalizeWh(raw: string): string | null {
+  const num = parseFloat(raw.replace(',', '.'));
+  if (isNaN(num) || num < 0.1 || num > 9999) return null;
+  // Round to at most 2 decimal places, strip trailing zeros
+  const rounded = Math.round(num * 100) / 100;
+  const str = rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(2).replace(/0+$/, '');
+  return str;
+}
+
+function extractWhFromText(text: string): string | null {
+  if (!text) return null;
+  const clean = text.replace(/<[^>]+>/g, ' ');
+  for (const m of clean.matchAll(/\b(\d+(?:[.,]\d+)?)\s*Wh\b/gi)) {
+    const result = normalizeWh(m[1]);
+    if (result) return result;
+  }
+  return null;
+}
+
+function extractWhFromTable(html: string): string | null {
+  if (!html) return null;
+  for (const trMatch of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const trContent = trMatch[1];
+    const labelMatch = trContent.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+    if (!labelMatch) continue;
+    const label = labelMatch[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
+    if (!/watt|wh\b|kapaz|kapacit/i.test(label)) continue;
+    const cells = [...trContent.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const valueCell = cells[1][1].replace(/<[^>]+>/g, '').trim();
+    const found = extractWhFromText(valueCell + ' Wh');
+    if (found) return found;
+    const numMatch = valueCell.match(/^(\d+(?:[.,]\d+)?)$/);
+    if (numMatch) { const r = normalizeWh(numMatch[1]); if (r) return r; }
+  }
+  return null;
+}
+
 export async function processVoltFile(
   file: File,
   options: VoltProcessorOptions
@@ -468,6 +513,7 @@ export async function processVoltFile(
 
   let voltChanged = 0, voltSkipped = 0, voltSkippedNonElectronic = 0, voltExtracted = 0;
   let mahExtracted = 0, mahSkipped = 0;
+  let whExtracted = 0, whSkipped = 0;
   const fixedRows: Record<string, string>[] = [];
   const changedCols: string[][] = [];
   const allChangedNames: ChangedName[] = [];
@@ -657,6 +703,53 @@ export async function processVoltFile(
       }
     }
 
+    // ─── Wh: nur ergänzen wenn Spalte vorhanden und Zelle leer ──────────────
+    if (headers.includes(WH_COL)) {
+      const whVal = (newRow[WH_COL] ?? '').trim();
+      if (!whVal) {
+        let extractedWh: string | null = null;
+
+        // 1. Produktname (DE dann NL)
+        for (const col of NAME_COLS) {
+          if (!headers.includes(col)) continue;
+          const val = row[col];
+          if (!val) continue;
+          extractedWh = extractWhFromText(val);
+          if (extractedWh) break;
+        }
+
+        // 2. Beschreibung HTML-Tabelle
+        if (!extractedWh) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const val = row[col];
+            if (!val) continue;
+            extractedWh = extractWhFromTable(val);
+            if (extractedWh) break;
+          }
+        }
+
+        // 3. Beschreibung Fließtext
+        if (!extractedWh) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const val = row[col];
+            if (!val) continue;
+            extractedWh = extractWhFromText(val);
+            if (extractedWh) break;
+          }
+        }
+
+        if (extractedWh) {
+          newRow[WH_COL] = extractedWh;
+          changed.push(WH_COL);
+          whExtracted++;
+        } else {
+          whSkipped++;
+        }
+      }
+    }
+
     fixedRows.push(newRow);
     changedCols.push(changed);
   }
@@ -816,6 +909,8 @@ export async function processVoltFile(
       voltNew: row[VOLT_COL] ?? '',
       mahOrig: (orig[MAH_COL] ?? '').trim(),
       mahNew: row[MAH_COL] ?? '',
+      whOrig: (orig[WH_COL] ?? '').trim(),
+      whNew: row[WH_COL] ?? '',
       nameDEOrig: orig['p_name[de]'] ?? '',
       nameDE: row['p_name[de]'] ?? '',
       nameNLOrig: orig['p_name[nl]'] ?? '',
@@ -865,6 +960,8 @@ export async function processVoltFile(
       htmlCorrectedCount,
       mahExtracted,
       mahSkipped,
+      whExtracted,
+      whSkipped,
     },
     previewItems,
     allChangedNames,
