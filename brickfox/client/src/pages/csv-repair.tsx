@@ -17,9 +17,15 @@ type RepairResult = {
   stats: RepairStats;
 };
 
+type ProgressState = {
+  label: string;
+  percent: number;
+};
+
 export default function CsvRepair() {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<ProgressState | null>(null);
   const [error, setError] = useState("");
   const [result, setResult] = useState<RepairResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -27,6 +33,7 @@ export default function CsvRepair() {
 
   const uploadFile = async (file: File) => {
     setLoading(true);
+    setProgress({ label: "Datei wird hochgeladen…", percent: 0 });
     setError("");
     setResult(null);
 
@@ -38,14 +45,51 @@ export default function CsvRepair() {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Fehler beim Reparieren");
-      setResult(data);
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as any).error || "Upload fehlgeschlagen");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          const lines = part.split("\n");
+          let event = "message";
+          let data = "";
+          for (const line of lines) {
+            if (line.startsWith("event: ")) event = line.slice(7).trim();
+            if (line.startsWith("data: "))  data  = line.slice(6).trim();
+          }
+          if (!data) continue;
+
+          const parsed = JSON.parse(data);
+
+          if (event === "progress") {
+            setProgress({ label: parsed.label, percent: parsed.percent });
+          } else if (event === "done") {
+            setResult({ jobId: parsed.jobId, fileName: parsed.fileName, stats: parsed.stats });
+            setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+          } else if (event === "error") {
+            throw new Error(parsed.message || "Unbekannter Fehler");
+          }
+        }
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   };
 
@@ -99,18 +143,36 @@ export default function CsvRepair() {
         {loading ? (
           <div className="flex flex-col items-center gap-3 text-indigo-600">
             <Loader2 size={36} className="animate-spin" />
-            <p className="text-base font-medium">CSV wird repariert…</p>
+            <p className="text-base font-medium">
+              {progress?.label ?? "Wird verarbeitet…"}
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3 text-gray-400">
             <Wrench size={36} />
             <div>
               <p className="text-base font-medium text-gray-600">Kaputten Brickfox-Export hier ablegen</p>
-              <p className="text-sm mt-1">oder klicken zum Auswählen · CSV · max. 200 MB</p>
+              <p className="text-sm mt-1">oder klicken zum Auswählen · CSV · max. 500 MB</p>
             </div>
           </div>
         )}
       </div>
+
+      {/* Fortschrittsbalken */}
+      {loading && progress && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600 font-medium">{progress.label}</span>
+            <span className="text-gray-400 tabular-nums">{progress.percent}%</span>
+          </div>
+          <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-indigo-500 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Fehler */}
       {error && (
