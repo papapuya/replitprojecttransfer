@@ -227,18 +227,8 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
     const stripped = stripTrailingZeroVolt(trimmed);
     return { fixed: stripped, changed: stripped !== trimmed };
   }
-  if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
-  // 1- und 2-stellige Zahlen sind immer ganze Volt-Werte → unverändert lassen.
-  if (trimmed.length <= 2) return { fixed: trimmed, changed: false };
-  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 108→10.8, 120→12, 144→14.4)
-  if (trimmed.length === 3) {
-    const firstTwo = parseInt(trimmed.slice(0, 2), 10);
-    if (firstTwo >= 10 && firstTwo <= 24) {
-      const raw3 = trimmed.slice(0, 2) + '.' + trimmed[2];
-      return { fixed: stripTrailingZeroVolt(raw3), changed: true };
-    }
-  }
-  // Sonstige Zahlen (z.B. 385, 370 usw.) → nicht verändern, kein 3.85 generieren
+  // Ganzzahlen (ohne Komma/Punkt) werden nicht automatisch umgewandelt — zu viele Fehlkorrekturen.
+  // Gültige Werte wie 20, 47, 108, 115, 250 etc. bleiben unverändert.
   return { fixed: trimmed, changed: false };
 }
 
@@ -901,65 +891,6 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
           voltChanged++;
           newRow[VOLT_COL] = fv;
           changed.push(VOLT_COL);
-        }
-      }
-
-      // ─── 2-stellige Integer: Beschreibung prüfen ob column/10 korrekt ist ──
-      // z.B. Spalte "48" + Beschreibung "4,8 Volt" → Spalte wird zu "4.8"
-      // Spalte "19" + Beschreibung "19V" → bleibt "19" (kein Match auf 1.9)
-      const currentVolt2 = (newRow[VOLT_COL] ?? '').trim();
-      if (/^\d{2}$/.test(currentVolt2)) {
-        const asInt = parseInt(currentVolt2, 10);
-        const dividedBy10 = asInt / 10;
-        const dividedStr = stripTrailingZeroVolt(
-          dividedBy10 % 1 === 0 ? dividedBy10.toString() : dividedBy10.toFixed(1)
-        );
-        let descExtracted: string | null = null;
-        for (const col of DESC_COLS) {
-          if (!headers.includes(col)) continue;
-          const descVal = row[col];
-          if (!descVal) continue;
-          descExtracted = extractVoltFromTable(descVal) ?? extractVoltFromBodyText(descVal);
-          if (descExtracted) break;
-        }
-        if (descExtracted) {
-          const descNum = parseFloat(descExtracted.replace(',', '.').split('-')[0].split('/')[0]);
-          if (!isNaN(descNum) && Math.abs(descNum - dividedBy10) < 0.01) {
-            if (dividedStr !== currentVolt2) {
-              newRow[VOLT_COL] = dividedStr;
-              if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
-            }
-          }
-        }
-      }
-
-      // ─── 3-stellige Integer (außer 10-24-Bereich) + 4-stellige Integer: ÷100 via Beschreibung ──
-      // z.B. 385 + Beschreibung "3,85 V" → 3.85 | 772 → 7.72 | 1155 → 11.55 | 1454 → 14.54
-      const currentVoltX = (newRow[VOLT_COL] ?? '').trim();
-      const is3digit = /^\d{3}$/.test(currentVoltX);
-      const is4digit = /^\d{4}$/.test(currentVoltX);
-      if (is3digit || is4digit) {
-        const asIntX = parseInt(currentVoltX, 10);
-        const firstTwoX = parseInt(currentVoltX.slice(0, 2), 10);
-        const alreadyHandled3 = is3digit && firstTwoX >= 10 && firstTwoX <= 24;
-        if (!alreadyHandled3) {
-          const dividedBy100 = asIntX / 100;
-          const dividedStr100 = parseFloat(dividedBy100.toFixed(2)).toString();
-          let descExtracted100: string | null = null;
-          for (const col of DESC_COLS) {
-            if (!headers.includes(col)) continue;
-            const descVal = row[col];
-            if (!descVal) continue;
-            descExtracted100 = extractVoltFromTable(descVal) ?? extractVoltFromBodyText(descVal);
-            if (descExtracted100) break;
-          }
-          if (descExtracted100) {
-            const descNum100 = parseFloat(descExtracted100.replace(',', '.').split('-')[0].split('/')[0]);
-            if (!isNaN(descNum100) && Math.abs(descNum100 - dividedBy100) < 0.001) {
-              newRow[VOLT_COL] = dividedStr100;
-              if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
-            }
-          }
         }
       }
 
