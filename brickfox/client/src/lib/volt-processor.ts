@@ -584,12 +584,11 @@ export async function processVoltFile(
   onProgress('building', 'Ergebnis wird aufbereitet…', 93);
   await yield_();
 
-  // HTML-Beschreibungsspalten unverändert lassen — Zeilenumbrüche sind Teil des HTML
-  const HTML_COLS = new Set(['p_description[de]', 'p_description[nl]']);
+  // Alle Spalten bereinigen — Zeilenumbrüche entfernen für maximale Excel-Kompatibilität
   const csvRows = fixedRows.map(row => {
     const r = { ...row };
     for (const key of Object.keys(r)) {
-      if (r[key] && !HTML_COLS.has(key)) {
+      if (r[key]) {
         r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
       }
     }
@@ -598,6 +597,23 @@ export async function processVoltFile(
   const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
   const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
   const csvBlob = new Blob(['\uFEFF' + csvOut], { type: 'text/csv;charset=utf-8' });
+
+  // Debug: korrigierte Volt-Werte in der Konsole ausgeben
+  {
+    const samples = changedCols
+      .map((cols, i) => ({ cols, i }))
+      .filter(({ cols }) => cols.includes(VOLT_COL))
+      .slice(0, 5);
+    if (samples.length > 0) {
+      console.log('[VoltFixer] Blob-Kontrolle – korrigierte Volt-Werte (fixedRows):');
+      samples.forEach(({ i }) => {
+        const itemNr = fixedRows[i]['p_item_number'] || fixedRows[i]['v_item_number'] || '?';
+        const origVolt = (rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '';
+        const newVolt = fixedRows[i][VOLT_COL] ?? '';
+        console.log(`  ${itemNr}: ${origVolt} → ${newVolt}`);
+      });
+    }
+  }
 
   const dreiSpannungIndices = fixedRows
     .map((row, i) => ({ i, html: row['p_description[de]'] || '' }))
@@ -650,7 +666,9 @@ export async function processVoltFile(
   }
 
   const baseName = file.name.replace(/\.csv$/i, '');
-  const fileName = baseName + '_volt_fixed.csv';
+  const now = new Date();
+  const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+  const fileName = `${baseName}_volt_fixed_${ts}.csv`;
 
   onProgress('done', 'Fertig!', 100);
 
