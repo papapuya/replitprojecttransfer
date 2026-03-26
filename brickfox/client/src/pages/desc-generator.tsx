@@ -142,8 +142,8 @@ export default function DescGenerator() {
           <h1 className="text-3xl font-bold">Beschreibungs-Generator</h1>
         </div>
         <p className="text-muted-foreground">
-          Lädt eine Brickfox-CSV hoch und generiert per KI neue HTML-Produktbeschreibungen für alle
-          Produkte, deren Beschreibung kürzer als 20 Zeichen ist.
+          Lädt eine Brickfox-CSV hoch und generiert per KI neue HTML-Produktbeschreibungen (1.200–2.000 Zeichen)
+          für alle Produkte, deren bestehende Beschreibung kürzer als 1.200 Zeichen ist.
         </p>
       </div>
 

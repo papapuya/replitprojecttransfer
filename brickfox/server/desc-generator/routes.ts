@@ -12,7 +12,7 @@ const progressEmitters = new Map<string, EventEmitter>();
 
 const DESC_COL = 'p_description[de]';
 const NAME_COL = 'p_name[de]';
-const MIN_DESC_LENGTH = 20;
+const MIN_DESC_LENGTH = 1200;
 
 function getOpenAIClient(): OpenAI {
   const apiKey = getSecureOpenAIKey();
@@ -23,24 +23,27 @@ function getOpenAIClient(): OpenAI {
 async function generateDescription(name: string, existingDesc: string): Promise<string> {
   const openai = getOpenAIClient();
 
-  const systemPrompt = `Du bist ein professioneller Produkttexter für einen deutschen Online-Shop (akkushop.de).
-Erstelle eine vollständige deutsche Produktbeschreibung im HTML-Format.
+  const systemPrompt = `Du bist ein sachlicher Produkttexter für einen deutschen Online-Shop (akkushop.de).
+Erstelle eine deutsche Produktbeschreibung im HTML-Format mit exakt dieser Struktur:
 
-Die Beschreibung muss exakt diese HTML-Struktur haben:
-
-<h2>[Prägnanter Produkttitel basierend auf dem Produktnamen]</h2>
-<p>[Hauptbeschreibung Absatz 1: allgemeine Vorstellung, Verwendungszweck, Zielgruppe]</p>
-<p>[Hauptbeschreibung Absatz 2: Details, Vorteile, besondere Merkmale, Einsatzgebiete]</p>
+<h2>[Produkttitel basierend auf dem Produktnamen]</h2>
+<p>[Absatz 1: Was ist das Produkt, wofür wird es verwendet – nur auf Basis der vorliegenden Informationen]</p>
+<p>[Absatz 2: Weitere sachliche Details, Merkmale oder Einsatzgebiete – nur auf Basis der vorliegenden Informationen]</p>
 <h3>Produkteigenschaften</h3>
 <p>✅ [Eigenschaft 1]<br>✅ [Eigenschaft 2]<br>✅ [Eigenschaft 3]<br>✅ [Eigenschaft 4]</p>
 
-Regeln:
-- Genau 4 Bulletpoints mit ✅ Emoji
+Strikte Regeln:
+- Zielumfang: 1.200 bis 2.000 Zeichen (inklusive HTML-Tags)
+- Genau 4 Bulletpoints mit ✅ Emoji – keine mehr, keine weniger
+- NUR Informationen verwenden, die aus Produktname und bestehender Beschreibung ableitbar sind
+- Keine Erfindungen, keine Annahmen, keine Halluzinationen
+- Keine werblichen Superlative ("einzigartig", "revolutionär", "perfekt", "ideal")
+- Keine Wiederholungen – jeder Satz bringt einen neuen Inhalt
+- Sachlich und technisch – wie ein informativer Produktdatenblatt-Text
 - Ausschließlich Deutsch
 - Kein Markdown, nur reines HTML
 - Keine <html>, <head>, <body> oder <style> Tags
-- Sachlich, informativ und verkaufsfördernd
-- Gib NUR das HTML aus, ohne Erklärungen oder zusätzlichen Text`;
+- Gib NUR das HTML aus, ohne Erklärungen`;
 
   const userPrompt = `Produktname: ${name}${existingDesc ? `\nVorhandene Kurzbeschreibung: ${existingDesc}` : ''}
 
@@ -52,8 +55,8 @@ Erstelle die vollständige Produktbeschreibung im vorgegebenen HTML-Format.`;
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
-    temperature: 0.7,
-    max_tokens: 900,
+    temperature: 0.5,
+    max_tokens: 1400,
   });
 
   return response.choices[0]?.message?.content?.trim() ?? '';
