@@ -7,7 +7,7 @@ import { getSecureOpenAIKey } from '../api-key-manager';
 import { EventEmitter } from 'events';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
 const progressEmitters = new Map<string, EventEmitter>();
 
 const DESC_COL = 'p_description[de]';
@@ -109,18 +109,24 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     const sessionId = req.headers['x-session-id'] as string;
     const emitter = sessionId ? progressEmitters.get(sessionId) : null;
 
+    // Sofortiges Event — erscheint noch vor dem CSV-Parsen
+    emitter?.emit('progress', { current: 0, total: 0, productName: 'Datei wird gelesen…' });
+
     let buffer = req.file.buffer;
     let text: string;
     if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
       // UTF-8 mit BOM
       text = buffer.slice(3).toString('utf-8');
     } else {
-      // Prüfen ob typische Windows-1252 Bytes für deutsche Sonderzeichen vorhanden sind
-      // ä=0xE4, ö=0xF6, ü=0xFC, Ä=0xC4, Ö=0xD6, Ü=0xDC, ß=0xDF
-      const hasWin1252 = Array.from(buffer).some(b =>
-        b === 0xE4 || b === 0xF6 || b === 0xFC ||
-        b === 0xC4 || b === 0xD6 || b === 0xDC || b === 0xDF
-      );
+      // Nur ersten 4KB prüfen — reicht für Encoding-Erkennung, viel schneller bei großen Dateien
+      const sample = buffer.slice(0, 4096);
+      let hasWin1252 = false;
+      for (let bi = 0; bi < sample.length; bi++) {
+        const b = sample[bi];
+        if (b === 0xE4 || b === 0xF6 || b === 0xFC || b === 0xC4 || b === 0xD6 || b === 0xDC || b === 0xDF) {
+          hasWin1252 = true; break;
+        }
+      }
       text = iconv.decode(buffer, hasWin1252 ? 'win1252' : 'utf-8');
     }
 
@@ -141,6 +147,9 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     const toProcess = rows
       .map((row, i) => ({ row, i }))
       .filter(({ row }) => !isAlreadyStructured(row[DESC_COL] ?? ''));
+
+    // Sofort initiales Event senden damit der Fortschrittsbalken sofort erscheint
+    emitter?.emit('progress', { current: 0, total: toProcess.length, productName: 'Wird vorbereitet…' });
 
     let generated = 0;
     let errors = 0;
