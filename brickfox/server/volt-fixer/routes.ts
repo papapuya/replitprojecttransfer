@@ -228,13 +228,20 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
     return { fixed: stripped, changed: stripped !== trimmed };
   }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
-  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 108→10.8, 120→12, 144→14.4)
-  // Andere Ganzzahlen (115, 250, 385 …) bleiben unverändert.
+  // 3-stellige Zahlen: Dezimalstelle einfügen
+  // ÷10  → XX.Y  wenn Ergebnis 5–26 V  (z.B. 108→10.8, 144→14.4, 222→22.2, 250→25)
+  // ÷100 → X.XX  wenn Ergebnis 1–9.9 V (z.B. 385→3.85, 675→6.75, 480→4.8, 720→7.2)
   if (trimmed.length === 3) {
-    const firstTwo = parseInt(trimmed.slice(0, 2), 10);
-    if (firstTwo >= 10 && firstTwo <= 24) {
-      const raw3 = trimmed.slice(0, 2) + '.' + trimmed[2];
-      return { fixed: stripTrailingZeroVolt(raw3), changed: true };
+    const n = parseInt(trimmed, 10);
+    const d10 = n / 10;
+    if (d10 >= 5 && d10 <= 26) {
+      const raw = d10 % 1 === 0 ? d10.toString() : d10.toFixed(1);
+      return { fixed: stripTrailingZeroVolt(raw), changed: true };
+    }
+    const d100 = n / 100;
+    if (d100 >= 1.0 && d100 < 10) {
+      const raw = d100.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+      return { fixed: raw, changed: raw !== trimmed };
     }
   }
   return { fixed: trimmed, changed: false };
@@ -1020,7 +1027,16 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       return true;
     };
 
-    const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
+    const csvRowsClean = csvRows
+      .filter(row => isValidPItemNr(row))
+      .map(row => {
+        const r = { ...row };
+        // Volt-Spalte: Punkt → Komma (deutsches Dezimalformat, Excel/Power Query kompatibel)
+        if (r[VOLT_COL] && /\./.test(r[VOLT_COL])) {
+          r[VOLT_COL] = r[VOLT_COL].replace('.', ',');
+        }
+        return r;
+      });
     const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
