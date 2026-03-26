@@ -625,19 +625,49 @@ export async function processVoltFile(
       });
     } else {
       console.log('[VoltFixer] Keine 2-/3-stelligen Volt-Korrekturen gefunden.');
-      // Alle VOLT_COL-Änderungen zeigen
-      const allSamples = changedCols
-        .map((cols, i) => ({ cols, i }))
-        .filter(({ cols }) => cols.includes(VOLT_COL))
-        .slice(0, 5);
-      allSamples.forEach(({ i }) => {
+    }
+
+    // Suche gezielt nach BSP-U010R_1 (exakt + partial)
+    const bspRow = blobRows.find(r =>
+      (r['p_item_number'] || '').includes('BSP-U010R') ||
+      (r['v_item_number'] || '').includes('BSP-U010R')
+    );
+    if (bspRow) {
+      console.log(`[VoltFixer] BSP-U010R_1 im Blob: item="${bspRow['p_item_number']}" volt="${bspRow[VOLT_COL]}"`);
+    } else {
+      console.log('[VoltFixer] BSP-U010R_1 NICHT im Blob (auch partial-Suche).');
+    }
+
+    // fixedRows: Suche BSP-U010R_1
+    const bspFixed = fixedRows.find(r =>
+      (r['p_item_number'] || '').includes('BSP-U010R') ||
+      (r['v_item_number'] || '').includes('BSP-U010R')
+    );
+    if (bspFixed) {
+      const itemNr = bspFixed['p_item_number'] || bspFixed['v_item_number'] || '?';
+      const pItemNr = (bspFixed['p_item_number'] ?? '').trim();
+      const passes = isValidPItemNr(bspFixed);
+      console.log(`[VoltFixer] BSP-U010R_1 in fixedRows: item="${itemNr}" p_item_number="${pItemNr}" isValidPItemNr=${passes} volt="${bspFixed[VOLT_COL]}"`);
+    } else {
+      console.log('[VoltFixer] BSP-U010R_1 NICHT in fixedRows.');
+    }
+
+    // Nicht-korrigierte 2-4-stellige Integer im Blob (nur wenn Original auch 2-4-stellig)
+    const trulyUncorrected = changedCols
+      .map((cols, i) => ({ cols, i }))
+      .filter(({ cols }) => !cols.includes(VOLT_COL))
+      .filter(({ i }) => /^\d{2,4}$/.test((rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? ''))
+      .slice(0, 5);
+    if (trulyUncorrected.length > 0) {
+      console.log('[VoltFixer] ⚠ 2-4-stellige Original-Volt die NICHT korrigiert wurden:');
+      trulyUncorrected.forEach(({ i }) => {
         const itemNr = fixedRows[i]['p_item_number'] || fixedRows[i]['v_item_number'] || '?';
         const origVolt = (rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '';
         const newVolt = fixedRows[i][VOLT_COL] ?? '';
-        const blobRow = blobRows.find(r => r['p_item_number'] === itemNr || r['v_item_number'] === itemNr);
-        const blobVolt = blobRow ? (blobRow[VOLT_COL] ?? '(kein Eintrag)') : '(Zeile nicht im Blob!)';
-        console.log(`  ${itemNr}: orig="${origVolt}" fixedRows="${newVolt}" BLOB="${blobVolt}"`);
+        console.log(`  ${itemNr}: orig=${origVolt} fixedRows=${newVolt}`);
       });
+    } else {
+      console.log('[VoltFixer] ✓ Alle 2-4-stelligen Original-Volt korrekt verarbeitet.');
     }
   });
 
@@ -702,9 +732,9 @@ export async function processVoltFile(
     .map((cols, i) => ({ cols, i }))
     .filter(({ cols }) => cols.includes(VOLT_COL))
     .map(({ i }) => ({
-      p_item_number: fixedRows[i]['p_item_number'] || fixedRows[i]['v_item_number'] || '',
-      volt_original: (rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '',
-      'p_attributes[akku_v][de]': fixedRows[i][VOLT_COL] ?? '',
+      Artikelnummer: fixedRows[i]['p_item_number'] || fixedRows[i]['v_item_number'] || '',
+      Volt_alt: (rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '',
+      Volt_neu: fixedRows[i][VOLT_COL] ?? '',
     }));
   const reportCsv = Papa.unparse(reportRows, { delimiter: ';' });
   const reportBlob = new Blob(['\uFEFF' + reportCsv], { type: 'text/csv;charset=utf-8' });
