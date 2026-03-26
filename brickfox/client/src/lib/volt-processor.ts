@@ -242,6 +242,74 @@ function extractVoltFromEinAusgang(html: string): string | null {
   return null;
 }
 
+function syncVoltInHtmlText(html: string, targetVolt: string): { result: string; changed: boolean } {
+  if (!html || !targetVolt || targetVolt.includes('-') || targetVolt.includes('/')) {
+    return { result: html, changed: false };
+  }
+  const protectedLabel = /(?:eingangs|ausgangs)(?:spannung|spanning)/i;
+  let changed = false;
+  const replaceVoltInTextNodes = (s: string): string =>
+    s.replace(/(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
+      (m, tag, _f, num, unit) => {
+        if (tag !== undefined) return tag;
+        if (!num || !unit) return m;
+        const norm = num.replace('.', ',');
+        if (norm === targetVolt || /[-\/]/.test(num)) return m;
+        changed = true;
+        return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
+      });
+  let result = html.replace(/(<table[^>]*>[\s\S]*?<\/table>)/gi, (tableBlock) =>
+    tableBlock.replace(/(<tr\b[^>]*>[\s\S]*?<\/tr>)/gi, (trBlock) => {
+      const labelCell = trBlock.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+      if (labelCell && protectedLabel.test(labelCell[1].replace(/<[^>]+>/g, ''))) return trBlock;
+      return replaceVoltInTextNodes(trBlock);
+    })
+  );
+  result = result.replace(/(<table[^>]*>[\s\S]*?<\/table>)|(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
+    (m, table, tag, _f, num, unit) => {
+      if (table !== undefined) return table;
+      if (tag !== undefined) return tag;
+      if (!num || !unit) return m;
+      const norm = num.replace('.', ',');
+      if (norm === targetVolt || /[-\/]/.test(num)) return m;
+      changed = true;
+      return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
+    });
+  return { result, changed };
+}
+
+function extractTableRowValues(html: string): string[] {
+  const rows = [...html.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/gi)];
+  return rows.map(m => {
+    const cells = [...m[0].matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) return '';
+    return cells[cells.length - 1][1];
+  }).filter(v => v !== '');
+}
+
+function syncTableValuesFromDe(deHtml: string, nlHtml: string): { result: string; changed: boolean } {
+  if (!deHtml || !nlHtml) return { result: nlHtml, changed: false };
+  const deValues = extractTableRowValues(deHtml);
+  if (deValues.length === 0) return { result: nlHtml, changed: false };
+  let rowIndex = 0;
+  let changed = false;
+  const result = nlHtml.replace(/<tr[^>]*>[\s\S]*?<\/tr>/gi, (row) => {
+    if (rowIndex >= deValues.length) return row;
+    const deValue = deValues[rowIndex++];
+    let cellCount = 0;
+    const totalCells = (row.match(/<(?:td|th)[^>]*/gi) || []).length;
+    const newRow = row.replace(/<(td|th)([^>]*)>([\s\S]*?)<\/(?:td|th)>/gi, (cellMatch, tag, attrs, content) => {
+      cellCount++;
+      if (cellCount === totalCells) {
+        if (content !== deValue) { changed = true; return `<${tag}${attrs}>${deValue}</${tag}>`; }
+      }
+      return cellMatch;
+    });
+    return newRow;
+  });
+  return { result, changed };
+}
+
 function hasDreiSpannung(html: string): boolean {
   if (!html) return false;
   const rows = [...html.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/gi)].map(m => m[0]);
@@ -485,6 +553,30 @@ export async function processVoltFile(
           if (!isNaN(descNum100) && Math.abs(descNum100 - dividedBy100) < 0.001) {
             newRow[VOLT_COL] = dividedStr100;
             if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
+          }
+        }
+      }
+    }
+
+    // ─── Beschreibung synchronisieren (wenn Volt-Spalte geändert wurde) ──────────────────
+    if (changed.includes(VOLT_COL)) {
+      const finalVolt = (newRow[VOLT_COL] ?? '').trim();
+      const targetVolt = finalVolt.replace('.', ',');
+      if (!targetVolt.includes('-') && !targetVolt.includes('/')) {
+        const deCol = 'p_description[de]';
+        if (headers.includes(deCol) && newRow[deCol]) {
+          const { result: syncedDe, changed: deChanged } = syncVoltInHtmlText(newRow[deCol], targetVolt);
+          if (deChanged) {
+            newRow[deCol] = syncedDe;
+            if (!changed.includes(deCol)) changed.push(deCol);
+          }
+        }
+        const nlCol = 'p_description[nl]';
+        if (headers.includes(nlCol) && newRow[nlCol] && newRow['p_description[de]']) {
+          const { result: syncedNl, changed: nlChanged } = syncTableValuesFromDe(newRow['p_description[de]'], newRow[nlCol]);
+          if (nlChanged) {
+            newRow[nlCol] = syncedNl;
+            if (!changed.includes(nlCol)) changed.push(nlCol);
           }
         }
       }
