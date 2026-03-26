@@ -57,6 +57,8 @@ type SaveMeta = {
 type Result = {
   jobId?: string;
   csvBlob?: Blob;
+  reportBlob?: Blob;
+  reportFileName?: string;
   headers: string[];
   fileName: string;
   stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; htmlCorrectedCount?: number };
@@ -468,6 +470,8 @@ export default function VoltFixer() {
 
       setResult({
         csvBlob: processorResult.csvBlob,
+        reportBlob: processorResult.reportBlob,
+        reportFileName: processorResult.reportFileName,
         headers: processorResult.headers,
         fileName: processorResult.fileName,
         stats: processorResult.stats,
@@ -518,6 +522,18 @@ export default function VoltFixer() {
     } else if (result.jobId) {
       window.open(`/api/volt-fixer/download/${result.jobId}`, "_blank");
     }
+  };
+
+  const downloadReport = () => {
+    if (!result?.reportBlob || !result?.reportFileName) return;
+    const url = URL.createObjectURL(result.reportBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = result.reportFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
   const openDetail = useCallback((index: number, rowNum: number) => {
@@ -767,6 +783,18 @@ export default function VoltFixer() {
                 </span>
               )}
             </Button>
+
+            {result.reportBlob && (
+              <Button onClick={downloadReport} variant="outline" className="border-green-500 text-green-700 hover:bg-green-50 gap-2">
+                <Download size={16} />
+                Volt-Korrekturen prüfen
+                {result.stats.voltChanged > 0 && (
+                  <span className="ml-1 bg-green-100 text-green-800 rounded px-1.5 py-0.5 text-xs font-semibold">
+                    {result.stats.voltChanged.toLocaleString('de-DE')} Zeilen
+                  </span>
+                )}
+              </Button>
+            )}
 
             {result.jobId && !result.csvBlob && (
               <Button
