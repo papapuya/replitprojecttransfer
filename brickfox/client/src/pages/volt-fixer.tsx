@@ -61,7 +61,7 @@ type Result = {
   reportFileName?: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; htmlCorrectedCount?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; htmlCorrectedCount?: number; mahExtracted?: number; mahSkipped?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -623,10 +623,9 @@ export default function VoltFixer() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Volt-Komma Fixer</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Brickfox Attribut-Tool</h1>
         <p className="text-gray-500 mt-1">
-          Korrigiert <code className="bg-gray-100 px-1 rounded text-sm">{VOLT_COL}</code> (z.B.{" "}
-          <strong>385 → 3,85</strong>) und aktualisiert Spannung/Nennspannung in den Produktbeschreibungen.
+          Korrigiert Volt-Werte, ergänzt fehlende mAh-Kapazitäten — aus Produktname und Beschreibung.
         </p>
       </div>
 
@@ -757,7 +756,10 @@ export default function VoltFixer() {
             <Badge variant="outline">{result.stats.total.toLocaleString()} Zeilen</Badge>
             <Badge className="bg-indigo-600 text-white">{result.stats.voltChanged.toLocaleString()} Volt-Werte korrigiert</Badge>
             {result.stats.voltExtracted > 0 && (
-              <Badge className="bg-orange-500 text-white">{result.stats.voltExtracted.toLocaleString()} aus Namen ergänzt</Badge>
+              <Badge className="bg-orange-500 text-white">{result.stats.voltExtracted.toLocaleString()} Volt ergänzt</Badge>
+            )}
+            {(result.stats.mahExtracted ?? 0) > 0 && (
+              <Badge className="bg-green-600 text-white">{result.stats.mahExtracted!.toLocaleString()} mAh ergänzt</Badge>
             )}
             {(result.stats.voltSkipped - (result.stats.voltSkippedNonElectronic ?? 0)) > 0 && (
               <Badge variant="outline" className="text-gray-400">
@@ -941,6 +943,8 @@ export default function VoltFixer() {
                       <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Artikel-Nr.</th>
                       <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (nachher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">mAh (vorher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">mAh (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name DE</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name NL</th>
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">Beschreibung DE</th>
@@ -1008,6 +1012,21 @@ export default function VoltFixer() {
                                 <span className="font-mono text-xs">{item.voltNew || <span className="text-gray-300 font-normal">—</span>}</span>
                                 <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
                               </button>
+                            )}
+                          </td>
+                          {/* mAh vorher */}
+                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-green-50/40">
+                            {item.mahOrig || "—"}
+                          </td>
+                          {/* mAh nachher */}
+                          <td className="px-3 py-1.5 font-mono text-xs bg-green-50/40">
+                            {item.changed.includes("p_attributes[akku_mah][de]") ? (
+                              <span className="font-semibold text-green-700 flex items-center gap-1">
+                                <CheckCircle size={10} className="shrink-0 text-green-500" />
+                                {item.mahNew || "—"}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">{item.mahNew || "—"}</span>
                             )}
                           </td>
                           <td className="px-3 py-1.5 max-w-xs">

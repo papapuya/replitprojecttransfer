@@ -14,6 +14,8 @@ export interface VoltProcessorResult {
     voltExtracted: number;
     dreiSpannungCount: number;
     htmlCorrectedCount: number;
+    mahExtracted: number;
+    mahSkipped: number;
   };
   previewItems: PreviewItem[];
   allChangedNames: ChangedName[];
@@ -32,6 +34,8 @@ export interface PreviewItem {
   itemNr: string;
   voltOrig: string;
   voltNew: string;
+  mahOrig: string;
+  mahNew: string;
   nameDEOrig: string;
   nameDE: string;
   nameNLOrig: string;
@@ -68,6 +72,7 @@ export interface CsvIssue {
 }
 
 const VOLT_COL = 'p_attributes[akku_v][de]';
+const MAH_COL  = 'p_attributes[akku_mah][de]';
 const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
 const NAME_COLS = ['p_name[de]', 'p_name[nl]'];
 
@@ -357,6 +362,53 @@ function restoreEmojiCheckmarks(html: string): string {
   return result;
 }
 
+// ─── mAh Extraktion ──────────────────────────────────────────────────────────
+
+function normalizeMah(raw: string): string | null {
+  const num = parseFloat(raw.replace(',', '.'));
+  if (isNaN(num) || num < 100 || num > 50000) return null;
+  return Math.round(num).toString();
+}
+
+function extractMahFromText(text: string): string | null {
+  if (!text) return null;
+  const clean = text.replace(/<[^>]+>/g, ' ');
+  // NNNNmAh oder NNNN mAh
+  for (const m of clean.matchAll(/\b(\d{3,5}(?:[.,]\d+)?)\s*mAh\b/gi)) {
+    const result = normalizeMah(m[1]);
+    if (result) return result;
+  }
+  // N.NAh oder N,NAh → ×1000
+  for (const m of clean.matchAll(/\b(\d+(?:[.,]\d+)?)\s*Ah\b/gi)) {
+    const num = parseFloat(m[1].replace(',', '.'));
+    if (!isNaN(num) && num >= 0.1 && num <= 50) {
+      const result = normalizeMah((num * 1000).toString());
+      if (result) return result;
+    }
+  }
+  return null;
+}
+
+function extractMahFromTable(html: string): string | null {
+  if (!html) return null;
+  for (const trMatch of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const trContent = trMatch[1];
+    const labelMatch = trContent.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+    if (!labelMatch) continue;
+    const label = labelMatch[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
+    if (!/kapaz|kapacit|mah|akku/i.test(label)) continue;
+    const cells = [...trContent.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const valueCell = cells[1][1].replace(/<[^>]+>/g, '').trim();
+    const found = extractMahFromText(valueCell);
+    if (found) return found;
+    // Reine Zahl in der Zelle (Einheit fehlt, aber Label sagt Kapazität)
+    const numMatch = valueCell.match(/^(\d{3,5})$/);
+    if (numMatch) { const r = normalizeMah(numMatch[1]); if (r) return r; }
+  }
+  return null;
+}
+
 export async function processVoltFile(
   file: File,
   options: VoltProcessorOptions
@@ -415,6 +467,7 @@ export async function processVoltFile(
   await yield_();
 
   let voltChanged = 0, voltSkipped = 0, voltSkippedNonElectronic = 0, voltExtracted = 0;
+  let mahExtracted = 0, mahSkipped = 0;
   const fixedRows: Record<string, string>[] = [];
   const changedCols: string[][] = [];
   const allChangedNames: ChangedName[] = [];
@@ -553,6 +606,53 @@ export async function processVoltFile(
             newRow[nlCol] = syncedNl;
             if (!changed.includes(nlCol)) changed.push(nlCol);
           }
+        }
+      }
+    }
+
+    // ─── mAh: nur ergänzen wenn Spalte vorhanden und Zelle leer ─────────────
+    if (headers.includes(MAH_COL)) {
+      const mahVal = (newRow[MAH_COL] ?? '').trim();
+      if (!mahVal) {
+        let extractedMah: string | null = null;
+
+        // 1. Produktname (DE dann NL)
+        for (const col of NAME_COLS) {
+          if (!headers.includes(col)) continue;
+          const val = row[col];
+          if (!val) continue;
+          extractedMah = extractMahFromText(val);
+          if (extractedMah) break;
+        }
+
+        // 2. Beschreibung HTML-Tabelle
+        if (!extractedMah) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const val = row[col];
+            if (!val) continue;
+            extractedMah = extractMahFromTable(val);
+            if (extractedMah) break;
+          }
+        }
+
+        // 3. Beschreibung Fließtext
+        if (!extractedMah) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const val = row[col];
+            if (!val) continue;
+            extractedMah = extractMahFromText(val);
+            if (extractedMah) break;
+          }
+        }
+
+        if (extractedMah) {
+          newRow[MAH_COL] = extractedMah;
+          changed.push(MAH_COL);
+          mahExtracted++;
+        } else {
+          mahSkipped++;
         }
       }
     }
@@ -714,6 +814,8 @@ export async function processVoltFile(
       itemNr,
       voltOrig: (orig[VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '',
       voltNew: row[VOLT_COL] ?? '',
+      mahOrig: (orig[MAH_COL] ?? '').trim(),
+      mahNew: row[MAH_COL] ?? '',
       nameDEOrig: orig['p_name[de]'] ?? '',
       nameDE: row['p_name[de]'] ?? '',
       nameNLOrig: orig['p_name[nl]'] ?? '',
@@ -735,8 +837,8 @@ export async function processVoltFile(
   const baseName = file.name.replace(/\.csv$/i, '');
   const now = new Date();
   const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-  const fileName = `${baseName}_volt_fixed_${ts}.csv`;
-  const reportFileName = `${baseName}_volt_korrekturen_${ts}.csv`;
+  const fileName = `${baseName}_attribut_fixed_${ts}.csv`;
+  const reportFileName = `${baseName}_attribut_korrekturen_${ts}.csv`;
 
   // Korrekturbericht: nur geänderte Volt-Zeilen mit 3 Spalten
   const reportRows = changedCols
@@ -761,6 +863,8 @@ export async function processVoltFile(
       voltExtracted,
       dreiSpannungCount: dreiSpannungIndices.length,
       htmlCorrectedCount,
+      mahExtracted,
+      mahSkipped,
     },
     previewItems,
     allChangedNames,
