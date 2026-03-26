@@ -5,7 +5,7 @@ import Papa from 'papaparse';
 import iconv from 'iconv-lite';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
 // ─── Job-Speicher (30 Minuten TTL) ───────────────────────────────────────────
 const jobStore = new Map<string, {
@@ -32,38 +32,30 @@ interface RepairStats {
 }
 
 // ─── Zeilen-Erkennung: Beginnt diese Zeile ein neues Produkt? ─────────────────
-// Doppelcheck: p_id (Spalte 0) UND p_item_number (Spalte 1) müssen gleichzeitig gültig aussehen.
-// So werden HTML-Fragmente die zufällig wie eine p_id aussehen (z.B. "Nennspannung;3.7 V")
-// nicht fälschlicherweise als neues Produkt erkannt.
 function looksLikeNewProductRow(pIdField: string, pItemNrField: string): boolean {
-  // ── p_id prüfen ──────────────────────────────────────────────────────────
   const id = pIdField.trim();
   if (!id) return false;
-  if (/<|>/.test(id)) return false;              // HTML-Tag
-  if (/&/.test(id)) return false;                // HTML-Entity
-  if (/\s/.test(id)) return false;               // Leerzeichen
-  if (/,/.test(id)) return false;                // Komma
-  if (/^\d+\.\d+$/.test(id)) return false;       // Dezimalzahl (1.5, 3.7)
-  // Gültige p_id: rein numerisch ODER alphanumerisch mit - und _ (BST41_16, LAP210, CR1_3N-FT1)
+  if (/<|>/.test(id)) return false;
+  if (/&/.test(id)) return false;
+  if (/\s/.test(id)) return false;
+  if (/,/.test(id)) return false;
+  if (/^\d+\.\d+$/.test(id)) return false;
   if (!/^[\w\-]+$/.test(id)) return false;
 
-  // ── p_item_number prüfen (Spalte 1) ─────────────────────────────────────
   const nr = pItemNrField.trim();
-  if (!nr) return false;                         // leer → kein echter Produktstart
-  if (/<|>/.test(nr)) return false;              // HTML
-  if (/&/.test(nr)) return false;                // Entity
-  if (/\s/.test(nr)) return false;               // Leerzeichen (z.B. "3.7 V")
-  if (/,/.test(nr)) return false;                // Komma
-  if (/^\d+\.\d+$/.test(nr)) return false;       // Dezimalzahl
-  if (/^\d{1,2}$/.test(nr)) return false;        // 1-2-stellige Zahl (kein Artikel)
-  if (!/^[\w\-]+$/.test(nr)) return false;       // muss alphanumerisch sein
+  if (!nr) return false;
+  if (/<|>/.test(nr)) return false;
+  if (/&/.test(nr)) return false;
+  if (/\s/.test(nr)) return false;
+  if (/,/.test(nr)) return false;
+  if (/^\d+\.\d+$/.test(nr)) return false;
+  if (/^\d{1,2}$/.test(nr)) return false;
+  if (!/^[\w\-]+$/.test(nr)) return false;
 
   return true;
 }
 
 // ─── Endfilter: Ist p_item_number eine echte Artikelnummer? ──────────────────
-// Strikt: Entfernt Volt-Werte (3.7, 10.8) und kurze Dezimalzahlen.
-// Erlaubt aber rein numerische Artikelnummern (z.B. "123456").
 function isValidPItemNr(v: string): boolean {
   const val = v.trim();
   if (!val) return false;
@@ -71,23 +63,39 @@ function isValidPItemNr(v: string): boolean {
   if (/&/.test(val)) return false;
   if (/\s/.test(val)) return false;
   if (/,/.test(val)) return false;
-  // Dezimalzahlen (Volt-Werte wie 3.7, 10.8, 14.4): ablehnen
   if (/^\d+\.\d+$/.test(val)) return false;
-  // Sehr kurze Integer (1–2 Stellen, z.B. "3", "12"): ablehnen
   if (/^\d{1,2}$/.test(val)) return false;
   return true;
 }
 
-// POST /api/csv-repair/upload
-router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+// Yield to event loop so SSE events are flushed to client
+const yield_ = () => new Promise<void>(resolve => setImmediate(resolve));
 
-    // Kodierung erkennen – gleiche Logik wie Volt-Fixer:
-    // Prüfe ob Bytes > 0x7F vorhanden sind; wenn ja, teste UTF-8-Validität.
-    // Falls ungültige UTF-8-Sequenzen → Windows-1252 dekodieren (via iconv).
+// POST /api/csv-repair/upload  →  SSE stream
+router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const send = (event: string, data: object) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    if (!req.file) {
+      send('error', { message: 'Keine Datei hochgeladen' });
+      return res.end();
+    }
+
+    const fileSizeMB = (req.file.size / 1024 / 1024).toFixed(1);
+    send('progress', { label: `Datei wird gelesen… (${fileSizeMB} MB)`, percent: 5 });
+    await yield_();
+
+    // ─── Kodierung erkennen ───────────────────────────────────────────────────
     const buf = req.file.buffer;
-    const encodingSample = buf.slice(0, Math.min(1000, buf.length));
+    const encodingSample = buf.slice(0, Math.min(4096, buf.length));
     let highBytes = 0;
     for (const b of encodingSample) { if (b > 0x7F) highBytes++; }
     let detectedEncoding = 'utf-8';
@@ -97,63 +105,73 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
     }
     let raw: string = iconv.decode(buf, detectedEncoding);
     console.log(`[CsvRepair] Kodierung erkannt: ${detectedEncoding} (highBytes=${highBytes})`);
-    // BOM entfernen
     if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
 
-    // Rohe Zeilen
+    send('progress', { label: 'Zeilen werden gezählt…', percent: 12 });
+    await yield_();
+
     const rawLines = raw.split(/\r?\n/);
     const totalRawLines = rawLines.length;
 
     if (rawLines.length < 2) {
-      return res.status(400).json({ error: 'CSV zu kurz — mindestens Header + 1 Zeile erforderlich' });
+      send('error', { message: 'CSV zu kurz — mindestens Header + 1 Zeile erforderlich' });
+      return res.end();
     }
 
     const headerLine = rawLines[0];
-
-    // Spaltenindizes bestimmen
     const headerCols = headerLine.split(';').map(h => h.trim());
-    const pIdIdx = headerCols.findIndex(h => h === 'p_id');
+    const pIdIdx     = headerCols.findIndex(h => h === 'p_id');
     const pItemNrIdx = headerCols.findIndex(h => h === 'p_item_number');
-    const pIdColIdx    = pIdIdx    >= 0 ? pIdIdx    : 0;
-    const pItemNrColIdx = pItemNrIdx >= 0 ? pItemNrIdx : 1;
+    const pIdColIdx      = pIdIdx     >= 0 ? pIdIdx     : 0;
+    const pItemNrColIdx  = pItemNrIdx >= 0 ? pItemNrIdx : 1;
 
-    console.log(`[CsvRepair] Header-Spalten: ${headerCols.length}, p_id-Index: ${pIdColIdx}, p_item_number-Index: ${pItemNrColIdx}, Rohe Zeilen: ${rawLines.length}`);
+    console.log(`[CsvRepair] Header-Spalten: ${headerCols.length}, p_id: ${pIdColIdx}, p_item_number: ${pItemNrColIdx}, Zeilen: ${totalRawLines}`);
 
     // ─── Zeilen zusammenführen ────────────────────────────────────────────────
-    // Doppelcheck: Neue Produktzeile nur wenn BEIDE p_id UND p_item_number gültig aussehen.
-    // Verhindert dass HTML-Fragmente (z.B. "Nennspannung;3.7 V") als neues Produkt erkannt werden.
-
     const mergedLines: string[] = [headerLine];
     let emptyLinesRemoved = 0;
     let rowsMerged = 0;
+    const PROGRESS_INTERVAL = 10_000;
+
+    send('progress', { label: `${totalRawLines.toLocaleString()} Zeilen werden zusammengeführt…`, percent: 18 });
+    await yield_();
 
     for (let i = 1; i < rawLines.length; i++) {
       const line = rawLines[i];
 
-      // Komplett leere Zeile (nur Whitespace oder Semikolons)
       if (!line.trim() || /^;+$/.test(line.trim())) {
         emptyLinesRemoved++;
         continue;
       }
 
-      const fields = line.split(';');
-      const pIdField    = fields[pIdColIdx]     ?? '';
+      const fields      = line.split(';');
+      const pIdField    = fields[pIdColIdx]    ?? '';
       const pItemNrField = fields[pItemNrColIdx] ?? '';
 
       if (looksLikeNewProductRow(pIdField, pItemNrField)) {
-        // Neue Produktzeile — p_id UND p_item_number sehen gültig aus
         mergedLines.push(line);
       } else {
-        // Fragment einer vorherigen Zeile — ohne \n anhängen (Papa.parse würde sonst wieder teilen)
         if (mergedLines.length > 1) {
           mergedLines[mergedLines.length - 1] += ' ' + line;
           rowsMerged++;
         } else {
-          // Kein vorheriger Datensatz — Header-Fragment ignorieren
           emptyLinesRemoved++;
         }
       }
+
+      // Yield and emit progress every PROGRESS_INTERVAL lines
+      if (i % PROGRESS_INTERVAL === 0) {
+        const pct = 18 + Math.round((i / totalRawLines) * 52);
+        send('progress', {
+          label: `Zeile ${i.toLocaleString()} von ${totalRawLines.toLocaleString()} verarbeitet…`,
+          percent: pct,
+        });
+        await yield_();
+      }
     }
+
+    send('progress', { label: 'Filtern und bereinigen…', percent: 72 });
+    await yield_();
 
     // ─── Mit Papa.parse neu verarbeiten ──────────────────────────────────────
     const mergedCsv = mergedLines.join('\n');
@@ -166,21 +184,17 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
     const headers = parsed.meta.fields ?? [];
     let rows = parsed.data;
 
-    console.log(`[CsvRepair] Nach Papa.parse: ${rows.length} Zeilen, ${mergedLines.length - 1} gemergte Produkte`);
-    // Erste 3 p_item_number-Werte loggen zur Diagnose
-    const sample = rows.slice(0, 3).map(r => r['p_item_number'] ?? '(leer)');
-    console.log(`[CsvRepair] Erste p_item_numbers: ${JSON.stringify(sample)}`);
+    console.log(`[CsvRepair] Nach Papa.parse: ${rows.length} Zeilen`);
 
-    // Nochmals komplett leere Zeilen filtern
     rows = rows.filter(row => Object.values(row).some(v => (v ?? '').trim() !== ''));
 
-    // Zeilen mit ungültiger p_item_number entfernen
     const beforeFilter = rows.length;
     rows = rows.filter(row => isValidPItemNr(row['p_item_number'] ?? ''));
     const invalidItemNrRemoved = beforeFilter - rows.length;
-    console.log(`[CsvRepair] Nach Filter: ${rows.length} gültige Zeilen, ${invalidItemNrRemoved} entfernt`);
 
-    // Zeilenumbrüche aus ALLEN Feldern entfernen (CSV-Sicherheit)
+    send('progress', { label: 'Zeilenumbrüche aus Feldern entfernen…', percent: 82 });
+    await yield_();
+
     rows = rows.map(row => {
       const r = { ...row };
       for (const key of Object.keys(r)) {
@@ -198,6 +212,9 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       rowsAfterRepair: rows.length,
       invalidItemNrRemoved,
     };
+
+    send('progress', { label: 'Reparierte CSV wird erstellt…', percent: 92 });
+    await yield_();
 
     // ─── CSV-Ausgabe erstellen (UTF-8 mit BOM) ───────────────────────────────
     const csvOut = Papa.unparse(rows, { delimiter: ';', columns: headers });
@@ -217,10 +234,13 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       stats,
     });
 
-    res.json({ jobId, fileName, stats });
+    console.log(`[CsvRepair] Fertig: ${rows.length} Zeilen, ${invalidItemNrRemoved} entfernt`);
+    send('done', { jobId, fileName, stats });
+    res.end();
   } catch (err: any) {
     console.error('[CsvRepair] Fehler:', err);
-    res.status(500).json({ error: err.message || 'Interner Fehler' });
+    send('error', { message: err.message || 'Interner Fehler' });
+    res.end();
   }
 });
 
