@@ -18,6 +18,10 @@ export interface VoltProcessorResult {
     mahSkipped: number;
     whExtracted: number;
     whSkipped: number;
+    wattExtracted: number;
+    wattSkipped: number;
+    leuchtExtracted: number;
+    leuchtSkipped: number;
   };
   previewItems: PreviewItem[];
   allChangedNames: ChangedName[];
@@ -40,6 +44,10 @@ export interface PreviewItem {
   mahNew: string;
   whOrig: string;
   whNew: string;
+  wattOrig: string;
+  wattNew: string;
+  leuchtOrig: string;
+  leuchtNew: string;
   nameDEOrig: string;
   nameDE: string;
   nameNLOrig: string;
@@ -75,9 +83,11 @@ export interface CsvIssue {
   detail: string;
 }
 
-const VOLT_COL = 'p_attributes[akku_v][de]';
-const MAH_COL  = 'p_attributes[akku_mah][de]';
-const WH_COL   = 'p_attributes[akku_wh][de]';
+const VOLT_COL  = 'p_attributes[akku_v][de]';
+const MAH_COL   = 'p_attributes[akku_mah][de]';
+const WH_COL    = 'p_attributes[akku_wh][de]';
+const WATT_COL  = 'p_attributes[lela_leistung_watt][de]';
+const LEUCHT_COL = 'p_attributes[tala_leuchtweite][de]';
 const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
 const NAME_COLS = ['p_name[de]', 'p_name[nl]'];
 
@@ -454,6 +464,94 @@ function extractWhFromTable(html: string): string | null {
   return null;
 }
 
+// ─── Watt Extraktion ─────────────────────────────────────────────────────────
+
+function normalizeWatt(raw: string): string | null {
+  const num = parseFloat(raw.replace(',', '.'));
+  if (isNaN(num) || num < 0.1 || num > 99999) return null;
+  const rounded = Math.round(num * 10) / 10;
+  const str = rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1);
+  return str;
+}
+
+function extractWattFromText(text: string): string | null {
+  if (!text) return null;
+  const clean = text.replace(/<[^>]+>/g, ' ');
+  // W oder Watt, aber NICHT Wh — W(?!h) matcht W nicht gefolgt von h
+  for (const m of clean.matchAll(/\b(\d+(?:[.,]\d+)?)\s*(?:Watt|W(?!h))(?!\w)/gi)) {
+    const result = normalizeWatt(m[1]);
+    if (result) return result;
+  }
+  return null;
+}
+
+function extractWattFromTable(html: string): string | null {
+  if (!html) return null;
+  for (const trMatch of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const trContent = trMatch[1];
+    const labelMatch = trContent.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+    if (!labelMatch) continue;
+    const label = labelMatch[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
+    if (!/leistung|watt|power|nennleistung/i.test(label)) continue;
+    const cells = [...trContent.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const valueCell = cells[1][1].replace(/<[^>]+>/g, '').trim();
+    const found = extractWattFromText(valueCell + ' W');
+    if (found) return found;
+    const numMatch = valueCell.match(/^(\d+(?:[.,]\d+)?)$/);
+    if (numMatch) { const r = normalizeWatt(numMatch[1]); if (r) return r; }
+  }
+  return null;
+}
+
+// ─── Leuchtweite Extraktion ───────────────────────────────────────────────────
+
+function normalizeLeucht(raw: string): string | null {
+  const num = parseFloat(raw.replace(',', '.'));
+  if (isNaN(num) || num < 1 || num > 9999) return null;
+  return Math.round(num).toString();
+}
+
+function extractLeuchtFromText(text: string): string | null {
+  if (!text) return null;
+  const clean = text.replace(/<[^>]+>/g, ' ');
+  // Kontext-Patterns: "Leuchtweite: 100m", "100m Leuchtweite", "bis zu 200 m"
+  const contextPatterns = [
+    /leuchtweite[^\d]{0,10}(\d+(?:[.,]\d+)?)\s*m(?!\w)/gi,
+    /(\d+(?:[.,]\d+)?)\s*m(?!\w)[^\d]{0,20}leuchtweite/gi,
+    /reichweite[^\d]{0,10}(\d+(?:[.,]\d+)?)\s*m(?!\w)/gi,
+    /(\d+(?:[.,]\d+)?)\s*m(?!\w)[^\d]{0,20}reichweite/gi,
+    /strahldistanz[^\d]{0,10}(\d+(?:[.,]\d+)?)\s*m(?!\w)/gi,
+  ];
+  for (const pattern of contextPatterns) {
+    for (const m of clean.matchAll(pattern)) {
+      const result = normalizeLeucht(m[1]);
+      if (result) return result;
+    }
+  }
+  return null;
+}
+
+function extractLeuchtFromTable(html: string): string | null {
+  if (!html) return null;
+  for (const trMatch of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const trContent = trMatch[1];
+    const labelMatch = trContent.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+    if (!labelMatch) continue;
+    const label = labelMatch[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
+    if (!/leuchtweite|lichtweite|reichweite|strahldistanz|beam|range/i.test(label)) continue;
+    const cells = [...trContent.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const valueCell = cells[1][1].replace(/<[^>]+>/g, '').trim();
+    // Zahl + optionales "m"
+    const mMatch = valueCell.match(/^(\d+(?:[.,]\d+)?)\s*m?$/i);
+    if (mMatch) { const r = normalizeLeucht(mMatch[1]); if (r) return r; }
+    const found = extractLeuchtFromText(valueCell + ' m Leuchtweite');
+    if (found) return found;
+  }
+  return null;
+}
+
 export async function processVoltFile(
   file: File,
   options: VoltProcessorOptions
@@ -514,6 +612,8 @@ export async function processVoltFile(
   let voltChanged = 0, voltSkipped = 0, voltSkippedNonElectronic = 0, voltExtracted = 0;
   let mahExtracted = 0, mahSkipped = 0;
   let whExtracted = 0, whSkipped = 0;
+  let wattExtracted = 0, wattSkipped = 0;
+  let leuchtExtracted = 0, leuchtSkipped = 0;
   const fixedRows: Record<string, string>[] = [];
   const changedCols: string[][] = [];
   const allChangedNames: ChangedName[] = [];
@@ -750,6 +850,94 @@ export async function processVoltFile(
       }
     }
 
+    // ─── Watt: nur ergänzen wenn Spalte vorhanden und Zelle leer ─────────────
+    if (headers.includes(WATT_COL)) {
+      const wattVal = (newRow[WATT_COL] ?? '').trim();
+      if (!wattVal) {
+        let extractedWatt: string | null = null;
+
+        for (const col of NAME_COLS) {
+          if (!headers.includes(col)) continue;
+          const val = row[col];
+          if (!val) continue;
+          extractedWatt = extractWattFromText(val);
+          if (extractedWatt) break;
+        }
+
+        if (!extractedWatt) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const val = row[col];
+            if (!val) continue;
+            extractedWatt = extractWattFromTable(val);
+            if (extractedWatt) break;
+          }
+        }
+
+        if (!extractedWatt) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const val = row[col];
+            if (!val) continue;
+            extractedWatt = extractWattFromText(val);
+            if (extractedWatt) break;
+          }
+        }
+
+        if (extractedWatt) {
+          newRow[WATT_COL] = extractedWatt;
+          changed.push(WATT_COL);
+          wattExtracted++;
+        } else {
+          wattSkipped++;
+        }
+      }
+    }
+
+    // ─── Leuchtweite: nur ergänzen wenn Spalte vorhanden und Zelle leer ──────
+    if (headers.includes(LEUCHT_COL)) {
+      const leuchtVal = (newRow[LEUCHT_COL] ?? '').trim();
+      if (!leuchtVal) {
+        let extractedLeucht: string | null = null;
+
+        for (const col of NAME_COLS) {
+          if (!headers.includes(col)) continue;
+          const val = row[col];
+          if (!val) continue;
+          extractedLeucht = extractLeuchtFromText(val);
+          if (extractedLeucht) break;
+        }
+
+        if (!extractedLeucht) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const val = row[col];
+            if (!val) continue;
+            extractedLeucht = extractLeuchtFromTable(val);
+            if (extractedLeucht) break;
+          }
+        }
+
+        if (!extractedLeucht) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const val = row[col];
+            if (!val) continue;
+            extractedLeucht = extractLeuchtFromText(val);
+            if (extractedLeucht) break;
+          }
+        }
+
+        if (extractedLeucht) {
+          newRow[LEUCHT_COL] = extractedLeucht;
+          changed.push(LEUCHT_COL);
+          leuchtExtracted++;
+        } else {
+          leuchtSkipped++;
+        }
+      }
+    }
+
     fixedRows.push(newRow);
     changedCols.push(changed);
   }
@@ -911,6 +1099,10 @@ export async function processVoltFile(
       mahNew: row[MAH_COL] ?? '',
       whOrig: (orig[WH_COL] ?? '').trim(),
       whNew: row[WH_COL] ?? '',
+      wattOrig: (orig[WATT_COL] ?? '').trim(),
+      wattNew: row[WATT_COL] ?? '',
+      leuchtOrig: (orig[LEUCHT_COL] ?? '').trim(),
+      leuchtNew: row[LEUCHT_COL] ?? '',
       nameDEOrig: orig['p_name[de]'] ?? '',
       nameDE: row['p_name[de]'] ?? '',
       nameNLOrig: orig['p_name[nl]'] ?? '',
@@ -962,6 +1154,10 @@ export async function processVoltFile(
       mahSkipped,
       whExtracted,
       whSkipped,
+      wattExtracted,
+      wattSkipped,
+      leuchtExtracted,
+      leuchtSkipped,
     },
     previewItems,
     allChangedNames,
