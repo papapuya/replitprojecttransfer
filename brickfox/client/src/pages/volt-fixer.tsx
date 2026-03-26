@@ -61,7 +61,7 @@ type Result = {
   reportFileName?: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; htmlCorrectedCount?: number; mahExtracted?: number; mahSkipped?: number; whExtracted?: number; whSkipped?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; htmlCorrectedCount?: number; mahExtracted?: number; mahSkipped?: number; whExtracted?: number; whSkipped?: number; wattExtracted?: number; wattSkipped?: number; leuchtExtracted?: number; leuchtSkipped?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -764,6 +764,12 @@ export default function VoltFixer() {
             {(result.stats.whExtracted ?? 0) > 0 && (
               <Badge className="bg-teal-600 text-white">{result.stats.whExtracted!.toLocaleString()} Wh ergänzt</Badge>
             )}
+            {(result.stats.wattExtracted ?? 0) > 0 && (
+              <Badge className="bg-yellow-600 text-white">{result.stats.wattExtracted!.toLocaleString()} Watt ergänzt</Badge>
+            )}
+            {(result.stats.leuchtExtracted ?? 0) > 0 && (
+              <Badge className="bg-sky-600 text-white">{result.stats.leuchtExtracted!.toLocaleString()} Leuchtweite ergänzt</Badge>
+            )}
             {(result.stats.voltSkipped - (result.stats.voltSkippedNonElectronic ?? 0)) > 0 && (
               <Badge variant="outline" className="text-gray-400">
                 {(result.stats.voltSkipped - (result.stats.voltSkippedNonElectronic ?? 0)).toLocaleString()} kein Volt gefunden
@@ -950,6 +956,10 @@ export default function VoltFixer() {
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">mAh (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-teal-700 whitespace-nowrap bg-teal-50">Wh (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-teal-700 whitespace-nowrap bg-teal-50">Wh (nachher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-yellow-700 whitespace-nowrap bg-yellow-50">Watt (vorher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-yellow-700 whitespace-nowrap bg-yellow-50">Watt (nachher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-sky-700 whitespace-nowrap bg-sky-50">Leuchtweite (vorher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-sky-700 whitespace-nowrap bg-sky-50">Leuchtweite (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name DE</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name NL</th>
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">Beschreibung DE</th>
@@ -1047,6 +1057,36 @@ export default function VoltFixer() {
                               </span>
                             ) : (
                               <span className="text-gray-500">{item.whNew || "—"}</span>
+                            )}
+                          </td>
+                          {/* Watt vorher */}
+                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-yellow-50/40">
+                            {item.wattOrig || "—"}
+                          </td>
+                          {/* Watt nachher */}
+                          <td className="px-3 py-1.5 font-mono text-xs bg-yellow-50/40">
+                            {item.changed.includes("p_attributes[lela_leistung_watt][de]") ? (
+                              <span className="font-semibold text-yellow-700 flex items-center gap-1">
+                                <CheckCircle size={10} className="shrink-0 text-yellow-500" />
+                                {item.wattNew || "—"}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">{item.wattNew || "—"}</span>
+                            )}
+                          </td>
+                          {/* Leuchtweite vorher */}
+                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-sky-50/40">
+                            {item.leuchtOrig || "—"}
+                          </td>
+                          {/* Leuchtweite nachher */}
+                          <td className="px-3 py-1.5 font-mono text-xs bg-sky-50/40">
+                            {item.changed.includes("p_attributes[tala_leuchtweite][de]") ? (
+                              <span className="font-semibold text-sky-700 flex items-center gap-1">
+                                <CheckCircle size={10} className="shrink-0 text-sky-500" />
+                                {item.leuchtNew || "—"}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">{item.leuchtNew || "—"}</span>
                             )}
                           </td>
                           <td className="px-3 py-1.5 max-w-xs">
