@@ -199,25 +199,21 @@ export default function DescGenerator() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const parseOriginalFile = (f: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const parsed = Papa.parse<Record<string, string>>(text, {
-        header: true,
-        delimiter: ";",
-        skipEmptyLines: true,
-      });
-      const rows: OriginalRow[] = parsed.data.map((row, i) => ({
-        index: i,
-        pId: row["p_id"] ?? "",
-        pItemNumber: row["p_item_number"] ?? "",
-        pNameDE: row["p_name[de]"] ?? "",
-        pDescDE: row["p_description[de]"] ?? "",
-      }));
-      setOriginalRows(rows);
-    };
-    reader.readAsText(f, "utf-8");
+  const parseOriginalFile = async (f: File) => {
+    const text = await f.text();
+    const parsed = Papa.parse<Record<string, string>>(text, {
+      header: true,
+      delimiter: ";",
+      skipEmptyLines: true,
+    });
+    const rows: OriginalRow[] = parsed.data.map((row, i) => ({
+      index: i,
+      pId: row["p_id"] ?? "",
+      pItemNumber: row["p_item_number"] ?? "",
+      pNameDE: row["p_name[de]"] ?? "",
+      pDescDE: row["p_description[de]"] ?? "",
+    }));
+    setOriginalRows(rows);
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
