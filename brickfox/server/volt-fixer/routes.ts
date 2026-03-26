@@ -442,11 +442,10 @@ function normalizeExtractedVolt(raw: string): string {
   if (!raw) return raw;
   // Bereichswert (z.B. "100-240", "12/24", "9,0-12,0") → normalizeRangeVolt anwenden
   if (/[-\/]/.test(raw)) return normalizeRangeVolt(raw);
-  // Dezimalwert (z.B. "3,7" oder "3.7") → Komma durch Punkt (Spaltenformat)
-  if (raw.includes(',')) return raw.replace(',', '.');
-  if (raw.includes('.')) return raw; // bereits Punkt-Format
-  // Ganzzahl → unverändert lassen (19 bleibt 19, nicht 19,0)
-  return raw;
+  let v = raw.includes(',') ? raw.replace(',', '.') : raw;
+  // Trailing-Nullen entfernen: 5.0 → 5, 3.0 → 3, 3.70 → 3.7
+  v = v.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  return v;
 }
 
 // Gruppiert Spannung-Zeilen in der technischen Tabelle:
