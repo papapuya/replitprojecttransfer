@@ -30,6 +30,9 @@ export interface VoltProcessorResult {
   headers: string[];
   fileName: string;
   csvBlob: Blob;
+  noDescBlob: Blob;
+  noDescFileName: string;
+  noDescCount: number;
   reportBlob: Blob;
   reportFileName: string;
 }
@@ -1028,8 +1031,23 @@ export async function processVoltFile(
     console.log(`[VoltFixer] Neue Attributspalten in Export eingefügt: ${missingAttrCols.join(', ')}`);
   }
 
-  const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: finalHeaders });
+  // Produkte mit und ohne Beschreibung trennen
+  const hasDesc = (row: Record<string, string>) =>
+    DESC_COLS.some(col => finalHeaders.includes(col) && (row[col] ?? '').trim() !== '');
+
+  const rowsWithDesc    = finalHeaders.some(h => DESC_COLS.includes(h))
+    ? csvRowsClean.filter(row => hasDesc(row))
+    : csvRowsClean;
+  const rowsWithoutDesc = finalHeaders.some(h => DESC_COLS.includes(h))
+    ? csvRowsClean.filter(row => !hasDesc(row))
+    : [];
+
+  const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders });
   const csvBlob = new Blob(['\uFEFF' + csvOut], { type: 'text/csv;charset=utf-8' });
+
+  const noDescOut  = Papa.unparse(rowsWithoutDesc, { delimiter: ';', columns: finalHeaders });
+  const noDescBlob = new Blob(['\uFEFF' + noDescOut], { type: 'text/csv;charset=utf-8' });
+  const noDescFileName = fileName.replace(/\.csv$/i, '_ohne_beschreibung.csv');
 
   // Debug: Blob-Inhalt direkt auslesen und verifizieren
   csvBlob.text().then(blobText => {
@@ -1207,6 +1225,9 @@ export async function processVoltFile(
     headers: finalHeaders,
     fileName,
     csvBlob,
+    noDescBlob,
+    noDescFileName,
+    noDescCount: rowsWithoutDesc.length,
     reportBlob,
     reportFileName,
   };
