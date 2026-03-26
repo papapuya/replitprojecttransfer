@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, FileSpreadsheet, Globe, FolderOpen, Zap, Building2, User, LayoutDashboard, GitCompare, LogOut, ShoppingCart, Scale, ChevronDown, ChevronRight, Store, Wrench, FileCode, DollarSign } from "lucide-react";
+import { Home, FileSpreadsheet, Globe, FolderOpen, Zap, Building2, User, LayoutDashboard, GitCompare, LogOut, ShoppingCart, Scale, ChevronDown, ChevronRight, Store, Wrench, FileCode, DollarSign, Sparkles } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -66,6 +66,7 @@ const toolsMenuItems = [
   { title: "Preisabgleich", url: "/price-matcher", icon: DollarSign },
   { title: "Akkushop Generator", url: "/akkushop-generator", icon: Zap },
   { title: "Beschreibungs-Analyse", url: "/description-analyzer", icon: FileSpreadsheet },
+  { title: "Beschreibungs-Generator", url: "/desc-generator", icon: Sparkles },
   { title: "Volt-Komma Fixer", url: "/volt-fixer", icon: Zap },
   { title: "CSV-Reparatur", url: "/csv-repair", icon: Wrench },
 ];
