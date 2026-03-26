@@ -45,6 +45,7 @@ import HtmlGenerator from "@/pages/html-generator";
 import PriceMatcher from "@/pages/price-matcher";
 import AkkushopGenerator from "@/pages/akkushop-generator";
 import DescriptionAnalyzer from "@/pages/description-analyzer";
+import DescGenerator from "@/pages/desc-generator";
 import VoltFixer from "@/pages/volt-fixer";
 import CsvRepair from "@/pages/csv-repair";
 
@@ -193,6 +194,11 @@ function Router() {
       <Route path="/description-analyzer">
         <ProtectedRoute>
           <DescriptionAnalyzer />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/desc-generator">
+        <ProtectedRoute>
+          <DescGenerator />
         </ProtectedRoute>
       </Route>
       <Route path="/volt-fixer">

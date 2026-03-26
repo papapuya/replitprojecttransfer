@@ -64,6 +64,7 @@ import mappingRouter from './routes-mapping';
 import akkushopGeneratorRouter from './akkushop-generator/routes';
 import voltFixerRouter from './volt-fixer/routes';
 import csvRepairRouter from './csv-repair/routes';
+import descGeneratorRouter from './desc-generator/routes';
 import { pdfParserService } from './services/pdf-parser';
 import { deeplService } from './services/deepl-service';
 
@@ -3566,6 +3567,7 @@ Beispiel Antwort:
 
   // CSV-Reparatur
   app.use('/api/csv-repair', csvRepairRouter);
+  app.use('/api/desc-generator', descGeneratorRouter);
 
   // Weight estimation endpoint
   app.post('/api/estimate-weight', requireAuth, async (req, res) => {
