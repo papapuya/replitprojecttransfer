@@ -200,7 +200,18 @@ export default function DescGenerator() {
   const { toast } = useToast();
 
   const parseOriginalFile = async (f: File) => {
-    const text = await f.text();
+    const buf = await f.arrayBuffer();
+    const arr = new Uint8Array(buf);
+    // UTF-8 BOM?
+    const hasBom = arr[0] === 0xEF && arr[1] === 0xBB && arr[2] === 0xBF;
+    // Typische Windows-1252 Bytes für deutsche Sonderzeichen (ä ö ü Ä Ö Ü ß)
+    const hasWin1252 = !hasBom && Array.from(arr).some(b =>
+      b === 0xE4 || b === 0xF6 || b === 0xFC ||
+      b === 0xC4 || b === 0xD6 || b === 0xDC || b === 0xDF
+    );
+    const encoding = hasBom ? 'utf-8' : (hasWin1252 ? 'windows-1252' : 'utf-8');
+    const slice = hasBom ? arr.slice(3) : arr;
+    const text = new TextDecoder(encoding).decode(slice);
     const parsed = Papa.parse<Record<string, string>>(text, {
       header: true,
       delimiter: ";",
@@ -255,9 +266,7 @@ export default function DescGenerator() {
     const sessionId = genId();
     const eventSource = new EventSource(`/api/desc-generator/progress/${sessionId}`);
 
-    // Warten bis SSE-Verbindung steht, bevor POST gesendet wird
-    await new Promise<void>((resolve) => { eventSource.onopen = () => resolve(); });
-
+    // Handler ZUERST setzen, dann auf Verbindung warten — sonst gehen Events verloren
     eventSource.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
@@ -276,6 +285,12 @@ export default function DescGenerator() {
       } catch {}
     };
     eventSource.onerror = () => { eventSource.close(); setProcessing(false); };
+
+    // Warten bis SSE-Verbindung steht, bevor POST gesendet wird
+    await new Promise<void>((resolve) => {
+      if (eventSource.readyState === EventSource.OPEN) { resolve(); return; }
+      eventSource.onopen = () => resolve();
+    });
 
     try {
       const formData = new FormData();
