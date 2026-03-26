@@ -1010,7 +1010,25 @@ export async function processVoltFile(
     return r;
   });
   const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
-  const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
+
+  // Attributspalten die im Original-CSV fehlten, aber jetzt befüllt wurden, hinzufügen
+  const ATTR_COLS_ORDERED = [VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL];
+  const missingAttrCols = ATTR_COLS_ORDERED.filter(col =>
+    !headers.includes(col) &&
+    csvRowsClean.some(r => (r[col] ?? '').trim() !== '')
+  );
+  let finalHeaders = [...headers];
+  if (missingAttrCols.length > 0) {
+    // Einfügen nach p_item_number (oder am Anfang wenn nicht vorhanden)
+    const insertAfter = finalHeaders.findIndex(h =>
+      h === 'p_item_number' || h === 'v_item_number'
+    );
+    const insertAt = insertAfter >= 0 ? insertAfter + 1 : 0;
+    finalHeaders.splice(insertAt, 0, ...missingAttrCols);
+    console.log(`[VoltFixer] Neue Attributspalten in Export eingefügt: ${missingAttrCols.join(', ')}`);
+  }
+
+  const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: finalHeaders });
   const csvBlob = new Blob(['\uFEFF' + csvOut], { type: 'text/csv;charset=utf-8' });
 
   // Debug: Blob-Inhalt direkt auslesen und verifizieren
