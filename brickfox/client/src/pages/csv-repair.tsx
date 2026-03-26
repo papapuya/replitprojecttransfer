@@ -77,9 +77,10 @@ export default function CsvRepair() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">CSV-Reparatur</h1>
         <p className="text-gray-500 mt-1">
-          Repariert kaputte Brickfox-Exporte: fügt zerrissene Produktzeilen wieder zusammen,
-          entfernt leere Zeilen und Zeilen mit ungültiger{" "}
-          <code className="bg-gray-100 px-1 rounded text-sm">p_item_number</code>.
+          Repariert kaputte Brickfox-Exporte: erkennt anhand der{" "}
+          <code className="bg-gray-100 px-1 rounded text-sm">p_id</code> wo jede Produktzeile beginnt,
+          fügt durch HTML-Zeilenumbrüche zerrissene Fragmente wieder zusammen und entfernt leere Zeilen —
+          so bleibt <code className="bg-gray-100 px-1 rounded text-sm">p_id</code> korrekt mit allen Feldern verbunden.
         </p>
       </div>
 
@@ -178,10 +179,14 @@ export default function CsvRepair() {
             <p className="font-semibold text-indigo-900 mb-2">Was wurde repariert?</p>
             <p>
               <span className="font-medium">Zerrissene Zeilen:</span> Brickfox speichert HTML-Beschreibungen ohne
-              Anführungszeichen. Zeilenumbrüche im HTML zerreißen das CSV in mehrere Zeilen.
-              Das Tool erkennt diese Fragmente (keine gültige{" "}
-              <code className="bg-indigo-100 px-1 rounded">p_item_number</code>) und fügt sie wieder
-              zur richtigen Produktzeile zusammen.
+              Anführungszeichen. Zeilenumbrüche im HTML zerreißen das CSV in mehrere Teile.
+              Das Tool erkennt echte Produktzeilen anhand der{" "}
+              <code className="bg-indigo-100 px-1 rounded">p_id</code> (z.B. 12744, BST41_16) und fügt alle
+              Fragmente korrekt zur ursprünglichen Zeile zusammen — so bleibt{" "}
+              <code className="bg-indigo-100 px-1 rounded">p_id</code> korrekt mit{" "}
+              <code className="bg-indigo-100 px-1 rounded">p_item_number</code>,{" "}
+              <code className="bg-indigo-100 px-1 rounded">p_description[de]</code> und{" "}
+              <code className="bg-indigo-100 px-1 rounded">p_attributes[akku_v][de]</code> verbunden.
             </p>
             <p className="mt-2">
               <span className="font-medium">Leere Zeilen:</span> Brickfox erzeugt manchmal Zeilen die nur

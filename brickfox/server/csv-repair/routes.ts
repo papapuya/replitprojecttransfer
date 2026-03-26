@@ -32,16 +32,19 @@ interface RepairStats {
 }
 
 // ─── Zeilen-Erkennung: Beginnt diese Zeile ein neues Produkt? ─────────────────
-// Lax: Akzeptiert auch rein numerische IDs (z.B. "123456").
-// Nur eindeutige HTML-Fragmente (Tags, Entities, Leerzeichen im Feld) werden abgelehnt.
-function looksLikeNewProductRow(firstField: string): boolean {
-  const f = firstField.trim();
-  if (!f) return false;           // leeres erstes Feld → Fragment
-  if (/<|>/.test(f)) return false; // HTML-Tag → Fragment
-  if (/&[a-zA-Z#]/.test(f)) return false; // HTML-Entity (&amp; &nbsp; etc.)
-  if (/\s/.test(f)) return false;  // Leerzeichen → Satzfragment
-  if (/,/.test(f)) return false;   // Komma → Volt-Wert (3,7 V)
-  return true;
+// Prüft p_id (Spalte 0): Gültige p_id = Integer oder alphanumerischer Code (BST41_16, LAP210).
+// Alles mit HTML-Tags, Entities, Leerzeichen → Fragment der vorherigen Zeile.
+function looksLikeNewProductRow(pIdField: string): boolean {
+  const f = pIdField.trim();
+  if (!f) return false;                         // leer → Fragment
+  if (/<|>/.test(f)) return false;              // HTML-Tag → Fragment
+  if (/&/.test(f)) return false;                // HTML-Entity → Fragment
+  if (/\s/.test(f)) return false;               // Leerzeichen → Satzfragment
+  if (/,/.test(f)) return false;                // Komma → Fragment
+  if (/^\d+\.\d+$/.test(f)) return false;       // Dezimalzahl (1.5, 3.7) → Fragment
+  // Gültige p_id: rein numerisch ODER alphanumerisch mit - und _
+  if (/^[\w\-]+$/.test(f)) return true;
+  return false;
 }
 
 // ─── Endfilter: Ist p_item_number eine echte Artikelnummer? ──────────────────
@@ -93,18 +96,18 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 
     const headerLine = rawLines[0];
 
-    // Spaltenindex von p_item_number bestimmen
+    // Spaltenindizes bestimmen
     const headerCols = headerLine.split(';').map(h => h.trim());
-    const pItemNrIdx = headerCols.findIndex(h => h === 'p_item_number');
-    // Fallback: Spalte 0 wenn p_item_number nicht im Header gefunden
-    const itemNrColIdx = pItemNrIdx >= 0 ? pItemNrIdx : 0;
+    const pIdIdx = headerCols.findIndex(h => h === 'p_id');
+    // p_id-Spalte = 0 (Standard-Brickfox-Format), Fallback auf Spalte 0
+    const pIdColIdx = pIdIdx >= 0 ? pIdIdx : 0;
 
-    console.log(`[CsvRepair] Header-Spalten: ${headerCols.length}, p_item_number-Index: ${pItemNrIdx}, Rohe Zeilen: ${rawLines.length}`);
+    console.log(`[CsvRepair] Header-Spalten: ${headerCols.length}, p_id-Index: ${pIdColIdx}, Rohe Zeilen: ${rawLines.length}`);
 
     // ─── Zeilen zusammenführen ────────────────────────────────────────────────
-    // Eine Zeile gilt als "Zeilenbeginn" (neues Produkt) wenn der Wert in der
-    // p_item_number-Spalte eine gültige Artikelnummer ist.
-    // Alle anderen Zeilen werden an die vorherige angehängt (Zeilenumbruch im HTML).
+    // Eine Zeile gilt als "Zeilenbeginn" (neues Produkt) wenn p_id (Spalte 0) 
+    // eine gültige Produkt-ID ist (Integer oder alphanumerischer Code wie BST41_16).
+    // HTML-Fragmente (</p>*, &nbsp; etc.) oder Dezimalzahlen → Fragment der vorherigen Zeile.
 
     const mergedLines: string[] = [headerLine];
     let emptyLinesRemoved = 0;
@@ -120,14 +123,13 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       }
 
       const fields = line.split(';');
-      const itemNrField = fields[itemNrColIdx] ?? '';
+      const pIdField = fields[pIdColIdx] ?? '';
 
-      if (looksLikeNewProductRow(itemNrField)) {
-        // Neue Produktzeile
+      if (looksLikeNewProductRow(pIdField)) {
+        // Neue Produktzeile — p_id sieht gültig aus
         mergedLines.push(line);
       } else {
-        // Fragment einer vorherigen Zeile — mit Leerzeichen zusammenfügen
-        // WICHTIG: kein \n hier, da Papa.parse sonst erneut aufteilt!
+        // Fragment einer vorherigen Zeile — ohne \n anhängen (Papa.parse würde sonst wieder teilen)
         if (mergedLines.length > 1) {
           mergedLines[mergedLines.length - 1] += ' ' + line;
           rowsMerged++;
