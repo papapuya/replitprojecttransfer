@@ -894,6 +894,39 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
         }
       }
 
+      // ─── 2-stellige Integer: Beschreibung prüfen ob Wert ÷10 korrekt ist ────────────────
+      // z.B. Spalte "30" + Beschreibung "3 V"  → Spalte wird zu "3"
+      //      Spalte "48" + Beschreibung "4,8 V" → Spalte wird zu "4.8"
+      //      Spalte "19" + Beschreibung "19 V"  → bleibt "19" (kein Match auf 1.9)
+      //      Spalte "20" + Beschreibung "20 V"  → bleibt "20" (kein Match auf 2.0)
+      {
+        const cv2 = (newRow[VOLT_COL] ?? '').trim();
+        if (/^\d{2}$/.test(cv2)) {
+          const asInt = parseInt(cv2, 10);
+          const dividedBy10 = asInt / 10;
+          const dividedStr = stripTrailingZeroVolt(
+            dividedBy10 % 1 === 0 ? dividedBy10.toString() : dividedBy10.toFixed(1)
+          );
+          let descExtracted: string | null = null;
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const descVal = row[col];
+            if (!descVal) continue;
+            descExtracted = extractVoltFromTable(descVal) ?? extractVoltFromBodyText(descVal);
+            if (descExtracted) break;
+          }
+          if (descExtracted) {
+            const descNum = parseFloat(descExtracted.replace(',', '.').split('-')[0].split('/')[0]);
+            if (!isNaN(descNum) && Math.abs(descNum - dividedBy10) < 0.01) {
+              if (dividedStr !== cv2) {
+                newRow[VOLT_COL] = dividedStr;
+                if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
+              }
+            }
+          }
+        }
+      }
+
       // ─── Beschreibung synchronisieren (wenn Volt-Spalte geändert wurde) ──────────────────
       if (changed.includes(VOLT_COL)) {
         const finalVolt = (newRow[VOLT_COL] ?? '').trim();
