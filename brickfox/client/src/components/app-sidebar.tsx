@@ -67,7 +67,7 @@ const toolsMenuItems = [
   { title: "Akkushop Generator", url: "/akkushop-generator", icon: Zap },
   { title: "Beschreibungs-Analyse", url: "/description-analyzer", icon: FileSpreadsheet },
   { title: "Beschreibungs-Generator", url: "/desc-generator", icon: Sparkles },
-  { title: "Volt-Komma Fixer", url: "/volt-fixer", icon: Zap },
+  { title: "Brickfox Attribut-Tool", url: "/volt-fixer", icon: Zap },
   { title: "CSV-Reparatur", url: "/csv-repair", icon: Wrench },
 ];
 
