@@ -818,7 +818,13 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
         continue;
       }
 
-      const voltVal = (row[VOLT_COL] ?? '').trim();
+      // Nur ersten Token der Volt-Spalte verwenden: "3,7 3965" → "3,7" (Schutz vor falsch
+      // geparsten CSV-Zeilenumbrüchen die Fremdwerte in die Volt-Spalte schieben)
+      const voltRaw = (row[VOLT_COL] ?? '').trim();
+      const voltVal = voltRaw.split(/\s+/)[0] ?? '';
+      if (voltRaw !== voltVal) {
+        newRow[VOLT_COL] = voltVal; // Bereinigung direkt setzen (kein changed-Eintrag nötig)
+      }
 
       // Unrealistisch hohe Zahlen (>= 1000) sind kein gültiger Volt-Wert → sofort leeren, keine Extraktion
       const voltAsNum = Number(voltVal.replace(',', '.'));
@@ -1110,7 +1116,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
         index: i,
         pId: row['p_id'] ?? '',
         itemNr,
-        voltOrig: orig[VOLT_COL] ?? '',
+        voltOrig: (orig[VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '',
         voltNew: row[VOLT_COL] ?? '',
         nameDEOrig: orig['p_name[de]'] ?? '',
         nameDE: row['p_name[de]'] ?? '',

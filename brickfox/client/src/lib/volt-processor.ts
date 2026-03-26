@@ -430,7 +430,12 @@ export async function processVoltFile(
       continue;
     }
 
-    const voltVal = (row[VOLT_COL] ?? '').trim();
+    // Nur ersten Token: "3,7 3965" → "3,7" (Schutz vor falsch geparsten CSV-Zeilenumbrüchen)
+    const voltRaw = (row[VOLT_COL] ?? '').trim();
+    const voltVal = voltRaw.split(/\s+/)[0] ?? '';
+    if (voltRaw !== voltVal) {
+      newRow[VOLT_COL] = voltVal;
+    }
     const voltAsNum = Number(voltVal.replace(',', '.'));
     const isUnrealisticVolt = voltVal !== '' && !isNaN(voltAsNum) && voltAsNum >= 1000;
 
@@ -666,7 +671,7 @@ export async function processVoltFile(
       index: i,
       pId: row['p_id'] ?? '',
       itemNr,
-      voltOrig: orig[VOLT_COL] ?? '',
+      voltOrig: (orig[VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '',
       voltNew: row[VOLT_COL] ?? '',
       nameDEOrig: orig['p_name[de]'] ?? '',
       nameDE: row['p_name[de]'] ?? '',
