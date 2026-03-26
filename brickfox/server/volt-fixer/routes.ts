@@ -926,6 +926,36 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
         }
       }
 
+      // ─── 3-stellige Integer (außer 10-24-Bereich) + 4-stellige Integer: ÷100 via Beschreibung ──
+      // z.B. 385 + Beschreibung "3,85 V" → 3.85 | 772 → 7.72 | 1155 → 11.55 | 1454 → 14.54
+      const currentVoltX = (newRow[VOLT_COL] ?? '').trim();
+      const is3digit = /^\d{3}$/.test(currentVoltX);
+      const is4digit = /^\d{4}$/.test(currentVoltX);
+      if (is3digit || is4digit) {
+        const asIntX = parseInt(currentVoltX, 10);
+        const firstTwoX = parseInt(currentVoltX.slice(0, 2), 10);
+        const alreadyHandled3 = is3digit && firstTwoX >= 10 && firstTwoX <= 24;
+        if (!alreadyHandled3) {
+          const dividedBy100 = asIntX / 100;
+          const dividedStr100 = parseFloat(dividedBy100.toFixed(2)).toString();
+          let descExtracted100: string | null = null;
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const descVal = row[col];
+            if (!descVal) continue;
+            descExtracted100 = extractVoltFromTable(descVal) ?? extractVoltFromBodyText(descVal);
+            if (descExtracted100) break;
+          }
+          if (descExtracted100) {
+            const descNum100 = parseFloat(descExtracted100.replace(',', '.').split('-')[0].split('/')[0]);
+            if (!isNaN(descNum100) && Math.abs(descNum100 - dividedBy100) < 0.001) {
+              newRow[VOLT_COL] = dividedStr100;
+              if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
+            }
+          }
+        }
+      }
+
       fixedRows.push(newRow);
       changedCols.push(changed);
     }
