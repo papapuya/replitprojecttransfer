@@ -602,10 +602,6 @@ export async function processVoltFile(
         r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
       }
     }
-    // Volt-Spalte: Punkt → Komma (deutsches Dezimalformat, Excel/Power Query kompatibel)
-    if (r[VOLT_COL] && /\./.test(r[VOLT_COL])) {
-      r[VOLT_COL] = r[VOLT_COL].replace('.', ',');
-    }
     return r;
   });
   const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
@@ -746,7 +742,7 @@ export async function processVoltFile(
     .map(({ i }) => ({
       Artikelnummer: fixedRows[i]['p_item_number'] || fixedRows[i]['v_item_number'] || '',
       Volt_alt: (rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '',
-      Volt_neu: (fixedRows[i][VOLT_COL] ?? '').replace('.', ','),
+      Volt_neu: fixedRows[i][VOLT_COL] ?? '',
     }));
   const reportCsv = Papa.unparse(reportRows, { delimiter: ';' });
   const reportBlob = new Blob(['\uFEFF' + reportCsv], { type: 'text/csv;charset=utf-8' });
