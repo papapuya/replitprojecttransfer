@@ -227,8 +227,16 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
     const stripped = stripTrailingZeroVolt(trimmed);
     return { fixed: stripped, changed: stripped !== trimmed };
   }
-  // Ganzzahlen (ohne Komma/Punkt) werden nicht automatisch umgewandelt — zu viele Fehlkorrekturen.
-  // Gültige Werte wie 20, 47, 108, 115, 250 etc. bleiben unverändert.
+  if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
+  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 108→10.8, 120→12, 144→14.4)
+  // Andere Ganzzahlen (115, 250, 385 …) bleiben unverändert.
+  if (trimmed.length === 3) {
+    const firstTwo = parseInt(trimmed.slice(0, 2), 10);
+    if (firstTwo >= 10 && firstTwo <= 24) {
+      const raw3 = trimmed.slice(0, 2) + '.' + trimmed[2];
+      return { fixed: stripTrailingZeroVolt(raw3), changed: true };
+    }
+  }
   return { fixed: trimmed, changed: false };
 }
 
