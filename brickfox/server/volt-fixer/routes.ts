@@ -391,12 +391,13 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
   let changed = false;
 
   // Ersetzt Volt-Werte in Textknoten (HTML-Tags überspringen)
+  // Vergleich: beide Seiten auf Punkt normalisieren; Ausgabe immer mit Punkt (wie Volt-Spalte)
   const replaceVoltInTextNodes = (s: string): string =>
     s.replace(/(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
       (m, tag, _f, num, unit) => {
         if (tag !== undefined) return tag;
         if (!num || !unit) return m;
-        const norm = num.replace('.', ',');
+        const norm = num.replace(',', '.'); // Komma → Punkt für Vergleich
         if (norm === targetVolt || /[-\/]/.test(num)) return m;
         changed = true;
         return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
@@ -419,7 +420,7 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
       if (table !== undefined) return table; // Tabelle bereits verarbeitet
       if (tag !== undefined) return tag;
       if (!num || !unit) return m;
-      const norm = num.replace('.', ',');
+      const norm = num.replace(',', '.'); // Komma → Punkt für Vergleich
       if (norm === targetVolt || /[-\/]/.test(num)) return m;
       changed = true;
       return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
@@ -959,7 +960,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       // ─── Beschreibung synchronisieren (wenn Volt-Spalte geändert wurde) ──────────────────
       if (changed.includes(VOLT_COL)) {
         const finalVolt = (newRow[VOLT_COL] ?? '').trim();
-        const targetVolt = finalVolt.replace('.', ','); // dot → Komma für DE-Beschreibung
+        const targetVolt = finalVolt; // Punkt-Format wie Volt-Spalte, Sync gibt auch Punkt aus
         if (!targetVolt.includes('-') && !targetVolt.includes('/')) {
           // DE-Beschreibung aktualisieren
           const deCol = 'p_description[de]';
