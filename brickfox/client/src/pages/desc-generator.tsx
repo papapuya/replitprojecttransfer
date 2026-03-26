@@ -254,13 +254,16 @@ export default function DescGenerator() {
 
     const sessionId = genId();
     const eventSource = new EventSource(`/api/desc-generator/progress/${sessionId}`);
+
+    // Warten bis SSE-Verbindung steht, bevor POST gesendet wird
+    await new Promise<void>((resolve) => { eventSource.onopen = () => resolve(); });
+
     eventSource.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
         if (data.complete) {
           setResult({ generated: data.generated, skipped: data.skipped, errors: data.errors, total: data.total });
           eventSource.close();
-          setProcessing(false);
           setProgress(null);
         } else if (data.error) {
           setError(data.error);
@@ -321,6 +324,7 @@ export default function DescGenerator() {
         };
       });
       setPreviewItems(items);
+      setProcessing(false);
       toast({ title: "Fertig", description: `${items.filter(i => i.changed).length} Beschreibungen generiert.` });
     } catch (err: any) {
       setError(err.message ?? "Unbekannter Fehler");
