@@ -424,6 +424,18 @@ function extractMahFromTable(html: string): string | null {
   return null;
 }
 
+// ─── Wh Normalisierung (bestehende Werte) ────────────────────────────────────
+
+function fixWh(val: string): { fixed: string; changed: boolean } {
+  const trimmed = val.trim();
+  if (!trimmed) return { fixed: trimmed, changed: false };
+  if (!trimmed.includes(',')) return { fixed: trimmed, changed: false };
+  const dotted = trimmed.replace(',', '.');
+  // Trailing-Nullen entfernen: 5.20 → 5.2, 50.00 → 50
+  const stripped = dotted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  return { fixed: stripped, changed: stripped !== trimmed };
+}
+
 // ─── Wh Extraktion ───────────────────────────────────────────────────────────
 
 function normalizeWh(raw: string): string | null {
@@ -803,10 +815,16 @@ export async function processVoltFile(
       }
     }
 
-    // ─── Wh: nur ergänzen wenn Spalte vorhanden und Zelle leer ──────────────
+    // ─── Wh: bestehende Werte normalisieren (Komma→Punkt), leere ergänzen ────
     if (headers.includes(WH_COL)) {
       const whVal = (newRow[WH_COL] ?? '').trim();
-      if (!whVal) {
+      if (whVal) {
+        const { fixed: fixedWh, changed: whFixed } = fixWh(whVal);
+        if (whFixed) {
+          newRow[WH_COL] = fixedWh;
+          if (!changed.includes(WH_COL)) changed.push(WH_COL);
+        }
+      } else {
         let extractedWh: string | null = null;
 
         // 1. Produktname (DE dann NL)
