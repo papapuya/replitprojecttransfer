@@ -1204,7 +1204,7 @@ export async function processVoltFile(
     allChangedNames,
     allExtractedVolt,
     csvIssues,
-    headers,
+    headers: finalHeaders,
     fileName,
     csvBlob,
     reportBlob,
