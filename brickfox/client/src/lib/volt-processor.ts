@@ -1047,7 +1047,6 @@ export async function processVoltFile(
 
   const noDescOut  = Papa.unparse(rowsWithoutDesc, { delimiter: ';', columns: finalHeaders });
   const noDescBlob = new Blob(['\uFEFF' + noDescOut], { type: 'text/csv;charset=utf-8' });
-  const noDescFileName = fileName.replace(/\.csv$/i, '_ohne_beschreibung.csv');
 
   // Debug: Blob-Inhalt direkt auslesen und verifizieren
   csvBlob.text().then(blobText => {
@@ -1184,6 +1183,7 @@ export async function processVoltFile(
   const now = new Date();
   const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
   const fileName = `${baseName}_attribut_fixed_${ts}.csv`;
+  const noDescFileName = `${baseName}_attribut_fixed_${ts}_ohne_beschreibung.csv`;
   const reportFileName = `${baseName}_attribut_korrekturen_${ts}.csv`;
 
   // Korrekturbericht: nur geänderte Volt-Zeilen mit 3 Spalten
