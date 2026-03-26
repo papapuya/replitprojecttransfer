@@ -501,10 +501,11 @@ export async function processVoltFile(
     }
 
     // ─── 2-stellige Integer: immer ÷10 korrigieren ───────────────────────────────────────
-    // Die Original-Volt-Spalte ist die Basis. 2-stellige Ganzzahlen sind immer Encoding-Fehler.
+    // Nur wenn Original-Volt-Spalte NICHT leer war (voltVal !== '').
+    // Extrahierte Werte aus Beschreibung/Name (z.B. 19, 100-240) bleiben unverändert.
     {
       const cv2 = (newRow[VOLT_COL] ?? '').trim();
-      if (/^\d{2}$/.test(cv2)) {
+      if (voltVal !== '' && /^\d{2}$/.test(cv2)) {
         const dividedBy10 = parseInt(cv2, 10) / 10;
         const dividedStr = stripTrailingZeroVolt(
           dividedBy10 % 1 === 0 ? dividedBy10.toString() : dividedBy10.toFixed(1)
