@@ -61,7 +61,7 @@ type Result = {
   reportFileName?: string;
   headers: string[];
   fileName: string;
-  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; htmlCorrectedCount?: number; mahExtracted?: number; mahSkipped?: number };
+  stats: { total: number; voltChanged: number; voltSkipped: number; voltSkippedNonElectronic: number; voltExtracted: number; dreiSpannungCount?: number; htmlCorrectedCount?: number; mahExtracted?: number; mahSkipped?: number; whExtracted?: number; whSkipped?: number };
   previewItems: PreviewItem[];
   allChangedNames: ChangedNameEntry[];
   allExtractedVolt: ExtractedVoltEntry[];
@@ -761,6 +761,9 @@ export default function VoltFixer() {
             {(result.stats.mahExtracted ?? 0) > 0 && (
               <Badge className="bg-green-600 text-white">{result.stats.mahExtracted!.toLocaleString()} mAh ergänzt</Badge>
             )}
+            {(result.stats.whExtracted ?? 0) > 0 && (
+              <Badge className="bg-teal-600 text-white">{result.stats.whExtracted!.toLocaleString()} Wh ergänzt</Badge>
+            )}
             {(result.stats.voltSkipped - (result.stats.voltSkippedNonElectronic ?? 0)) > 0 && (
               <Badge variant="outline" className="text-gray-400">
                 {(result.stats.voltSkipped - (result.stats.voltSkippedNonElectronic ?? 0)).toLocaleString()} kein Volt gefunden
@@ -945,6 +948,8 @@ export default function VoltFixer() {
                       <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">mAh (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">mAh (nachher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-teal-700 whitespace-nowrap bg-teal-50">Wh (vorher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-teal-700 whitespace-nowrap bg-teal-50">Wh (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name DE</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name NL</th>
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">Beschreibung DE</th>
@@ -1027,6 +1032,21 @@ export default function VoltFixer() {
                               </span>
                             ) : (
                               <span className="text-gray-500">{item.mahNew || "—"}</span>
+                            )}
+                          </td>
+                          {/* Wh vorher */}
+                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-teal-50/40">
+                            {item.whOrig || "—"}
+                          </td>
+                          {/* Wh nachher */}
+                          <td className="px-3 py-1.5 font-mono text-xs bg-teal-50/40">
+                            {item.changed.includes("p_attributes[akku_wh][de]") ? (
+                              <span className="font-semibold text-teal-700 flex items-center gap-1">
+                                <CheckCircle size={10} className="shrink-0 text-teal-500" />
+                                {item.whNew || "—"}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">{item.whNew || "—"}</span>
                             )}
                           </td>
                           <td className="px-3 py-1.5 max-w-xs">
