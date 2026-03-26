@@ -3,8 +3,20 @@ import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { processVoltFile } from "@/lib/volt-processor";
+import Papa from "papaparse";
 
-const VOLT_COL = "p_attributes[akku_v][de]";
+const VOLT_COL   = "p_attributes[akku_v][de]";
+const MAH_COL    = "p_attributes[akku_mah][de]";
+const WH_COL     = "p_attributes[akku_wh][de]";
+const WATT_COL   = "p_attributes[lela_leistung_watt][de]";
+const LEUCHT_COL = "p_attributes[tala_leuchtweite][de]";
+
+const COL_TO_FIELD: Record<string, string> = {
+  [MAH_COL]:    "mahNew",
+  [WH_COL]:     "whNew",
+  [WATT_COL]:   "wattNew",
+  [LEUCHT_COL]: "leuchtNew",
+};
 // Volt-Werte >= 1000 sind unrealistisch und werden nicht angezeigt
 const isUnrealisticVolt = (v: string) => { const n = Number(v.replace(',', '.')); return v !== '' && !isNaN(n) && n >= 1000; };
 const PAGE_SIZE = 500;
@@ -15,6 +27,14 @@ type PreviewItem = {
   itemNr: string;
   voltOrig: string;
   voltNew: string;
+  mahOrig?: string;
+  mahNew?: string;
+  whOrig?: string;
+  whNew?: string;
+  wattOrig?: string;
+  wattNew?: string;
+  leuchtOrig?: string;
+  leuchtNew?: string;
   nameDEOrig: string;
   nameDE: string;
   nameNLOrig: string;
@@ -377,6 +397,7 @@ export default function VoltFixer() {
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [editingVolt, setEditingVolt] = useState<{ index: number; value: string } | null>(null);
+  const [editingAttr, setEditingAttr] = useState<{ index: number; col: string; value: string } | null>(null);
   const [patchSaving, setPatchSaving] = useState(false);
   const [detailLocalData, setDetailLocalData] = useState<DetailData | null>(null);
 
@@ -611,6 +632,52 @@ export default function VoltFixer() {
       setPatchSaving(false);
       setEditingVolt(null);
     }
+  };
+
+  const saveAttrEdit = async (index: number, col: string, newVal: string) => {
+    if (!result) return;
+    const field = COL_TO_FIELD[col];
+    if (!field) return;
+
+    // 1. PreviewItems aktualisieren
+    setResult(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        previewItems: prev.previewItems.map(item =>
+          item.index === index
+            ? {
+                ...item,
+                [field]: newVal,
+                changed: newVal
+                  ? item.changed.includes(col) ? item.changed : [...item.changed, col]
+                  : item.changed.filter(c => c !== col),
+              }
+            : item
+        ),
+      };
+    });
+
+    // 2. CSV-Blob patchen (damit der Download aktuell bleibt)
+    if (result.csvBlob) {
+      try {
+        const item = result.previewItems.find(p => p.index === index);
+        const text = await result.csvBlob.text();
+        const parsed = Papa.parse<Record<string, string>>(text, { delimiter: ';', header: true });
+        const rowToEdit = parsed.data.find(r =>
+          (item?.itemNr && r['p_item_number'] === item.itemNr) ||
+          (item?.pId && r['p_id'] === item.pId)
+        );
+        if (rowToEdit && col in rowToEdit) {
+          rowToEdit[col] = newVal;
+          const newCsv = Papa.unparse(parsed.data, { delimiter: ';', columns: parsed.meta.fields });
+          const newBlob = new Blob(['\uFEFF' + newCsv], { type: 'text/csv;charset=utf-8' });
+          setResult(prev => prev ? { ...prev, csvBlob: newBlob } : prev);
+        }
+      } catch { /* ignorieren */ }
+    }
+
+    setEditingAttr(null);
   };
 
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
@@ -1034,14 +1101,25 @@ export default function VoltFixer() {
                             {item.mahOrig || "—"}
                           </td>
                           {/* mAh nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs bg-green-50/40">
-                            {item.changed.includes("p_attributes[akku_mah][de]") ? (
-                              <span className="font-semibold text-green-700 flex items-center gap-1">
-                                <CheckCircle size={10} className="shrink-0 text-green-500" />
-                                {item.mahNew || "—"}
-                              </span>
+                          <td className="px-1 py-1 font-mono text-xs bg-green-50/40">
+                            {editingAttr?.index === item.index && editingAttr?.col === MAH_COL ? (
+                              <div className="flex items-center gap-1">
+                                <input autoFocus className="w-20 px-2 py-0.5 text-xs border border-green-400 rounded focus:outline-none focus:ring-1 focus:ring-green-500 font-mono"
+                                  value={editingAttr.value}
+                                  onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })}
+                                  onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, MAH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }}
+                                />
+                                <button onClick={() => saveAttrEdit(item.index, MAH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-green-600 text-white rounded hover:bg-green-700">✓</button>
+                                <button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button>
+                              </div>
                             ) : (
-                              <span className="text-gray-500">{item.mahNew || "—"}</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: MAH_COL, value: item.mahNew ?? '' })}
+                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-green-100 transition-colors cursor-text text-left w-full ${item.changed.includes(MAH_COL) ? "text-green-700 font-semibold" : "text-gray-500"}`}
+                                title="Klicken zum Bearbeiten">
+                                {item.changed.includes(MAH_COL) && <CheckCircle size={10} className="inline shrink-0 text-green-500" />}
+                                <span className="font-mono text-xs">{item.mahNew || <span className="text-gray-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              </button>
                             )}
                           </td>
                           {/* Wh vorher */}
@@ -1049,14 +1127,25 @@ export default function VoltFixer() {
                             {item.whOrig || "—"}
                           </td>
                           {/* Wh nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs bg-teal-50/40">
-                            {item.changed.includes("p_attributes[akku_wh][de]") ? (
-                              <span className="font-semibold text-teal-700 flex items-center gap-1">
-                                <CheckCircle size={10} className="shrink-0 text-teal-500" />
-                                {item.whNew || "—"}
-                              </span>
+                          <td className="px-1 py-1 font-mono text-xs bg-teal-50/40">
+                            {editingAttr?.index === item.index && editingAttr?.col === WH_COL ? (
+                              <div className="flex items-center gap-1">
+                                <input autoFocus className="w-20 px-2 py-0.5 text-xs border border-teal-400 rounded focus:outline-none focus:ring-1 focus:ring-teal-500 font-mono"
+                                  value={editingAttr.value}
+                                  onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })}
+                                  onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }}
+                                />
+                                <button onClick={() => saveAttrEdit(item.index, WH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-teal-600 text-white rounded hover:bg-teal-700">✓</button>
+                                <button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button>
+                              </div>
                             ) : (
-                              <span className="text-gray-500">{item.whNew || "—"}</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: WH_COL, value: item.whNew ?? '' })}
+                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-teal-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WH_COL) ? "text-teal-700 font-semibold" : "text-gray-500"}`}
+                                title="Klicken zum Bearbeiten">
+                                {item.changed.includes(WH_COL) && <CheckCircle size={10} className="inline shrink-0 text-teal-500" />}
+                                <span className="font-mono text-xs">{item.whNew || <span className="text-gray-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              </button>
                             )}
                           </td>
                           {/* Watt vorher */}
@@ -1064,14 +1153,25 @@ export default function VoltFixer() {
                             {item.wattOrig || "—"}
                           </td>
                           {/* Watt nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs bg-yellow-50/40">
-                            {item.changed.includes("p_attributes[lela_leistung_watt][de]") ? (
-                              <span className="font-semibold text-yellow-700 flex items-center gap-1">
-                                <CheckCircle size={10} className="shrink-0 text-yellow-500" />
-                                {item.wattNew || "—"}
-                              </span>
+                          <td className="px-1 py-1 font-mono text-xs bg-yellow-50/40">
+                            {editingAttr?.index === item.index && editingAttr?.col === WATT_COL ? (
+                              <div className="flex items-center gap-1">
+                                <input autoFocus className="w-20 px-2 py-0.5 text-xs border border-yellow-400 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500 font-mono"
+                                  value={editingAttr.value}
+                                  onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })}
+                                  onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WATT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }}
+                                />
+                                <button onClick={() => saveAttrEdit(item.index, WATT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-yellow-600 text-white rounded hover:bg-yellow-700">✓</button>
+                                <button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button>
+                              </div>
                             ) : (
-                              <span className="text-gray-500">{item.wattNew || "—"}</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: WATT_COL, value: item.wattNew ?? '' })}
+                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-yellow-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WATT_COL) ? "text-yellow-700 font-semibold" : "text-gray-500"}`}
+                                title="Klicken zum Bearbeiten">
+                                {item.changed.includes(WATT_COL) && <CheckCircle size={10} className="inline shrink-0 text-yellow-500" />}
+                                <span className="font-mono text-xs">{item.wattNew || <span className="text-gray-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              </button>
                             )}
                           </td>
                           {/* Leuchtweite vorher */}
@@ -1079,14 +1179,25 @@ export default function VoltFixer() {
                             {item.leuchtOrig || "—"}
                           </td>
                           {/* Leuchtweite nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs bg-sky-50/40">
-                            {item.changed.includes("p_attributes[tala_leuchtweite][de]") ? (
-                              <span className="font-semibold text-sky-700 flex items-center gap-1">
-                                <CheckCircle size={10} className="shrink-0 text-sky-500" />
-                                {item.leuchtNew || "—"}
-                              </span>
+                          <td className="px-1 py-1 font-mono text-xs bg-sky-50/40">
+                            {editingAttr?.index === item.index && editingAttr?.col === LEUCHT_COL ? (
+                              <div className="flex items-center gap-1">
+                                <input autoFocus className="w-20 px-2 py-0.5 text-xs border border-sky-400 rounded focus:outline-none focus:ring-1 focus:ring-sky-500 font-mono"
+                                  value={editingAttr.value}
+                                  onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })}
+                                  onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }}
+                                />
+                                <button onClick={() => saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-sky-600 text-white rounded hover:bg-sky-700">✓</button>
+                                <button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button>
+                              </div>
                             ) : (
-                              <span className="text-gray-500">{item.leuchtNew || "—"}</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: LEUCHT_COL, value: item.leuchtNew ?? '' })}
+                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-sky-100 transition-colors cursor-text text-left w-full ${item.changed.includes(LEUCHT_COL) ? "text-sky-700 font-semibold" : "text-gray-500"}`}
+                                title="Klicken zum Bearbeiten">
+                                {item.changed.includes(LEUCHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-sky-500" />}
+                                <span className="font-mono text-xs">{item.leuchtNew || <span className="text-gray-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              </button>
                             )}
                           </td>
                           <td className="px-3 py-1.5 max-w-xs">
