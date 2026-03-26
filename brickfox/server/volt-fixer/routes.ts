@@ -1362,7 +1362,30 @@ router.post('/saves/:saveId/load', (req: Request, res: Response) => {
       restoreEmoji: jobData.restoreEmoji,
     });
 
-    res.json({ jobId: newJobId, ...resultData });
+    // Wenn Original-Zeilen vorhanden: CSV daraus rekonstruieren und zurückgeben,
+    // damit der Client sie mit der aktuellen Korrektur-Logik neu verarbeiten kann.
+    let originalCsvBase64: string | undefined;
+    if (Array.isArray(jobData.originalRows) && jobData.originalRows.length > 0) {
+      try {
+        const originalCsvText = Papa.unparse(jobData.originalRows, {
+          delimiter: ';',
+          columns: jobData.headers,
+        });
+        originalCsvBase64 = Buffer.from('\uFEFF' + originalCsvText, 'utf-8').toString('base64');
+      } catch (_e) {
+        // Fallback: kein originalCsvBase64
+      }
+    }
+
+    res.json({
+      jobId: newJobId,
+      ...resultData,
+      ...(originalCsvBase64 ? {
+        originalCsvBase64,
+        fileName: jobData.fileName,
+        restoreEmoji: jobData.restoreEmoji,
+      } : {}),
+    });
   } catch (e) {
     res.status(500).json({ error: 'Fehler beim Laden des Projekts' });
   }

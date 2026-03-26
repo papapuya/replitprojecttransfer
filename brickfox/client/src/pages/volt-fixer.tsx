@@ -420,7 +420,25 @@ export default function VoltFixer() {
     try {
       const r = await fetch(`/api/volt-fixer/saves/${saveId}/load`, { method: 'POST' });
       if (!r.ok) { setError('Fehler beim Laden des Projekts'); return; }
-      const data = await r.json() as Result;
+      const data = await r.json() as Result & {
+        originalCsvBase64?: string;
+        restoreEmoji?: boolean;
+      };
+
+      // Wenn Original-CSV vorhanden: lokal neu verarbeiten mit aktueller Korrektur-Logik
+      if (data.originalCsvBase64 && data.fileName) {
+        const binaryStr = atob(data.originalCsvBase64);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+        const file = new File([bytes], data.fileName, { type: 'text/csv' });
+        const savedRestoreEmoji = data.restoreEmoji !== undefined ? data.restoreEmoji : restoreEmoji;
+        if (data.restoreEmoji !== undefined) setRestoreEmoji(data.restoreEmoji);
+        setLoadingSaveId(null);
+        processLocally(file, savedRestoreEmoji);
+        return;
+      }
+
+      // Fallback: altes Verhalten (kein originalCsvBase64 im Save)
       setResult(data);
       setPage(0);
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -434,7 +452,7 @@ export default function VoltFixer() {
   };
 
   // Browser-seitige Verarbeitung (kein Upload, kein Server)
-  const processLocally = async (file: File) => {
+  const processLocally = async (file: File, restoreEmojiOverride?: boolean) => {
     setLoading(true);
     setError("");
     setResult(null);
@@ -442,7 +460,7 @@ export default function VoltFixer() {
 
     try {
       const processorResult = await processVoltFile(file, {
-        restoreEmoji,
+        restoreEmoji: restoreEmojiOverride !== undefined ? restoreEmojiOverride : restoreEmoji,
         onProgress: (step, label, percent, detail) => {
           setProgress({ step, stepLabel: label, percent, detail: detail ?? '' });
         },
