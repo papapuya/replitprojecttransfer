@@ -903,33 +903,6 @@ export default function VoltFixer() {
               <FileText size={16} className="text-gray-500" />
               <span className="text-sm font-medium text-gray-700">{result.fileName}</span>
             </div>
-            <Badge variant="outline">{result.stats.total.toLocaleString()} Zeilen</Badge>
-            <Badge className="bg-indigo-600 text-white">{result.stats.voltChanged.toLocaleString()} Volt-Werte korrigiert</Badge>
-            {result.stats.voltExtracted > 0 && (
-              <Badge className="bg-orange-500 text-white">{result.stats.voltExtracted.toLocaleString()} Volt ergänzt</Badge>
-            )}
-            {(result.stats.mahExtracted ?? 0) > 0 && (
-              <Badge className="bg-green-600 text-white">{result.stats.mahExtracted!.toLocaleString()} mAh ergänzt</Badge>
-            )}
-            {(result.stats.whExtracted ?? 0) > 0 && (
-              <Badge className="bg-teal-600 text-white">{result.stats.whExtracted!.toLocaleString()} Wh ergänzt</Badge>
-            )}
-            {(result.stats.wattExtracted ?? 0) > 0 && (
-              <Badge className="bg-yellow-600 text-white">{result.stats.wattExtracted!.toLocaleString()} Watt ergänzt</Badge>
-            )}
-            {(result.stats.leuchtExtracted ?? 0) > 0 && (
-              <Badge className="bg-sky-600 text-white">{result.stats.leuchtExtracted!.toLocaleString()} Leuchtweite ergänzt</Badge>
-            )}
-            {(result.stats.voltSkipped - (result.stats.voltSkippedNonElectronic ?? 0)) > 0 && (
-              <Badge variant="outline" className="text-gray-400">
-                {(result.stats.voltSkipped - (result.stats.voltSkippedNonElectronic ?? 0)).toLocaleString()} kein Volt gefunden
-              </Badge>
-            )}
-            {(result.stats.voltSkippedNonElectronic ?? 0) > 0 && (
-              <Badge variant="outline" className="text-gray-400">
-                {result.stats.voltSkippedNonElectronic!.toLocaleString()} nicht-elektronisch
-              </Badge>
-            )}
           </div>
 
 
