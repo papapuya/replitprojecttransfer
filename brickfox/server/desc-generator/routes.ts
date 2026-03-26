@@ -66,7 +66,12 @@ Extrahiere alle sachlichen Informationen aus den Quelldaten und erstelle daraus 
     max_tokens: 1400,
   });
 
-  return response.choices[0]?.message?.content?.trim() ?? '';
+  const raw = response.choices[0]?.message?.content?.trim() ?? '';
+  // KI umschließt Ausgabe manchmal mit Anführungszeichen oder Markdown-Codeblock – beides entfernen
+  return raw
+    .replace(/^```html?\s*/i, '').replace(/```\s*$/, '')
+    .replace(/^"|"$/g, '')
+    .trim();
 }
 
 router.get('/progress/:sessionId', (req: Request, res: Response) => {
