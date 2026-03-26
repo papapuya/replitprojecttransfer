@@ -77,6 +77,9 @@ type SaveMeta = {
 type Result = {
   jobId?: string;
   csvBlob?: Blob;
+  noDescBlob?: Blob;
+  noDescFileName?: string;
+  noDescCount?: number;
   reportBlob?: Blob;
   reportFileName?: string;
   headers: string[];
@@ -542,6 +545,9 @@ export default function VoltFixer() {
 
       setResult({
         csvBlob: processorResult.csvBlob,
+        noDescBlob: processorResult.noDescBlob,
+        noDescFileName: processorResult.noDescFileName,
+        noDescCount: processorResult.noDescCount,
         reportBlob: processorResult.reportBlob,
         reportFileName: processorResult.reportFileName,
         headers: processorResult.headers,
@@ -1016,6 +1022,29 @@ export default function VoltFixer() {
                 </span>
               )}
             </Button>
+
+            {result.noDescBlob && (result.noDescCount ?? 0) > 0 && (
+              <Button
+                onClick={() => {
+                  const url = URL.createObjectURL(result.noDescBlob!);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = result.noDescFileName ?? 'ohne_beschreibung.csv';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  setTimeout(() => URL.revokeObjectURL(url), 5000);
+                }}
+                variant="outline"
+                className="border-orange-400 text-orange-700 hover:bg-orange-50 gap-2"
+              >
+                <Download size={16} />
+                Ohne Beschreibung
+                <span className="ml-1 bg-orange-100 text-orange-800 rounded px-1.5 py-0.5 text-xs font-semibold">
+                  {(result.noDescCount ?? 0).toLocaleString('de-DE')} Produkte
+                </span>
+              </Button>
+            )}
 
             {result.reportBlob && (
               <Button onClick={downloadReport} variant="outline" className="border-green-500 text-green-700 hover:bg-green-50 gap-2">
