@@ -672,7 +672,9 @@ export async function processVoltFile(
         const itemNr = fixedRows[i]['p_item_number'] || fixedRows[i]['v_item_number'] || '?';
         const origVolt = (rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '';
         const newVolt = fixedRows[i][VOLT_COL] ?? '';
-        console.log(`  ${itemNr}: orig=${origVolt} fixedRows=${newVolt}`);
+        const name = (rows[i]['p_name[de]'] ?? '').slice(0, 60);
+        const isNonElec = NON_ELECTRONIC_KEYWORDS.some(kw => (rows[i]['p_name[de]'] || '').toLowerCase().includes(kw));
+        console.log(`  ${itemNr}: orig=${origVolt} fixedRows=${newVolt} nonElec=${isNonElec} name="${name}"`);
       });
     } else {
       console.log('[VoltFixer] ✓ Alle 2-4-stelligen Original-Volt korrekt verarbeitet.');
