@@ -12,7 +12,10 @@ const progressEmitters = new Map<string, EventEmitter>();
 
 const DESC_COL = 'p_description[de]';
 const NAME_COL = 'p_name[de]';
-const MIN_DESC_LENGTH = 1200;
+// Prüft ob eine Beschreibung bereits korrekt strukturiert ist (h2 + h3 + ✅ Bullets vorhanden)
+function isAlreadyStructured(desc: string): boolean {
+  return /<h2/i.test(desc) && /<h3/i.test(desc) && desc.includes('✅');
+}
 
 function getOpenAIClient(): OpenAI {
   const apiKey = getSecureOpenAIKey();
@@ -45,9 +48,13 @@ Strikte Regeln:
 - Keine <html>, <head>, <body> oder <style> Tags
 - Gib NUR das HTML aus, ohne Erklärungen`;
 
-  const userPrompt = `Produktname: ${name}${existingDesc ? `\nVorhandene Kurzbeschreibung: ${existingDesc}` : ''}
+  const rawDesc = existingDesc
+    ? existingDesc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    : '';
 
-Erstelle die vollständige Produktbeschreibung im vorgegebenen HTML-Format.`;
+  const userPrompt = `Produktname: ${name}${rawDesc ? `\nVorhandene Beschreibung (Quellinformation – kann kurz, lang, Plain Text oder chaotisches HTML sein):\n${rawDesc}` : ''}
+
+Extrahiere alle sachlichen Informationen aus den Quelldaten und erstelle daraus die Produktbeschreibung im vorgegebenen HTML-Format. Erfinde keine Informationen die nicht in den Quelldaten stehen.`;
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
@@ -117,9 +124,10 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
       return res.status(400).json({ error: `Spalte "${DESC_COL}" nicht gefunden in der CSV` });
     }
 
+    // Alle Zeilen verarbeiten die NICHT bereits korrekt strukturiert sind
     const toProcess = rows
       .map((row, i) => ({ row, i }))
-      .filter(({ row }) => (row[DESC_COL] ?? '').trim().length < MIN_DESC_LENGTH);
+      .filter(({ row }) => !isAlreadyStructured(row[DESC_COL] ?? ''));
 
     let generated = 0;
     let errors = 0;
