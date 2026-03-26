@@ -343,6 +343,55 @@ function DetailModal({
                     </div>
                   </section>
                 )}
+
+                {/* ── 6. Weitere Attribute ── */}
+                {(() => {
+                  const attrDefs = [
+                    { col: MAH_COL,    label: 'Kapazität (mAh)' },
+                    { col: WH_COL,     label: 'Energie (Wh)'    },
+                    { col: WATT_COL,   label: 'Leistung (Watt)' },
+                    { col: LEUCHT_COL, label: 'Leuchtweite'     },
+                  ].filter(a => data.headers.includes(a.col) && (data.original[a.col] || data.row[a.col]));
+
+                  if (!attrDefs.length) return null;
+
+                  return (
+                    <section>
+                      <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b">Weitere Attribute</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {attrDefs.map(({ col, label }) => {
+                          const origVal  = data.original[col] ?? '';
+                          const fixedVal = data.row[col] ?? '';
+                          const isChanged = data.changed.includes(col);
+                          return (
+                            <div key={col} className="rounded-xl border border-gray-200 overflow-hidden">
+                              <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
+                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
+                                {isChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                              </div>
+                              <div className="px-4 py-3 flex items-center gap-4">
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-0.5">Original</p>
+                                  <p className={`text-xl font-bold ${isChanged ? 'text-red-400 line-through' : 'text-gray-700'}`}>{origVal || '—'}</p>
+                                </div>
+                                {isChanged && (
+                                  <>
+                                    <span className="text-2xl text-gray-300">→</span>
+                                    <div>
+                                      <p className="text-xs text-gray-400 mb-0.5">Korrigiert</p>
+                                      <p className="text-2xl font-bold text-indigo-700">{fixedVal || '—'}</p>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                              <p className="px-4 pb-2 text-xs text-gray-300 font-mono">{col}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  );
+                })()}
               </>
             );
           })()}
@@ -566,7 +615,11 @@ export default function VoltFixer() {
         const row: Record<string, string> = {
           'p_item_number': item.itemNr,
           'p_id': item.pId,
-          [VOLT_COL]: item.voltNew,
+          [VOLT_COL]:   item.voltNew,
+          [MAH_COL]:    item.mahNew   ?? '',
+          [WH_COL]:     item.whNew    ?? '',
+          [WATT_COL]:   item.wattNew  ?? '',
+          [LEUCHT_COL]: item.leuchtNew ?? '',
           'p_name[de]': item.nameDE,
           'p_name[nl]': item.nameNL,
           'p_description[de]': item.descDEOrig ?? '',
@@ -575,7 +628,11 @@ export default function VoltFixer() {
         const original: Record<string, string> = {
           'p_item_number': item.itemNr,
           'p_id': item.pId,
-          [VOLT_COL]: item.voltOrig,
+          [VOLT_COL]:   item.voltOrig,
+          [MAH_COL]:    item.mahOrig   ?? '',
+          [WH_COL]:     item.whOrig    ?? '',
+          [WATT_COL]:   item.wattOrig  ?? '',
+          [LEUCHT_COL]: item.leuchtOrig ?? '',
           'p_name[de]': item.nameDEOrig,
           'p_name[nl]': item.nameNLOrig,
           'p_description[de]': item.descDEOrig ?? '',
