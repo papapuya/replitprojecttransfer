@@ -903,19 +903,17 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       }
 
       // ─── 2-stellige Integer: immer ÷10 korrigieren ───────────────────────────────────────
-      // Nur wenn Original-Volt-Spalte NICHT leer war (voltVal !== '').
-      // Extrahierte Werte aus Beschreibung/Name (z.B. 19, 100-240) bleiben unverändert.
-      {
-        const cv2 = (newRow[VOLT_COL] ?? '').trim();
-        if (voltVal !== '' && /^\d{2}$/.test(cv2)) {
-          const dividedBy10 = parseInt(cv2, 10) / 10;
-          const dividedStr = stripTrailingZeroVolt(
-            dividedBy10 % 1 === 0 ? dividedBy10.toString() : dividedBy10.toFixed(1)
-          );
-          if (dividedStr !== cv2) {
-            newRow[VOLT_COL] = dividedStr;
-            if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
-          }
+      // Prüfung gegen ORIGINAL-Wert (voltVal), nicht gegen das fixVolt-Ergebnis.
+      // Verhindert Doppelkorrektur: 120→fixVolt→12→÷10→1.2 (falsch).
+      // Extrahierte Werte aus Beschreibung/Name bleiben unverändert (voltVal === '').
+      if (voltVal !== '' && /^\d{2}$/.test(voltVal)) {
+        const dividedBy10 = parseInt(voltVal, 10) / 10;
+        const dividedStr = stripTrailingZeroVolt(
+          dividedBy10 % 1 === 0 ? dividedBy10.toString() : dividedBy10.toFixed(1)
+        );
+        if (dividedStr !== voltVal) {
+          newRow[VOLT_COL] = dividedStr;
+          if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
         }
       }
 
