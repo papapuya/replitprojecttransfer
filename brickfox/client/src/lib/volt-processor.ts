@@ -500,31 +500,18 @@ export async function processVoltFile(
       }
     }
 
-    // ─── 2-stellige Integer: Beschreibung prüfen ob Wert ÷10 korrekt ist ────────────────
+    // ─── 2-stellige Integer: immer ÷10 korrigieren ───────────────────────────────────────
+    // Die Original-Volt-Spalte ist die Basis. 2-stellige Ganzzahlen sind immer Encoding-Fehler.
     {
       const cv2 = (newRow[VOLT_COL] ?? '').trim();
       if (/^\d{2}$/.test(cv2)) {
-        const asInt = parseInt(cv2, 10);
-        const dividedBy10 = asInt / 10;
+        const dividedBy10 = parseInt(cv2, 10) / 10;
         const dividedStr = stripTrailingZeroVolt(
           dividedBy10 % 1 === 0 ? dividedBy10.toString() : dividedBy10.toFixed(1)
         );
-        let descExtracted: string | null = null;
-        for (const col of DESC_COLS) {
-          if (!headers.includes(col)) continue;
-          const descVal = row[col];
-          if (!descVal) continue;
-          descExtracted = extractVoltFromTable(descVal) ?? extractVoltFromBodyText(descVal);
-          if (descExtracted) break;
-        }
-        if (descExtracted) {
-          const descNum = parseFloat(descExtracted.replace(',', '.').split('-')[0].split('/')[0]);
-          if (!isNaN(descNum) && Math.abs(descNum - dividedBy10) < 0.01) {
-            if (dividedStr !== cv2) {
-              newRow[VOLT_COL] = dividedStr;
-              if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
-            }
-          }
+        if (dividedStr !== cv2) {
+          newRow[VOLT_COL] = dividedStr;
+          if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
         }
       }
     }
