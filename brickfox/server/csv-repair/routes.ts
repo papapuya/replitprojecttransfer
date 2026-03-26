@@ -32,19 +32,33 @@ interface RepairStats {
 }
 
 // ─── Zeilen-Erkennung: Beginnt diese Zeile ein neues Produkt? ─────────────────
-// Prüft p_id (Spalte 0): Gültige p_id = Integer oder alphanumerischer Code (BST41_16, LAP210).
-// Alles mit HTML-Tags, Entities, Leerzeichen → Fragment der vorherigen Zeile.
-function looksLikeNewProductRow(pIdField: string): boolean {
-  const f = pIdField.trim();
-  if (!f) return false;                         // leer → Fragment
-  if (/<|>/.test(f)) return false;              // HTML-Tag → Fragment
-  if (/&/.test(f)) return false;                // HTML-Entity → Fragment
-  if (/\s/.test(f)) return false;               // Leerzeichen → Satzfragment
-  if (/,/.test(f)) return false;                // Komma → Fragment
-  if (/^\d+\.\d+$/.test(f)) return false;       // Dezimalzahl (1.5, 3.7) → Fragment
-  // Gültige p_id: rein numerisch ODER alphanumerisch mit - und _
-  if (/^[\w\-]+$/.test(f)) return true;
-  return false;
+// Doppelcheck: p_id (Spalte 0) UND p_item_number (Spalte 1) müssen gleichzeitig gültig aussehen.
+// So werden HTML-Fragmente die zufällig wie eine p_id aussehen (z.B. "Nennspannung;3.7 V")
+// nicht fälschlicherweise als neues Produkt erkannt.
+function looksLikeNewProductRow(pIdField: string, pItemNrField: string): boolean {
+  // ── p_id prüfen ──────────────────────────────────────────────────────────
+  const id = pIdField.trim();
+  if (!id) return false;
+  if (/<|>/.test(id)) return false;              // HTML-Tag
+  if (/&/.test(id)) return false;                // HTML-Entity
+  if (/\s/.test(id)) return false;               // Leerzeichen
+  if (/,/.test(id)) return false;                // Komma
+  if (/^\d+\.\d+$/.test(id)) return false;       // Dezimalzahl (1.5, 3.7)
+  // Gültige p_id: rein numerisch ODER alphanumerisch mit - und _ (BST41_16, LAP210, CR1_3N-FT1)
+  if (!/^[\w\-]+$/.test(id)) return false;
+
+  // ── p_item_number prüfen (Spalte 1) ─────────────────────────────────────
+  const nr = pItemNrField.trim();
+  if (!nr) return false;                         // leer → kein echter Produktstart
+  if (/<|>/.test(nr)) return false;              // HTML
+  if (/&/.test(nr)) return false;                // Entity
+  if (/\s/.test(nr)) return false;               // Leerzeichen (z.B. "3.7 V")
+  if (/,/.test(nr)) return false;                // Komma
+  if (/^\d+\.\d+$/.test(nr)) return false;       // Dezimalzahl
+  if (/^\d{1,2}$/.test(nr)) return false;        // 1-2-stellige Zahl (kein Artikel)
+  if (!/^[\w\-]+$/.test(nr)) return false;       // muss alphanumerisch sein
+
+  return true;
 }
 
 // ─── Endfilter: Ist p_item_number eine echte Artikelnummer? ──────────────────
@@ -99,15 +113,15 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
     // Spaltenindizes bestimmen
     const headerCols = headerLine.split(';').map(h => h.trim());
     const pIdIdx = headerCols.findIndex(h => h === 'p_id');
-    // p_id-Spalte = 0 (Standard-Brickfox-Format), Fallback auf Spalte 0
-    const pIdColIdx = pIdIdx >= 0 ? pIdIdx : 0;
+    const pItemNrIdx = headerCols.findIndex(h => h === 'p_item_number');
+    const pIdColIdx    = pIdIdx    >= 0 ? pIdIdx    : 0;
+    const pItemNrColIdx = pItemNrIdx >= 0 ? pItemNrIdx : 1;
 
-    console.log(`[CsvRepair] Header-Spalten: ${headerCols.length}, p_id-Index: ${pIdColIdx}, Rohe Zeilen: ${rawLines.length}`);
+    console.log(`[CsvRepair] Header-Spalten: ${headerCols.length}, p_id-Index: ${pIdColIdx}, p_item_number-Index: ${pItemNrColIdx}, Rohe Zeilen: ${rawLines.length}`);
 
     // ─── Zeilen zusammenführen ────────────────────────────────────────────────
-    // Eine Zeile gilt als "Zeilenbeginn" (neues Produkt) wenn p_id (Spalte 0) 
-    // eine gültige Produkt-ID ist (Integer oder alphanumerischer Code wie BST41_16).
-    // HTML-Fragmente (</p>*, &nbsp; etc.) oder Dezimalzahlen → Fragment der vorherigen Zeile.
+    // Doppelcheck: Neue Produktzeile nur wenn BEIDE p_id UND p_item_number gültig aussehen.
+    // Verhindert dass HTML-Fragmente (z.B. "Nennspannung;3.7 V") als neues Produkt erkannt werden.
 
     const mergedLines: string[] = [headerLine];
     let emptyLinesRemoved = 0;
@@ -123,10 +137,11 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       }
 
       const fields = line.split(';');
-      const pIdField = fields[pIdColIdx] ?? '';
+      const pIdField    = fields[pIdColIdx]     ?? '';
+      const pItemNrField = fields[pItemNrColIdx] ?? '';
 
-      if (looksLikeNewProductRow(pIdField)) {
-        // Neue Produktzeile — p_id sieht gültig aus
+      if (looksLikeNewProductRow(pIdField, pItemNrField)) {
+        // Neue Produktzeile — p_id UND p_item_number sehen gültig aus
         mergedLines.push(line);
       } else {
         // Fragment einer vorherigen Zeile — ohne \n anhängen (Papa.parse würde sonst wieder teilen)
