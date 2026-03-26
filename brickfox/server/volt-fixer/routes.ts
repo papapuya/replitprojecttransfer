@@ -230,11 +230,12 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
   // 1- und 2-stellige Zahlen sind immer ganze Volt-Werte → unverändert lassen.
   if (trimmed.length <= 2) return { fixed: trimmed, changed: false };
-  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 108→10.8, 111→11.1, 144→14.4)
+  // 3-stellige Zahlen: wenn erste zwei Ziffern 10–24 → XX.Y (z.B. 108→10.8, 120→12, 144→14.4)
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
     if (firstTwo >= 10 && firstTwo <= 24) {
-      return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
+      const raw3 = trimmed.slice(0, 2) + '.' + trimmed[2];
+      return { fixed: stripTrailingZeroVolt(raw3), changed: true };
     }
   }
   // Sonstige Zahlen (z.B. 385, 370 usw.) → nicht verändern, kein 3.85 generieren
@@ -326,22 +327,31 @@ function extractVoltFromName(name: string): string | null {
 function extractVoltFromTable(html: string): string | null {
   if (!html) return null;
   const trMatches = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
+  let spannungResult: string | null = null;
+  let ausgangsResult: string | null = null;
+  let eingangsResult: string | null = null;
   for (const trMatch of trMatches) {
     const trContent = trMatch[1];
     const labelMatch = trContent.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
     if (!labelMatch) continue;
     const label = labelMatch[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
-    // Nur "Spannung" / "Nennspannung" / "Spanning" — NICHT Eingangs-/Ausgangsspannung
-    if (!/^(?:nenn)?spann(?:ung|ing)$/.test(label)) continue;
     const cells = [...trContent.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
     if (cells.length < 2) continue;
     const valueCell = cells[1][1].replace(/<[^>]+>/g, '').trim();
     const m = valueCell.match(/\b(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*(?:V(?:olt)?)?\b/i);
     if (!m) continue;
     const normalized = normalizeExtractedVolt(m[1]);
-    if (normalized) return normalized;
+    if (!normalized) continue;
+    if (/^(?:nenn)?spann(?:ung|ing)$/.test(label)) {
+      spannungResult = normalized;
+    } else if (/ausgangs(?:spannung|spanning)/.test(label) && !ausgangsResult) {
+      ausgangsResult = normalized;
+    } else if (/eingangs(?:spannung|spanning)/.test(label) && !eingangsResult) {
+      eingangsResult = normalized;
+    }
   }
-  return null;
+  // Priorität: Spannung → Ausgangsspannung → Eingangsspannung
+  return spannungResult ?? ausgangsResult ?? eingangsResult ?? null;
 }
 
 // Extrahiert Volt-Wert aus dem Fließtext (außerhalb von Tabellen) der HTML-Beschreibung.
@@ -355,6 +365,18 @@ function extractVoltFromBodyText(html: string): string | null {
     const normalized = normalizeExtractedVolt(m[1]);
     if (!isAcMainsVolt(normalized)) return normalized;
   }
+  return null;
+}
+
+// Extrahiert Volt aus Ausgangs-/Eingangsspannung-Schlüsselwörtern im Fließtext.
+// Priorität: Ausgangsspannung → Eingangsspannung. Auch AC-Bereiche (100-240) werden akzeptiert.
+function extractVoltFromEinAusgang(html: string): string | null {
+  if (!html) return null;
+  const bodyText = html.replace(/<table[^>]*>[\s\S]*?<\/table>/gi, ' ').replace(/<[^>]+>/g, ' ');
+  const ausMatch = bodyText.match(/ausgangsspann\w*\s+(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*V/i);
+  if (ausMatch) return normalizeExtractedVolt(ausMatch[1]);
+  const einMatch = bodyText.match(/eingangsspann\w*\s+(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*V/i);
+  if (einMatch) return normalizeExtractedVolt(einMatch[1]);
   return null;
 }
 
@@ -839,6 +861,17 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
             if (!descVal) continue;
             const found = extractVoltFromBodyText(descVal);
             if (found) { extracted = found; extractedFromCol = col; extractedFromName = descVal.replace(/<[^>]+>/g, ' ').substring(0, 80); break; }
+          }
+        }
+
+        // Stufe 4: Ausgangs-/Eingangsspannung-Schlüsselwörter im Fließtext — letzter Fallback
+        if (!extracted) {
+          for (const col of DESC_COLS) {
+            if (!headers.includes(col)) continue;
+            const descVal = row[col];
+            if (!descVal) continue;
+            const found = extractVoltFromEinAusgang(descVal);
+            if (found) { extracted = found; extractedFromCol = col; extractedFromName = '(Ausgangs-/Eingangsspannung)'; break; }
           }
         }
 

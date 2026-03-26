@@ -147,7 +147,8 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
   if (trimmed.length === 3) {
     const firstTwo = parseInt(trimmed.slice(0, 2), 10);
     if (firstTwo >= 10 && firstTwo <= 24) {
-      return { fixed: trimmed.slice(0, 2) + '.' + trimmed[2], changed: true };
+      const raw3 = trimmed.slice(0, 2) + '.' + trimmed[2];
+      return { fixed: stripTrailingZeroVolt(raw3), changed: true };
     }
   }
   return { fixed: trimmed, changed: false };
@@ -194,21 +195,30 @@ function extractVoltFromName(name: string): string | null {
 function extractVoltFromTable(html: string): string | null {
   if (!html) return null;
   const trMatches = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
+  let spannungResult: string | null = null;
+  let ausgangsResult: string | null = null;
+  let eingangsResult: string | null = null;
   for (const trMatch of trMatches) {
     const trContent = trMatch[1];
     const labelMatch = trContent.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
     if (!labelMatch) continue;
     const label = labelMatch[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
-    if (!/^(?:nenn)?spann(?:ung|ing)$/.test(label)) continue;
     const cells = [...trContent.matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
     if (cells.length < 2) continue;
     const valueCell = cells[1][1].replace(/<[^>]+>/g, '').trim();
     const m = valueCell.match(/\b(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*(?:V(?:olt)?)?\b/i);
     if (!m) continue;
     const normalized = normalizeExtractedVolt(m[1]);
-    if (normalized) return normalized;
+    if (!normalized) continue;
+    if (/^(?:nenn)?spann(?:ung|ing)$/.test(label)) {
+      spannungResult = normalized;
+    } else if (/ausgangs(?:spannung|spanning)/.test(label) && !ausgangsResult) {
+      ausgangsResult = normalized;
+    } else if (/eingangs(?:spannung|spanning)/.test(label) && !eingangsResult) {
+      eingangsResult = normalized;
+    }
   }
-  return null;
+  return spannungResult ?? ausgangsResult ?? eingangsResult ?? null;
 }
 
 function extractVoltFromBodyText(html: string): string | null {
@@ -219,6 +229,16 @@ function extractVoltFromBodyText(html: string): string | null {
     const normalized = normalizeExtractedVolt(m[1]);
     if (!isAcMainsVolt(normalized)) return normalized;
   }
+  return null;
+}
+
+function extractVoltFromEinAusgang(html: string): string | null {
+  if (!html) return null;
+  const bodyText = html.replace(/<table[^>]*>[\s\S]*?<\/table>/gi, ' ').replace(/<[^>]+>/g, ' ');
+  const ausMatch = bodyText.match(/ausgangsspann\w*\s+(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*V/i);
+  if (ausMatch) return normalizeExtractedVolt(ausMatch[1]);
+  const einMatch = bodyText.match(/eingangsspann\w*\s+(\d+(?:[,.]\d+)?(?:[-\/]\d+(?:[,.]\d+)?)?)\s*V/i);
+  if (einMatch) return normalizeExtractedVolt(einMatch[1]);
   return null;
 }
 
@@ -379,6 +399,16 @@ export async function processVoltFile(
           if (!descVal) continue;
           const found = extractVoltFromBodyText(descVal);
           if (found) { extracted = found; extractedFromCol = col; extractedFromName = descVal.replace(/<[^>]+>/g, ' ').substring(0, 80); break; }
+        }
+      }
+
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col)) continue;
+          const descVal = row[col];
+          if (!descVal) continue;
+          const found = extractVoltFromEinAusgang(descVal);
+          if (found) { extracted = found; extractedFromCol = col; extractedFromName = '(Ausgangs-/Eingangsspannung)'; break; }
         }
       }
 
