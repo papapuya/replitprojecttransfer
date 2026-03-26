@@ -22,6 +22,8 @@ export interface VoltProcessorResult {
   headers: string[];
   fileName: string;
   csvBlob: Blob;
+  reportBlob: Blob;
+  reportFileName: string;
 }
 
 export interface PreviewItem {
@@ -693,6 +695,19 @@ export async function processVoltFile(
   const now = new Date();
   const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
   const fileName = `${baseName}_volt_fixed_${ts}.csv`;
+  const reportFileName = `${baseName}_volt_korrekturen_${ts}.csv`;
+
+  // Korrekturbericht: nur geänderte Volt-Zeilen mit 3 Spalten
+  const reportRows = changedCols
+    .map((cols, i) => ({ cols, i }))
+    .filter(({ cols }) => cols.includes(VOLT_COL))
+    .map(({ i }) => ({
+      p_item_number: fixedRows[i]['p_item_number'] || fixedRows[i]['v_item_number'] || '',
+      volt_original: (rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '',
+      'p_attributes[akku_v][de]': fixedRows[i][VOLT_COL] ?? '',
+    }));
+  const reportCsv = Papa.unparse(reportRows, { delimiter: ';' });
+  const reportBlob = new Blob(['\uFEFF' + reportCsv], { type: 'text/csv;charset=utf-8' });
 
   onProgress('done', 'Fertig!', 100);
 
@@ -713,5 +728,7 @@ export async function processVoltFile(
     headers,
     fileName,
     csvBlob,
+    reportBlob,
+    reportFileName,
   };
 }
