@@ -177,9 +177,10 @@ function stripDecimalZeroInDesc(html: string): { result: string; changed: boolea
 function normalizeExtractedVolt(raw: string): string {
   if (!raw) return raw;
   if (/[-\/]/.test(raw)) return normalizeRangeVolt(raw);
-  if (raw.includes(',')) return raw.replace(',', '.');
-  if (raw.includes('.')) return raw;
-  return raw;
+  let v = raw.includes(',') ? raw.replace(',', '.') : raw;
+  // Trailing-Nullen entfernen: 5.0 → 5, 3.0 → 3, 3.70 → 3.7
+  v = v.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  return v;
 }
 
 function isAcMainsVolt(raw: string): boolean {
