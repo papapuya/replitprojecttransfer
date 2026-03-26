@@ -598,22 +598,46 @@ export async function processVoltFile(
   const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
   const csvBlob = new Blob(['\uFEFF' + csvOut], { type: 'text/csv;charset=utf-8' });
 
-  // Debug: korrigierte Volt-Werte in der Konsole ausgeben
-  {
+  // Debug: Blob-Inhalt direkt auslesen und verifizieren
+  csvBlob.text().then(blobText => {
+    const blobParsed = Papa.parse<Record<string, string>>(blobText, { delimiter: ';', header: true });
+    const blobRows = blobParsed.data as Record<string, string>[];
+    const voltColInBlob = blobParsed.meta.fields?.includes(VOLT_COL);
+    console.log(`[VoltFixer] Blob: ${blobRows.length} Zeilen, VOLT_COL vorhanden=${voltColInBlob}`);
+
+    // Suche Zeilen mit korrigierten Volt-Werten (2-/3-stellige Original-Werte)
     const samples = changedCols
       .map((cols, i) => ({ cols, i }))
-      .filter(({ cols }) => cols.includes(VOLT_COL))
+      .filter(({ cols, i }) => cols.includes(VOLT_COL) && /^\d{2,3}$/.test((rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? ''))
       .slice(0, 5);
+
     if (samples.length > 0) {
-      console.log('[VoltFixer] Blob-Kontrolle – korrigierte Volt-Werte (fixedRows):');
+      console.log('[VoltFixer] fixedRows-Korrekturen (2-/3-stellige Original-Volt):');
       samples.forEach(({ i }) => {
         const itemNr = fixedRows[i]['p_item_number'] || fixedRows[i]['v_item_number'] || '?';
         const origVolt = (rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '';
         const newVolt = fixedRows[i][VOLT_COL] ?? '';
-        console.log(`  ${itemNr}: ${origVolt} → ${newVolt}`);
+        const blobRow = blobRows.find(r => r['p_item_number'] === itemNr || r['v_item_number'] === itemNr);
+        const blobVolt = blobRow ? (blobRow[VOLT_COL] ?? '(kein Eintrag)') : '(Zeile nicht im Blob!)';
+        console.log(`  ${itemNr}: orig=${origVolt} fixedRows=${newVolt} BLOB=${blobVolt}`);
+      });
+    } else {
+      console.log('[VoltFixer] Keine 2-/3-stelligen Volt-Korrekturen gefunden.');
+      // Alle VOLT_COL-Änderungen zeigen
+      const allSamples = changedCols
+        .map((cols, i) => ({ cols, i }))
+        .filter(({ cols }) => cols.includes(VOLT_COL))
+        .slice(0, 5);
+      allSamples.forEach(({ i }) => {
+        const itemNr = fixedRows[i]['p_item_number'] || fixedRows[i]['v_item_number'] || '?';
+        const origVolt = (rows[i][VOLT_COL] ?? '').trim().split(/\s+/)[0] ?? '';
+        const newVolt = fixedRows[i][VOLT_COL] ?? '';
+        const blobRow = blobRows.find(r => r['p_item_number'] === itemNr || r['v_item_number'] === itemNr);
+        const blobVolt = blobRow ? (blobRow[VOLT_COL] ?? '(kein Eintrag)') : '(Zeile nicht im Blob!)';
+        console.log(`  ${itemNr}: orig="${origVolt}" fixedRows="${newVolt}" BLOB="${blobVolt}"`);
       });
     }
-  }
+  });
 
   const dreiSpannungIndices = fixedRows
     .map((row, i) => ({ i, html: row['p_description[de]'] || '' }))
