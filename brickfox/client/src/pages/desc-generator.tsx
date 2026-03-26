@@ -359,7 +359,7 @@ export default function DescGenerator() {
     URL.revokeObjectURL(url);
   };
 
-  const progressPercent = progress ? Math.round((progress.current / progress.total) * 100) : 0;
+  const progressPercent = progress && progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
 
   const filteredItems = showOnlyChanged
     ? previewItems.filter((i) => i.changed)
@@ -438,7 +438,12 @@ export default function DescGenerator() {
               <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
               <span className="font-medium">KI generiert Beschreibungen…</span>
             </div>
-            {progress && (
+            {progress && progress.total === 0 && (
+              <div className="text-sm text-muted-foreground animate-pulse mt-1">
+                {progress.productName}
+              </div>
+            )}
+            {progress && progress.total > 0 && (
               <>
                 <Progress value={progressPercent} className="mb-2" />
                 <div className="flex justify-between text-sm text-muted-foreground">
