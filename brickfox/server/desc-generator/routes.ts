@@ -112,9 +112,16 @@ router.post('/generate', upload.single('file'), async (req: Request, res: Respon
     let buffer = req.file.buffer;
     let text: string;
     if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+      // UTF-8 mit BOM
       text = buffer.slice(3).toString('utf-8');
     } else {
-      text = iconv.decode(buffer, 'utf-8');
+      // Prüfen ob typische Windows-1252 Bytes für deutsche Sonderzeichen vorhanden sind
+      // ä=0xE4, ö=0xF6, ü=0xFC, Ä=0xC4, Ö=0xD6, Ü=0xDC, ß=0xDF
+      const hasWin1252 = Array.from(buffer).some(b =>
+        b === 0xE4 || b === 0xF6 || b === 0xFC ||
+        b === 0xC4 || b === 0xD6 || b === 0xDC || b === 0xDF
+      );
+      text = iconv.decode(buffer, hasWin1252 ? 'win1252' : 'utf-8');
     }
 
     const parsed = Papa.parse<Record<string, string>>(text, {
