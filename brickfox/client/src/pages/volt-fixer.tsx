@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check, Save, Trash2, FolderOpen } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { processVoltFile } from "@/lib/volt-processor";
@@ -449,6 +449,8 @@ export default function VoltFixer() {
   const [editingAttr, setEditingAttr] = useState<{ index: number; col: string; value: string } | null>(null);
   const [patchSaving, setPatchSaving] = useState(false);
   const [detailLocalData, setDetailLocalData] = useState<DetailData | null>(null);
+  const [selectedCols, setSelectedCols] = useState<Set<string>>(new Set());
+  const [colPickerOpen, setColPickerOpen] = useState(false);
 
 
   // Saves (Projektübersicht)
@@ -551,6 +553,8 @@ export default function VoltFixer() {
         csvIssues: processorResult.csvIssues,
       });
 
+      setSelectedCols(new Set(processorResult.headers));
+      setColPickerOpen(false);
       setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } catch (e: unknown) {
@@ -578,10 +582,26 @@ export default function VoltFixer() {
     if (file) handleFile(file);
   };
 
-  const download = () => {
+  const download = async () => {
     if (!result) return;
     if (result.csvBlob) {
-      const url = URL.createObjectURL(result.csvBlob);
+      let blob = result.csvBlob;
+      // Spaltenfilter anwenden wenn nicht alle Spalten ausgewählt
+      if (selectedCols.size > 0 && selectedCols.size < result.headers.length) {
+        try {
+          const text = await blob.text();
+          const parsed = Papa.parse<Record<string, string>>(text, { delimiter: ';', header: true });
+          const cols = result.headers.filter(h => selectedCols.has(h));
+          const filtered = parsed.data.map(row => {
+            const r: Record<string, string> = {};
+            for (const c of cols) r[c] = row[c] ?? '';
+            return r;
+          });
+          const csv = Papa.unparse(filtered, { delimiter: ';', columns: cols });
+          blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+        } catch { /* Originalblob nehmen falls Fehler */ }
+      }
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = result.fileName;
@@ -906,6 +926,84 @@ export default function VoltFixer() {
             )}
           </div>
 
+
+          {/* Spaltenauswahl */}
+          {result.csvBlob && result.headers.length > 0 && (
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <button
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700"
+                onClick={() => setColPickerOpen(o => !o)}
+              >
+                <span className="flex items-center gap-2">
+                  <Columns size={14} className="text-indigo-500" />
+                  Spalten für Export auswählen
+                  <span className="text-xs text-gray-400 font-normal">
+                    {selectedCols.size} von {result.headers.length} Spalten
+                  </span>
+                </span>
+                {colPickerOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+
+              {colPickerOpen && (
+                <div className="p-4 space-y-3 bg-white">
+                  {/* Alle / Keine */}
+                  <div className="flex gap-2">
+                    <button
+                      className="text-xs px-2.5 py-1 rounded border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                      onClick={() => setSelectedCols(new Set(result.headers))}
+                    >
+                      Alle auswählen
+                    </button>
+                    <button
+                      className="text-xs px-2.5 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                      onClick={() => setSelectedCols(new Set())}
+                    >
+                      Keine
+                    </button>
+                    <button
+                      className="text-xs px-2.5 py-1 rounded border border-green-300 text-green-700 hover:bg-green-50"
+                      onClick={() => setSelectedCols(new Set([
+                        VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
+                        'p_id', 'p_item_number', 'p_name[de]', 'p_name[nl]',
+                      ].filter(c => result.headers.includes(c))))}
+                    >
+                      Nur Attribute
+                    </button>
+                  </div>
+
+                  {/* Spalten-Liste */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 max-h-64 overflow-y-auto pr-1">
+                    {result.headers.map(col => {
+                      const isAttr = [VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL].includes(col);
+                      const checked = selectedCols.has(col);
+                      return (
+                        <label
+                          key={col}
+                          className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1 hover:bg-gray-50 ${isAttr ? 'font-medium text-indigo-700' : 'text-gray-600'}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={e => {
+                              setSelectedCols(prev => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(col);
+                                else next.delete(col);
+                                return next;
+                              });
+                            }}
+                            className="accent-indigo-600 shrink-0"
+                          />
+                          <span className="truncate" title={col}>{col}</span>
+                          {isAttr && <span className="shrink-0 ml-auto text-indigo-400">★</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Download + Speichern */}
           <div className="flex flex-wrap gap-3">
