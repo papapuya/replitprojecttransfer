@@ -1027,16 +1027,7 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       return true;
     };
 
-    const csvRowsClean = csvRows
-      .filter(row => isValidPItemNr(row))
-      .map(row => {
-        const r = { ...row };
-        // Volt-Spalte: Punkt → Komma (deutsches Dezimalformat, Excel/Power Query kompatibel)
-        if (r[VOLT_COL] && /\./.test(r[VOLT_COL])) {
-          r[VOLT_COL] = r[VOLT_COL].replace('.', ',');
-        }
-        return r;
-      });
+    const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
     const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
