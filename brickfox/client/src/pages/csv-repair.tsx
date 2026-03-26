@@ -69,7 +69,6 @@ export default function CsvRepair() {
 
   const totalFixed =
     (result?.stats.emptyLinesRemoved ?? 0) +
-    (result?.stats.rowsMerged ?? 0) +
     (result?.stats.invalidItemNrRemoved ?? 0);
 
   return (
@@ -130,9 +129,8 @@ export default function CsvRepair() {
             <div>
               <p className="font-semibold text-green-800">Reparatur abgeschlossen</p>
               <p className="text-sm text-green-700 mt-0.5">
-                {totalFixed > 0
-                  ? `${totalFixed.toLocaleString()} Problem${totalFixed === 1 ? "" : "e"} behoben`
-                  : "Keine Probleme gefunden — CSV war bereits sauber"}
+                {result.stats.rowsAfterRepair.toLocaleString()} Produkte im sauberen Export
+                {totalFixed > 0 && ` · ${totalFixed.toLocaleString()} Problemzeilen bereinigt`}
               </p>
             </div>
           </div>
@@ -152,14 +150,15 @@ export default function CsvRepair() {
                 neutral
               />
               <StatRow
+                label="HTML-Zeilenumbrüche zusammengeführt"
+                value={result.stats.rowsMerged.toLocaleString()}
+                note="Normal — HTML-Beschreibungen haben viele Zeilenumbrüche"
+                neutral
+              />
+              <StatRow
                 label="Leere / reine-Semikolon-Zeilen entfernt"
                 value={result.stats.emptyLinesRemoved.toLocaleString()}
                 good={result.stats.emptyLinesRemoved > 0}
-              />
-              <StatRow
-                label="Zeilen-Fragmente wieder zusammengeführt"
-                value={result.stats.rowsMerged.toLocaleString()}
-                good={result.stats.rowsMerged > 0}
               />
               <StatRow
                 label="Zeilen mit ungültiger p_item_number entfernt"
@@ -208,29 +207,34 @@ export default function CsvRepair() {
 function StatRow({
   label,
   value,
+  note,
   neutral,
   good,
   highlight,
 }: {
   label: string;
   value: string;
+  note?: string;
   neutral?: boolean;
   good?: boolean;
   highlight?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between px-5 py-3 ${highlight ? "bg-indigo-50/60" : ""}`}>
-      <span className={`text-sm ${highlight ? "font-semibold text-indigo-800" : "text-gray-600"}`}>
-        {label}
-      </span>
+    <div className={`flex items-start justify-between gap-4 px-5 py-3 ${highlight ? "bg-indigo-50/60" : ""}`}>
+      <div className="min-w-0">
+        <span className={`text-sm ${highlight ? "font-semibold text-indigo-800" : "text-gray-600"}`}>
+          {label}
+        </span>
+        {note && <p className="text-xs text-gray-400 mt-0.5">{note}</p>}
+      </div>
       <Badge
-        className={
+        className={`shrink-0 ${
           highlight
             ? "bg-indigo-600 text-white"
             : good && value !== "0"
             ? "bg-green-100 text-green-800 border border-green-200"
             : "bg-gray-100 text-gray-600 border border-gray-200"
-        }
+        }`}
       >
         {value}
       </Badge>
