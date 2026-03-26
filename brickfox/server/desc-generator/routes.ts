@@ -1,0 +1,169 @@
+import { Router, Request, Response } from 'express';
+import multer from 'multer';
+import Papa from 'papaparse';
+import iconv from 'iconv-lite';
+import OpenAI from 'openai';
+import { getSecureOpenAIKey } from '../api-key-manager';
+import { EventEmitter } from 'events';
+
+const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
+const progressEmitters = new Map<string, EventEmitter>();
+
+const DESC_COL = 'p_description[de]';
+const NAME_COL = 'p_name[de]';
+const MIN_DESC_LENGTH = 20;
+
+function getOpenAIClient(): OpenAI {
+  const apiKey = getSecureOpenAIKey();
+  if (!apiKey) throw new Error('OpenAI API key nicht konfiguriert');
+  return new OpenAI({ apiKey });
+}
+
+async function generateDescription(name: string, existingDesc: string): Promise<string> {
+  const openai = getOpenAIClient();
+
+  const systemPrompt = `Du bist ein professioneller Produkttexter für einen deutschen Online-Shop (akkushop.de).
+Erstelle eine vollständige deutsche Produktbeschreibung im HTML-Format.
+
+Die Beschreibung muss exakt diese HTML-Struktur haben:
+
+<h2>[Prägnanter Produkttitel basierend auf dem Produktnamen]</h2>
+<p>[Hauptbeschreibung Absatz 1: allgemeine Vorstellung, Verwendungszweck, Zielgruppe]</p>
+<p>[Hauptbeschreibung Absatz 2: Details, Vorteile, besondere Merkmale, Einsatzgebiete]</p>
+<h3>Produkteigenschaften</h3>
+<p>✅ [Eigenschaft 1]<br>✅ [Eigenschaft 2]<br>✅ [Eigenschaft 3]<br>✅ [Eigenschaft 4]</p>
+
+Regeln:
+- Genau 4 Bulletpoints mit ✅ Emoji
+- Ausschließlich Deutsch
+- Kein Markdown, nur reines HTML
+- Keine <html>, <head>, <body> oder <style> Tags
+- Sachlich, informativ und verkaufsfördernd
+- Gib NUR das HTML aus, ohne Erklärungen oder zusätzlichen Text`;
+
+  const userPrompt = `Produktname: ${name}${existingDesc ? `\nVorhandene Kurzbeschreibung: ${existingDesc}` : ''}
+
+Erstelle die vollständige Produktbeschreibung im vorgegebenen HTML-Format.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 900,
+  });
+
+  return response.choices[0]?.message?.content?.trim() ?? '';
+}
+
+router.get('/progress/:sessionId', (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const emitter = new EventEmitter();
+  progressEmitters.set(sessionId, emitter);
+
+  emitter.on('progress', (data) => res.write(`data: ${JSON.stringify(data)}\n\n`));
+  emitter.on('complete', (data) => {
+    res.write(`data: ${JSON.stringify({ ...data, complete: true })}\n\n`);
+    progressEmitters.delete(sessionId);
+    res.end();
+  });
+  emitter.on('error', (err: Error) => {
+    res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+    progressEmitters.delete(sessionId);
+    res.end();
+  });
+
+  req.on('close', () => progressEmitters.delete(sessionId));
+});
+
+router.post('/generate', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+
+    const sessionId = req.headers['x-session-id'] as string;
+    const emitter = sessionId ? progressEmitters.get(sessionId) : null;
+
+    let buffer = req.file.buffer;
+    let text: string;
+    if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+      text = buffer.slice(3).toString('utf-8');
+    } else {
+      text = iconv.decode(buffer, 'utf-8');
+    }
+
+    const parsed = Papa.parse<Record<string, string>>(text, {
+      header: true,
+      delimiter: ';',
+      skipEmptyLines: true,
+    });
+
+    const rows = parsed.data;
+    const headers = parsed.meta.fields ?? [];
+
+    if (!headers.includes(DESC_COL)) {
+      return res.status(400).json({ error: `Spalte "${DESC_COL}" nicht gefunden in der CSV` });
+    }
+
+    const toProcess = rows
+      .map((row, i) => ({ row, i }))
+      .filter(({ row }) => (row[DESC_COL] ?? '').trim().length < MIN_DESC_LENGTH);
+
+    let generated = 0;
+    let errors = 0;
+    const resultRows = rows.map(r => ({ ...r }));
+
+    for (let idx = 0; idx < toProcess.length; idx++) {
+      const { row, i } = toProcess[idx];
+      const name = row[NAME_COL] ?? '';
+      const existingDesc = (row[DESC_COL] ?? '').trim();
+
+      emitter?.emit('progress', {
+        current: idx + 1,
+        total: toProcess.length,
+        productName: name,
+      });
+
+      try {
+        const newDesc = await generateDescription(name, existingDesc);
+        resultRows[i][DESC_COL] = newDesc;
+        generated++;
+      } catch (err: any) {
+        console.error(`[DescGenerator] Fehler bei "${name}":`, err.message);
+        errors++;
+      }
+    }
+
+    const csvOut = Papa.unparse(resultRows, { delimiter: ';', columns: headers });
+    const csvBuffer = Buffer.concat([
+      Buffer.from('\uFEFF', 'utf-8'),
+      Buffer.from(csvOut, 'utf-8'),
+    ]);
+
+    emitter?.emit('complete', {
+      generated,
+      errors,
+      skipped: rows.length - toProcess.length,
+      total: rows.length,
+    });
+
+    const fileName = `desc_generated_${Date.now()}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(csvBuffer);
+  } catch (err: any) {
+    console.error('[DescGenerator] Fehler:', err);
+    res.status(500).json({ error: err.message ?? 'Unbekannter Fehler' });
+  }
+});
+
+export default router;
