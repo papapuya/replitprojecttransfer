@@ -1,21 +1,10 @@
 import { useState, useRef } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, Wrench, FileText, Loader2 } from "lucide-react";
+import { Download, CheckCircle, AlertCircle, Wrench, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { repairCsv, type RepairStats, type RepairResult } from "@/lib/csv-repair-processor";
 
-type RepairStats = {
-  totalRawLines: number;
-  emptyLinesRemoved: number;
-  rowsMerged: number;
-  rowsAfterRepair: number;
-  invalidItemNrRemoved: number;
-};
-
-type RepairResult = {
-  jobId: string;
-  fileName: string;
-  stats: RepairStats;
-};
+type LocalResult = RepairResult & { stats: RepairStats };
 
 type ProgressState = {
   label: string;
@@ -27,66 +16,24 @@ export default function CsvRepair() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<RepairResult | null>(null);
+  const [result, setResult] = useState<LocalResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const uploadFile = async (file: File) => {
+  const processFile = async (file: File) => {
     setLoading(true);
-    setProgress({ label: "Datei wird hochgeladen…", percent: 0 });
+    setProgress({ label: "Datei wird gelesen…", percent: 0 });
     setError("");
     setResult(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
-      const res = await fetch("/api/csv-repair/upload", {
-        method: "POST",
-        body: formData,
+      const repaired = await repairCsv(file, (label, percent) => {
+        setProgress({ label, percent });
       });
-
-      if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as any).error || "Upload fehlgeschlagen");
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() ?? "";
-
-        for (const part of parts) {
-          const lines = part.split("\n");
-          let event = "message";
-          let data = "";
-          for (const line of lines) {
-            if (line.startsWith("event: ")) event = line.slice(7).trim();
-            if (line.startsWith("data: "))  data  = line.slice(6).trim();
-          }
-          if (!data) continue;
-
-          const parsed = JSON.parse(data);
-
-          if (event === "progress") {
-            setProgress({ label: parsed.label, percent: parsed.percent });
-          } else if (event === "done") {
-            setResult({ jobId: parsed.jobId, fileName: parsed.fileName, stats: parsed.stats });
-            setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-          } else if (event === "error") {
-            throw new Error(parsed.message || "Unbekannter Fehler");
-          }
-        }
-      }
+      setResult(repaired);
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (e: any) {
-      setError(e.message);
+      setError(e.message || "Unbekannter Fehler");
     } finally {
       setLoading(false);
       setProgress(null);
@@ -95,7 +42,7 @@ export default function CsvRepair() {
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) uploadFile(file);
+    if (file) processFile(file);
     e.target.value = "";
   };
 
@@ -103,12 +50,17 @@ export default function CsvRepair() {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) uploadFile(file);
+    if (file) processFile(file);
   };
 
   const download = () => {
     if (!result) return;
-    window.open(`/api/csv-repair/download/${result.jobId}`, "_blank");
+    const url = URL.createObjectURL(result.csvBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = result.fileName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   };
 
   const totalFixed =
@@ -124,6 +76,7 @@ export default function CsvRepair() {
           <code className="bg-gray-100 px-1 rounded text-sm">p_id</code> wo jede Produktzeile beginnt,
           fügt durch HTML-Zeilenumbrüche zerrissene Fragmente wieder zusammen und entfernt leere Zeilen —
           so bleibt <code className="bg-gray-100 px-1 rounded text-sm">p_id</code> korrekt mit allen Feldern verbunden.
+          Die Datei wird vollständig im Browser verarbeitet — kein Upload nötig.
         </p>
       </div>
 
@@ -142,7 +95,21 @@ export default function CsvRepair() {
         <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={onFileChange} />
         {loading ? (
           <div className="flex flex-col items-center gap-3 text-indigo-600">
-            <Loader2 size={36} className="animate-spin" />
+            <div className="relative w-10 h-10">
+              <svg className="animate-spin w-10 h-10" viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="16" fill="none" stroke="#e0e7ff" strokeWidth="4" />
+                <circle
+                  cx="20" cy="20" r="16" fill="none" stroke="#6366f1" strokeWidth="4"
+                  strokeDasharray={`${2 * Math.PI * 16 * (progress?.percent ?? 0) / 100} ${2 * Math.PI * 16}`}
+                  strokeLinecap="round"
+                  transform="rotate(-90 20 20)"
+                  style={{ transition: "stroke-dasharray 0.3s ease" }}
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-indigo-700">
+                {progress?.percent ?? 0}%
+              </span>
+            </div>
             <p className="text-base font-medium">
               {progress?.label ?? "Wird verarbeitet…"}
             </p>
@@ -152,7 +119,7 @@ export default function CsvRepair() {
             <Wrench size={36} />
             <div>
               <p className="text-base font-medium text-gray-600">Kaputten Brickfox-Export hier ablegen</p>
-              <p className="text-sm mt-1">oder klicken zum Auswählen · CSV · max. 500 MB</p>
+              <p className="text-sm mt-1">oder klicken zum Auswählen · CSV · beliebige Größe · rein browserbasiert</p>
             </div>
           </div>
         )}
@@ -191,8 +158,8 @@ export default function CsvRepair() {
             <div>
               <p className="font-semibold text-green-800">Reparatur abgeschlossen</p>
               <p className="text-sm text-green-700 mt-0.5">
-                {result.stats.rowsAfterRepair.toLocaleString()} Produkte im sauberen Export
-                {totalFixed > 0 && ` · ${totalFixed.toLocaleString()} Problemzeilen bereinigt`}
+                {result.stats.rowsAfterRepair.toLocaleString("de-DE")} Produkte im sauberen Export
+                {totalFixed > 0 && ` · ${totalFixed.toLocaleString("de-DE")} Problemzeilen bereinigt`}
               </p>
             </div>
           </div>
@@ -208,28 +175,28 @@ export default function CsvRepair() {
             <div className="divide-y divide-gray-100">
               <StatRow
                 label="Rohe Zeilen in der Datei"
-                value={result.stats.totalRawLines.toLocaleString()}
+                value={result.stats.totalRawLines.toLocaleString("de-DE")}
                 neutral
               />
               <StatRow
                 label="HTML-Zeilenumbrüche zusammengeführt"
-                value={result.stats.rowsMerged.toLocaleString()}
+                value={result.stats.rowsMerged.toLocaleString("de-DE")}
                 note="Normal — HTML-Beschreibungen haben viele Zeilenumbrüche"
                 neutral
               />
               <StatRow
                 label="Leere / reine-Semikolon-Zeilen entfernt"
-                value={result.stats.emptyLinesRemoved.toLocaleString()}
+                value={result.stats.emptyLinesRemoved.toLocaleString("de-DE")}
                 good={result.stats.emptyLinesRemoved > 0}
               />
               <StatRow
                 label="Zeilen mit ungültiger p_item_number entfernt"
-                value={result.stats.invalidItemNrRemoved.toLocaleString()}
+                value={result.stats.invalidItemNrRemoved.toLocaleString("de-DE")}
                 good={result.stats.invalidItemNrRemoved > 0}
               />
               <StatRow
                 label="Produkte im reparierten Export"
-                value={result.stats.rowsAfterRepair.toLocaleString()}
+                value={result.stats.rowsAfterRepair.toLocaleString("de-DE")}
                 highlight
               />
             </div>
