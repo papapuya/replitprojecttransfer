@@ -665,7 +665,30 @@ export async function processVoltFile(
       newRow[VOLT_COL] = '';
       changed.push(VOLT_COL);
       voltChanged++;
-    } else if (!voltVal) {
+    } else {
+      // 1. Bestehenden Wert normalisieren (Komma→Punkt)
+      if (voltVal) {
+        const { fixed: fv, changed: wc } = fixVolt(voltVal);
+        if (wc) {
+          voltChanged++;
+          newRow[VOLT_COL] = fv;
+          changed.push(VOLT_COL);
+        }
+      }
+
+      // 2. 2-stellige Integer: ÷10 korrigieren (Prüfung gegen ORIGINAL voltVal)
+      if (voltVal !== '' && /^\d{2}$/.test(voltVal)) {
+        const dividedBy10 = parseInt(voltVal, 10) / 10;
+        const dividedStr = stripTrailingZeroVolt(
+          dividedBy10 % 1 === 0 ? dividedBy10.toString() : dividedBy10.toFixed(1)
+        );
+        if (dividedStr !== voltVal) {
+          newRow[VOLT_COL] = dividedStr;
+          if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
+        }
+      }
+
+      // 3. Immer aus Name/Beschreibung extrahieren und überschreiben wenn gefunden
       let extracted: string | null = null;
       let extractedFromCol = '';
       let extractedFromName = '';
@@ -709,8 +732,10 @@ export async function processVoltFile(
       }
 
       if (extracted) {
-        newRow[VOLT_COL] = extracted;
-        changed.push(VOLT_COL);
+        if (extracted !== (newRow[VOLT_COL] ?? '').trim()) {
+          newRow[VOLT_COL] = extracted;
+          if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
+        }
         voltExtracted++;
         allExtractedVolt.push({
           itemNr: row['p_item_number'] || row['v_item_number'] || '',
@@ -718,29 +743,8 @@ export async function processVoltFile(
           fromName: extractedFromName,
           fromCol: extractedFromCol,
         });
-      } else {
+      } else if (!voltVal) {
         voltSkipped++;
-      }
-    } else {
-      const { fixed: fv, changed: wc } = fixVolt(voltVal);
-      if (wc) {
-        voltChanged++;
-        newRow[VOLT_COL] = fv;
-        changed.push(VOLT_COL);
-      }
-    }
-
-    // ─── 2-stellige Integer: immer ÷10 korrigieren ───────────────────────────────────────
-    // Prüfung gegen ORIGINAL-Wert (voltVal), nicht gegen das fixVolt-Ergebnis.
-    // Verhindert Doppelkorrektur: 120→fixVolt→12→÷10→1.2 (falsch).
-    if (voltVal !== '' && /^\d{2}$/.test(voltVal)) {
-      const dividedBy10 = parseInt(voltVal, 10) / 10;
-      const dividedStr = stripTrailingZeroVolt(
-        dividedBy10 % 1 === 0 ? dividedBy10.toString() : dividedBy10.toFixed(1)
-      );
-      if (dividedStr !== voltVal) {
-        newRow[VOLT_COL] = dividedStr;
-        if (!changed.includes(VOLT_COL)) { changed.push(VOLT_COL); voltChanged++; }
       }
     }
 
@@ -768,55 +772,55 @@ export async function processVoltFile(
       }
     }
 
-    // ─── mAh: nur ergänzen wenn Spalte vorhanden und Zelle leer ─────────────
+    // ─── mAh: immer aus Name/Beschreibung extrahieren, bestehenden Wert überschreiben ──
     if (headers.includes(MAH_COL)) {
-      const mahVal = (newRow[MAH_COL] ?? '').trim();
-      if (!mahVal) {
-        let extractedMah: string | null = null;
+      let extractedMah: string | null = null;
 
-        // 1. Produktname (DE dann NL)
-        for (const col of NAME_COLS) {
+      // 1. Produktname (DE dann NL)
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col)) continue;
+        const val = row[col];
+        if (!val) continue;
+        extractedMah = extractMahFromText(val);
+        if (extractedMah) break;
+      }
+
+      // 2. Beschreibung HTML-Tabelle
+      if (!extractedMah) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col)) continue;
+          const val = row[col];
+          if (!val) continue;
+          extractedMah = extractMahFromTable(val);
+          if (extractedMah) break;
+        }
+      }
+
+      // 3. Beschreibung Fließtext
+      if (!extractedMah) {
+        for (const col of DESC_COLS) {
           if (!headers.includes(col)) continue;
           const val = row[col];
           if (!val) continue;
           extractedMah = extractMahFromText(val);
           if (extractedMah) break;
         }
+      }
 
-        // 2. Beschreibung HTML-Tabelle
-        if (!extractedMah) {
-          for (const col of DESC_COLS) {
-            if (!headers.includes(col)) continue;
-            const val = row[col];
-            if (!val) continue;
-            extractedMah = extractMahFromTable(val);
-            if (extractedMah) break;
-          }
-        }
-
-        // 3. Beschreibung Fließtext
-        if (!extractedMah) {
-          for (const col of DESC_COLS) {
-            if (!headers.includes(col)) continue;
-            const val = row[col];
-            if (!val) continue;
-            extractedMah = extractMahFromText(val);
-            if (extractedMah) break;
-          }
-        }
-
-        if (extractedMah) {
+      if (extractedMah) {
+        if (extractedMah !== (newRow[MAH_COL] ?? '').trim()) {
           newRow[MAH_COL] = extractedMah;
-          changed.push(MAH_COL);
-          mahExtracted++;
-        } else {
-          mahSkipped++;
+          if (!changed.includes(MAH_COL)) changed.push(MAH_COL);
         }
+        mahExtracted++;
+      } else {
+        mahSkipped++;
       }
     }
 
-    // ─── Wh: bestehende Werte normalisieren (Komma→Punkt), leere ergänzen ────
+    // ─── Wh: bestehende Werte normalisieren, dann immer aus Name/Beschreibung extrahieren ──
     if (headers.includes(WH_COL)) {
+      // 1. Bestehenden Wert normalisieren (Komma→Punkt)
       const whVal = (newRow[WH_COL] ?? '').trim();
       if (whVal) {
         const { fixed: fixedWh, changed: whFixed } = fixWh(whVal);
@@ -824,135 +828,136 @@ export async function processVoltFile(
           newRow[WH_COL] = fixedWh;
           if (!changed.includes(WH_COL)) changed.push(WH_COL);
         }
-      } else {
-        let extractedWh: string | null = null;
+      }
 
-        // 1. Produktname (DE dann NL)
-        for (const col of NAME_COLS) {
+      // 2. Immer aus Name/Beschreibung extrahieren und überschreiben wenn gefunden
+      let extractedWh: string | null = null;
+
+      // Produktname (DE dann NL)
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col)) continue;
+        const val = row[col];
+        if (!val) continue;
+        extractedWh = extractWhFromText(val);
+        if (extractedWh) break;
+      }
+
+      // Beschreibung HTML-Tabelle
+      if (!extractedWh) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col)) continue;
+          const val = row[col];
+          if (!val) continue;
+          extractedWh = extractWhFromTable(val);
+          if (extractedWh) break;
+        }
+      }
+
+      // Beschreibung Fließtext
+      if (!extractedWh) {
+        for (const col of DESC_COLS) {
           if (!headers.includes(col)) continue;
           const val = row[col];
           if (!val) continue;
           extractedWh = extractWhFromText(val);
           if (extractedWh) break;
         }
+      }
 
-        // 2. Beschreibung HTML-Tabelle
-        if (!extractedWh) {
-          for (const col of DESC_COLS) {
-            if (!headers.includes(col)) continue;
-            const val = row[col];
-            if (!val) continue;
-            extractedWh = extractWhFromTable(val);
-            if (extractedWh) break;
-          }
-        }
-
-        // 3. Beschreibung Fließtext
-        if (!extractedWh) {
-          for (const col of DESC_COLS) {
-            if (!headers.includes(col)) continue;
-            const val = row[col];
-            if (!val) continue;
-            extractedWh = extractWhFromText(val);
-            if (extractedWh) break;
-          }
-        }
-
-        if (extractedWh) {
+      if (extractedWh) {
+        if (extractedWh !== (newRow[WH_COL] ?? '').trim()) {
           newRow[WH_COL] = extractedWh;
-          changed.push(WH_COL);
-          whExtracted++;
-        } else {
-          whSkipped++;
+          if (!changed.includes(WH_COL)) changed.push(WH_COL);
         }
+        whExtracted++;
+      } else {
+        whSkipped++;
       }
     }
 
-    // ─── Watt: nur ergänzen wenn Spalte vorhanden und Zelle leer ─────────────
+    // ─── Watt: immer aus Name/Beschreibung extrahieren, bestehenden Wert überschreiben ──
     if (headers.includes(WATT_COL)) {
-      const wattVal = (newRow[WATT_COL] ?? '').trim();
-      if (!wattVal) {
-        let extractedWatt: string | null = null;
+      let extractedWatt: string | null = null;
 
-        for (const col of NAME_COLS) {
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col)) continue;
+        const val = row[col];
+        if (!val) continue;
+        extractedWatt = extractWattFromText(val);
+        if (extractedWatt) break;
+      }
+
+      if (!extractedWatt) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col)) continue;
+          const val = row[col];
+          if (!val) continue;
+          extractedWatt = extractWattFromTable(val);
+          if (extractedWatt) break;
+        }
+      }
+
+      if (!extractedWatt) {
+        for (const col of DESC_COLS) {
           if (!headers.includes(col)) continue;
           const val = row[col];
           if (!val) continue;
           extractedWatt = extractWattFromText(val);
           if (extractedWatt) break;
         }
+      }
 
-        if (!extractedWatt) {
-          for (const col of DESC_COLS) {
-            if (!headers.includes(col)) continue;
-            const val = row[col];
-            if (!val) continue;
-            extractedWatt = extractWattFromTable(val);
-            if (extractedWatt) break;
-          }
-        }
-
-        if (!extractedWatt) {
-          for (const col of DESC_COLS) {
-            if (!headers.includes(col)) continue;
-            const val = row[col];
-            if (!val) continue;
-            extractedWatt = extractWattFromText(val);
-            if (extractedWatt) break;
-          }
-        }
-
-        if (extractedWatt) {
+      if (extractedWatt) {
+        if (extractedWatt !== (newRow[WATT_COL] ?? '').trim()) {
           newRow[WATT_COL] = extractedWatt;
-          changed.push(WATT_COL);
-          wattExtracted++;
-        } else {
-          wattSkipped++;
+          if (!changed.includes(WATT_COL)) changed.push(WATT_COL);
         }
+        wattExtracted++;
+      } else {
+        wattSkipped++;
       }
     }
 
-    // ─── Leuchtweite: nur ergänzen wenn Spalte vorhanden und Zelle leer ──────
+    // ─── Leuchtweite: immer aus Name/Beschreibung extrahieren, bestehenden Wert überschreiben ──
     if (headers.includes(LEUCHT_COL)) {
-      const leuchtVal = (newRow[LEUCHT_COL] ?? '').trim();
-      if (!leuchtVal) {
-        let extractedLeucht: string | null = null;
+      let extractedLeucht: string | null = null;
 
-        for (const col of NAME_COLS) {
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col)) continue;
+        const val = row[col];
+        if (!val) continue;
+        extractedLeucht = extractLeuchtFromText(val);
+        if (extractedLeucht) break;
+      }
+
+      if (!extractedLeucht) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col)) continue;
+          const val = row[col];
+          if (!val) continue;
+          extractedLeucht = extractLeuchtFromTable(val);
+          if (extractedLeucht) break;
+        }
+      }
+
+      if (!extractedLeucht) {
+        for (const col of DESC_COLS) {
           if (!headers.includes(col)) continue;
           const val = row[col];
           if (!val) continue;
           extractedLeucht = extractLeuchtFromText(val);
           if (extractedLeucht) break;
         }
+      }
 
-        if (!extractedLeucht) {
-          for (const col of DESC_COLS) {
-            if (!headers.includes(col)) continue;
-            const val = row[col];
-            if (!val) continue;
-            extractedLeucht = extractLeuchtFromTable(val);
-            if (extractedLeucht) break;
-          }
-        }
-
-        if (!extractedLeucht) {
-          for (const col of DESC_COLS) {
-            if (!headers.includes(col)) continue;
-            const val = row[col];
-            if (!val) continue;
-            extractedLeucht = extractLeuchtFromText(val);
-            if (extractedLeucht) break;
-          }
-        }
-
-        if (extractedLeucht) {
+      if (extractedLeucht) {
+        if (extractedLeucht !== (newRow[LEUCHT_COL] ?? '').trim()) {
           newRow[LEUCHT_COL] = extractedLeucht;
-          changed.push(LEUCHT_COL);
-          leuchtExtracted++;
-        } else {
-          leuchtSkipped++;
+          if (!changed.includes(LEUCHT_COL)) changed.push(LEUCHT_COL);
         }
+        leuchtExtracted++;
+      } else {
+        leuchtSkipped++;
       }
     }
 
