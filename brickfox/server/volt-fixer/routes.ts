@@ -956,6 +956,32 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
         }
       }
 
+      // ─── Beschreibung synchronisieren (wenn Volt-Spalte geändert wurde) ──────────────────
+      if (changed.includes(VOLT_COL)) {
+        const finalVolt = (newRow[VOLT_COL] ?? '').trim();
+        const targetVolt = finalVolt.replace('.', ','); // dot → Komma für DE-Beschreibung
+        if (!targetVolt.includes('-') && !targetVolt.includes('/')) {
+          // DE-Beschreibung aktualisieren
+          const deCol = 'p_description[de]';
+          if (headers.includes(deCol) && newRow[deCol]) {
+            const { result: syncedDe, changed: deChanged } = syncVoltInHtmlText(newRow[deCol], targetVolt);
+            if (deChanged) {
+              newRow[deCol] = syncedDe;
+              if (!changed.includes(deCol)) changed.push(deCol);
+            }
+          }
+          // NL-Tabellenwerte aus DE übernehmen
+          const nlCol = 'p_description[nl]';
+          if (headers.includes(nlCol) && newRow[nlCol] && newRow['p_description[de]']) {
+            const { result: syncedNl, changed: nlChanged } = syncTableValuesFromDe(newRow['p_description[de]'], newRow[nlCol]);
+            if (nlChanged) {
+              newRow[nlCol] = syncedNl;
+              if (!changed.includes(nlCol)) changed.push(nlCol);
+            }
+          }
+        }
+      }
+
       fixedRows.push(newRow);
       changedCols.push(changed);
     }
