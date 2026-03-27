@@ -24,7 +24,7 @@ export default function Landing() {
             </Button>
           </Link>
           <Link href="/register">
-            <Button size="lg" className="text-lg px-8 py-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg min-w-[180px]">
+            <Button size="lg" className="text-lg px-8 py-6 bg-violet-600 hover:bg-violet-700 text-white rounded-xl shadow-lg min-w-[180px]">
               Registrieren
             </Button>
           </Link>

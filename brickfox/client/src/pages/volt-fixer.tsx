@@ -174,15 +174,15 @@ function DescriptionView({ html, rawHtml, changed, label, bg = "gray" }: { html:
     <section>
       <div className="flex items-center gap-2 mb-2">
         <h3 className="text-sm font-bold text-gray-700">{label}</h3>
-        {changed && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+        {changed && <Badge className="bg-violet-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
         <div className="ml-auto flex rounded-lg border border-gray-200 overflow-hidden text-xs">
           <button
             onClick={() => setTab("preview")}
-            className={`px-3 py-1 font-medium transition-colors ${tab === "preview" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+            className={`px-3 py-1 font-medium transition-colors ${tab === "preview" ? "bg-violet-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
           >Fließtext</button>
           <button
             onClick={() => setTab("source")}
-            className={`px-3 py-1 font-medium transition-colors border-l border-gray-200 ${tab === "source" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+            className={`px-3 py-1 font-medium transition-colors border-l border-gray-200 ${tab === "source" ? "bg-violet-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
           >HTML</button>
         </div>
       </div>
@@ -413,7 +413,7 @@ function DetailModal({
                         <div className="rounded-xl border border-gray-200 overflow-hidden">
                           <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Name DE</span>
-                            {nameDeChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                            {nameDeChanged && <Badge className="bg-violet-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
                           </div>
                           <div className="px-4 py-3 space-y-1">
                             {nameDeChanged ? (
@@ -435,7 +435,7 @@ function DetailModal({
                         <div className="rounded-xl border border-gray-200 overflow-hidden">
                           <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Name NL</span>
-                            {nameNlChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                            {nameNlChanged && <Badge className="bg-violet-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
                           </div>
                           <div className="px-4 py-3 space-y-1">
                             {nameNlChanged ? (
@@ -493,7 +493,7 @@ function DetailModal({
                   <section>
                     <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b flex items-center gap-2">
                       {VOLT_COL}
-                      {vChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                      {vChanged && <Badge className="bg-violet-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
                     </h3>
                     <div className="flex items-center gap-6">
                       <div className="flex flex-col">
@@ -544,7 +544,7 @@ function DetailModal({
                             <div key={col} className="rounded-xl border border-gray-200 overflow-hidden">
                               <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
                                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
-                                {isChanged && <Badge className="bg-indigo-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
+                                {isChanged && <Badge className="bg-violet-600 text-white text-xs gap-1"><CheckCircle size={10} /> geändert</Badge>}
                               </div>
                               <div className="px-4 py-3 flex items-center gap-4">
                                 <div>
@@ -1086,7 +1086,7 @@ export default function VoltFixer() {
                   <button
                     onClick={() => handleLoadSave(s.id)}
                     disabled={loadingSaveId === s.id}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-50 font-medium shrink-0"
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 font-medium shrink-0"
                   >
                     {loadingSaveId === s.id ? <Loader2 size={12} className="animate-spin" /> : <FolderOpen size={12} />}
                     Laden
@@ -1210,7 +1210,7 @@ export default function VoltFixer() {
           {result.csvBlob && result.headers.length > 0 && (
             <div className="border border-slate-200 rounded-xl overflow-hidden">
               <button
-                className="w-full flex items-center justify-between px-4 py-3 bg-slate-900 hover:bg-slate-800 transition-colors text-sm font-medium text-white"
+                className="w-full flex items-center justify-between px-4 py-3 bg-violet-600 hover:bg-violet-700 transition-colors text-sm font-medium text-white"
                 onClick={() => setColPickerOpen(o => !o)}
               >
                 <span className="flex items-center gap-2">
@@ -1295,7 +1295,7 @@ export default function VoltFixer() {
                 onClick={handleDescSync}
                 disabled={descSynced || !rawProcessorResult}
                 className={descSynced
-                  ? "bg-indigo-600 hover:bg-indigo-600 text-white gap-2 shrink-0"
+                  ? "bg-indigo-600 hover:bg-violet-600 text-white gap-2 shrink-0"
                   : "bg-slate-900 hover:bg-slate-800 text-white gap-2 shrink-0"}
               >
                 {descSynced ? <CheckCircle size={16} /> : <PenLine size={16} />}
@@ -1308,7 +1308,7 @@ export default function VoltFixer() {
 
           {/* Download + Speichern */}
           <div className="flex flex-wrap gap-2">
-            <Button onClick={download} className="bg-slate-900 hover:bg-slate-800 text-white gap-2">
+            <Button onClick={download} className="bg-violet-600 hover:bg-violet-700 text-white gap-2">
               <Download size={15} />
               CSV herunterladen
               {result.stats.total > 0 && (
@@ -1397,7 +1397,7 @@ export default function VoltFixer() {
                   <button
                     onClick={handleSave}
                     disabled={!saveName.trim() || isSaving}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 font-medium text-sm"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 font-medium text-sm"
                   >
                     {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                     Speichern
@@ -1574,7 +1574,7 @@ export default function VoltFixer() {
                                   }}
                                   disabled={patchSaving}
                                 />
-                                <button onClick={() => saveVoltEdit(item.index, editingVolt.value)} disabled={patchSaving} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700 disabled:opacity-50">✓</button>
+                                <button onClick={() => saveVoltEdit(item.index, editingVolt.value)} disabled={patchSaving} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50">✓</button>
                                 <button onClick={() => setEditingVolt(null)} disabled={patchSaving} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button>
                               </div>
                             ) : (
@@ -1594,7 +1594,7 @@ export default function VoltFixer() {
                           {/* mAh nachher */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === MAH_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, MAH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, MAH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, MAH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, MAH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: MAH_COL, value: item.mahNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(MAH_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(MAH_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1608,7 +1608,7 @@ export default function VoltFixer() {
                           {/* Wh nachher */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === WH_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, WH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, WH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: WH_COL, value: item.whNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WH_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(WH_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1622,7 +1622,7 @@ export default function VoltFixer() {
                           {/* Watt nachher */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === WATT_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WATT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, WATT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WATT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, WATT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: WATT_COL, value: item.wattNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WATT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(WATT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1636,7 +1636,7 @@ export default function VoltFixer() {
                           {/* Leuchtweite nachher */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === LEUCHT_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: LEUCHT_COL, value: item.leuchtNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(LEUCHT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(LEUCHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1649,7 +1649,7 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.gewichtOrig || <span className="text-slate-300">—</span>}</td>
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === GEWICHT_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: GEWICHT_COL, value: item.gewichtNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(GEWICHT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(GEWICHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1662,7 +1662,7 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.inputVoltOrig || <span className="text-slate-300">—</span>}</td>
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === INPUT_VOLT_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: INPUT_VOLT_COL, value: item.inputVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(INPUT_VOLT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(INPUT_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1675,7 +1675,7 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.outputVoltOrig || <span className="text-slate-300">—</span>}</td>
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === OUTPUT_VOLT_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: OUTPUT_VOLT_COL, value: item.outputVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(OUTPUT_VOLT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(OUTPUT_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1688,7 +1688,7 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.durchmOrig || <span className="text-slate-300">—</span>}</td>
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === DURCHM_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, DURCHM_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, DURCHM_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, DURCHM_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, DURCHM_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: DURCHM_COL, value: item.durchmNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(DURCHM_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(DURCHM_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1701,7 +1701,7 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.breiteOrig || <span className="text-slate-300">—</span>}</td>
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === BREITE_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, BREITE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, BREITE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, BREITE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, BREITE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: BREITE_COL, value: item.breiteNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(BREITE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(BREITE_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1714,7 +1714,7 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.hoeheOrig || <span className="text-slate-300">—</span>}</td>
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === HOEHE_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, HOEHE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, HOEHE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, HOEHE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, HOEHE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: HOEHE_COL, value: item.hoeheNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(HOEHE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(HOEHE_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
@@ -1727,7 +1727,7 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.laengeOrig || <span className="text-slate-300">—</span>}</td>
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === LAENGE_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LAENGE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, LAENGE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LAENGE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, LAENGE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
                               <button onClick={() => setEditingAttr({ index: item.index, col: LAENGE_COL, value: item.laengeNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(LAENGE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(LAENGE_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}

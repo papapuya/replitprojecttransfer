@@ -223,7 +223,7 @@ export default function CsvRepair() {
           </div>
 
           {/* Download */}
-          <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+          <Button onClick={download} className="bg-violet-600 hover:bg-violet-700 text-white gap-2">
             <Download size={16} />
             Reparierte CSV herunterladen
           </Button>
