@@ -783,7 +783,9 @@ export async function processVoltFile(
   for (let i = 0; i < rawData.length; i++) {
     const fixed: Record<string, string> = {};
     for (const key of Object.keys(rawData[i])) {
-      let val = rawData[i][key];
+      if (key === '__parsed_extra') continue; // PapaParse-Artefakt bei Zeilen mit zu vielen Feldern
+      const raw = rawData[i][key];
+      let val = typeof raw === 'string' ? raw : String(raw ?? '');
       if (restoreEmoji) val = restoreEmojiCheckmarks(val);
       fixed[key] = repairMojibake(val);
     }
