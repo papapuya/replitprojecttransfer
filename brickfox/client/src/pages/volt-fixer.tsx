@@ -846,8 +846,8 @@ export default function VoltFixer() {
           [GEWICHT_COL]:     item.gewichtNew     ?? '',
           'p_name[de]': item.nameDE,
           'p_name[nl]': item.nameNL,
-          'p_description[de]': item.descDEOrig ?? '',
-          'p_description[nl]': item.descNLOrig ?? '',
+          'p_description[de]': item.descDEFull ?? item.descDEOrig ?? '',
+          'p_description[nl]': item.descNLFull ?? item.descNLOrig ?? '',
         };
         const original: Record<string, string> = {
           'p_item_number': item.itemNr,
