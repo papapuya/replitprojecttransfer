@@ -339,8 +339,8 @@ function DetailModal({
                   <div className="flex items-center gap-4 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
                     <span className="font-medium text-gray-600">Markierungen:</span>
                     <span className="flex items-center gap-1.5">
-                      <mark style={{ background: 'rgba(234,179,8,0.40)', borderRadius: '3px', padding: '0 4px', fontWeight: 600 }}>255mm</mark>
-                      Extrahierter Attributwert
+                      <span style={{ display: 'inline-block', width: 12, height: 12, background: 'rgba(234,179,8,0.60)', borderRadius: 3, border: '1px solid rgba(234,179,8,0.8)' }} />
+                      Extrahierter Attributwert im Text
                     </span>
                   </div>
                 )}
