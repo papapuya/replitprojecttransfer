@@ -1470,7 +1470,7 @@ export default function VoltFixer() {
                       const hasChange = item.changed.length > 0;
                       const voltChanged = item.changed.includes(VOLT_COL);
                       return (
-                        <tr key={item.index} className={`border-b border-slate-100 last:border-0 group/row cursor-default ${hasChange ? "bg-indigo-50/20 hover:bg-indigo-50/40" : "bg-white hover:bg-slate-50"}`}>
+                        <tr key={item.index} className={`border-b border-slate-100 last:border-0 group/row cursor-default ${hasChange ? "bg-indigo-50/20 hover:bg-indigo-100" : "bg-white hover:bg-slate-100"}`}>
                           <td className="px-3 py-1.5 text-slate-400">{item.index + 1}</td>
                           <td className="px-2 py-1.5">
                             <button
