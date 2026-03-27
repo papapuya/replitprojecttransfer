@@ -218,42 +218,71 @@ const ATTR_SPECS: Array<[string, string]> = [
   [GEWICHT_COL,     '(?:kg|gramm?|gr|g)(?![a-zA-Z])'],
 ];
 
+const COL_SHORT: Record<string, { label: string; color: string }> = {
+  [VOLT_COL]:        { label: 'Volt',     color: 'bg-indigo-100 text-indigo-700' },
+  [MAH_COL]:         { label: 'mAh',      color: 'bg-green-100 text-green-700' },
+  [WH_COL]:          { label: 'Wh',       color: 'bg-teal-100 text-teal-700' },
+  [WATT_COL]:        { label: 'Watt',     color: 'bg-yellow-100 text-yellow-700' },
+  [LEUCHT_COL]:      { label: 'Leuchtw.', color: 'bg-sky-100 text-sky-700' },
+  [INPUT_VOLT_COL]:  { label: 'In-V',     color: 'bg-violet-100 text-violet-700' },
+  [OUTPUT_VOLT_COL]: { label: 'Out-V',    color: 'bg-violet-100 text-violet-700' },
+  [DURCHM_COL]:      { label: 'Ø mm',     color: 'bg-orange-100 text-orange-700' },
+  [BREITE_COL]:      { label: 'B mm',     color: 'bg-orange-100 text-orange-700' },
+  [HOEHE_COL]:       { label: 'H mm',     color: 'bg-orange-100 text-orange-700' },
+  [LAENGE_COL]:      { label: 'L mm',     color: 'bg-orange-100 text-orange-700' },
+  [GEWICHT_COL]:     { label: 'Gew.',     color: 'bg-emerald-100 text-emerald-700' },
+  ['p_description[de]']: { label: 'Beschr.', color: 'bg-amber-100 text-amber-700' },
+};
+
+type HLPatterns = { green: RegExp[]; yellow: RegExp[] };
+
 function buildHighlightPatterns(
-  _changed: string[],
+  changed: string[],
   row: Record<string, string>,
   original: Record<string, string>
-): RegExp[] {
-  const pats: RegExp[] = [];
+): HLPatterns {
+  const green: RegExp[] = [];
+  const yellow: RegExp[] = [];
   for (const [col, unit] of ATTR_SPECS) {
     const val = (row[col] || original[col] || '').trim();
     if (!val) continue;
     const v = val.replace(/\./g, '[.,]');
-    try { pats.push(new RegExp(`${v}\\s*${unit}`, 'gi')); } catch (_) { /* noop */ }
+    try {
+      const rx = new RegExp(`${v}\\s*${unit}`, 'gi');
+      if (changed.includes(col)) green.push(rx);
+      else yellow.push(rx);
+    } catch (_) { /* noop */ }
   }
-  return pats;
+  return { green, yellow };
 }
 
-const MARK_HL = 'background:rgba(234,179,8,0.40);border-radius:3px;padding:0 2px;font-weight:600;';
+const MARK_YELLOW = 'background:rgba(234,179,8,0.40);border-radius:3px;padding:0 2px;font-weight:600;';
+const MARK_GREEN  = 'background:rgba(34,197,94,0.38);border-radius:3px;padding:0 2px;font-weight:600;';
 
-function applyHighlightPatterns(text: string, pats: RegExp[]): string {
+function applyHighlightPatterns(text: string, pats: HLPatterns): string {
   let result = text;
-  for (const rx of pats) {
+  for (const rx of pats.yellow) {
     result = result.replace(rx, (m: string) =>
-      m.startsWith('<mark') ? m : `<mark style="${MARK_HL}">${m}</mark>`
+      m.startsWith('<mark') ? m : `<mark style="${MARK_YELLOW}">${m}</mark>`
+    );
+  }
+  for (const rx of pats.green) {
+    result = result.replace(rx, (m: string) =>
+      m.startsWith('<mark') ? m : `<mark style="${MARK_GREEN}">${m}</mark>`
     );
   }
   return result;
 }
 
-function highlightInHtml(html: string, pats: RegExp[]): string {
-  if (!html || pats.length === 0) return html;
+function highlightInHtml(html: string, pats: HLPatterns): string {
+  if (!html || (pats.green.length === 0 && pats.yellow.length === 0)) return html;
   return html.replace(/>([^<]+)</g, (_, text) =>
     '>' + applyHighlightPatterns(text, pats) + '<'
   );
 }
 
-function highlightInText(text: string, pats: RegExp[]): string {
-  if (!text || pats.length === 0) return text;
+function highlightInText(text: string, pats: HLPatterns): string {
+  if (!text || (pats.green.length === 0 && pats.yellow.length === 0)) return text;
   return applyHighlightPatterns(text, pats);
 }
 
@@ -327,7 +356,7 @@ function DetailModal({
             const nameNlChanged = data.changed.includes("p_name[nl]");
 
             const pats = buildHighlightPatterns(data.changed, data.row, data.original);
-            const hasHL = pats.length > 0;
+            const hasHL = pats.green.length + pats.yellow.length > 0;
             const hlOrigDE  = highlightInHtml(origDE  || fixedDE, pats);
             const hlFixedDE = highlightInHtml(fixedDE, pats);
             const hlOrigNL  = highlightInHtml(origNL  || fixedNL, pats);
@@ -341,10 +370,18 @@ function DetailModal({
                 {hasHL && (
                   <div className="flex items-center gap-4 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
                     <span className="font-medium text-gray-600">Markierungen:</span>
-                    <span className="flex items-center gap-1.5">
-                      <span style={{ display: 'inline-block', width: 12, height: 12, background: 'rgba(234,179,8,0.60)', borderRadius: 3, border: '1px solid rgba(234,179,8,0.8)' }} />
-                      Extrahierter Attributwert im Text
-                    </span>
+                    {pats.yellow.length > 0 && (
+                      <span className="flex items-center gap-1.5">
+                        <span style={{ display: 'inline-block', width: 12, height: 12, background: 'rgba(234,179,8,0.60)', borderRadius: 3, border: '1px solid rgba(234,179,8,0.8)' }} />
+                        Attributwert gefunden
+                      </span>
+                    )}
+                    {pats.green.length > 0 && (
+                      <span className="flex items-center gap-1.5">
+                        <span style={{ display: 'inline-block', width: 12, height: 12, background: 'rgba(34,197,94,0.55)', borderRadius: 3, border: '1px solid rgba(34,197,94,0.8)' }} />
+                        Wert korrigiert
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -1334,6 +1371,7 @@ export default function VoltFixer() {
                       <th className="px-2 py-2 w-8"></th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">p_id</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Artikel-Nr.</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap bg-gray-50">Geänderte Werte</th>
                       <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">mAh (vorher)</th>
@@ -1382,6 +1420,30 @@ export default function VoltFixer() {
                           </td>
                           <td className="px-3 py-1.5 text-gray-400 font-mono text-xs">{item.pId || "—"}</td>
                           <td className="px-3 py-1.5 text-gray-600 font-mono text-xs">{item.itemNr || "—"}</td>
+                          <td className="px-3 py-1.5">
+                            <div className="flex flex-wrap gap-1 min-w-[80px]">
+                              {item.changed.length === 0 && !item.descDEChanged ? (
+                                <span className="text-gray-300 text-[10px]">—</span>
+                              ) : (
+                                <>
+                                  {item.changed.map((col) => {
+                                    const info = COL_SHORT[col];
+                                    if (!info) return null;
+                                    return (
+                                      <span key={col} className={`inline-block rounded px-1 py-0 text-[10px] font-semibold leading-4 ${info.color}`}>
+                                        {info.label}
+                                      </span>
+                                    );
+                                  })}
+                                  {item.descDEChanged && (
+                                    <span className="inline-block rounded px-1 py-0 text-[10px] font-semibold leading-4 bg-amber-100 text-amber-700">
+                                      Beschr.
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
                           <td className={`px-3 py-1.5 ${voltChanged ? "text-red-400 line-through opacity-70" : "text-gray-500"}`}>
                             {isUnrealisticVolt(item.voltOrig) ? "—" : (item.voltOrig || "—")}
                           </td>
