@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { processVoltFile, applyDescriptionSync, type VoltProcessorResult } from "@/lib/volt-processor";
@@ -968,12 +968,19 @@ export default function VoltFixer() {
   };
 
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const allItems = result?.previewItems ?? [];
-  const items = showOnlyChanged ? allItems.filter(it => it.changed.length > 0) : allItems;
+  const filteredByChanged = showOnlyChanged ? allItems.filter(it => it.changed.length > 0) : allItems;
+  const items = searchTerm.trim()
+    ? filteredByChanged.filter(it =>
+        (it.itemNr || '').toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+        (it.pId || '').toLowerCase().includes(searchTerm.trim().toLowerCase())
+      )
+    : filteredByChanged;
   const changedCount = allItems.filter(it => it.changed.length > 0).length;
   const visibleItems = items.slice(0, visibleCount);
 
-  useEffect(() => { setVisibleCount(500); }, [showOnlyChanged, result]);
+  useEffect(() => { setVisibleCount(500); }, [showOnlyChanged, searchTerm, result]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -1360,12 +1367,30 @@ export default function VoltFixer() {
               <h2 className="text-lg font-semibold text-gray-800">
                 Spaltenvorschau
                 <span className="ml-2 text-sm font-normal text-gray-400">
-                  {items.length.toLocaleString()} Zeilen
-                  {changedCount > 0 && ` · ${changedCount.toLocaleString()} geändert`}
+                  {searchTerm.trim()
+                    ? `${items.length} Treffer`
+                    : `${items.length.toLocaleString()} Zeilen`}
+                  {!searchTerm.trim() && changedCount > 0 && ` · ${changedCount.toLocaleString()} geändert`}
                   {" "}· Klick auf <Eye size={12} className="inline" /> für Details
                 </span>
               </h2>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    placeholder="Artikel-Nr. suchen…"
+                    className="text-xs px-2 py-1.5 pl-7 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-44"
+                  />
+                  <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >×</button>
+                  )}
+                </div>
                 <button
                   onClick={() => setShowOnlyChanged(v => !v)}
                   className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
