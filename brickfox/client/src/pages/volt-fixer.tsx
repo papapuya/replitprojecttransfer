@@ -738,14 +738,26 @@ export default function VoltFixer() {
     await loadSaves();
   };
 
-  // URL-Parameter ?projekt=<id> → Projekt direkt laden
+  // Sidebar-Event: Projekt direkt laden (funktioniert auch wenn Seite schon offen)
+  const handleLoadSaveRef = useRef(handleLoadSave);
+  useEffect(() => { handleLoadSaveRef.current = handleLoadSave; });
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const projektId = params.get('projekt');
-    if (projektId) {
-      window.history.replaceState({}, '', '/volt-fixer');
-      handleLoadSave(projektId);
+    // sessionStorage: gesetzt von Sidebar-Klick (funktioniert auch bei Navigation von anderer Seite)
+    const stored = sessionStorage.getItem('brickfox-load-projekt');
+    if (stored) {
+      sessionStorage.removeItem('brickfox-load-projekt');
+      handleLoadSaveRef.current(stored);
     }
+    // Custom Event: für Klick wenn bereits auf dieser Seite
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent<{ id: string }>).detail?.id;
+      if (id) {
+        sessionStorage.removeItem('brickfox-load-projekt');
+        handleLoadSaveRef.current(id);
+      }
+    };
+    window.addEventListener('brickfox-load-projekt', handler);
+    return () => window.removeEventListener('brickfox-load-projekt', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -1406,47 +1406,75 @@ router.post('/saves/:saveId/load', (req: Request, res: Response) => {
       };
     };
 
-    const { jobData, resultData } = saveData;
-    const newJobId = crypto.randomUUID();
-    const expires = Date.now() + 30 * 60 * 1000;
+    const { jobData, resultData, meta } = saveData as {
+      meta: SaveMeta;
+      resultData?: Record<string, unknown>;
+      jobData?: {
+        csvBufferBase64: string;
+        fixedRows: Record<string, string>[];
+        originalRows: Record<string, string>[];
+        headers: string[];
+        changedCols: string[][];
+        dreiSpannungIndices: number[];
+        restoreEmoji: boolean;
+        fileName: string;
+      };
+    };
 
-    jobStore.set(newJobId, {
-      csvBuffer: Buffer.from(jobData.csvBufferBase64, 'base64'),
-      fileName: jobData.fileName,
-      expires,
-      fixedRows: jobData.fixedRows,
-      originalRows: jobData.originalRows,
-      headers: jobData.headers,
-      changedCols: jobData.changedCols,
-      dreiSpannungIndices: jobData.dreiSpannungIndices,
-      restoreEmoji: jobData.restoreEmoji,
-    });
+    // Fall 1: Vollständige jobData vorhanden (server-seitige Verarbeitung)
+    if (jobData) {
+      const newJobId = crypto.randomUUID();
+      const expires = Date.now() + 30 * 60 * 1000;
+      jobStore.set(newJobId, {
+        csvBuffer: Buffer.from(jobData.csvBufferBase64, 'base64'),
+        fileName: jobData.fileName,
+        expires,
+        fixedRows: jobData.fixedRows,
+        originalRows: jobData.originalRows,
+        headers: jobData.headers,
+        changedCols: jobData.changedCols,
+        dreiSpannungIndices: jobData.dreiSpannungIndices,
+        restoreEmoji: jobData.restoreEmoji,
+      });
 
-    // Wenn Original-Zeilen vorhanden: CSV daraus rekonstruieren und zurückgeben,
-    // damit der Client sie mit der aktuellen Korrektur-Logik neu verarbeiten kann.
-    let originalCsvBase64: string | undefined;
-    if (Array.isArray(jobData.originalRows) && jobData.originalRows.length > 0) {
-      try {
-        const originalCsvText = Papa.unparse(jobData.originalRows, {
-          delimiter: ';',
-          columns: jobData.headers,
-        });
-        originalCsvBase64 = Buffer.from('\uFEFF' + originalCsvText, 'utf-8').toString('base64');
-      } catch (_e) {
-        // Fallback: kein originalCsvBase64
+      let originalCsvBase64: string | undefined;
+      if (Array.isArray(jobData.originalRows) && jobData.originalRows.length > 0) {
+        try {
+          const originalCsvText = Papa.unparse(jobData.originalRows, {
+            delimiter: ';',
+            columns: jobData.headers,
+          });
+          originalCsvBase64 = Buffer.from('\uFEFF' + originalCsvText, 'utf-8').toString('base64');
+        } catch (_e) { /* Fallback */ }
       }
+
+      return res.json({
+        jobId: newJobId,
+        ...(resultData ?? {}),
+        ...(originalCsvBase64 ? {
+          originalCsvBase64,
+          fileName: jobData.fileName,
+          restoreEmoji: jobData.restoreEmoji,
+        } : {}),
+      });
     }
 
-    res.json({
-      jobId: newJobId,
-      ...resultData,
-      ...(originalCsvBase64 ? {
+    // Fall 2: Nur meta + gespeicherte CSV vorhanden (client-seitige Verarbeitung)
+    const csvFilePath = path.join(SAVES_DIR, `${saveId}.csv.gz`);
+    if (fs.existsSync(csvFilePath)) {
+      const csvBuffer = zlib.gunzipSync(fs.readFileSync(csvFilePath));
+      const originalCsvBase64 = csvBuffer.toString('base64');
+      return res.json({
         originalCsvBase64,
-        fileName: jobData.fileName,
-        restoreEmoji: jobData.restoreEmoji,
-      } : {}),
-    });
+        fileName: meta.fileName,
+        restoreEmoji: false,
+      });
+    }
+
+    // Fall 3: Keine nutzbaren Daten — Fehler
+    return res.status(422).json({ error: 'Projekt enthält keine ladbaren CSV-Daten. Bitte neu hochladen und speichern.' });
   } catch (e) {
+    console.error('[VoltFixer] Load error:', e);
     res.status(500).json({ error: 'Fehler beim Laden des Projekts' });
   }
 });
