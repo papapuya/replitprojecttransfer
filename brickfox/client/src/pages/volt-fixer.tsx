@@ -5,11 +5,24 @@ import { Badge } from "@/components/ui/badge";
 import { processVoltFile } from "@/lib/volt-processor";
 import Papa from "papaparse";
 
-const VOLT_COL   = "p_attributes[akku_v][de]";
-const MAH_COL    = "p_attributes[akku_mah][de]";
-const WH_COL     = "p_attributes[akku_wh][de]";
-const WATT_COL   = "p_attributes[lela_leistung_watt][de]";
-const LEUCHT_COL = "p_attributes[tala_leuchtweite][de]";
+const VOLT_COL        = "p_attributes[akku_v][de]";
+const MAH_COL         = "p_attributes[akku_mah][de]";
+const WH_COL          = "p_attributes[akku_wh][de]";
+const WATT_COL        = "p_attributes[lela_leistung_watt][de]";
+const LEUCHT_COL      = "p_attributes[tala_leuchtweite][de]";
+const INPUT_VOLT_COL  = "p_attributes[netzteil_input_volt][de]";
+const OUTPUT_VOLT_COL = "p_attributes[netzteil_output_volt][de]";
+const NENN_VOLT_COL   = "p_attributes[Nennspannung][de]";
+const DURCHM_COL      = "p_attributes[akku_durchmesser][de]";
+const BREITE_COL      = "p_attributes[breite][de]";
+const HOEHE_COL       = "p_attributes[hoehe][de]";
+const LAENGE_COL      = "p_attributes[akku_länge][de]";
+
+const ALL_ATTR_COLS = [
+  VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
+  INPUT_VOLT_COL, OUTPUT_VOLT_COL, NENN_VOLT_COL,
+  DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL,
+];
 
 const COL_TO_FIELD: Record<string, string> = {
   [MAH_COL]:    "mahNew",
@@ -350,10 +363,17 @@ function DetailModal({
                 {/* ── 6. Weitere Attribute ── */}
                 {(() => {
                   const attrDefs = [
-                    { col: MAH_COL,    label: 'Kapazität (mAh)' },
-                    { col: WH_COL,     label: 'Energie (Wh)'    },
-                    { col: WATT_COL,   label: 'Leistung (Watt)' },
-                    { col: LEUCHT_COL, label: 'Leuchtweite'     },
+                    { col: MAH_COL,         label: 'Kapazität (mAh)'     },
+                    { col: WH_COL,          label: 'Energie (Wh)'         },
+                    { col: WATT_COL,        label: 'Leistung (Watt)'      },
+                    { col: LEUCHT_COL,      label: 'Leuchtweite'          },
+                    { col: INPUT_VOLT_COL,  label: 'Netzteil Input (V)'   },
+                    { col: OUTPUT_VOLT_COL, label: 'Netzteil Output (V)'  },
+                    { col: NENN_VOLT_COL,   label: 'Nennspannung (V)'     },
+                    { col: DURCHM_COL,      label: 'Durchmesser (mm)'     },
+                    { col: BREITE_COL,      label: 'Breite (mm)'          },
+                    { col: HOEHE_COL,       label: 'Höhe (mm)'            },
+                    { col: LAENGE_COL,      label: 'Länge (mm)'           },
                   ].filter(a => data.headers.includes(a.col) && (data.original[a.col] || data.row[a.col]));
 
                   if (!attrDefs.length) return null;
@@ -942,7 +962,7 @@ export default function VoltFixer() {
                     <button
                       className="text-xs px-2.5 py-1 rounded border border-green-300 text-green-700 hover:bg-green-50"
                       onClick={() => setSelectedCols(new Set([
-                        VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
+                        ...ALL_ATTR_COLS,
                         'p_id', 'p_item_number', 'p_name[de]', 'p_name[nl]',
                       ].filter(c => result.headers.includes(c))))}
                     >
@@ -953,7 +973,7 @@ export default function VoltFixer() {
                   {/* Spalten-Liste */}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 max-h-64 overflow-y-auto pr-1">
                     {result.headers.map(col => {
-                      const isAttr = [VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL].includes(col);
+                      const isAttr = ALL_ATTR_COLS.includes(col);
                       const checked = selectedCols.has(col);
                       return (
                         <label
