@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Home, FileSpreadsheet, Globe, FolderOpen, Zap, Building2, User, LayoutDashboard, GitCompare, LogOut, ShoppingCart, Scale, ChevronDown, ChevronRight, Store, Wrench, FileCode, DollarSign, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Home, FileSpreadsheet, Globe, FolderOpen, Zap, Building2, User, LayoutDashboard, GitCompare, LogOut, ShoppingCart, Scale, ChevronDown, ChevronRight, Store, Wrench, FileCode, DollarSign, Sparkles, Loader2 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +84,23 @@ export function AppSidebar() {
   
   // State for open shop dropdowns
   const [openShops, setOpenShops] = useState<Record<string, boolean>>({ akku500: true });
+
+  // Brickfox Projekt-Dropdown
+  const [brickfoxOpen, setBrickfoxOpen] = useState(false);
+  const [brickfoxProjects, setBrickfoxProjects] = useState<Array<{ id: string; name: string; savedAt: string }>>([]);
+  const [brickfoxLoading, setBrickfoxLoading] = useState(false);
+
+  useEffect(() => {
+    if (!brickfoxOpen) return;
+    setBrickfoxLoading(true);
+    fetch('/api/volt-fixer/saves')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: Array<{ id: string; name: string; savedAt: string }>) => {
+        setBrickfoxProjects([...data].reverse());
+      })
+      .catch(() => setBrickfoxProjects([]))
+      .finally(() => setBrickfoxLoading(false));
+  }, [brickfoxOpen]);
 
   const tenantFeatures = currentTenant?.settings?.features || {};
 
@@ -237,16 +254,76 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-indigo-600 font-bold">Werkzeuge</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredTools.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-indigo-50 hover:text-indigo-600">
-                    <Link href={item.url} className="text-gray-700">
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {filteredTools.map((item) => {
+                if (item.url === '/volt-fixer') {
+                  return (
+                    <Collapsible key={item.title} open={brickfoxOpen} onOpenChange={setBrickfoxOpen}>
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton
+                            isActive={location === item.url}
+                            className="w-full justify-between text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+                          >
+                            <div className="flex items-center gap-2">
+                              <item.icon className="w-4 h-4" />
+                              <span>{item.title}</span>
+                            </div>
+                            {brickfoxOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton asChild isActive={location === '/volt-fixer'} className="text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
+                                <Link href="/volt-fixer">
+                                  <Zap className="w-3 h-3" />
+                                  <span>Neues Projekt</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                            {brickfoxLoading && (
+                              <SidebarMenuSubItem>
+                                <div className="flex items-center gap-2 px-2 py-1 text-xs text-slate-400">
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  <span>Lade Projekte…</span>
+                                </div>
+                              </SidebarMenuSubItem>
+                            )}
+                            {!brickfoxLoading && brickfoxProjects.length === 0 && (
+                              <SidebarMenuSubItem>
+                                <div className="px-2 py-1 text-xs text-slate-400 italic">Keine Projekte gespeichert</div>
+                              </SidebarMenuSubItem>
+                            )}
+                            {!brickfoxLoading && brickfoxProjects.map(proj => (
+                              <SidebarMenuSubItem key={proj.id}>
+                                <SidebarMenuSubButton
+                                  asChild
+                                  className="text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+                                >
+                                  <Link href={`/volt-fixer?projekt=${proj.id}`}>
+                                    <FolderOpen className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{proj.name}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  );
+                }
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={location === item.url} className="hover:bg-indigo-50 hover:text-indigo-600">
+                      <Link href={item.url} className="text-gray-700">
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
