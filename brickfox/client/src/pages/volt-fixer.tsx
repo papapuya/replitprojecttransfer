@@ -200,52 +200,66 @@ function DescriptionView({ html, changed, label, bg = "gray" }: { html: string; 
 
 // ── Highlight-Utilities ──────────────────────────────────────────────────────
 
-function buildHighlightPatterns(changed: string[], row: Record<string, string>): RegExp[] {
-  const patterns: RegExp[] = [];
-  const addPat = (val: string, unitRx: string) => {
-    if (!val) return;
+const ATTR_SPECS: Array<[string, string]> = [
+  [VOLT_COL,        'V(?:olt|AC|DC)?(?!\\w)'],
+  [MAH_COL,         'm[Aa][Hh]'],
+  [WH_COL,          'W[Hh]'],
+  [WATT_COL,        'W(?:att)?(?!h|\\w)'],
+  [LEUCHT_COL,      'm(?!\\w)'],
+  [INPUT_VOLT_COL,  'V(?:olt|AC|DC)?(?!\\w)'],
+  [OUTPUT_VOLT_COL, 'V(?:olt|AC|DC)?(?!\\w)'],
+  [NENN_VOLT_COL,   'V(?:olt)?(?!\\w)'],
+  [DURCHM_COL,      'mm'],
+  [BREITE_COL,      'mm'],
+  [HOEHE_COL,       'mm'],
+  [LAENGE_COL,      'mm'],
+];
+
+function buildHighlightPatterns(
+  changed: string[],
+  row: Record<string, string>,
+  original: Record<string, string>
+): { changedPats: RegExp[]; keptPats: RegExp[] } {
+  const changedPats: RegExp[] = [];
+  const keptPats: RegExp[] = [];
+  for (const [col, unit] of ATTR_SPECS) {
+    const val = (row[col] || original[col] || '').trim();
+    if (!val) continue;
     const v = val.replace(/\./g, '[.,]');
-    try { patterns.push(new RegExp(`${v}\\s*${unitRx}`, 'gi')); } catch (_) { /* noop */ }
-  };
-  if (changed.includes(VOLT_COL))        addPat(row[VOLT_COL],        'V(?:olt|AC|DC)?(?!\\w)');
-  if (changed.includes(MAH_COL))         addPat(row[MAH_COL],         'm[Aa][Hh]');
-  if (changed.includes(WH_COL))          addPat(row[WH_COL],          'W[Hh]');
-  if (changed.includes(WATT_COL))        addPat(row[WATT_COL],        'W(?:att)?(?!h|\\w)');
-  if (changed.includes(LEUCHT_COL))      addPat(row[LEUCHT_COL],      'm(?!\\w)');
-  if (changed.includes(INPUT_VOLT_COL))  addPat(row[INPUT_VOLT_COL],  'V(?:olt|AC|DC)?(?!\\w)');
-  if (changed.includes(OUTPUT_VOLT_COL)) addPat(row[OUTPUT_VOLT_COL], 'V(?:olt|AC|DC)?(?!\\w)');
-  if (changed.includes(NENN_VOLT_COL))   addPat(row[NENN_VOLT_COL],   'V(?:olt)?(?!\\w)');
-  if (changed.includes(DURCHM_COL))      addPat(row[DURCHM_COL],      'mm');
-  if (changed.includes(BREITE_COL))      addPat(row[BREITE_COL],      'mm');
-  if (changed.includes(HOEHE_COL))       addPat(row[HOEHE_COL],       'mm');
-  if (changed.includes(LAENGE_COL))      addPat(row[LAENGE_COL],      'mm');
-  return patterns;
+    try {
+      const rx = new RegExp(`${v}\\s*${unit}`, 'gi');
+      (changed.includes(col) ? changedPats : keptPats).push(rx);
+    } catch (_) { /* noop */ }
+  }
+  return { changedPats, keptPats };
 }
 
-const MARK_STYLE = 'background:rgba(234,179,8,0.35);border-radius:3px;padding:0 2px;font-weight:600;';
+const MARK_CHANGED = 'background:rgba(234,179,8,0.40);border-radius:3px;padding:0 2px;font-weight:600;';
+const MARK_KEPT    = 'background:rgba(96,165,250,0.30);border-radius:3px;padding:0 2px;';
 
-function highlightInHtml(html: string, patterns: RegExp[]): string {
-  if (!html || patterns.length === 0) return html;
-  return html.replace(/>([^<]+)</g, (_, text) => {
-    let result = text;
-    for (const rx of patterns) {
-      result = result.replace(rx, (m: string) =>
-        `<mark style="${MARK_STYLE}">${m}</mark>`
-      );
-    }
-    return '>' + result + '<';
-  });
-}
-
-function highlightInText(text: string, patterns: RegExp[]): string {
-  if (!text || patterns.length === 0) return text;
+function applyHighlightPatterns(text: string, changedPats: RegExp[], keptPats: RegExp[]): string {
   let result = text;
-  for (const rx of patterns) {
+  for (const rx of changedPats) {
+    result = result.replace(rx, (m: string) => `<mark style="${MARK_CHANGED}">${m}</mark>`);
+  }
+  for (const rx of keptPats) {
     result = result.replace(rx, (m: string) =>
-      `<mark style="${MARK_STYLE}">${m}</mark>`
+      m.startsWith('<mark') ? m : `<mark style="${MARK_KEPT}">${m}</mark>`
     );
   }
   return result;
+}
+
+function highlightInHtml(html: string, changedPats: RegExp[], keptPats: RegExp[]): string {
+  if (!html || (changedPats.length === 0 && keptPats.length === 0)) return html;
+  return html.replace(/>([^<]+)</g, (_, text) =>
+    '>' + applyHighlightPatterns(text, changedPats, keptPats) + '<'
+  );
+}
+
+function highlightInText(text: string, changedPats: RegExp[], keptPats: RegExp[]): string {
+  if (!text || (changedPats.length === 0 && keptPats.length === 0)) return text;
+  return applyHighlightPatterns(text, changedPats, keptPats);
 }
 
 // Detail-Modal
@@ -317,16 +331,32 @@ function DetailModal({
             const nameDeChanged = data.changed.includes("p_name[de]");
             const nameNlChanged = data.changed.includes("p_name[nl]");
 
-            const hlPatterns = buildHighlightPatterns(data.changed, data.row);
-            const hlOrigDE   = hlPatterns.length ? highlightInHtml(origDE  || fixedDE, hlPatterns) : (origDE || fixedDE);
-            const hlFixedDE  = hlPatterns.length ? highlightInHtml(fixedDE, hlPatterns) : fixedDE;
-            const hlOrigNL   = hlPatterns.length ? highlightInHtml(origNL  || fixedNL, hlPatterns) : (origNL || fixedNL);
-            const hlFixedNL  = hlPatterns.length ? highlightInHtml(fixedNL, hlPatterns) : fixedNL;
-            const hlNameDE   = hlPatterns.length ? highlightInText(origNameDE, hlPatterns) : '';
-            const hlNameNL   = hlPatterns.length ? highlightInText(origNameNL, hlPatterns) : '';
+            const { changedPats, keptPats } = buildHighlightPatterns(data.changed, data.row, data.original);
+            const hasHL = changedPats.length > 0 || keptPats.length > 0;
+            const hlOrigDE  = highlightInHtml(origDE  || fixedDE, changedPats, keptPats);
+            const hlFixedDE = highlightInHtml(fixedDE, changedPats, keptPats);
+            const hlOrigNL  = highlightInHtml(origNL  || fixedNL, changedPats, keptPats);
+            const hlFixedNL = highlightInHtml(fixedNL, changedPats, keptPats);
+            const hlNameDE  = hasHL ? highlightInText(origNameDE, changedPats, keptPats) : '';
+            const hlNameNL  = hasHL ? highlightInText(origNameNL, changedPats, keptPats) : '';
 
             return (
               <>
+                {/* ── Farblegende ── */}
+                {hasHL && (
+                  <div className="flex items-center gap-4 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
+                    <span className="font-medium text-gray-600">Markierungen:</span>
+                    <span className="flex items-center gap-1.5">
+                      <mark style={{ background: 'rgba(234,179,8,0.40)', borderRadius: '3px', padding: '0 4px', fontWeight: 600 }}>3,7V</mark>
+                      Wert korrigiert
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <mark style={{ background: 'rgba(96,165,250,0.30)', borderRadius: '3px', padding: '0 4px' }}>1200mAh</mark>
+                      Wert übernommen
+                    </span>
+                  </div>
+                )}
+
                 {/* ── 0. Produktnamen ── */}
                 {(origNameDE || origNameNL) && (
                   <section>
