@@ -326,13 +326,14 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
   const protectedLabel = /(?:eingangs|ausgangs)(?:spannung|spanning)/i;
   let changed = false;
   // Vergleich: beide Seiten auf Punkt normalisieren; Ausgabe immer mit Punkt (wie Volt-Spalte)
+  const targetNorm = String(parseFloat(targetVolt)); // kanonisch: Nullen entfernen ("3.70" → "3.7")
   const replaceVoltInTextNodes = (s: string): string =>
     s.replace(/(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
       (m, tag, _f, num, unit) => {
         if (tag !== undefined) return tag;
         if (!num || !unit) return m;
         const norm = num.replace(',', '.'); // Komma → Punkt für Vergleich
-        if (parseFloat(norm) === parseFloat(targetVolt) || /[-\/]/.test(num)) return m;
+        if (norm === targetNorm || /[-\/]/.test(num)) return m; // "3.0" !== "3" → ersetzen
         changed = true;
         return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
       });
@@ -349,7 +350,7 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
       if (tag !== undefined) return tag;
       if (!num || !unit) return m;
       const norm = num.replace(',', '.'); // Komma → Punkt für Vergleich
-      if (parseFloat(norm) === parseFloat(targetVolt) || /[-\/]/.test(num)) return m;
+      if (norm === targetNorm || /[-\/]/.test(num)) return m; // "3.0" !== "3" → ersetzen
       changed = true;
       return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
     });
