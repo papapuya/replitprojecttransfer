@@ -680,11 +680,13 @@ const NENN_VOLT_KW   = /nennspannung/i;
 function extractDurchmesserFromText(text: string): string | null {
   if (!text) return null;
   const clean = text.replace(/<[^>]+>/g, ' ');
+  // Unklare Kombinationsangabe wie "Höhe/Ø 10,8x11,6mm" — überspringen
+  if (/[Øø]\s*\d+[.,]?\d*\s*[xX×]\s*\d+[.,]?\d*\s*mm/i.test(clean)) return null;
   const patterns: RegExp[] = [
     /[Dd]urchmesser[^\d]{0,15}(\d+(?:[.,]\d+)?)\s*mm/g,
     /[Øø]\s*(\d+(?:[.,]\d+)?)\s*mm/g,
     /(\d+(?:[.,]\d+)?)\s*mm[^,;\n\r]{0,20}[Dd]urchmesser/g,
-    /[Øø]\s*(\d+(?:[.,]\d+)?)\b/g,
+    /[Øø]\s*(\d+(?:[.,]\d+)?)(?!\s*[xX×])\b/g,
   ];
   for (const pat of patterns) {
     for (const m of clean.matchAll(pat)) {
