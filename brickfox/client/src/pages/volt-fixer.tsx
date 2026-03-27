@@ -1381,7 +1381,7 @@ export default function VoltFixer() {
                           </td>
                           {/* mAh vorher */}
                           <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-green-50/40">
-                            {item.mahOrig || "—"}
+                            {item.mahOrig || <span className="text-gray-300">—</span>}
                           </td>
                           {/* mAh nachher */}
                           <td className="px-1 py-1 font-mono text-xs bg-green-50/40">
@@ -1407,7 +1407,7 @@ export default function VoltFixer() {
                           </td>
                           {/* Wh vorher */}
                           <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-teal-50/40">
-                            {item.whOrig || "—"}
+                            {item.whOrig || <span className="text-gray-300">—</span>}
                           </td>
                           {/* Wh nachher */}
                           <td className="px-1 py-1 font-mono text-xs bg-teal-50/40">
@@ -1433,7 +1433,7 @@ export default function VoltFixer() {
                           </td>
                           {/* Watt vorher */}
                           <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-yellow-50/40">
-                            {item.wattOrig || "—"}
+                            {item.wattOrig || <span className="text-gray-300">—</span>}
                           </td>
                           {/* Watt nachher */}
                           <td className="px-1 py-1 font-mono text-xs bg-yellow-50/40">
@@ -1459,7 +1459,7 @@ export default function VoltFixer() {
                           </td>
                           {/* Leuchtweite vorher */}
                           <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-sky-50/40">
-                            {item.leuchtOrig || "—"}
+                            {item.leuchtOrig || <span className="text-gray-300">—</span>}
                           </td>
                           {/* Leuchtweite nachher */}
                           <td className="px-1 py-1 font-mono text-xs bg-sky-50/40">
