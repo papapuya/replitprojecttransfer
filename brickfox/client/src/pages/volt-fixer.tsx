@@ -1439,30 +1439,18 @@ export default function VoltFixer() {
                       <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">p_id</th>
                       <th className="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Artikel-Nr.</th>
                       <th className="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Geändert</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Volt vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Volt nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">mAh vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">mAh nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Wh vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Wh nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Watt vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Watt nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Leuchtw. vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Leuchtw. nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Gew. g vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Gew. g nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">In-V vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">In-V nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Out-V vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Out-V nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Ø vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Ø nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">B vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">B nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">H vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">H nachher</th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">L vorher</th>
-                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">L nachher</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Volt</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">mAh</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Wh</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Watt</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Leuchtw.</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Gew. g</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">In-V</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Out-V</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Ø</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">B</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">H</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">L</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1508,182 +1496,141 @@ export default function VoltFixer() {
                               })()}
                             </div>
                           </td>
-                          <td className={`px-3 py-1.5 font-mono text-xs ${voltChanged ? "text-slate-300 line-through" : "text-slate-400"}`}>
-                            {isUnrealisticVolt(item.voltOrig) ? "—" : (item.voltOrig || "—")}
-                          </td>
+                          {/* Volt */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingVolt?.index === item.index ? (
                               <div className="flex items-center gap-1">
-                                <input
-                                  autoFocus
-                                  className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
-                                  value={editingVolt.value}
-                                  onChange={e => setEditingVolt({ index: item.index, value: e.target.value })}
-                                  onKeyDown={e => {
-                                    if (e.key === "Enter") saveVoltEdit(item.index, editingVolt.value);
-                                    if (e.key === "Escape") setEditingVolt(null);
-                                  }}
-                                  disabled={patchSaving}
-                                />
+                                <input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingVolt.value} onChange={e => setEditingVolt({ index: item.index, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveVoltEdit(item.index, editingVolt.value); if (e.key === "Escape") setEditingVolt(null); }} disabled={patchSaving} />
                                 <button onClick={() => saveVoltEdit(item.index, editingVolt.value)} disabled={patchSaving} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50">✓</button>
                                 <button onClick={() => setEditingVolt(null)} disabled={patchSaving} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => setEditingVolt({ index: item.index, value: item.voltNew })}
-                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${voltChanged ? "text-indigo-700 font-semibold" : "text-slate-500"}`}
-                                title="Klicken zum Bearbeiten"
-                              >
-                                {voltChanged && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.voltNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingVolt({ index: item.index, value: item.voltNew })} className={`group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full`} title="Klicken zum Bearbeiten">
+                                {voltChanged && !isUnrealisticVolt(item.voltOrig) && item.voltOrig && (
+                                  <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.voltOrig}</span>
+                                )}
+                                <span className={`font-mono text-xs ${voltChanged ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.voltNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* mAh vorher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.mahOrig || <span className="text-slate-300">—</span>}</td>
-                          {/* mAh nachher */}
+                          {/* mAh */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === MAH_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, MAH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, MAH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: MAH_COL, value: item.mahNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(MAH_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(MAH_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.mahNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: MAH_COL, value: item.mahNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(MAH_COL) && item.mahOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.mahOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(MAH_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.mahNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Wh vorher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.whOrig || <span className="text-slate-300">—</span>}</td>
-                          {/* Wh nachher */}
+                          {/* Wh */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === WH_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, WH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: WH_COL, value: item.whNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WH_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(WH_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.whNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: WH_COL, value: item.whNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(WH_COL) && item.whOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.whOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(WH_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.whNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Watt vorher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.wattOrig || <span className="text-slate-300">—</span>}</td>
-                          {/* Watt nachher */}
+                          {/* Watt */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === WATT_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WATT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, WATT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: WATT_COL, value: item.wattNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WATT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(WATT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.wattNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: WATT_COL, value: item.wattNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(WATT_COL) && item.wattOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.wattOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(WATT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.wattNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Leuchtweite vorher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.leuchtOrig || <span className="text-slate-300">—</span>}</td>
-                          {/* Leuchtweite nachher */}
+                          {/* Leuchtweite */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === LEUCHT_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: LEUCHT_COL, value: item.leuchtNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(LEUCHT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(LEUCHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.leuchtNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: LEUCHT_COL, value: item.leuchtNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(LEUCHT_COL) && item.leuchtOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.leuchtOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(LEUCHT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.leuchtNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Gewicht vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.gewichtOrig || <span className="text-slate-300">—</span>}</td>
+                          {/* Gewicht */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === GEWICHT_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: GEWICHT_COL, value: item.gewichtNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(GEWICHT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(GEWICHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.gewichtNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: GEWICHT_COL, value: item.gewichtNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(GEWICHT_COL) && item.gewichtOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.gewichtOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(GEWICHT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.gewichtNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Input Volt vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.inputVoltOrig || <span className="text-slate-300">—</span>}</td>
+                          {/* Input Volt */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === INPUT_VOLT_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: INPUT_VOLT_COL, value: item.inputVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(INPUT_VOLT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(INPUT_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.inputVoltNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: INPUT_VOLT_COL, value: item.inputVoltNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(INPUT_VOLT_COL) && item.inputVoltOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.inputVoltOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(INPUT_VOLT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.inputVoltNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Output Volt vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.outputVoltOrig || <span className="text-slate-300">—</span>}</td>
+                          {/* Output Volt */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === OUTPUT_VOLT_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: OUTPUT_VOLT_COL, value: item.outputVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(OUTPUT_VOLT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(OUTPUT_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.outputVoltNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: OUTPUT_VOLT_COL, value: item.outputVoltNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(OUTPUT_VOLT_COL) && item.outputVoltOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.outputVoltOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(OUTPUT_VOLT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.outputVoltNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Durchmesser vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.durchmOrig || <span className="text-slate-300">—</span>}</td>
+                          {/* Durchmesser */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === DURCHM_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, DURCHM_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, DURCHM_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: DURCHM_COL, value: item.durchmNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(DURCHM_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(DURCHM_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.durchmNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: DURCHM_COL, value: item.durchmNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(DURCHM_COL) && item.durchmOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.durchmOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(DURCHM_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.durchmNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Breite vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.breiteOrig || <span className="text-slate-300">—</span>}</td>
+                          {/* Breite */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === BREITE_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, BREITE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, BREITE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: BREITE_COL, value: item.breiteNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(BREITE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(BREITE_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.breiteNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: BREITE_COL, value: item.breiteNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(BREITE_COL) && item.breiteOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.breiteOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(BREITE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.breiteNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Höhe vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.hoeheOrig || <span className="text-slate-300">—</span>}</td>
+                          {/* Höhe */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === HOEHE_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, HOEHE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, HOEHE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: HOEHE_COL, value: item.hoeheNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(HOEHE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(HOEHE_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.hoeheNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: HOEHE_COL, value: item.hoeheNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(HOEHE_COL) && item.hoeheOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.hoeheOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(HOEHE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.hoeheNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
-                          {/* Länge vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.laengeOrig || <span className="text-slate-300">—</span>}</td>
+                          {/* Länge */}
                           <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === LAENGE_COL ? (
                               <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LAENGE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, LAENGE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: LAENGE_COL, value: item.laengeNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(LAENGE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(LAENGE_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
-                                <span className="font-mono text-xs">{item.laengeNew || <span className="text-slate-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: LAENGE_COL, value: item.laengeNew ?? '' })} className="group flex flex-col gap-0 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full" title="Klicken zum Bearbeiten">
+                                {item.changed.includes(LAENGE_COL) && item.laengeOrig && <span className="font-mono text-[10px] text-red-400 line-through leading-tight">{item.laengeOrig}</span>}
+                                <span className={`font-mono text-xs ${item.changed.includes(LAENGE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`}>{item.laengeNew || <span className="text-slate-300 font-normal">—</span>}</span>
                               </button>
                             )}
                           </td>
