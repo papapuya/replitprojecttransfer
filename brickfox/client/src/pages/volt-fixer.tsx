@@ -1324,10 +1324,6 @@ export default function VoltFixer() {
                       <th className="px-3 py-2 text-left font-semibold text-yellow-700 whitespace-nowrap bg-yellow-50">Watt (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-sky-700 whitespace-nowrap bg-sky-50">Leuchtweite (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-sky-700 whitespace-nowrap bg-sky-50">Leuchtweite (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name DE</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">Name NL</th>
-                      <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">Beschreibung DE</th>
-                      <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">Beschreibung NL</th>
                       <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt original</th>
                     </tr>
                   </thead>
@@ -1335,8 +1331,6 @@ export default function VoltFixer() {
                     {pageItems.map((item) => {
                       const hasChange = item.changed.length > 0;
                       const voltChanged = item.changed.includes(VOLT_COL);
-                      const nameDEChanged = item.changed.includes("p_name[de]");
-                      const nameNLChanged = item.changed.includes("p_name[nl]");
                       return (
                         <tr key={item.index} className={`border-b last:border-0 ${hasChange ? "bg-indigo-50/30" : "bg-white"}`}>
                           <td className="px-3 py-1.5 text-gray-400">{item.index + 1}</td>
@@ -1496,42 +1490,6 @@ export default function VoltFixer() {
                                 <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
                               </button>
                             )}
-                          </td>
-                          <td className="px-3 py-1.5 max-w-xs">
-                            {nameDEChanged ? (
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-red-400 line-through opacity-70 truncate">{item.nameDEOrig}</span>
-                                <span className="text-indigo-700 truncate">{item.nameDE}</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-700 truncate block">{item.nameDE || "—"}</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-1.5 max-w-xs">
-                            {nameNLChanged ? (
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-red-400 line-through opacity-70 truncate">{item.nameNLOrig}</span>
-                                <span className="text-indigo-700 truncate">{item.nameNL}</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-700 truncate block">{item.nameNL || "—"}</span>
-                            )}
-                          </td>
-                          <td className={`px-3 py-1.5 max-w-sm ${item.descDEChanged ? "bg-green-50/60" : ""}`}>
-                            {item.descDE ? (
-                              <span className={`block truncate ${item.descDEChanged ? "text-green-800 font-medium" : "text-gray-600"}`}>
-                                {item.descDEChanged && <CheckCircle size={10} className="inline mr-1 text-green-600" />}
-                                {item.descDE}
-                              </span>
-                            ) : <span className="text-gray-300">—</span>}
-                          </td>
-                          <td className={`px-3 py-1.5 max-w-sm ${item.descNLChanged ? "bg-green-50/60" : ""}`}>
-                            {item.descNL ? (
-                              <span className={`block truncate ${item.descNLChanged ? "text-green-800 font-medium" : "text-gray-600"}`}>
-                                {item.descNLChanged && <CheckCircle size={10} className="inline mr-1 text-green-600" />}
-                                {item.descNL}
-                              </span>
-                            ) : <span className="text-gray-300">—</span>}
                           </td>
                           <td className="px-3 py-1.5 bg-indigo-50/40 font-mono text-xs text-indigo-700">
                             {isUnrealisticVolt(item.voltOrig) ? <span className="text-gray-300">—</span> : (item.voltOrig || <span className="text-gray-300">—</span>)}
