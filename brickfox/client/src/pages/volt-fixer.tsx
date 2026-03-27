@@ -1038,13 +1038,13 @@ export default function VoltFixer() {
           {result.csvBlob && result.headers.length > 0 && (
             <div className="border border-gray-200 rounded-xl overflow-hidden">
               <button
-                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700"
+                className="w-full flex items-center justify-between px-4 py-3 bg-indigo-600 hover:bg-indigo-700 transition-colors text-sm font-medium text-white"
                 onClick={() => setColPickerOpen(o => !o)}
               >
                 <span className="flex items-center gap-2">
-                  <Columns size={14} className="text-indigo-500" />
+                  <Columns size={14} className="text-indigo-200" />
                   Spalten für Export auswählen
-                  <span className="text-xs text-gray-400 font-normal">
+                  <span className="text-xs text-indigo-200 font-normal">
                     {selectedCols.size} von {result.headers.length} Spalten
                   </span>
                 </span>
@@ -1144,18 +1144,6 @@ export default function VoltFixer() {
                 <span className="ml-1 bg-orange-100 text-orange-800 rounded px-1.5 py-0.5 text-xs font-semibold">
                   {(result.noDescCount ?? 0).toLocaleString('de-DE')} Produkte
                 </span>
-              </Button>
-            )}
-
-            {result.reportBlob && (
-              <Button onClick={downloadReport} variant="outline" className="border-green-500 text-green-700 hover:bg-green-50 gap-2">
-                <Download size={16} />
-                Volt-Korrekturen prüfen
-                {result.stats.voltChanged > 0 && (
-                  <span className="ml-1 bg-green-100 text-green-800 rounded px-1.5 py-0.5 text-xs font-semibold">
-                    {result.stats.voltChanged.toLocaleString('de-DE')} Zeilen
-                  </span>
-                )}
               </Button>
             )}
 
