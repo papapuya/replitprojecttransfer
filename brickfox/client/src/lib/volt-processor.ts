@@ -735,6 +735,37 @@ function extractDimensions(text: string): DimResult {
   return none;
 }
 
+// Extraktion einzelner beschrifteter Abmessungen aus Fließtext
+// z.B. "Höhe 145mm", "Breite: 50 mm", "Länge ca. 200 mm"
+function extractSingleDimsFromText(text: string): DimResult {
+  const none = { laenge: null, breite: null, hoehe: null };
+  if (!text) return none;
+  const clean = text.replace(/<[^>]+>/g, ' ');
+  const result: DimResult = { laenge: null, breite: null, hoehe: null };
+
+  const NUM = /(\d+(?:[.,]\d+)?)/;
+  const SEP = /[:\s=]{0,5}(?:ca\.?\s*)?/;
+  const UNIT = /\s*(mm|cm)\b/;
+
+  const patterns: Array<[RegExp, keyof DimResult]> = [
+    [new RegExp(`(?:l[äa]nge|tiefe|länge|laenge|length)${SEP.source}${NUM.source}${UNIT.source}`, 'i'), 'laenge'],
+    [new RegExp(`(?:breite|width)${SEP.source}${NUM.source}${UNIT.source}`, 'i'), 'breite'],
+    [new RegExp(`(?:h[öo]he|height|depth)${SEP.source}${NUM.source}${UNIT.source}`, 'i'), 'hoehe'],
+  ];
+
+  for (const [rx, key] of patterns) {
+    for (const m of clean.matchAll(new RegExp(rx.source, 'gi'))) {
+      const unit = m[m.length - 1];
+      const val = m[m.length - 2];
+      const isCm = unit.toLowerCase() === 'cm';
+      const r = normalizeMm(val, isCm);
+      if (r && !result[key]) result[key] = r;
+    }
+  }
+
+  return result;
+}
+
 function extractDimensionsFromTable(html: string): DimResult {
   const none = { laenge: null, breite: null, hoehe: null };
   if (!html) return none;
@@ -1326,27 +1357,43 @@ export async function processVoltFile(
           if (c) { newRow[col] = fixed; if (!changed.includes(col)) changed.push(col); }
         }
       }
+      // Helper: merge single-dim results into dims (only fill gaps)
+      const mergeDims = (a: DimResult, b: DimResult): DimResult => ({
+        laenge: a.laenge ?? b.laenge,
+        breite: a.breite ?? b.breite,
+        hoehe:  a.hoehe  ?? b.hoehe,
+      });
+
       // Extract from names
       let dims: DimResult = { laenge: null, breite: null, hoehe: null };
       for (const col of NAME_COLS) {
         if (!headers.includes(col) || !row[col]) continue;
-        dims = extractDimensions(row[col]);
-        if (dims.laenge) break;
+        dims = mergeDims(dims, extractDimensions(row[col]));
+        dims = mergeDims(dims, extractSingleDimsFromText(row[col]));
+        if (dims.laenge && dims.breite && dims.hoehe) break;
       }
       // Extract from desc table
       if (!dims.laenge) {
         for (const col of DESC_COLS) {
           if (!headers.includes(col) || !row[col]) continue;
-          dims = extractDimensionsFromTable(row[col]);
+          dims = mergeDims(dims, extractDimensionsFromTable(row[col]));
           if (dims.laenge) break;
         }
       }
-      // Extract from desc text
+      // Extract from desc text (3-value format)
       if (!dims.laenge) {
         for (const col of DESC_COLS) {
           if (!headers.includes(col) || !row[col]) continue;
-          dims = extractDimensions(row[col]);
+          dims = mergeDims(dims, extractDimensions(row[col]));
           if (dims.laenge) break;
+        }
+      }
+      // Fallback: single labeled dims from desc text ("Höhe 145mm" etc.)
+      if (!dims.laenge || !dims.breite || !dims.hoehe) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          dims = mergeDims(dims, extractSingleDimsFromText(row[col]));
+          if (dims.laenge && dims.breite && dims.hoehe) break;
         }
       }
       const assign = (col: string, val: string | null) => {
