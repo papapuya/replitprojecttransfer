@@ -300,7 +300,15 @@ export function AppSidebar() {
                                   asChild
                                   className="text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
                                 >
-                                  <Link href={`/volt-fixer?projekt=${proj.id}`}>
+                                  <Link
+                                    href="/volt-fixer"
+                                    onClick={() => {
+                                      sessionStorage.setItem('brickfox-load-projekt', proj.id);
+                                      window.dispatchEvent(
+                                        new CustomEvent('brickfox-load-projekt', { detail: { id: proj.id } })
+                                      );
+                                    }}
+                                  >
                                     <FolderOpen className="w-3 h-3 shrink-0" />
                                     <span className="truncate">{proj.name}</span>
                                   </Link>
