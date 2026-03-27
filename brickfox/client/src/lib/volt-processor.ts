@@ -769,6 +769,9 @@ export async function processVoltFile(
   }
 
   const headers = parsed.meta.fields || [];
+  if (headers.length === 0) {
+    throw new Error('CSV hat keine erkennbaren Spaltenköpfe. Bitte prüfe das Dateiformat: Semikolon-getrennt, UTF-8 oder Windows-1252.');
+  }
   const rawData = parsed.data.filter(row =>
     Object.values(row).some(v => typeof v === 'string' && v.trim() !== '')
   );
