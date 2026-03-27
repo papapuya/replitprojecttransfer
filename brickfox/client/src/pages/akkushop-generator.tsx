@@ -669,7 +669,7 @@ export default function AkkushopGenerator() {
                 <Button
                   onClick={handleCategorize}
                   disabled={!file || isProcessing}
-                  className="bg-indigo-600 hover:bg-indigo-700"
+                  className="bg-violet-600 hover:bg-violet-700"
                 >
                   {isProcessing ? (
                     <>
@@ -725,7 +725,7 @@ export default function AkkushopGenerator() {
                   <Button
                     onClick={() => handleGenerateWithOptions()}
                     disabled={isProcessing || selectedRows.size === 0 || (!genOptions.description && !genOptions.bullets && !genOptions.attributes)}
-                    className="bg-indigo-600 hover:bg-indigo-700"
+                    className="bg-violet-600 hover:bg-violet-700"
                   >
                     {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
                     Generieren ({selectedRows.size})

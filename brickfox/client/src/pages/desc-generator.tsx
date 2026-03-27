@@ -94,18 +94,18 @@ function DescriptionView({
       <div className="flex items-center gap-2 mb-2">
         <h3 className="text-sm font-bold text-gray-700">{label}</h3>
         {changed && (
-          <Badge className="bg-purple-600 text-white text-xs gap-1">
+          <Badge className="bg-violet-600 text-white text-xs gap-1">
             <CheckCircle2 size={10} /> generiert
           </Badge>
         )}
         <div className="ml-auto flex rounded-lg border border-gray-200 overflow-hidden text-xs">
           <button
             onClick={() => setTab("preview")}
-            className={`px-3 py-1 font-medium transition-colors ${tab === "preview" ? "bg-purple-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+            className={`px-3 py-1 font-medium transition-colors ${tab === "preview" ? "bg-violet-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
           >Fließtext</button>
           <button
             onClick={() => setTab("source")}
-            className={`px-3 py-1 font-medium transition-colors border-l border-gray-200 ${tab === "source" ? "bg-purple-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+            className={`px-3 py-1 font-medium transition-colors border-l border-gray-200 ${tab === "source" ? "bg-violet-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
           >HTML</button>
         </div>
       </div>
@@ -422,7 +422,7 @@ export default function DescGenerator() {
           <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileSelect} />
 
           {file && !processing && (
-            <Button className="mt-4 w-full gap-2 bg-purple-600 hover:bg-purple-700" onClick={handleProcess}>
+            <Button className="mt-4 w-full gap-2 bg-violet-600 hover:bg-violet-700" onClick={handleProcess}>
               <Sparkles className="h-4 w-4" />
               Beschreibungen generieren
             </Button>
@@ -474,7 +474,7 @@ export default function DescGenerator() {
                 <span className="font-semibold text-lg">Fertig!</span>
               </div>
               {csvBlob && (
-                <Button onClick={handleExport} className="gap-2 bg-purple-600 hover:bg-purple-700">
+                <Button onClick={handleExport} className="gap-2 bg-violet-600 hover:bg-violet-700">
                   <Download className="h-4 w-4" />
                   CSV exportieren
                 </Button>
@@ -515,7 +515,7 @@ export default function DescGenerator() {
                 onClick={() => { setShowOnlyChanged((v) => !v); setPage(0); }}
                 className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
                   showOnlyChanged
-                    ? "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
+                    ? "bg-violet-600 text-white border-purple-600 hover:bg-purple-700"
                     : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
                 }`}
               >

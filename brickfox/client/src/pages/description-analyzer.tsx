@@ -343,7 +343,7 @@ export default function DescriptionAnalyzer() {
               <Button 
                 onClick={runAnalysis}
                 disabled={isAnalyzing}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-violet-600 hover:bg-violet-700"
               >
                 <Search className="h-4 w-4 mr-2" />
                 {isAnalyzing ? 'Analysiere...' : 'Analyse starten'}
@@ -425,7 +425,7 @@ export default function DescriptionAnalyzer() {
                     <Download className="h-4 w-4 mr-2" />
                     Analyse-Report
                   </Button>
-                  <Button variant="default" size="sm" onClick={exportIncompleteToCSV} className="bg-indigo-600 hover:bg-indigo-700">
+                  <Button variant="default" size="sm" onClick={exportIncompleteToCSV} className="bg-violet-600 hover:bg-violet-700">
                     <Download className="h-4 w-4 mr-2" />
                     Unvollständige CSV
                   </Button>

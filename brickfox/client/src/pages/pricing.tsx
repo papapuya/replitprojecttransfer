@@ -92,7 +92,7 @@ export default function Pricing() {
               </p>
               <Button 
                 onClick={() => handleDemo('professional')}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-6 text-base"
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium py-6 text-base"
               >
                 Kostenlos starten
               </Button>
