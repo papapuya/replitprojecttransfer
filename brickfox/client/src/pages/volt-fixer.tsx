@@ -1279,8 +1279,8 @@ export default function VoltFixer() {
 
           {/* Beschreibungen synchronisieren */}
           {result.csvBlob && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-800">Beschreibungen synchronisieren</p>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Ersetzt falsche Werte (mAh, Wh, Watt, Gewicht) in der HTML-Beschreibung — nur falls ein Wert bereits vorhanden ist.
@@ -1290,8 +1290,8 @@ export default function VoltFixer() {
                 onClick={handleDescSync}
                 disabled={descSynced || !rawProcessorResult}
                 className={descSynced
-                  ? "bg-indigo-600 hover:bg-violet-600 text-white gap-2 shrink-0"
-                  : "bg-slate-900 hover:bg-slate-800 text-white gap-2 shrink-0"}
+                  ? "bg-violet-600 hover:bg-violet-700 text-white gap-2 shrink-0"
+                  : "bg-violet-600 hover:bg-violet-700 text-white gap-2 shrink-0"}
               >
                 {descSynced ? <CheckCircle size={16} /> : <PenLine size={16} />}
                 {descSynced
