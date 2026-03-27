@@ -722,7 +722,7 @@ export default function VoltFixer() {
         const savedRestoreEmoji = data.restoreEmoji !== undefined ? data.restoreEmoji : restoreEmoji;
         if (data.restoreEmoji !== undefined) setRestoreEmoji(data.restoreEmoji);
         setLoadingSaveId(null);
-        processLocally(file, savedRestoreEmoji);
+        processLocally(file, savedRestoreEmoji, true);
         return;
       }
 
@@ -762,7 +762,7 @@ export default function VoltFixer() {
   }, []);
 
   // Browser-seitige Verarbeitung (kein Upload, kein Server)
-  const processLocally = async (file: File, restoreEmojiOverride?: boolean) => {
+  const processLocally = async (file: File, restoreEmojiOverride?: boolean, autoSync?: boolean) => {
     setLoading(true);
     setError("");
     setResult(null);
@@ -775,8 +775,11 @@ export default function VoltFixer() {
         },
       });
 
+      // Beim Laden eines Projekts: Sync automatisch anwenden
+      const finalResult = autoSync ? applyDescriptionSync(processorResult) : null;
+
       setResult({
-        csvBlob: processorResult.csvBlob,
+        csvBlob: finalResult?.csvBlob ?? processorResult.csvBlob,
         noDescBlob: processorResult.noDescBlob,
         noDescFileName: processorResult.noDescFileName,
         noDescCount: processorResult.noDescCount,
@@ -785,15 +788,20 @@ export default function VoltFixer() {
         headers: processorResult.headers,
         fileName: processorResult.fileName,
         stats: processorResult.stats,
-        previewItems: processorResult.previewItems,
+        previewItems: finalResult?.previewItems ?? processorResult.previewItems,
         allChangedNames: processorResult.allChangedNames,
         allExtractedVolt: processorResult.allExtractedVolt,
         csvIssues: processorResult.csvIssues,
       });
 
       setRawProcessorResult(processorResult);
-      setDescSynced(false);
-      setDescSyncCount(0);
+      if (autoSync && finalResult) {
+        setDescSynced(true);
+        setDescSyncCount(finalResult.descSyncCount);
+      } else {
+        setDescSynced(false);
+        setDescSyncCount(0);
+      }
       setSelectedCols(new Set(processorResult.headers));
       setColPickerOpen(false);
       setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
