@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { processVoltFile } from "@/lib/volt-processor";
+import { processVoltFile, applyDescriptionSync, type VoltProcessorResult } from "@/lib/volt-processor";
 import Papa from "papaparse";
 
 const VOLT_COL        = "p_attributes[akku_v][de]";
@@ -572,6 +572,9 @@ export default function VoltFixer() {
   const [editingAttr, setEditingAttr] = useState<{ index: number; col: string; value: string } | null>(null);
   const [patchSaving, setPatchSaving] = useState(false);
   const [detailLocalData, setDetailLocalData] = useState<DetailData | null>(null);
+  const [rawProcessorResult, setRawProcessorResult] = useState<VoltProcessorResult | null>(null);
+  const [descSynced, setDescSynced] = useState(false);
+  const [descSyncCount, setDescSyncCount] = useState(0);
   const [selectedCols, setSelectedCols] = useState<Set<string>>(new Set());
   const [colPickerOpen, setColPickerOpen] = useState(false);
 
@@ -677,6 +680,9 @@ export default function VoltFixer() {
         csvIssues: processorResult.csvIssues,
       });
 
+      setRawProcessorResult(processorResult);
+      setDescSynced(false);
+      setDescSyncCount(0);
       setSelectedCols(new Set(processorResult.headers));
       setColPickerOpen(false);
       setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
@@ -737,6 +743,18 @@ export default function VoltFixer() {
       window.open(`/api/volt-fixer/download/${result.jobId}`, "_blank");
     }
   };
+
+  const handleDescSync = useCallback(() => {
+    if (!rawProcessorResult) return;
+    const syncResult = applyDescriptionSync(rawProcessorResult);
+    setResult(prev => prev ? {
+      ...prev,
+      csvBlob: syncResult.csvBlob,
+      previewItems: syncResult.previewItems,
+    } : prev);
+    setDescSynced(true);
+    setDescSyncCount(syncResult.descSyncCount);
+  }, [rawProcessorResult]);
 
   const downloadReport = () => {
     if (!result?.reportBlob || !result?.reportFileName) return;
@@ -1130,6 +1148,30 @@ export default function VoltFixer() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Beschreibungen korrigieren */}
+          {result.csvBlob && (
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-amber-900">Beschreibungen korrigieren</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Ersetzt falsche Werte (mAh, Wh, Watt, Gewicht) in der HTML-Beschreibung — nur falls ein Wert bereits vorhanden ist. Dezimalzahlen werden mit Komma geschrieben.
+                </p>
+              </div>
+              <Button
+                onClick={handleDescSync}
+                disabled={descSynced || !rawProcessorResult}
+                className={descSynced
+                  ? "bg-green-600 hover:bg-green-600 text-white gap-2 shrink-0"
+                  : "bg-amber-600 hover:bg-amber-700 text-white gap-2 shrink-0"}
+              >
+                {descSynced ? <CheckCircle size={16} /> : <PenLine size={16} />}
+                {descSynced
+                  ? `Fertig — ${descSyncCount} Beschreibung${descSyncCount !== 1 ? 'en' : ''} aktualisiert`
+                  : 'Beschreibungen korrigieren'}
+              </Button>
             </div>
           )}
 

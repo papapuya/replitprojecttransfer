@@ -35,6 +35,16 @@ export interface VoltProcessorResult {
   noDescCount: number;
   reportBlob: Blob;
   reportFileName: string;
+  correctedRows: Record<string, string>[];
+  originalRows: Record<string, string>[];
+  changedColsPerRow: string[][];
+  finalHeaders: string[];
+}
+
+export interface DescSyncResult {
+  csvBlob: Blob;
+  previewItems: PreviewItem[];
+  descSyncCount: number;
 }
 
 export interface PreviewItem {
@@ -376,6 +386,83 @@ function syncTableValuesFromDe(deHtml: string, nlHtml: string): { result: string
     return newRow;
   });
   return { result, changed };
+}
+
+// ─── Dezimalzahl auf deutsches Format (Komma) bringen ────────────────────────
+// "3.7" → "3,7", "5.0" → "5", "5" → "5", "10.4" → "10,4"
+function toGermanDecimal(val: string): string {
+  const n = parseFloat(val);
+  if (isNaN(n)) return val;
+  if (n % 1 === 0) return n.toFixed(0);
+  return val.replace('.', ',');
+}
+
+// ─── Generischer HTML-Sync: ersetzt jeden Zahlwert + Einheit ────────────────
+// der nicht mit newValDot übereinstimmt (Vergleich normalisiert auf Punkt)
+function syncNumericAttrInHtml(
+  html: string,
+  newValDot: string,
+  numRxStr: string,
+  unitRxStr: string,
+  protectedLabelRx?: RegExp
+): { result: string; changed: boolean } {
+  if (!html || !newValDot) return { result: html, changed: false };
+  const newGerman = toGermanDecimal(newValDot);
+  const newNorm = parseFloat(newValDot);
+  let changed = false;
+
+  const tagOrNumRx = new RegExp(`(<[^>]*>)|\\b(${numRxStr})\\s*(${unitRxStr})`, 'gi');
+
+  const replaceInSegment = (s: string): string =>
+    s.replace(tagOrNumRx, (m, tag, num, unit) => {
+      if (tag !== undefined) return tag;
+      if (!num || !unit) return m;
+      const numNorm = parseFloat(num.replace(',', '.'));
+      if (isNaN(numNorm) || Math.abs(numNorm - newNorm) < 0.0001) return m;
+      changed = true;
+      return newGerman + ' ' + unit;
+    });
+
+  // Pass 1: innerhalb von Tabellen (Zeile für Zeile, optional geschützte Labels überspringen)
+  let result = html.replace(/(<table[^>]*>[\s\S]*?<\/table>)/gi, (tableBlock) =>
+    tableBlock.replace(/(<tr\b[^>]*>[\s\S]*?<\/tr>)/gi, (trBlock) => {
+      if (protectedLabelRx) {
+        const labelCell = trBlock.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
+        if (labelCell && protectedLabelRx.test(labelCell[1].replace(/<[^>]+>/g, ''))) return trBlock;
+      }
+      return replaceInSegment(trBlock);
+    })
+  );
+
+  // Pass 2: Fließtext außerhalb von Tabellen
+  const tableOrTagOrNumRx = new RegExp(
+    `(<table[^>]*>[\\s\\S]*?<\\/table>)|(<[^>]*>)|\\b(${numRxStr})\\s*(${unitRxStr})`,
+    'gi'
+  );
+  result = result.replace(tableOrTagOrNumRx, (m, table, tag, num, unit) => {
+    if (table !== undefined) return table;
+    if (tag !== undefined) return tag;
+    if (!num || !unit) return m;
+    const numNorm = parseFloat(num.replace(',', '.'));
+    if (isNaN(numNorm) || Math.abs(numNorm - newNorm) < 0.0001) return m;
+    changed = true;
+    return newGerman + ' ' + unit;
+  });
+
+  return { result, changed };
+}
+
+function syncMahInHtml(html: string, newMah: string) {
+  return syncNumericAttrInHtml(html, newMah, '\\d{3,5}(?:[.,]\\d+)?', 'mAh\\b');
+}
+function syncWhInHtml(html: string, newWh: string) {
+  return syncNumericAttrInHtml(html, newWh, '\\d+(?:[.,]\\d+)?', 'Wh\\b');
+}
+function syncWattInHtml(html: string, newWatt: string) {
+  return syncNumericAttrInHtml(html, newWatt, '\\d+(?:[.,]\\d+)?', 'W(?:att)?(?!h)(?!\\w)');
+}
+function syncGewichtInHtml(html: string, newGewicht: string) {
+  return syncNumericAttrInHtml(html, newGewicht, '\\d+(?:[.,]\\d+)?', '(?:gramm?|gr|g)(?![a-zA-Z0-9])');
 }
 
 function hasDreiSpannung(html: string): boolean {
@@ -1781,5 +1868,102 @@ export async function processVoltFile(
     noDescCount: rowsWithoutDesc.length,
     reportBlob,
     reportFileName,
+    correctedRows: fixedRows,
+    originalRows: rows,
+    changedColsPerRow: changedCols,
+    finalHeaders,
   };
+}
+
+// ─── Beschreibungs-Sync: korrigierte Attributwerte in die HTML-Beschreibung ──
+// Wird als separater Schritt nach Nutzer-Prüfung ausgeführt.
+// Ersetzt Werte NUR wenn sie bereits in der Beschreibung vorhanden sind.
+// Dezimaltrennzeichen in der HTML: Komma (z.B. "3,7 Wh"); ganze Zahlen bleiben ganz.
+export function applyDescriptionSync(result: VoltProcessorResult): DescSyncResult {
+  const { correctedRows, finalHeaders } = result;
+  const deCol = 'p_description[de]';
+  const nlCol = 'p_description[nl]';
+
+  const toPlainText = (html: string, max = 120): string => {
+    if (!html) return '';
+    const plain = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+    return plain.length > max ? plain.slice(0, max) + '…' : plain;
+  };
+
+  // Tiefe Kopie der Zeilen
+  const rows = correctedRows.map(r => ({ ...r }));
+  let descSyncCount = 0;
+
+  // Kopie der previewItems
+  const previewItems: PreviewItem[] = result.previewItems.map(p => ({ ...p, changed: [...p.changed] }));
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const html = (row[deCol] ?? '').trim();
+    if (!html) continue;
+
+    let syncedHtml = html;
+    let descChanged = false;
+
+    // mAh
+    if (row[MAH_COL]) {
+      const { result: r, changed: c } = syncMahInHtml(syncedHtml, row[MAH_COL]);
+      if (c) { syncedHtml = r; descChanged = true; }
+    }
+    // Wh
+    if (row[WH_COL]) {
+      const { result: r, changed: c } = syncWhInHtml(syncedHtml, row[WH_COL]);
+      if (c) { syncedHtml = r; descChanged = true; }
+    }
+    // Watt
+    if (row[WATT_COL]) {
+      const { result: r, changed: c } = syncWattInHtml(syncedHtml, row[WATT_COL]);
+      if (c) { syncedHtml = r; descChanged = true; }
+    }
+    // Gewicht
+    if (row[GEWICHT_COL]) {
+      const { result: r, changed: c } = syncGewichtInHtml(syncedHtml, row[GEWICHT_COL]);
+      if (c) { syncedHtml = r; descChanged = true; }
+    }
+
+    if (descChanged) {
+      row[deCol] = syncedHtml;
+      descSyncCount++;
+
+      // NL-Tabellenwerte aus DE synchronisieren
+      if (row[nlCol]) {
+        const { result: nlResult } = syncTableValuesFromDe(syncedHtml, row[nlCol]);
+        row[nlCol] = nlResult;
+      }
+
+      // PreviewItem aktualisieren
+      const pi = previewItems[i];
+      if (pi) {
+        pi.descDEFull = syncedHtml;
+        pi.descDE = toPlainText(syncedHtml);
+        pi.descDEChanged = true;
+        if (!pi.changed.includes(deCol)) pi.changed.push(deCol);
+        if (row[nlCol]) {
+          pi.descNLFull = row[nlCol];
+          pi.descNL = toPlainText(row[nlCol]);
+        }
+      }
+    }
+  }
+
+  // CSV-Blob neu erzeugen
+  const csvRows = rows.map(row => {
+    const r = { ...row };
+    for (const key of Object.keys(r)) {
+      if (r[key]) r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+    }
+    return r;
+  });
+  const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
+  const hasDescCol = finalHeaders.some(h => DESC_COLS.includes(h));
+  const rowsWithDesc    = hasDescCol ? csvRowsClean.filter(row => DESC_COLS.some(c => (row[c] ?? '').trim())) : csvRowsClean;
+  const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders });
+  const csvBlob = new Blob(['\uFEFF' + csvOut], { type: 'text/csv;charset=utf-8' });
+
+  return { csvBlob, previewItems, descSyncCount };
 }
