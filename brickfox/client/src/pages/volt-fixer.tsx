@@ -209,19 +209,23 @@ const ATTR_SPECS: Array<[string, string]> = [
   [INPUT_VOLT_COL,  'V(?:olt|AC|DC)?(?!\\w)'],
   [OUTPUT_VOLT_COL, 'V(?:olt|AC|DC)?(?!\\w)'],
   [NENN_VOLT_COL,   'V(?:olt)?(?!\\w)'],
-  [DURCHM_COL,      'mm'],
-  [BREITE_COL,      'mm'],
-  [HOEHE_COL,       'mm'],
-  [LAENGE_COL,      'mm'],
+];
+
+const DIM_SPECS: Array<[string, string]> = [
+  [DURCHM_COL, 'mm'],
+  [BREITE_COL, 'mm'],
+  [HOEHE_COL,  'mm'],
+  [LAENGE_COL, 'mm'],
 ];
 
 function buildHighlightPatterns(
   changed: string[],
   row: Record<string, string>,
   original: Record<string, string>
-): { changedPats: RegExp[]; keptPats: RegExp[] } {
+): { changedPats: RegExp[]; keptPats: RegExp[]; dimPats: RegExp[] } {
   const changedPats: RegExp[] = [];
   const keptPats: RegExp[] = [];
+  const dimPats: RegExp[] = [];
   for (const [col, unit] of ATTR_SPECS) {
     const val = (row[col] || original[col] || '').trim();
     if (!val) continue;
@@ -231,13 +235,20 @@ function buildHighlightPatterns(
       (changed.includes(col) ? changedPats : keptPats).push(rx);
     } catch (_) { /* noop */ }
   }
-  return { changedPats, keptPats };
+  for (const [col, unit] of DIM_SPECS) {
+    const val = (row[col] || original[col] || '').trim();
+    if (!val) continue;
+    const v = val.replace(/\./g, '[.,]');
+    try { dimPats.push(new RegExp(`${v}\\s*${unit}`, 'gi')); } catch (_) { /* noop */ }
+  }
+  return { changedPats, keptPats, dimPats };
 }
 
 const MARK_CHANGED = 'background:rgba(234,179,8,0.40);border-radius:3px;padding:0 2px;font-weight:600;';
 const MARK_KEPT    = 'background:rgba(96,165,250,0.30);border-radius:3px;padding:0 2px;';
+const MARK_DIM     = 'background:rgba(249,115,22,0.30);border-radius:3px;padding:0 2px;';
 
-function applyHighlightPatterns(text: string, changedPats: RegExp[], keptPats: RegExp[]): string {
+function applyHighlightPatterns(text: string, changedPats: RegExp[], keptPats: RegExp[], dimPats: RegExp[]): string {
   let result = text;
   for (const rx of changedPats) {
     result = result.replace(rx, (m: string) => `<mark style="${MARK_CHANGED}">${m}</mark>`);
@@ -247,19 +258,24 @@ function applyHighlightPatterns(text: string, changedPats: RegExp[], keptPats: R
       m.startsWith('<mark') ? m : `<mark style="${MARK_KEPT}">${m}</mark>`
     );
   }
+  for (const rx of dimPats) {
+    result = result.replace(rx, (m: string) =>
+      m.startsWith('<mark') ? m : `<mark style="${MARK_DIM}">${m}</mark>`
+    );
+  }
   return result;
 }
 
-function highlightInHtml(html: string, changedPats: RegExp[], keptPats: RegExp[]): string {
-  if (!html || (changedPats.length === 0 && keptPats.length === 0)) return html;
+function highlightInHtml(html: string, changedPats: RegExp[], keptPats: RegExp[], dimPats: RegExp[]): string {
+  if (!html || (changedPats.length === 0 && keptPats.length === 0 && dimPats.length === 0)) return html;
   return html.replace(/>([^<]+)</g, (_, text) =>
-    '>' + applyHighlightPatterns(text, changedPats, keptPats) + '<'
+    '>' + applyHighlightPatterns(text, changedPats, keptPats, dimPats) + '<'
   );
 }
 
-function highlightInText(text: string, changedPats: RegExp[], keptPats: RegExp[]): string {
-  if (!text || (changedPats.length === 0 && keptPats.length === 0)) return text;
-  return applyHighlightPatterns(text, changedPats, keptPats);
+function highlightInText(text: string, changedPats: RegExp[], keptPats: RegExp[], dimPats: RegExp[]): string {
+  if (!text || (changedPats.length === 0 && keptPats.length === 0 && dimPats.length === 0)) return text;
+  return applyHighlightPatterns(text, changedPats, keptPats, dimPats);
 }
 
 // Detail-Modal
