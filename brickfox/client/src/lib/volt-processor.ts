@@ -1720,10 +1720,10 @@ export async function processVoltFile(
     ? csvRowsClean.filter(row => !hasDesc(row))
     : [];
 
-  const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders });
+  const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders, quotes: true, newline: '\r\n' });
   const csvBlob = new Blob(['\uFEFF' + csvOut], { type: 'text/csv;charset=utf-8' });
 
-  const noDescOut  = Papa.unparse(rowsWithoutDesc, { delimiter: ';', columns: finalHeaders });
+  const noDescOut  = Papa.unparse(rowsWithoutDesc, { delimiter: ';', columns: finalHeaders, quotes: true, newline: '\r\n' });
   const noDescBlob = new Blob(['\uFEFF' + noDescOut], { type: 'text/csv;charset=utf-8' });
 
   // Debug: Blob-Inhalt direkt auslesen und verifizieren
@@ -2017,7 +2017,7 @@ export function applyDescriptionSync(result: VoltProcessorResult): DescSyncResul
   const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
   const hasDescCol = finalHeaders.some(h => DESC_COLS.includes(h));
   const rowsWithDesc    = hasDescCol ? csvRowsClean.filter(row => DESC_COLS.some(c => (row[c] ?? '').trim())) : csvRowsClean;
-  const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders });
+  const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders, quotes: true, newline: '\r\n' });
   const csvBlob = new Blob(['\uFEFF' + csvOut], { type: 'text/csv;charset=utf-8' });
 
   return { csvBlob, previewItems, descSyncCount };
