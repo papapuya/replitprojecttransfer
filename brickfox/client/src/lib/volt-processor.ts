@@ -404,7 +404,8 @@ function syncNumericAttrInHtml(
   newValDot: string,
   numRxStr: string,
   unitRxStr: string,
-  protectedLabelRx?: RegExp
+  protectedLabelRx?: RegExp,
+  outUnit?: string
 ): { result: string; changed: boolean } {
   if (!html || !newValDot) return { result: html, changed: false };
   const newGerman = toGermanDecimal(newValDot);
@@ -418,9 +419,13 @@ function syncNumericAttrInHtml(
       if (tag !== undefined) return tag;
       if (!num || !unit) return m;
       const numNorm = parseFloat(num.replace(',', '.'));
-      if (isNaN(numNorm) || Math.abs(numNorm - newNorm) < 0.0001) return m;
+      if (isNaN(numNorm)) return m;
+      const numMatches = Math.abs(numNorm - newNorm) < 0.0001;
+      const resolvedUnit = outUnit ?? unit;
+      const unitMatches = !outUnit || unit.toLowerCase() === resolvedUnit.toLowerCase();
+      if (numMatches && unitMatches) return m;
       changed = true;
-      return newGerman + ' ' + unit;
+      return newGerman + ' ' + resolvedUnit;
     });
 
   // Pass 1: innerhalb von Tabellen (Zeile für Zeile, optional geschützte Labels überspringen)
@@ -444,9 +449,13 @@ function syncNumericAttrInHtml(
     if (tag !== undefined) return tag;
     if (!num || !unit) return m;
     const numNorm = parseFloat(num.replace(',', '.'));
-    if (isNaN(numNorm) || Math.abs(numNorm - newNorm) < 0.0001) return m;
+    if (isNaN(numNorm)) return m;
+    const numMatches = Math.abs(numNorm - newNorm) < 0.0001;
+    const resolvedUnit = outUnit ?? unit;
+    const unitMatches = !outUnit || unit.toLowerCase() === resolvedUnit.toLowerCase();
+    if (numMatches && unitMatches) return m;
     changed = true;
-    return newGerman + ' ' + unit;
+    return newGerman + ' ' + resolvedUnit;
   });
 
   return { result, changed };
@@ -462,7 +471,7 @@ function syncWattInHtml(html: string, newWatt: string) {
   return syncNumericAttrInHtml(html, newWatt, '\\d+(?:[.,]\\d+)?', 'W(?:att)?(?!h)(?!\\w)');
 }
 function syncGewichtInHtml(html: string, newGewicht: string) {
-  return syncNumericAttrInHtml(html, newGewicht, '\\d+(?:[.,]\\d+)?', '(?:gramm?|gr|g)(?![a-zA-Z0-9])');
+  return syncNumericAttrInHtml(html, newGewicht, '\\d+(?:[.,]\\d+)?', '(?:gramm?|gr|g)(?![a-zA-Z0-9])', undefined, 'g');
 }
 
 function hasDreiSpannung(html: string): boolean {
