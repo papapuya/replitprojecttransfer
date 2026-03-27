@@ -347,14 +347,14 @@ function DetailModal({
             const nameDeChanged = data.changed.includes("p_name[de]");
             const nameNlChanged = data.changed.includes("p_name[nl]");
 
-            const { changedPats, keptPats } = buildHighlightPatterns(data.changed, data.row, data.original);
-            const hasHL = changedPats.length > 0 || keptPats.length > 0;
-            const hlOrigDE  = highlightInHtml(origDE  || fixedDE, changedPats, keptPats);
-            const hlFixedDE = highlightInHtml(fixedDE, changedPats, keptPats);
-            const hlOrigNL  = highlightInHtml(origNL  || fixedNL, changedPats, keptPats);
-            const hlFixedNL = highlightInHtml(fixedNL, changedPats, keptPats);
-            const hlNameDE  = hasHL ? highlightInText(origNameDE, changedPats, keptPats) : '';
-            const hlNameNL  = hasHL ? highlightInText(origNameNL, changedPats, keptPats) : '';
+            const { changedPats, keptPats, dimPats } = buildHighlightPatterns(data.changed, data.row, data.original);
+            const hasHL = changedPats.length > 0 || keptPats.length > 0 || dimPats.length > 0;
+            const hlOrigDE  = highlightInHtml(origDE  || fixedDE, changedPats, keptPats, dimPats);
+            const hlFixedDE = highlightInHtml(fixedDE, changedPats, keptPats, dimPats);
+            const hlOrigNL  = highlightInHtml(origNL  || fixedNL, changedPats, keptPats, dimPats);
+            const hlFixedNL = highlightInHtml(fixedNL, changedPats, keptPats, dimPats);
+            const hlNameDE  = hasHL ? highlightInText(origNameDE, changedPats, keptPats, dimPats) : '';
+            const hlNameNL  = hasHL ? highlightInText(origNameNL, changedPats, keptPats, dimPats) : '';
 
             return (
               <>
@@ -369,6 +369,10 @@ function DetailModal({
                     <span className="flex items-center gap-1.5">
                       <mark style={{ background: 'rgba(96,165,250,0.30)', borderRadius: '3px', padding: '0 4px' }}>1200mAh</mark>
                       Wert übernommen
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <mark style={{ background: 'rgba(249,115,22,0.30)', borderRadius: '3px', padding: '0 4px' }}>44mm</mark>
+                      Abmessung
                     </span>
                   </div>
                 )}
