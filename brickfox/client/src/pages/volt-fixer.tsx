@@ -17,18 +17,20 @@ const DURCHM_COL      = "p_attributes[akku_durchmesser][de]";
 const BREITE_COL      = "p_attributes[breite][de]";
 const HOEHE_COL       = "p_attributes[hoehe][de]";
 const LAENGE_COL      = "p_attributes[akku_länge][de]";
+const GEWICHT_COL     = "p_attributes[tala_gewicht][de]";
 
 const ALL_ATTR_COLS = [
   VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
   INPUT_VOLT_COL, OUTPUT_VOLT_COL, NENN_VOLT_COL,
-  DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL,
+  DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
 ];
 
 const COL_TO_FIELD: Record<string, string> = {
   [MAH_COL]:    "mahNew",
   [WH_COL]:     "whNew",
   [WATT_COL]:   "wattNew",
-  [LEUCHT_COL]: "leuchtNew",
+  [LEUCHT_COL]:   "leuchtNew",
+  [GEWICHT_COL]:  "gewichtNew",
 };
 // Volt-Werte >= 1000 sind unrealistisch und werden nicht angezeigt
 const isUnrealisticVolt = (v: string) => { const n = Number(v.replace(',', '.')); return v !== '' && !isNaN(n) && n >= 1000; };
@@ -62,6 +64,8 @@ type PreviewItem = {
   hoeheNew?: string;
   laengeOrig?: string;
   laengeNew?: string;
+  gewichtOrig?: string;
+  gewichtNew?: string;
   nameDEOrig: string;
   nameDE: string;
   nameNLOrig: string;
@@ -213,6 +217,7 @@ const ATTR_SPECS: Array<[string, string]> = [
   [BREITE_COL,      '(?:mm\\b|[xX×*])'],
   [HOEHE_COL,       '(?:mm\\b|[xX×*])'],
   [LAENGE_COL,      '(?:mm\\b|[xX×*])'],
+  [GEWICHT_COL,     '(?:kg|gramm?|gr|g)(?![a-zA-Z])'],
 ];
 
 function buildHighlightPatterns(
@@ -468,6 +473,7 @@ function DetailModal({
                     { col: BREITE_COL,      label: 'Breite (mm)'          },
                     { col: HOEHE_COL,       label: 'Höhe (mm)'            },
                     { col: LAENGE_COL,      label: 'Länge (mm)'           },
+                    { col: GEWICHT_COL,     label: 'Gewicht (g)'          },
                   ].filter(a => data.headers.includes(a.col) && (data.original[a.col] || data.row[a.col]));
 
                   if (!attrDefs.length) return null;
@@ -1300,6 +1306,8 @@ export default function VoltFixer() {
                       <th className="px-3 py-2 text-left font-semibold text-yellow-700 whitespace-nowrap bg-yellow-50">Watt (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-sky-700 whitespace-nowrap bg-sky-50">Leuchtweite (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-sky-700 whitespace-nowrap bg-sky-50">Leuchtweite (nachher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-emerald-700 whitespace-nowrap bg-emerald-50">Gewicht g (vorher)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-emerald-700 whitespace-nowrap bg-emerald-50">Gewicht g (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Input Volt (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Input Volt (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Output Volt (vorher)</th>
@@ -1476,6 +1484,19 @@ export default function VoltFixer() {
                                 title="Klicken zum Bearbeiten">
                                 {item.changed.includes(LEUCHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-sky-500" />}
                                 <span className="font-mono text-xs">{item.leuchtNew || <span className="text-gray-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              </button>
+                            )}
+                          </td>
+                          {/* Gewicht vorher/nachher */}
+                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-emerald-50/40">{item.gewichtOrig || <span className="text-gray-300">—</span>}</td>
+                          <td className="px-1 py-1 font-mono text-xs bg-emerald-50/40">
+                            {editingAttr?.index === item.index && editingAttr?.col === GEWICHT_COL ? (
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-emerald-400 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-emerald-600 text-white rounded hover:bg-emerald-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button></div>
+                            ) : (
+                              <button onClick={() => setEditingAttr({ index: item.index, col: GEWICHT_COL, value: item.gewichtNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-emerald-100 transition-colors cursor-text text-left w-full ${item.changed.includes(GEWICHT_COL) ? "text-emerald-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(GEWICHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-emerald-500" />}
+                                <span className="font-mono text-xs">{item.gewichtNew || <span className="text-gray-300 font-normal">—</span>}</span>
                                 <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
                               </button>
                             )}

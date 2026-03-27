@@ -65,6 +65,8 @@ export interface PreviewItem {
   hoeheNew: string;
   laengeOrig: string;
   laengeNew: string;
+  gewichtOrig: string;
+  gewichtNew: string;
   nameDEOrig: string;
   nameDE: string;
   nameNLOrig: string;
@@ -112,6 +114,7 @@ const DURCHM_COL       = 'p_attributes[akku_durchmesser][de]';
 const BREITE_COL       = 'p_attributes[breite][de]';
 const HOEHE_COL        = 'p_attributes[hoehe][de]';
 const LAENGE_COL       = 'p_attributes[akku_länge][de]';
+const GEWICHT_COL      = 'p_attributes[tala_gewicht][de]';
 const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
 const NAME_COLS = ['p_name[de]', 'p_name[nl]'];
 
@@ -716,6 +719,69 @@ function extractDurchmesserFromTable(html: string): string | null {
   return null;
 }
 
+// ─── Gewicht (immer in Gramm) ─────────────────────────────────────────────────
+
+function normalizeGramm(numStr: string, unit: string): string | null {
+  const num = parseFloat(numStr.replace(',', '.'));
+  if (isNaN(num) || num <= 0) return null;
+  const g = /^kg$/i.test(unit.trim()) ? Math.round(num * 1000) : Math.round(num);
+  if (g <= 0 || g > 500000) return null;
+  return String(g);
+}
+
+function fixGewicht(val: string): { fixed: string; changed: boolean } {
+  const trimmed = val.trim();
+  if (!trimmed) return { fixed: trimmed, changed: false };
+  // Schon eine reine Zahl → nichts zu tun
+  if (/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
+  // Zahl + Einheit
+  const m = trimmed.match(/^(\d+(?:[.,]\d+)?)\s*(kg|gramm?|gr|g)$/i);
+  if (m) {
+    const fixed = normalizeGramm(m[1], m[2]);
+    if (fixed && fixed !== trimmed) return { fixed, changed: true };
+  }
+  return { fixed: trimmed, changed: false };
+}
+
+function extractGewichtFromText(text: string): string | null {
+  if (!text) return null;
+  const clean = text.replace(/<[^>]+>/g, ' ');
+  // Label vor Wert
+  const patterns: RegExp[] = [
+    /gewicht[^\d]{0,20}(\d+(?:[.,]\d+)?)\s*(kg|gramm?|gr|g)(?![a-zA-Z])/gi,
+    /weight[^\d]{0,20}(\d+(?:[.,]\d+)?)\s*(kg|gramm?|gr|g)(?![a-zA-Z])/gi,
+    // Wert vor Label
+    /(\d+(?:[.,]\d+)?)\s*(kg|gramm?|gr|g)(?![a-zA-Z])[^\d]{0,20}gewicht/gi,
+  ];
+  for (const pat of patterns) {
+    for (const m of clean.matchAll(pat)) {
+      const r = normalizeGramm(m[1], m[2]);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
+function extractGewichtFromTable(html: string): string | null {
+  if (!html) return null;
+  for (const trMatch of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [...trMatch[1].matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const label = cells[0][1].replace(/<[^>]+>/g, '').trim();
+    if (!/gewicht|weight/i.test(label)) continue;
+    const valueText = cells[1][1].replace(/<[^>]+>/g, '').trim();
+    const m = valueText.match(/^(\d+(?:[.,]\d+)?)\s*(kg|gramm?|gr|g)?$/i);
+    if (m) {
+      const unit = m[2] ?? 'g';
+      const r = normalizeGramm(m[1], unit);
+      if (r) return r;
+    }
+    const found = extractGewichtFromText(valueText + ' Gewicht');
+    if (found) return found;
+  }
+  return null;
+}
+
 // ─── Abmessungen (L × B × H) ─────────────────────────────────────────────────
 
 interface DimResult { laenge: string | null; breite: string | null; hoehe: string | null }
@@ -1213,6 +1279,39 @@ export async function processVoltFile(
       }
     }
 
+    // ─── Gewicht (immer in Gramm) ─────────────────────────────────────────────
+    if (headers.includes(GEWICHT_COL)) {
+      const raw = (newRow[GEWICHT_COL] ?? '').trim();
+      if (raw) {
+        const { fixed, changed: c } = fixGewicht(raw);
+        if (c) { newRow[GEWICHT_COL] = fixed; if (!changed.includes(GEWICHT_COL)) changed.push(GEWICHT_COL); }
+      }
+      let extracted: string | null = null;
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col) || !row[col]) continue;
+        extracted = extractGewichtFromText(row[col]);
+        if (extracted) break;
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractGewichtFromTable(row[col]);
+          if (extracted) break;
+        }
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractGewichtFromText(row[col]);
+          if (extracted) break;
+        }
+      }
+      if (extracted && extracted !== (newRow[GEWICHT_COL] ?? '').trim()) {
+        newRow[GEWICHT_COL] = extracted;
+        if (!changed.includes(GEWICHT_COL)) changed.push(GEWICHT_COL);
+      }
+    }
+
     // ─── Input Volt ───────────────────────────────────────────────────────────
     if (headers.includes(INPUT_VOLT_COL)) {
       const raw = (newRow[INPUT_VOLT_COL] ?? '').trim();
@@ -1462,7 +1561,7 @@ export async function processVoltFile(
   const ATTR_COLS_ORDERED = [
     VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
     INPUT_VOLT_COL, OUTPUT_VOLT_COL, NENN_VOLT_COL,
-    DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL,
+    DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
   ];
   const missingAttrCols = ATTR_COLS_ORDERED.filter(col =>
     !headers.includes(col) &&
@@ -1623,6 +1722,8 @@ export async function processVoltFile(
       hoeheNew: row[HOEHE_COL] ?? '',
       laengeOrig: (orig[LAENGE_COL] ?? '').trim(),
       laengeNew: row[LAENGE_COL] ?? '',
+      gewichtOrig: (orig[GEWICHT_COL] ?? '').trim(),
+      gewichtNew: row[GEWICHT_COL] ?? '',
       nameDEOrig: orig['p_name[de]'] ?? '',
       nameDE: row['p_name[de]'] ?? '',
       nameNLOrig: orig['p_name[nl]'] ?? '',
