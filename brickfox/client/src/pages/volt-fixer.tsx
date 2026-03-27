@@ -48,6 +48,20 @@ type PreviewItem = {
   wattNew?: string;
   leuchtOrig?: string;
   leuchtNew?: string;
+  inputVoltOrig?: string;
+  inputVoltNew?: string;
+  outputVoltOrig?: string;
+  outputVoltNew?: string;
+  nennVoltOrig?: string;
+  nennVoltNew?: string;
+  durchmOrig?: string;
+  durchmNew?: string;
+  breiteOrig?: string;
+  breiteNew?: string;
+  hoeheOrig?: string;
+  hoeheNew?: string;
+  laengeOrig?: string;
+  laengeNew?: string;
   nameDEOrig: string;
   nameDE: string;
   nameNLOrig: string;
@@ -661,11 +675,18 @@ export default function VoltFixer() {
         const row: Record<string, string> = {
           'p_item_number': item.itemNr,
           'p_id': item.pId,
-          [VOLT_COL]:   item.voltNew,
-          [MAH_COL]:    item.mahNew   ?? '',
-          [WH_COL]:     item.whNew    ?? '',
-          [WATT_COL]:   item.wattNew  ?? '',
-          [LEUCHT_COL]: item.leuchtNew ?? '',
+          [VOLT_COL]:        item.voltNew,
+          [MAH_COL]:         item.mahNew         ?? '',
+          [WH_COL]:          item.whNew          ?? '',
+          [WATT_COL]:        item.wattNew        ?? '',
+          [LEUCHT_COL]:      item.leuchtNew      ?? '',
+          [INPUT_VOLT_COL]:  item.inputVoltNew   ?? '',
+          [OUTPUT_VOLT_COL]: item.outputVoltNew  ?? '',
+          [NENN_VOLT_COL]:   item.nennVoltNew    ?? '',
+          [DURCHM_COL]:      item.durchmNew      ?? '',
+          [BREITE_COL]:      item.breiteNew      ?? '',
+          [HOEHE_COL]:       item.hoeheNew       ?? '',
+          [LAENGE_COL]:      item.laengeNew      ?? '',
           'p_name[de]': item.nameDE,
           'p_name[nl]': item.nameNL,
           'p_description[de]': item.descDEOrig ?? '',
@@ -674,11 +695,18 @@ export default function VoltFixer() {
         const original: Record<string, string> = {
           'p_item_number': item.itemNr,
           'p_id': item.pId,
-          [VOLT_COL]:   item.voltOrig,
-          [MAH_COL]:    item.mahOrig   ?? '',
-          [WH_COL]:     item.whOrig    ?? '',
-          [WATT_COL]:   item.wattOrig  ?? '',
-          [LEUCHT_COL]: item.leuchtOrig ?? '',
+          [VOLT_COL]:        item.voltOrig,
+          [MAH_COL]:         item.mahOrig         ?? '',
+          [WH_COL]:          item.whOrig          ?? '',
+          [WATT_COL]:        item.wattOrig        ?? '',
+          [LEUCHT_COL]:      item.leuchtOrig      ?? '',
+          [INPUT_VOLT_COL]:  item.inputVoltOrig   ?? '',
+          [OUTPUT_VOLT_COL]: item.outputVoltOrig  ?? '',
+          [NENN_VOLT_COL]:   item.nennVoltOrig    ?? '',
+          [DURCHM_COL]:      item.durchmOrig      ?? '',
+          [BREITE_COL]:      item.breiteOrig      ?? '',
+          [HOEHE_COL]:       item.hoeheOrig       ?? '',
+          [LAENGE_COL]:      item.laengeOrig      ?? '',
           'p_name[de]': item.nameDEOrig,
           'p_name[nl]': item.nameNLOrig,
           'p_description[de]': item.descDEOrig ?? '',
