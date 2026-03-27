@@ -198,6 +198,56 @@ function DescriptionView({ html, changed, label, bg = "gray" }: { html: string; 
   );
 }
 
+// ── Highlight-Utilities ──────────────────────────────────────────────────────
+
+function buildHighlightPatterns(changed: string[], row: Record<string, string>): RegExp[] {
+  const patterns: RegExp[] = [];
+  const addPat = (val: string, unitRx: string) => {
+    if (!val) return;
+    const v = val.replace(/\./g, '[.,]');
+    try { patterns.push(new RegExp(`${v}\\s*${unitRx}`, 'gi')); } catch (_) { /* noop */ }
+  };
+  if (changed.includes(VOLT_COL))        addPat(row[VOLT_COL],        'V(?:olt|AC|DC)?(?!\\w)');
+  if (changed.includes(MAH_COL))         addPat(row[MAH_COL],         'm[Aa][Hh]');
+  if (changed.includes(WH_COL))          addPat(row[WH_COL],          'W[Hh]');
+  if (changed.includes(WATT_COL))        addPat(row[WATT_COL],        'W(?:att)?(?!h|\\w)');
+  if (changed.includes(LEUCHT_COL))      addPat(row[LEUCHT_COL],      'm(?!\\w)');
+  if (changed.includes(INPUT_VOLT_COL))  addPat(row[INPUT_VOLT_COL],  'V(?:olt|AC|DC)?(?!\\w)');
+  if (changed.includes(OUTPUT_VOLT_COL)) addPat(row[OUTPUT_VOLT_COL], 'V(?:olt|AC|DC)?(?!\\w)');
+  if (changed.includes(NENN_VOLT_COL))   addPat(row[NENN_VOLT_COL],   'V(?:olt)?(?!\\w)');
+  if (changed.includes(DURCHM_COL))      addPat(row[DURCHM_COL],      'mm');
+  if (changed.includes(BREITE_COL))      addPat(row[BREITE_COL],      'mm');
+  if (changed.includes(HOEHE_COL))       addPat(row[HOEHE_COL],       'mm');
+  if (changed.includes(LAENGE_COL))      addPat(row[LAENGE_COL],      'mm');
+  return patterns;
+}
+
+const MARK_STYLE = 'background:rgba(234,179,8,0.35);border-radius:3px;padding:0 2px;font-weight:600;';
+
+function highlightInHtml(html: string, patterns: RegExp[]): string {
+  if (!html || patterns.length === 0) return html;
+  return html.replace(/>([^<]+)</g, (_, text) => {
+    let result = text;
+    for (const rx of patterns) {
+      result = result.replace(rx, (m: string) =>
+        `<mark style="${MARK_STYLE}">${m}</mark>`
+      );
+    }
+    return '>' + result + '<';
+  });
+}
+
+function highlightInText(text: string, patterns: RegExp[]): string {
+  if (!text || patterns.length === 0) return text;
+  let result = text;
+  for (const rx of patterns) {
+    result = result.replace(rx, (m: string) =>
+      `<mark style="${MARK_STYLE}">${m}</mark>`
+    );
+  }
+  return result;
+}
+
 // Detail-Modal
 function DetailModal({
   jobId,
@@ -267,6 +317,14 @@ function DetailModal({
             const nameDeChanged = data.changed.includes("p_name[de]");
             const nameNlChanged = data.changed.includes("p_name[nl]");
 
+            const hlPatterns = buildHighlightPatterns(data.changed, data.row);
+            const hlOrigDE   = hlPatterns.length ? highlightInHtml(origDE  || fixedDE, hlPatterns) : (origDE || fixedDE);
+            const hlFixedDE  = hlPatterns.length ? highlightInHtml(fixedDE, hlPatterns) : fixedDE;
+            const hlOrigNL   = hlPatterns.length ? highlightInHtml(origNL  || fixedNL, hlPatterns) : (origNL || fixedNL);
+            const hlFixedNL  = hlPatterns.length ? highlightInHtml(fixedNL, hlPatterns) : fixedNL;
+            const hlNameDE   = hlPatterns.length ? highlightInText(origNameDE, hlPatterns) : '';
+            const hlNameNL   = hlPatterns.length ? highlightInText(origNameNL, hlPatterns) : '';
+
             return (
               <>
                 {/* ── 0. Produktnamen ── */}
@@ -288,6 +346,8 @@ function DetailModal({
                                 <p className="text-xs text-gray-400 mt-1">Korrigiert</p>
                                 <p className="text-sm font-semibold text-indigo-700">{fixedNameDE}</p>
                               </>
+                            ) : hlNameDE ? (
+                              <p className="text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: hlNameDE }} />
                             ) : (
                               <p className="text-sm text-gray-800">{origNameDE}</p>
                             )}
@@ -308,6 +368,8 @@ function DetailModal({
                                 <p className="text-xs text-gray-400 mt-1">Korrigiert</p>
                                 <p className="text-sm font-semibold text-indigo-700">{fixedNameNL}</p>
                               </>
+                            ) : hlNameNL ? (
+                              <p className="text-sm text-gray-800" dangerouslySetInnerHTML={{ __html: hlNameNL }} />
                             ) : (
                               <p className="text-sm text-gray-800">{origNameNL}</p>
                             )}
@@ -329,11 +391,11 @@ function DetailModal({
                 {(origDE || fixedDE) && (
                   deChanged ? (
                     <>
-                      <DescriptionView html={origDE} label="Original Text Deutsch" bg="gray" />
-                      <DescriptionView html={fixedDE} label="Geänderter Text Deutsch" changed bg="indigo" />
+                      <DescriptionView html={hlOrigDE} label="Original Text Deutsch" bg="gray" />
+                      <DescriptionView html={hlFixedDE} label="Geänderter Text Deutsch" changed bg="indigo" />
                     </>
                   ) : (
-                    <DescriptionView html={fixedDE || origDE} label="Produktbeschreibung Deutsch" bg="gray" />
+                    <DescriptionView html={hlOrigDE} label="Produktbeschreibung Deutsch" bg="gray" />
                   )
                 )}
 
@@ -341,11 +403,11 @@ function DetailModal({
                 {(origNL || fixedNL) && (
                   nlChanged ? (
                     <>
-                      <DescriptionView html={origNL} label="Original Text Niederländisch" bg="gray" />
-                      <DescriptionView html={fixedNL} label="Geänderter Text Niederländisch" changed bg="indigo" />
+                      <DescriptionView html={hlOrigNL} label="Original Text Niederländisch" bg="gray" />
+                      <DescriptionView html={hlFixedNL} label="Geänderter Text Niederländisch" changed bg="indigo" />
                     </>
                   ) : (
-                    <DescriptionView html={fixedNL || origNL} label="Produktbeschreibung Niederländisch" bg="gray" />
+                    <DescriptionView html={hlOrigNL} label="Produktbeschreibung Niederländisch" bg="gray" />
                   )
                 )}
 
