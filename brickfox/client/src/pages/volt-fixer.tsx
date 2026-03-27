@@ -1208,19 +1208,14 @@ export default function VoltFixer() {
 
           {/* Spaltenauswahl */}
           {result.csvBlob && result.headers.length > 0 && (
-            <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <div className="inline-block border border-slate-200 rounded-xl overflow-hidden">
               <button
-                className="w-full flex items-center justify-between px-4 py-3 bg-violet-600 hover:bg-violet-700 transition-colors text-sm font-medium text-white"
+                className="flex items-center gap-2 px-3 py-2 bg-violet-600 hover:bg-violet-700 transition-colors text-sm font-medium text-white rounded-t-xl"
                 onClick={() => setColPickerOpen(o => !o)}
               >
-                <span className="flex items-center gap-2">
-                  <Columns size={14} className="text-slate-400" />
-                  Spalten für Export auswählen
-                  <span className="text-xs text-slate-400 font-normal">
-                    {selectedCols.size} von {result.headers.length} Spalten
-                  </span>
-                </span>
-                {colPickerOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                <Columns size={14} />
+                Spalten für Export auswählen
+                {colPickerOpen ? <ChevronUp size={14} className="ml-1" /> : <ChevronDown size={14} className="ml-1" />}
               </button>
 
               {colPickerOpen && (
