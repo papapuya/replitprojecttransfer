@@ -1236,7 +1236,7 @@ export default function VoltFixer() {
                 className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
               >
                 {descSynced ? <CheckCircle size={15} /> : <PenLine size={15} />}
-                {descSynced ? `Fertig — ${descSyncCount} aktualisiert` : 'Synchronisieren'}
+                {descSynced ? (descSyncCount > 0 ? `Fertig — ${descSyncCount} aktualisiert` : 'Fertig') : 'Synchronisieren'}
               </Button>
 
               {/* CSV herunterladen */}
