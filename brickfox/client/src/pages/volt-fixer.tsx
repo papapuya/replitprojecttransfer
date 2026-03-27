@@ -154,8 +154,8 @@ function CopyButton({ text, label = "HTML kopieren" }: { text: string; label?: s
       onClick={copy}
       className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
         copied
-          ? "bg-green-50 border-green-300 text-green-700"
-          : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-indigo-600 hover:border-indigo-300"
+          ? "bg-indigo-50 border-indigo-300 text-indigo-700"
+          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
       }`}
     >
       {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -222,17 +222,17 @@ const ATTR_SPECS: Array<[string, string]> = [
 
 const COL_SHORT: Record<string, { label: string; color: string }> = {
   [VOLT_COL]:        { label: 'Volt',     color: 'bg-indigo-100 text-indigo-700' },
-  [MAH_COL]:         { label: 'mAh',      color: 'bg-green-100 text-green-700' },
-  [WH_COL]:          { label: 'Wh',       color: 'bg-teal-100 text-teal-700' },
-  [WATT_COL]:        { label: 'Watt',     color: 'bg-yellow-100 text-yellow-700' },
-  [LEUCHT_COL]:      { label: 'Leuchtw.', color: 'bg-sky-100 text-sky-700' },
-  [INPUT_VOLT_COL]:  { label: 'In-V',     color: 'bg-violet-100 text-violet-700' },
-  [OUTPUT_VOLT_COL]: { label: 'Out-V',    color: 'bg-violet-100 text-violet-700' },
-  [DURCHM_COL]:      { label: 'Ø',        color: 'bg-orange-100 text-orange-700' },
-  [BREITE_COL]:      { label: 'B',        color: 'bg-orange-100 text-orange-700' },
-  [HOEHE_COL]:       { label: 'H',        color: 'bg-orange-100 text-orange-700' },
-  [LAENGE_COL]:      { label: 'L',        color: 'bg-orange-100 text-orange-700' },
-  [GEWICHT_COL]:     { label: 'Gew.',     color: 'bg-emerald-100 text-emerald-700' },
+  [MAH_COL]:         { label: 'mAh',      color: 'bg-indigo-100 text-indigo-700' },
+  [WH_COL]:          { label: 'Wh',       color: 'bg-indigo-100 text-indigo-700' },
+  [WATT_COL]:        { label: 'Watt',     color: 'bg-indigo-100 text-indigo-700' },
+  [LEUCHT_COL]:      { label: 'Leuchtw.', color: 'bg-indigo-100 text-indigo-700' },
+  [INPUT_VOLT_COL]:  { label: 'In-V',     color: 'bg-slate-100 text-slate-700' },
+  [OUTPUT_VOLT_COL]: { label: 'Out-V',    color: 'bg-slate-100 text-slate-700' },
+  [DURCHM_COL]:      { label: 'Ø',        color: 'bg-slate-100 text-slate-700' },
+  [BREITE_COL]:      { label: 'B',        color: 'bg-slate-100 text-slate-700' },
+  [HOEHE_COL]:       { label: 'H',        color: 'bg-slate-100 text-slate-700' },
+  [LAENGE_COL]:      { label: 'L',        color: 'bg-slate-100 text-slate-700' },
+  [GEWICHT_COL]:     { label: 'Gew.',     color: 'bg-slate-100 text-slate-700' },
 };
 
 function getColNewValue(col: string, item: PreviewItem): string {
@@ -1035,18 +1035,18 @@ export default function VoltFixer() {
 
       {/* Projektübersicht */}
       {(saves.length > 0 || savesLoading) && (
-        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <FolderOpen size={16} className="text-indigo-600" />
-            <h2 className="text-sm font-semibold text-gray-700">Gespeicherte Projekte</h2>
-            <span className="ml-auto text-xs text-gray-400">{saves.length} Projekt{saves.length !== 1 ? 'e' : ''}</span>
+        <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+            <FolderOpen size={14} className="text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-700">Gespeicherte Projekte</h2>
+            <span className="ml-auto text-xs text-slate-400">{saves.length} Projekt{saves.length !== 1 ? 'e' : ''}</span>
           </div>
           {savesLoading ? (
-            <div className="flex items-center gap-2 px-4 py-3 text-sm text-gray-400"><Loader2 size={14} className="animate-spin" /> Lade…</div>
+            <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-400"><Loader2 size={14} className="animate-spin" /> Lade…</div>
           ) : (
-            <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+            <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
               {saves.map(s => (
-                <div key={s.id} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 group">
+                <div key={s.id} className="flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 group">
                   <div className="flex-1 min-w-0">
                     {renamingId === s.id ? (
                       <div className="flex items-center gap-1.5">
@@ -1055,21 +1055,21 @@ export default function VoltFixer() {
                           value={renameValue}
                           onChange={e => setRenameValue(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') handleRenameSave(s.id); if (e.key === 'Escape') setRenamingId(null); }}
-                          className="flex-1 text-sm px-2 py-0.5 border border-indigo-400 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                          className="flex-1 text-sm px-2 py-0.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-semibold"
                         />
-                        <button onClick={() => handleRenameSave(s.id)} className="text-indigo-600 hover:text-indigo-800"><Check size={14} /></button>
-                        <button onClick={() => setRenamingId(null)} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
+                        <button onClick={() => handleRenameSave(s.id)} className="text-slate-700 hover:text-slate-900"><Check size={14} /></button>
+                        <button onClick={() => setRenamingId(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
+                        <p className="text-sm font-medium text-slate-800 truncate">{s.name}</p>
                         <button
                           onClick={() => { setRenamingId(s.id); setRenameValue(s.name); }}
-                          className="p-0.5 rounded text-gray-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          className="p-0.5 rounded text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                         ><PenLine size={12} /></button>
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 truncate mt-0.5">
+                    <p className="text-xs text-slate-400 truncate mt-0.5">
                       {s.exportFileName || s.fileName} · {s.totalRows.toLocaleString()} Zeilen · {s.changedRows.toLocaleString()} geändert · {new Date(s.savedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
@@ -1077,7 +1077,7 @@ export default function VoltFixer() {
                     <a
                       href={`/api/volt-fixer/saves/${s.id}/download`}
                       download={s.exportFileName || s.fileName}
-                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 font-medium shrink-0"
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 font-medium shrink-0"
                     >
                       <Download size={12} />
                       CSV
@@ -1086,14 +1086,14 @@ export default function VoltFixer() {
                   <button
                     onClick={() => handleLoadSave(s.id)}
                     disabled={loadingSaveId === s.id}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 font-medium shrink-0"
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-50 font-medium shrink-0"
                   >
                     {loadingSaveId === s.id ? <Loader2 size={12} className="animate-spin" /> : <FolderOpen size={12} />}
                     Laden
                   </button>
                   <button
                     onClick={() => handleDeleteSave(s.id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    className="p-1.5 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -1173,8 +1173,8 @@ export default function VoltFixer() {
       {/* Übersetzungs-Option deaktiviert */}
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700">
-          <AlertCircle size={16} />
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-700">
+          <AlertCircle size={16} className="text-slate-500 shrink-0" />
           <span className="text-sm">{error}</span>
         </div>
       )}
@@ -1182,25 +1182,41 @@ export default function VoltFixer() {
       {result && (
         <div ref={resultRef}>
           {/* Stats */}
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-4 py-2">
-              <FileText size={16} className="text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">{result.fileName}</span>
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+              <FileText size={13} className="text-slate-400 shrink-0" />
+              <span className="text-sm font-medium text-slate-700 truncate max-w-xs">{result.fileName}</span>
             </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+              <span className="text-sm font-semibold text-slate-800">{result.stats.total.toLocaleString('de-DE')}</span>
+              <span className="text-xs text-slate-500">Zeilen</span>
+            </div>
+            {result.stats.voltChanged > 0 && (
+              <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-1.5">
+                <span className="text-sm font-semibold text-indigo-700">{result.stats.voltChanged.toLocaleString('de-DE')}</span>
+                <span className="text-xs text-indigo-500">Volt korrigiert</span>
+              </div>
+            )}
+            {(result.stats.mahFilled ?? 0) > 0 && (
+              <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-1.5">
+                <span className="text-sm font-semibold text-indigo-700">{(result.stats.mahFilled ?? 0).toLocaleString('de-DE')}</span>
+                <span className="text-xs text-indigo-500">mAh ergänzt</span>
+              </div>
+            )}
           </div>
 
 
           {/* Spaltenauswahl */}
           {result.csvBlob && result.headers.length > 0 && (
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
               <button
-                className="w-full flex items-center justify-between px-4 py-3 bg-indigo-600 hover:bg-indigo-700 transition-colors text-sm font-medium text-white"
+                className="w-full flex items-center justify-between px-4 py-3 bg-slate-900 hover:bg-slate-800 transition-colors text-sm font-medium text-white"
                 onClick={() => setColPickerOpen(o => !o)}
               >
                 <span className="flex items-center gap-2">
-                  <Columns size={14} className="text-indigo-200" />
+                  <Columns size={14} className="text-slate-400" />
                   Spalten für Export auswählen
-                  <span className="text-xs text-indigo-200 font-normal">
+                  <span className="text-xs text-slate-400 font-normal">
                     {selectedCols.size} von {result.headers.length} Spalten
                   </span>
                 </span>
@@ -1209,22 +1225,21 @@ export default function VoltFixer() {
 
               {colPickerOpen && (
                 <div className="p-4 space-y-3 bg-white">
-                  {/* Alle / Keine */}
                   <div className="flex gap-2">
                     <button
-                      className="text-xs px-2.5 py-1 rounded border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                      className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
                       onClick={() => setSelectedCols(new Set(result.headers))}
                     >
                       Alle auswählen
                     </button>
                     <button
-                      className="text-xs px-2.5 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                      className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
                       onClick={() => setSelectedCols(new Set())}
                     >
                       Keine
                     </button>
                     <button
-                      className="text-xs px-2.5 py-1 rounded border border-green-300 text-green-700 hover:bg-green-50"
+                      className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
                       onClick={() => setSelectedCols(new Set([
                         ...ALL_ATTR_COLS,
                         'p_id', 'p_item_number', 'p_name[de]', 'p_name[nl]',
@@ -1235,14 +1250,14 @@ export default function VoltFixer() {
                   </div>
 
                   {/* Spalten-Liste */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 max-h-64 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 max-h-64 overflow-y-auto pr-1">
                     {result.headers.map(col => {
                       const isAttr = ALL_ATTR_COLS.includes(col);
                       const checked = selectedCols.has(col);
                       return (
                         <label
                           key={col}
-                          className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1 hover:bg-gray-50 ${isAttr ? 'font-medium text-indigo-700' : 'text-gray-600'}`}
+                          className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1 hover:bg-slate-50 ${isAttr ? 'font-medium text-indigo-600' : 'text-slate-600'}`}
                         >
                           <input
                             type="checkbox"
@@ -1258,7 +1273,6 @@ export default function VoltFixer() {
                             className="accent-indigo-600 shrink-0"
                           />
                           <span className="truncate" title={col}>{col}</span>
-                          {isAttr && <span className="shrink-0 ml-auto text-indigo-400">★</span>}
                         </label>
                       );
                     })}
@@ -1270,35 +1284,35 @@ export default function VoltFixer() {
 
           {/* Beschreibungen synchronisieren */}
           {result.csvBlob && (
-            <div className="flex items-center gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-amber-900">Beschreibungen synchronisieren</p>
-                <p className="text-xs text-amber-700 mt-0.5">
-                  Ersetzt falsche Werte (mAh, Wh, Watt, Gewicht) in der HTML-Beschreibung — nur falls ein Wert bereits vorhanden ist. Dezimalzahlen werden mit Komma geschrieben.
+                <p className="text-sm font-medium text-slate-800">Beschreibungen synchronisieren</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Ersetzt falsche Werte (mAh, Wh, Watt, Gewicht) in der HTML-Beschreibung — nur falls ein Wert bereits vorhanden ist.
                 </p>
               </div>
               <Button
                 onClick={handleDescSync}
                 disabled={descSynced || !rawProcessorResult}
                 className={descSynced
-                  ? "bg-green-600 hover:bg-green-600 text-white gap-2 shrink-0"
-                  : "bg-amber-600 hover:bg-amber-700 text-white gap-2 shrink-0"}
+                  ? "bg-indigo-600 hover:bg-indigo-600 text-white gap-2 shrink-0"
+                  : "bg-slate-900 hover:bg-slate-800 text-white gap-2 shrink-0"}
               >
                 {descSynced ? <CheckCircle size={16} /> : <PenLine size={16} />}
                 {descSynced
-                  ? `Fertig — ${descSyncCount} Beschreibung${descSyncCount !== 1 ? 'en' : ''} aktualisiert`
-                  : 'Beschreibungen synchronisieren'}
+                  ? `Fertig — ${descSyncCount} aktualisiert`
+                  : 'Synchronisieren'}
               </Button>
             </div>
           )}
 
           {/* Download + Speichern */}
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={download} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
-              <Download size={16} />
-              Saubere CSV herunterladen
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={download} className="bg-slate-900 hover:bg-slate-800 text-white gap-2">
+              <Download size={15} />
+              CSV herunterladen
               {result.stats.total > 0 && (
-                <span className="ml-1 bg-white/20 rounded px-1.5 py-0.5 text-xs font-semibold">
+                <span className="ml-1 bg-white/15 rounded px-1.5 py-0.5 text-xs font-semibold">
                   {result.stats.total.toLocaleString('de-DE')} Zeilen
                 </span>
               )}
@@ -1317,12 +1331,12 @@ export default function VoltFixer() {
                   setTimeout(() => URL.revokeObjectURL(url), 5000);
                 }}
                 variant="outline"
-                className="border-orange-400 text-orange-700 hover:bg-orange-50 gap-2"
+                className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
               >
-                <Download size={16} />
+                <Download size={15} />
                 Ohne Beschreibung
-                <span className="ml-1 bg-orange-100 text-orange-800 rounded px-1.5 py-0.5 text-xs font-semibold">
-                  {(result.noDescCount ?? 0).toLocaleString('de-DE')} Produkte
+                <span className="ml-1 bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs font-semibold">
+                  {(result.noDescCount ?? 0).toLocaleString('de-DE')}
                 </span>
               </Button>
             )}
@@ -1331,10 +1345,10 @@ export default function VoltFixer() {
               <Button
                 onClick={() => { setSaveName(""); setSaveDialogOpen(true); }}
                 variant="outline"
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 gap-2"
+                className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
               >
-                <Save size={16} />
-                Projekt speichern
+                <Save size={15} />
+                Speichern
               </Button>
             )}
 
@@ -1342,29 +1356,32 @@ export default function VoltFixer() {
               <Button
                 onClick={() => window.open(`/api/volt-fixer/download-drei-spannung/${result.jobId}`, "_blank")}
                 variant="outline"
-                className="border-amber-400 text-amber-700 hover:bg-amber-50 gap-2"
+                className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
               >
-                <Download size={16} />
-                Drei-Spannung-Produkte ({result.stats.dreiSpannungCount!.toLocaleString()} Zeilen)
+                <Download size={15} />
+                Drei-Spannung
+                <span className="ml-1 bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs font-semibold">
+                  {result.stats.dreiSpannungCount!.toLocaleString()}
+                </span>
               </Button>
             )}
           </div>
 
           {/* Speichern-Dialog */}
           {saveDialogOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSaveDialogOpen(false)}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setSaveDialogOpen(false)}>
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-gray-900">Projekt speichern</h2>
-                  <button onClick={() => setSaveDialogOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+                  <h2 className="text-base font-semibold text-slate-900">Projekt speichern</h2>
+                  <button onClick={() => setSaveDialogOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X size={16} /></button>
                 </div>
-                <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="font-medium text-gray-700">{result.fileName}</span>
-                  <span className="mx-1">·</span>{result.stats.total.toLocaleString()} Zeilen
-                  <span className="mx-1">·</span>{result.stats.voltChanged.toLocaleString()} Volt geändert
+                <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                  <span className="font-medium text-slate-700">{result.fileName}</span>
+                  <span className="mx-1 text-slate-300">·</span>{result.stats.total.toLocaleString()} Zeilen
+                  <span className="mx-1 text-slate-300">·</span>{result.stats.voltChanged.toLocaleString()} Volt geändert
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Projektname</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Projektname</label>
                   <input
                     type="text"
                     autoFocus
@@ -1372,15 +1389,15 @@ export default function VoltFixer() {
                     value={saveName}
                     onChange={e => setSaveName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && saveName.trim()) handleSave(); }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                 </div>
-                <div className="flex gap-3 pt-1">
-                  <button onClick={() => setSaveDialogOpen(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium text-sm">Abbrechen</button>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setSaveDialogOpen(false)} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm">Abbrechen</button>
                   <button
                     onClick={handleSave}
                     disabled={!saveName.trim() || isSaving}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 font-medium text-sm"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 font-medium text-sm"
                   >
                     {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                     Speichern
@@ -1393,43 +1410,44 @@ export default function VoltFixer() {
           {/* CSV Qualitätsprüfung */}
           {(result.csvIssues ?? []).length > 0 ? (
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
-                CSV Qualitätsprüfung
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                  <AlertCircle size={11} /> {result.csvIssues!.length.toLocaleString()} Warnung{result.csvIssues!.length !== 1 ? 'en' : ''}
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-sm font-semibold text-slate-700">CSV Qualitätsprüfung</h2>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                  <AlertCircle size={11} /> {result.csvIssues!.length.toLocaleString()} Warnungen
                 </span>
-              </h2>
-              <div className="border border-amber-200 rounded-xl overflow-hidden shadow-sm divide-y divide-gray-100 max-h-72 overflow-y-auto">
+              </div>
+              <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-56 overflow-y-auto">
                 {result.csvIssues!.map((issue, i) => (
-                  <div key={i} className="flex items-start gap-3 px-4 py-2.5 text-sm bg-amber-50 hover:bg-amber-100">
-                    <span className="shrink-0 text-xs font-mono pt-0.5 w-14 text-right text-amber-500">Z.{issue.row}</span>
-                    <span className="shrink-0 text-xs font-mono text-gray-500 w-24 truncate pt-0.5">{issue.itemNr || '—'}</span>
-                    <span className="font-semibold shrink-0 w-44 text-amber-800">{issue.type}</span>
-                    <span className="text-gray-600 truncate">{issue.detail}</span>
+                  <div key={i} className="flex items-start gap-3 px-4 py-2 text-xs bg-white hover:bg-slate-50">
+                    <span className="shrink-0 font-mono pt-0.5 w-12 text-right text-slate-400">Z.{issue.row}</span>
+                    <span className="shrink-0 font-mono text-slate-400 w-24 truncate pt-0.5">{issue.itemNr || '—'}</span>
+                    <span className="font-semibold shrink-0 w-44 text-slate-700">{issue.type}</span>
+                    <span className="text-slate-500 truncate">{issue.detail}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : result.csvIssues !== undefined ? (
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
-              <CheckCircle size={15} className="text-green-500" />
-              CSV Qualitätsprüfung: Keine Probleme gefunden
+            <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
+              <CheckCircle size={14} className="text-indigo-500 shrink-0" />
+              Keine CSV-Probleme gefunden
             </div>
           ) : null}
 
           {/* Spaltenvorschau */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-lg font-semibold text-gray-800">
-                Spaltenvorschau
-                <span className="ml-2 text-sm font-normal text-gray-400">
-                  {searchTerm.trim()
-                    ? `${items.length} Treffer`
-                    : `${items.length.toLocaleString()} Zeilen`}
-                  {!searchTerm.trim() && changedCount > 0 && ` · ${changedCount.toLocaleString()} geändert`}
-                  {" "}· Klick auf <Eye size={12} className="inline" /> für Details
-                </span>
-              </h2>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800">
+                  Spaltenvorschau
+                  <span className="ml-2 font-normal text-slate-400">
+                    {searchTerm.trim()
+                      ? `${items.length} Treffer`
+                      : `${items.length.toLocaleString()} Zeilen`}
+                    {!searchTerm.trim() && changedCount > 0 && ` · ${changedCount.toLocaleString()} geändert`}
+                  </span>
+                </h2>
+              </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <input
@@ -1437,13 +1455,13 @@ export default function VoltFixer() {
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     placeholder="Artikel-Nr. suchen…"
-                    className="text-xs px-2 py-1.5 pl-7 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-44"
+                    className="text-xs px-2 py-1.5 pl-7 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-44"
                   />
-                  <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   {searchTerm && (
                     <button
                       onClick={() => setSearchTerm('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >×</button>
                   )}
                 </div>
@@ -1451,8 +1469,8 @@ export default function VoltFixer() {
                   onClick={() => setShowOnlyChanged(v => !v)}
                   className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
                     showOnlyChanged
-                      ? "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700"
-                      : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                      ? "bg-slate-900 text-white border-slate-900 hover:bg-slate-800"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                   }`}
                 >
                   {showOnlyChanged ? "Nur Geänderte" : "Alle anzeigen"}
@@ -1464,36 +1482,36 @@ export default function VoltFixer() {
               <div ref={scrollContainerRef} className="overflow-x-auto max-h-[calc(100vh-220px)] overflow-y-auto">
                 <table className="text-xs w-full">
                   <thead className="sticky top-0 z-10">
-                    <tr className="bg-gray-50 border-b">
-                      <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">#</th>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">#</th>
                       <th className="px-2 py-2 w-8"></th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">p_id</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Artikel-Nr.</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap bg-gray-50">Geänderte Werte</th>
-                      <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-indigo-700 whitespace-nowrap bg-indigo-50">Volt (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">mAh (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap bg-green-50">mAh (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-teal-700 whitespace-nowrap bg-teal-50">Wh (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-teal-700 whitespace-nowrap bg-teal-50">Wh (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-yellow-700 whitespace-nowrap bg-yellow-50">Watt (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-yellow-700 whitespace-nowrap bg-yellow-50">Watt (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-sky-700 whitespace-nowrap bg-sky-50">Leuchtweite (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-sky-700 whitespace-nowrap bg-sky-50">Leuchtweite (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-emerald-700 whitespace-nowrap bg-emerald-50">Gewicht g (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-emerald-700 whitespace-nowrap bg-emerald-50">Gewicht g (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Input Volt (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Input Volt (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Output Volt (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Output Volt (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Durchmesser (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Durchmesser (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Breite (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Breite (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Höhe (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Höhe (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Länge (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Länge (nachher)</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">p_id</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Artikel-Nr.</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">Geändert</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Volt vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Volt</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">mAh vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">mAh</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Wh vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Wh</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Watt vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Watt</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Leuchtw. vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Leuchtw.</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Gew. g vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Gew. g</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">In-V vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">In-V</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Out-V vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Out-V</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">Ø vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">Ø</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">B vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">B</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">H vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">H</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-400 whitespace-nowrap">L vor</th>
+                      <th className="px-3 py-2 text-left font-medium text-indigo-600 whitespace-nowrap bg-indigo-50/40">L</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1501,23 +1519,23 @@ export default function VoltFixer() {
                       const hasChange = item.changed.length > 0;
                       const voltChanged = item.changed.includes(VOLT_COL);
                       return (
-                        <tr key={item.index} className={`border-b last:border-0 group/row cursor-default ${hasChange ? "bg-indigo-50/30 hover:bg-indigo-100/60" : "bg-white hover:bg-yellow-50"}`}>
-                          <td className="px-3 py-1.5 text-gray-400">{item.index + 1}</td>
+                        <tr key={item.index} className={`border-b border-slate-100 last:border-0 group/row cursor-default ${hasChange ? "bg-indigo-50/20 hover:bg-indigo-50/40" : "bg-white hover:bg-slate-50"}`}>
+                          <td className="px-3 py-1.5 text-slate-400">{item.index + 1}</td>
                           <td className="px-2 py-1.5">
                             <button
                               onClick={() => openDetail(item.index, item.index + 1)}
                               className={`p-1 rounded transition-colors ${
                                 item.descDEChanged
-                                  ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100"
-                                  : "text-gray-400 hover:text-indigo-600 hover:bg-indigo-100"
+                                  ? "text-indigo-500 hover:text-indigo-700 hover:bg-indigo-100"
+                                  : "text-slate-300 hover:text-slate-600 hover:bg-slate-100"
                               }`}
                               title={item.descDEChanged ? "Beschreibung wurde korrigiert" : "Alle Felder anzeigen"}
                             >
                               <Eye size={13} />
                             </button>
                           </td>
-                          <td className="px-3 py-1.5 text-gray-400 font-mono text-xs">{item.pId || "—"}</td>
-                          <td className="px-3 py-1.5 text-gray-600 font-mono text-xs">{item.itemNr || "—"}</td>
+                          <td className="px-3 py-1.5 text-slate-400 font-mono text-xs">{item.pId || "—"}</td>
+                          <td className="px-3 py-1.5 text-slate-600 font-mono text-xs">{item.itemNr || "—"}</td>
                           <td className="px-3 py-1.5">
                             <div className="flex flex-wrap gap-1 min-w-[80px]">
                               {(() => {
@@ -1539,15 +1557,15 @@ export default function VoltFixer() {
                               })()}
                             </div>
                           </td>
-                          <td className={`px-3 py-1.5 ${voltChanged ? "text-red-400 line-through opacity-70" : "text-gray-500"}`}>
+                          <td className={`px-3 py-1.5 font-mono text-xs ${voltChanged ? "text-slate-300 line-through" : "text-slate-400"}`}>
                             {isUnrealisticVolt(item.voltOrig) ? "—" : (item.voltOrig || "—")}
                           </td>
-                          <td className={`px-1 py-1 font-semibold ${voltChanged ? "text-indigo-700" : "text-gray-700"}`}>
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingVolt?.index === item.index ? (
                               <div className="flex items-center gap-1">
                                 <input
                                   autoFocus
-                                  className="w-20 px-2 py-0.5 text-xs border border-indigo-400 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                                  className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
                                   value={editingVolt.value}
                                   onChange={e => setEditingVolt({ index: item.index, value: e.target.value })}
                                   onKeyDown={e => {
@@ -1556,223 +1574,165 @@ export default function VoltFixer() {
                                   }}
                                   disabled={patchSaving}
                                 />
-                                <button
-                                  onClick={() => saveVoltEdit(item.index, editingVolt.value)}
-                                  disabled={patchSaving}
-                                  className="text-xs px-1.5 py-0.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
-                                  title="Speichern"
-                                >✓</button>
-                                <button
-                                  onClick={() => setEditingVolt(null)}
-                                  disabled={patchSaving}
-                                  className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
-                                  title="Abbrechen"
-                                >✕</button>
+                                <button onClick={() => saveVoltEdit(item.index, editingVolt.value)} disabled={patchSaving} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700 disabled:opacity-50">✓</button>
+                                <button onClick={() => setEditingVolt(null)} disabled={patchSaving} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button>
                               </div>
                             ) : (
                               <button
                                 onClick={() => setEditingVolt({ index: item.index, value: item.voltNew })}
-                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${voltChanged ? "text-indigo-700" : "text-gray-500"}`}
+                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${voltChanged ? "text-indigo-700 font-semibold" : "text-slate-500"}`}
                                 title="Klicken zum Bearbeiten"
                               >
-                                {voltChanged && <CheckCircle size={10} className="inline shrink-0 text-indigo-500" />}
-                                <span className="font-mono text-xs">{item.voltNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                                {voltChanged && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.voltNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* mAh vorher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-green-50/40">
-                            {item.mahOrig || <span className="text-gray-300">—</span>}
-                          </td>
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.mahOrig || <span className="text-slate-300">—</span>}</td>
                           {/* mAh nachher */}
-                          <td className="px-1 py-1 font-mono text-xs bg-green-50/40">
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === MAH_COL ? (
-                              <div className="flex items-center gap-1">
-                                <input autoFocus className="w-20 px-2 py-0.5 text-xs border border-green-400 rounded focus:outline-none focus:ring-1 focus:ring-green-500 font-mono"
-                                  value={editingAttr.value}
-                                  onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })}
-                                  onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, MAH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }}
-                                />
-                                <button onClick={() => saveAttrEdit(item.index, MAH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-green-600 text-white rounded hover:bg-green-700">✓</button>
-                                <button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button>
-                              </div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, MAH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, MAH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: MAH_COL, value: item.mahNew ?? '' })}
-                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-green-100 transition-colors cursor-text text-left w-full ${item.changed.includes(MAH_COL) ? "text-green-700 font-semibold" : "text-gray-500"}`}
-                                title="Klicken zum Bearbeiten">
-                                {item.changed.includes(MAH_COL) && <CheckCircle size={10} className="inline shrink-0 text-green-500" />}
-                                <span className="font-mono text-xs">{item.mahNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: MAH_COL, value: item.mahNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(MAH_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(MAH_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.mahNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Wh vorher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-teal-50/40">
-                            {item.whOrig || <span className="text-gray-300">—</span>}
-                          </td>
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.whOrig || <span className="text-slate-300">—</span>}</td>
                           {/* Wh nachher */}
-                          <td className="px-1 py-1 font-mono text-xs bg-teal-50/40">
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === WH_COL ? (
-                              <div className="flex items-center gap-1">
-                                <input autoFocus className="w-20 px-2 py-0.5 text-xs border border-teal-400 rounded focus:outline-none focus:ring-1 focus:ring-teal-500 font-mono"
-                                  value={editingAttr.value}
-                                  onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })}
-                                  onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }}
-                                />
-                                <button onClick={() => saveAttrEdit(item.index, WH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-teal-600 text-white rounded hover:bg-teal-700">✓</button>
-                                <button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button>
-                              </div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WH_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, WH_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: WH_COL, value: item.whNew ?? '' })}
-                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-teal-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WH_COL) ? "text-teal-700 font-semibold" : "text-gray-500"}`}
-                                title="Klicken zum Bearbeiten">
-                                {item.changed.includes(WH_COL) && <CheckCircle size={10} className="inline shrink-0 text-teal-500" />}
-                                <span className="font-mono text-xs">{item.whNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: WH_COL, value: item.whNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WH_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(WH_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.whNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Watt vorher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-yellow-50/40">
-                            {item.wattOrig || <span className="text-gray-300">—</span>}
-                          </td>
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.wattOrig || <span className="text-slate-300">—</span>}</td>
                           {/* Watt nachher */}
-                          <td className="px-1 py-1 font-mono text-xs bg-yellow-50/40">
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === WATT_COL ? (
-                              <div className="flex items-center gap-1">
-                                <input autoFocus className="w-20 px-2 py-0.5 text-xs border border-yellow-400 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500 font-mono"
-                                  value={editingAttr.value}
-                                  onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })}
-                                  onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WATT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }}
-                                />
-                                <button onClick={() => saveAttrEdit(item.index, WATT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-yellow-600 text-white rounded hover:bg-yellow-700">✓</button>
-                                <button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button>
-                              </div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, WATT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, WATT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: WATT_COL, value: item.wattNew ?? '' })}
-                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-yellow-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WATT_COL) ? "text-yellow-700 font-semibold" : "text-gray-500"}`}
-                                title="Klicken zum Bearbeiten">
-                                {item.changed.includes(WATT_COL) && <CheckCircle size={10} className="inline shrink-0 text-yellow-500" />}
-                                <span className="font-mono text-xs">{item.wattNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: WATT_COL, value: item.wattNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(WATT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(WATT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.wattNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Leuchtweite vorher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-sky-50/40">
-                            {item.leuchtOrig || <span className="text-gray-300">—</span>}
-                          </td>
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.leuchtOrig || <span className="text-slate-300">—</span>}</td>
                           {/* Leuchtweite nachher */}
-                          <td className="px-1 py-1 font-mono text-xs bg-sky-50/40">
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === LEUCHT_COL ? (
-                              <div className="flex items-center gap-1">
-                                <input autoFocus className="w-20 px-2 py-0.5 text-xs border border-sky-400 rounded focus:outline-none focus:ring-1 focus:ring-sky-500 font-mono"
-                                  value={editingAttr.value}
-                                  onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })}
-                                  onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }}
-                                />
-                                <button onClick={() => saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-sky-600 text-white rounded hover:bg-sky-700">✓</button>
-                                <button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button>
-                              </div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, LEUCHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: LEUCHT_COL, value: item.leuchtNew ?? '' })}
-                                className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-sky-100 transition-colors cursor-text text-left w-full ${item.changed.includes(LEUCHT_COL) ? "text-sky-700 font-semibold" : "text-gray-500"}`}
-                                title="Klicken zum Bearbeiten">
-                                {item.changed.includes(LEUCHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-sky-500" />}
-                                <span className="font-mono text-xs">{item.leuchtNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: LEUCHT_COL, value: item.leuchtNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(LEUCHT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(LEUCHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.leuchtNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Gewicht vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-emerald-50/40">{item.gewichtOrig || <span className="text-gray-300">—</span>}</td>
-                          <td className="px-1 py-1 font-mono text-xs bg-emerald-50/40">
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.gewichtOrig || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === GEWICHT_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-emerald-400 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-emerald-600 text-white rounded hover:bg-emerald-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, GEWICHT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: GEWICHT_COL, value: item.gewichtNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-emerald-100 transition-colors cursor-text text-left w-full ${item.changed.includes(GEWICHT_COL) ? "text-emerald-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(GEWICHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-emerald-500" />}
-                                <span className="font-mono text-xs">{item.gewichtNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: GEWICHT_COL, value: item.gewichtNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(GEWICHT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(GEWICHT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.gewichtNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Input Volt vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-violet-50/40">{item.inputVoltOrig || <span className="text-gray-300">—</span>}</td>
-                          <td className="px-1 py-1 font-mono text-xs bg-violet-50/40">
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.inputVoltOrig || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === INPUT_VOLT_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-violet-400 rounded focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, INPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: INPUT_VOLT_COL, value: item.inputVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-violet-100 transition-colors cursor-text text-left w-full ${item.changed.includes(INPUT_VOLT_COL) ? "text-violet-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(INPUT_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-violet-500" />}
-                                <span className="font-mono text-xs">{item.inputVoltNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: INPUT_VOLT_COL, value: item.inputVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(INPUT_VOLT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(INPUT_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.inputVoltNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Output Volt vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-violet-50/40">{item.outputVoltOrig || <span className="text-gray-300">—</span>}</td>
-                          <td className="px-1 py-1 font-mono text-xs bg-violet-50/40">
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.outputVoltOrig || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === OUTPUT_VOLT_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-violet-400 rounded focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, OUTPUT_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: OUTPUT_VOLT_COL, value: item.outputVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-violet-100 transition-colors cursor-text text-left w-full ${item.changed.includes(OUTPUT_VOLT_COL) ? "text-violet-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(OUTPUT_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-violet-500" />}
-                                <span className="font-mono text-xs">{item.outputVoltNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: OUTPUT_VOLT_COL, value: item.outputVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(OUTPUT_VOLT_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(OUTPUT_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.outputVoltNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Durchmesser vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-orange-50/40">{item.durchmOrig || <span className="text-gray-300">—</span>}</td>
-                          <td className="px-1 py-1 font-mono text-xs bg-orange-50/40">
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.durchmOrig || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === DURCHM_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-orange-400 rounded focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, DURCHM_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, DURCHM_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-orange-600 text-white rounded hover:bg-orange-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, DURCHM_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, DURCHM_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: DURCHM_COL, value: item.durchmNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-orange-100 transition-colors cursor-text text-left w-full ${item.changed.includes(DURCHM_COL) ? "text-orange-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(DURCHM_COL) && <CheckCircle size={10} className="inline shrink-0 text-orange-500" />}
-                                <span className="font-mono text-xs">{item.durchmNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: DURCHM_COL, value: item.durchmNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(DURCHM_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(DURCHM_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.durchmNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Breite vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-orange-50/40">{item.breiteOrig || <span className="text-gray-300">—</span>}</td>
-                          <td className="px-1 py-1 font-mono text-xs bg-orange-50/40">
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.breiteOrig || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === BREITE_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-orange-400 rounded focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, BREITE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, BREITE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-orange-600 text-white rounded hover:bg-orange-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, BREITE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, BREITE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: BREITE_COL, value: item.breiteNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-orange-100 transition-colors cursor-text text-left w-full ${item.changed.includes(BREITE_COL) ? "text-orange-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(BREITE_COL) && <CheckCircle size={10} className="inline shrink-0 text-orange-500" />}
-                                <span className="font-mono text-xs">{item.breiteNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: BREITE_COL, value: item.breiteNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(BREITE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(BREITE_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.breiteNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Höhe vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-orange-50/40">{item.hoeheOrig || <span className="text-gray-300">—</span>}</td>
-                          <td className="px-1 py-1 font-mono text-xs bg-orange-50/40">
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.hoeheOrig || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === HOEHE_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-orange-400 rounded focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, HOEHE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, HOEHE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-orange-600 text-white rounded hover:bg-orange-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, HOEHE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, HOEHE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: HOEHE_COL, value: item.hoeheNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-orange-100 transition-colors cursor-text text-left w-full ${item.changed.includes(HOEHE_COL) ? "text-orange-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(HOEHE_COL) && <CheckCircle size={10} className="inline shrink-0 text-orange-500" />}
-                                <span className="font-mono text-xs">{item.hoeheNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: HOEHE_COL, value: item.hoeheNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(HOEHE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(HOEHE_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.hoeheNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
                           {/* Länge vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-orange-50/40">{item.laengeOrig || <span className="text-gray-300">—</span>}</td>
-                          <td className="px-1 py-1 font-mono text-xs bg-orange-50/40">
+                          <td className="px-3 py-1.5 font-mono text-xs text-slate-400">{item.laengeOrig || <span className="text-slate-300">—</span>}</td>
+                          <td className="px-1 py-1 bg-indigo-50/20">
                             {editingAttr?.index === item.index && editingAttr?.col === LAENGE_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-orange-400 rounded focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LAENGE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, LAENGE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-orange-600 text-white rounded hover:bg-orange-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button></div>
+                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, LAENGE_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, LAENGE_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-slate-900 text-white rounded hover:bg-slate-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">✕</button></div>
                             ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: LAENGE_COL, value: item.laengeNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-orange-100 transition-colors cursor-text text-left w-full ${item.changed.includes(LAENGE_COL) ? "text-orange-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(LAENGE_COL) && <CheckCircle size={10} className="inline shrink-0 text-orange-500" />}
-                                <span className="font-mono text-xs">{item.laengeNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
+                              <button onClick={() => setEditingAttr({ index: item.index, col: LAENGE_COL, value: item.laengeNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors cursor-text text-left w-full ${item.changed.includes(LAENGE_COL) ? "text-indigo-700 font-semibold" : "text-slate-500"}`} title="Klicken zum Bearbeiten">
+                                {item.changed.includes(LAENGE_COL) && <CheckCircle size={10} className="inline shrink-0 text-indigo-400" />}
+                                <span className="font-mono text-xs">{item.laengeNew || <span className="text-slate-300 font-normal">—</span>}</span>
+                                <span className="ml-auto opacity-0 group-hover:opacity-40 text-slate-400 text-xs">✎</span>
                               </button>
                             )}
                           </td>
