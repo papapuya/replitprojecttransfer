@@ -738,6 +738,17 @@ export default function VoltFixer() {
     await loadSaves();
   };
 
+  // URL-Parameter ?projekt=<id> → Projekt direkt laden
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const projektId = params.get('projekt');
+    if (projektId) {
+      window.history.replaceState({}, '', '/volt-fixer');
+      handleLoadSave(projektId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Browser-seitige Verarbeitung (kein Upload, kein Server)
   const processLocally = async (file: File, restoreEmojiOverride?: boolean) => {
     setLoading(true);
