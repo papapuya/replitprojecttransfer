@@ -1034,103 +1034,12 @@ export default function VoltFixer() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Brickfox Attribut-Tool</h1>
-          <p className="text-gray-500 mt-1">
-            Korrigiert Volt-Werte, ergänzt fehlende mAh-Kapazitäten — aus Produktname und Beschreibung.
-          </p>
-        </div>
-        <button
-          onClick={() => setProjectsPanelOpen(o => !o)}
-          className={`flex items-center gap-2 text-sm px-3.5 py-2 rounded-lg border font-medium shrink-0 transition-colors ${
-            projectsPanelOpen
-              ? 'bg-violet-50 border-violet-300 text-violet-700'
-              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-          }`}
-        >
-          <FolderOpen size={15} />
-          Projekte
-          {saves.length > 0 && (
-            <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${projectsPanelOpen ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600'}`}>
-              {saves.length}
-            </span>
-          )}
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Brickfox Attribut-Tool</h1>
+        <p className="text-gray-500 mt-1">
+          Korrigiert Volt-Werte, ergänzt fehlende mAh-Kapazitäten — aus Produktname und Beschreibung.
+        </p>
       </div>
-
-      {/* Projektübersicht */}
-      {projectsPanelOpen && (
-        <div className="border border-slate-200 rounded-xl overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-            <FolderOpen size={14} className="text-slate-500" />
-            <h2 className="text-sm font-semibold text-slate-700">Projekte</h2>
-            <span className="ml-auto text-xs text-slate-400">{saves.length} Projekt{saves.length !== 1 ? 'e' : ''}</span>
-          </div>
-          {savesLoading ? (
-            <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-400"><Loader2 size={14} className="animate-spin" /> Lade…</div>
-          ) : saves.length === 0 ? (
-            <div className="px-4 py-6 text-sm text-slate-400 text-center">Noch keine gespeicherten Projekte.</div>
-          ) : (
-            <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
-              {saves.map(s => (
-                <div key={s.id} className="flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 group">
-                  <div className="flex-1 min-w-0">
-                    {renamingId === s.id ? (
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          autoFocus
-                          value={renameValue}
-                          onChange={e => setRenameValue(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') handleRenameSave(s.id); if (e.key === 'Escape') setRenamingId(null); }}
-                          className="flex-1 text-sm px-2 py-0.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-semibold"
-                        />
-                        <button onClick={() => handleRenameSave(s.id)} className="text-slate-700 hover:text-slate-900"><Check size={14} /></button>
-                        <button onClick={() => setRenamingId(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-medium text-slate-800 truncate">{s.name}</p>
-                        <button
-                          onClick={() => { setRenamingId(s.id); setRenameValue(s.name); }}
-                          className="p-0.5 rounded text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        ><PenLine size={12} /></button>
-                      </div>
-                    )}
-                    <p className="text-xs text-slate-400 truncate mt-0.5">
-                      {s.exportFileName || s.fileName} · {s.totalRows.toLocaleString()} Zeilen · {s.changedRows.toLocaleString()} geändert · {new Date(s.savedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  {s.hasCsv && (
-                    <a
-                      href={`/api/volt-fixer/saves/${s.id}/download`}
-                      download={s.exportFileName || s.fileName}
-                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 font-medium shrink-0"
-                    >
-                      <Download size={12} />
-                      CSV
-                    </a>
-                  )}
-                  <button
-                    onClick={() => handleLoadSave(s.id)}
-                    disabled={loadingSaveId === s.id}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 font-medium shrink-0"
-                  >
-                    {loadingSaveId === s.id ? <Loader2 size={12} className="animate-spin" /> : <FolderOpen size={12} />}
-                    Laden
-                  </button>
-                  <button
-                    onClick={() => handleDeleteSave(s.id)}
-                    className="p-1.5 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Upload */}
       <div
@@ -1238,6 +1147,24 @@ export default function VoltFixer() {
           {result.csvBlob && (
             <div className="flex flex-wrap gap-2 items-center">
 
+              {/* Projekte */}
+              <button
+                onClick={() => setProjectsPanelOpen(o => !o)}
+                className={`flex items-center gap-2 text-sm px-3.5 py-2 rounded-lg border font-medium shrink-0 transition-colors ${
+                  projectsPanelOpen
+                    ? 'bg-violet-50 border-violet-300 text-violet-700'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <FolderOpen size={15} />
+                Projekte
+                {saves.length > 0 && (
+                  <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${projectsPanelOpen ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600'}`}>
+                    {saves.length}
+                  </span>
+                )}
+              </button>
+
               {/* Spalten für Export — mit Dropdown */}
               {result.headers.length > 0 && (
                 <div className="relative">
@@ -1342,6 +1269,79 @@ export default function VoltFixer() {
                     {result.stats.dreiSpannungCount!.toLocaleString()}
                   </span>
                 </Button>
+              )}
+            </div>
+          )}
+
+          {/* Projektübersicht */}
+          {projectsPanelOpen && (
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                <FolderOpen size={14} className="text-slate-500" />
+                <h2 className="text-sm font-semibold text-slate-700">Projekte</h2>
+                <span className="ml-auto text-xs text-slate-400">{saves.length} Projekt{saves.length !== 1 ? 'e' : ''}</span>
+              </div>
+              {savesLoading ? (
+                <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-400"><Loader2 size={14} className="animate-spin" /> Lade…</div>
+              ) : saves.length === 0 ? (
+                <div className="px-4 py-6 text-sm text-slate-400 text-center">Noch keine gespeicherten Projekte.</div>
+              ) : (
+                <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                  {saves.map(s => (
+                    <div key={s.id} className="flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 group">
+                      <div className="flex-1 min-w-0">
+                        {renamingId === s.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={e => setRenameValue(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') handleRenameSave(s.id); if (e.key === 'Escape') setRenamingId(null); }}
+                              className="flex-1 text-sm px-2 py-0.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 font-semibold"
+                            />
+                            <button onClick={() => handleRenameSave(s.id)} className="text-slate-700 hover:text-slate-900"><Check size={14} /></button>
+                            <button onClick={() => setRenamingId(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium text-slate-800 truncate">{s.name}</p>
+                            <button
+                              onClick={() => { setRenamingId(s.id); setRenameValue(s.name); }}
+                              className="p-0.5 rounded text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            ><PenLine size={12} /></button>
+                          </div>
+                        )}
+                        <p className="text-xs text-slate-400 truncate mt-0.5">
+                          {s.exportFileName || s.fileName} · {s.totalRows.toLocaleString()} Zeilen · {s.changedRows.toLocaleString()} geändert · {new Date(s.savedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      {s.hasCsv && (
+                        <a
+                          href={`/api/volt-fixer/saves/${s.id}/download`}
+                          download={s.exportFileName || s.fileName}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 font-medium shrink-0"
+                        >
+                          <Download size={12} />
+                          CSV
+                        </a>
+                      )}
+                      <button
+                        onClick={() => handleLoadSave(s.id)}
+                        disabled={loadingSaveId === s.id}
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 font-medium shrink-0"
+                      >
+                        {loadingSaveId === s.id ? <Loader2 size={12} className="animate-spin" /> : <FolderOpen size={12} />}
+                        Laden
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSave(s.id)}
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
