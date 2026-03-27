@@ -1327,7 +1327,7 @@ export default function VoltFixer() {
               </Button>
             )}
 
-            {result.jobId && !result.csvBlob && (
+            {result.jobId && (
               <Button
                 onClick={() => { setSaveName(""); setSaveDialogOpen(true); }}
                 variant="outline"
