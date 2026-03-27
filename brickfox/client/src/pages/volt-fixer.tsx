@@ -1389,33 +1389,6 @@ export default function VoltFixer() {
             </div>
           )}
 
-          {/* CSV Qualitätsprüfung */}
-          {(result.csvIssues ?? []).length > 0 ? (
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-sm font-semibold text-slate-700">CSV Qualitätsprüfung</h2>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                  <AlertCircle size={11} /> {result.csvIssues!.length.toLocaleString()} Warnungen
-                </span>
-              </div>
-              <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-56 overflow-y-auto">
-                {result.csvIssues!.map((issue, i) => (
-                  <div key={i} className="flex items-start gap-3 px-4 py-2 text-xs bg-white hover:bg-slate-50">
-                    <span className="shrink-0 font-mono pt-0.5 w-12 text-right text-slate-400">Z.{issue.row}</span>
-                    <span className="shrink-0 font-mono text-slate-400 w-24 truncate pt-0.5">{issue.itemNr || '—'}</span>
-                    <span className="font-semibold shrink-0 w-44 text-slate-700">{issue.type}</span>
-                    <span className="text-slate-500 truncate">{issue.detail}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : result.csvIssues !== undefined ? (
-            <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
-              <CheckCircle size={14} className="text-indigo-500 shrink-0" />
-              Keine CSV-Probleme gefunden
-            </div>
-          ) : null}
-
           {/* Spaltenvorschau */}
           <div>
             <div className="flex items-center justify-between mb-2">
