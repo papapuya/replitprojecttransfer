@@ -163,7 +163,7 @@ function CopyButton({ text, label = "HTML kopieren" }: { text: string; label?: s
 }
 
 // Beschreibungs-Ansicht mit Tabs: Fließtext ↔ HTML-Quelltext
-function DescriptionView({ html, changed, label, bg = "gray" }: { html: string; changed?: boolean; label: string; bg?: "gray" | "indigo" }) {
+function DescriptionView({ html, rawHtml, changed, label, bg = "gray" }: { html: string; rawHtml: string; changed?: boolean; label: string; bg?: "gray" | "indigo" }) {
   const [tab, setTab] = useState<"preview" | "source">("preview");
   const bgClass = bg === "indigo"
     ? "bg-indigo-50 border-indigo-200"
@@ -191,9 +191,9 @@ function DescriptionView({ html, changed, label, bg = "gray" }: { html: string; 
         <div className="rounded-xl border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">HTML-Quelltext</p>
-            <CopyButton text={html} label="Kopieren" />
+            <CopyButton text={rawHtml} label="Kopieren" />
           </div>
-          <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-72 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">{html}</pre>
+          <pre className="text-xs text-gray-700 p-4 overflow-x-auto overflow-y-auto max-h-72 whitespace-pre-wrap break-words bg-white font-mono leading-relaxed select-all">{rawHtml}</pre>
         </div>
       )}
     </section>
@@ -467,11 +467,11 @@ function DetailModal({
                 {(origDE || fixedDE) && (
                   deChanged ? (
                     <>
-                      <DescriptionView html={hlOrigDE} label="Original Text Deutsch" bg="gray" />
-                      <DescriptionView html={hlFixedDE} label="Geänderter Text Deutsch" changed bg="indigo" />
+                      <DescriptionView html={hlOrigDE} rawHtml={origDE || fixedDE} label="Original Text Deutsch" bg="gray" />
+                      <DescriptionView html={hlFixedDE} rawHtml={fixedDE} label="Geänderter Text Deutsch" changed bg="indigo" />
                     </>
                   ) : (
-                    <DescriptionView html={hlOrigDE} label="Produktbeschreibung Deutsch" bg="gray" />
+                    <DescriptionView html={hlOrigDE} rawHtml={fixedDE} label="Produktbeschreibung Deutsch" bg="gray" />
                   )
                 )}
 
@@ -479,11 +479,11 @@ function DetailModal({
                 {(origNL || fixedNL) && (
                   nlChanged ? (
                     <>
-                      <DescriptionView html={hlOrigNL} label="Original Text Niederländisch" bg="gray" />
-                      <DescriptionView html={hlFixedNL} label="Geänderter Text Niederländisch" changed bg="indigo" />
+                      <DescriptionView html={hlOrigNL} rawHtml={origNL || fixedNL} label="Original Text Niederländisch" bg="gray" />
+                      <DescriptionView html={hlFixedNL} rawHtml={fixedNL} label="Geänderter Text Niederländisch" changed bg="indigo" />
                     </>
                   ) : (
-                    <DescriptionView html={hlOrigNL} label="Produktbeschreibung Niederländisch" bg="gray" />
+                    <DescriptionView html={hlOrigNL} rawHtml={fixedNL} label="Produktbeschreibung Niederländisch" bg="gray" />
                   )
                 )}
 
