@@ -209,57 +209,49 @@ const ATTR_SPECS: Array<[string, string]> = [
   [INPUT_VOLT_COL,  'V(?:olt|AC|DC)?(?!\\w)'],
   [OUTPUT_VOLT_COL, 'V(?:olt|AC|DC)?(?!\\w)'],
   [NENN_VOLT_COL,   'V(?:olt)?(?!\\w)'],
-  [DURCHM_COL,      'mm'],
-  [BREITE_COL,      'mm'],
-  [HOEHE_COL,       'mm'],
-  [LAENGE_COL,      'mm'],
+  [DURCHM_COL,      '(?:mm\\b|[xX×*])'],
+  [BREITE_COL,      '(?:mm\\b|[xX×*])'],
+  [HOEHE_COL,       '(?:mm\\b|[xX×*])'],
+  [LAENGE_COL,      '(?:mm\\b|[xX×*])'],
 ];
 
 function buildHighlightPatterns(
-  changed: string[],
+  _changed: string[],
   row: Record<string, string>,
   original: Record<string, string>
-): { changedPats: RegExp[]; keptPats: RegExp[] } {
-  const changedPats: RegExp[] = [];
-  const keptPats: RegExp[] = [];
+): RegExp[] {
+  const pats: RegExp[] = [];
   for (const [col, unit] of ATTR_SPECS) {
     const val = (row[col] || original[col] || '').trim();
     if (!val) continue;
     const v = val.replace(/\./g, '[.,]');
-    try {
-      const rx = new RegExp(`${v}\\s*${unit}`, 'gi');
-      (changed.includes(col) ? changedPats : keptPats).push(rx);
-    } catch (_) { /* noop */ }
+    try { pats.push(new RegExp(`${v}\\s*${unit}`, 'gi')); } catch (_) { /* noop */ }
   }
-  return { changedPats, keptPats };
+  return pats;
 }
 
-const MARK_CHANGED = 'background:rgba(234,179,8,0.40);border-radius:3px;padding:0 2px;font-weight:600;';
-const MARK_KEPT    = 'background:rgba(96,165,250,0.30);border-radius:3px;padding:0 2px;';
+const MARK_HL = 'background:rgba(234,179,8,0.40);border-radius:3px;padding:0 2px;font-weight:600;';
 
-function applyHighlightPatterns(text: string, changedPats: RegExp[], keptPats: RegExp[]): string {
+function applyHighlightPatterns(text: string, pats: RegExp[]): string {
   let result = text;
-  for (const rx of changedPats) {
-    result = result.replace(rx, (m: string) => `<mark style="${MARK_CHANGED}">${m}</mark>`);
-  }
-  for (const rx of keptPats) {
+  for (const rx of pats) {
     result = result.replace(rx, (m: string) =>
-      m.startsWith('<mark') ? m : `<mark style="${MARK_KEPT}">${m}</mark>`
+      m.startsWith('<mark') ? m : `<mark style="${MARK_HL}">${m}</mark>`
     );
   }
   return result;
 }
 
-function highlightInHtml(html: string, changedPats: RegExp[], keptPats: RegExp[]): string {
-  if (!html || (changedPats.length === 0 && keptPats.length === 0)) return html;
+function highlightInHtml(html: string, pats: RegExp[]): string {
+  if (!html || pats.length === 0) return html;
   return html.replace(/>([^<]+)</g, (_, text) =>
-    '>' + applyHighlightPatterns(text, changedPats, keptPats) + '<'
+    '>' + applyHighlightPatterns(text, pats) + '<'
   );
 }
 
-function highlightInText(text: string, changedPats: RegExp[], keptPats: RegExp[]): string {
-  if (!text || (changedPats.length === 0 && keptPats.length === 0)) return text;
-  return applyHighlightPatterns(text, changedPats, keptPats);
+function highlightInText(text: string, pats: RegExp[]): string {
+  if (!text || pats.length === 0) return text;
+  return applyHighlightPatterns(text, pats);
 }
 
 // Detail-Modal
@@ -331,14 +323,14 @@ function DetailModal({
             const nameDeChanged = data.changed.includes("p_name[de]");
             const nameNlChanged = data.changed.includes("p_name[nl]");
 
-            const { changedPats, keptPats } = buildHighlightPatterns(data.changed, data.row, data.original);
-            const hasHL = changedPats.length > 0 || keptPats.length > 0;
-            const hlOrigDE  = highlightInHtml(origDE  || fixedDE, changedPats, keptPats);
-            const hlFixedDE = highlightInHtml(fixedDE, changedPats, keptPats);
-            const hlOrigNL  = highlightInHtml(origNL  || fixedNL, changedPats, keptPats);
-            const hlFixedNL = highlightInHtml(fixedNL, changedPats, keptPats);
-            const hlNameDE  = hasHL ? highlightInText(origNameDE, changedPats, keptPats) : '';
-            const hlNameNL  = hasHL ? highlightInText(origNameNL, changedPats, keptPats) : '';
+            const pats = buildHighlightPatterns(data.changed, data.row, data.original);
+            const hasHL = pats.length > 0;
+            const hlOrigDE  = highlightInHtml(origDE  || fixedDE, pats);
+            const hlFixedDE = highlightInHtml(fixedDE, pats);
+            const hlOrigNL  = highlightInHtml(origNL  || fixedNL, pats);
+            const hlFixedNL = highlightInHtml(fixedNL, pats);
+            const hlNameDE  = hasHL ? highlightInText(origNameDE, pats) : '';
+            const hlNameNL  = hasHL ? highlightInText(origNameNL, pats) : '';
 
             return (
               <>
@@ -347,12 +339,8 @@ function DetailModal({
                   <div className="flex items-center gap-4 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
                     <span className="font-medium text-gray-600">Markierungen:</span>
                     <span className="flex items-center gap-1.5">
-                      <mark style={{ background: 'rgba(234,179,8,0.40)', borderRadius: '3px', padding: '0 4px', fontWeight: 600 }}>3,7V</mark>
-                      Wert korrigiert
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <mark style={{ background: 'rgba(96,165,250,0.30)', borderRadius: '3px', padding: '0 4px' }}>1200mAh</mark>
-                      Wert übernommen
+                      <mark style={{ background: 'rgba(234,179,8,0.40)', borderRadius: '3px', padding: '0 4px', fontWeight: 600 }}>255mm</mark>
+                      Extrahierter Attributwert
                     </span>
                   </div>
                 )}
