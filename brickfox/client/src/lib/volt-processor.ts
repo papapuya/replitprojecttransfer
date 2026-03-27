@@ -758,8 +758,20 @@ export async function processVoltFile(
   onProgress('parsing', 'CSV wird geparst…', 8);
   await yield_();
 
+  // Trennzeichen erkennen: erst Semikolon probieren, dann Komma (Google Sheets), dann Tab
+  const detectDelimiter = (src: string): string => {
+    for (const delim of [';', ',', '\t']) {
+      const probe = Papa.parse<Record<string, string>>(src.slice(0, 4096), {
+        delimiter: delim, header: true, skipEmptyLines: true, preview: 3,
+      });
+      if ((probe.meta.fields?.length ?? 0) > 1) return delim;
+    }
+    return ';';
+  };
+  const delimiter = detectDelimiter(text);
+
   const parsed = Papa.parse<Record<string, string>>(text, {
-    delimiter: ';',
+    delimiter,
     header: true,
     skipEmptyLines: true,
   });
