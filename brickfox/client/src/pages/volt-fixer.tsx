@@ -231,7 +231,6 @@ const COL_SHORT: Record<string, { label: string; color: string }> = {
   [HOEHE_COL]:       { label: 'H',        color: 'bg-orange-100 text-orange-700' },
   [LAENGE_COL]:      { label: 'L',        color: 'bg-orange-100 text-orange-700' },
   [GEWICHT_COL]:     { label: 'Gew.',     color: 'bg-emerald-100 text-emerald-700' },
-  ['p_description[de]']: { label: 'Beschr.', color: 'bg-amber-100 text-amber-700' },
 };
 
 function getColNewValue(col: string, item: PreviewItem): string {
@@ -1440,11 +1439,9 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 text-gray-600 font-mono text-xs">{item.itemNr || "—"}</td>
                           <td className="px-3 py-1.5">
                             <div className="flex flex-wrap gap-1 min-w-[80px]">
-                              {item.changed.length === 0 ? (
-                                <span className="text-gray-300 text-[10px]">—</span>
-                              ) : (
-                                <>
-                                  {item.changed.map((col) => {
+                              {(() => {
+                                const badges = item.changed
+                                  .map((col) => {
                                     const info = COL_SHORT[col];
                                     if (!info) return null;
                                     const val = getColNewValue(col, item);
@@ -1453,9 +1450,12 @@ export default function VoltFixer() {
                                         {val ? `${info.label}: ${val}` : info.label}
                                       </span>
                                     );
-                                  })}
-                                </>
-                              )}
+                                  })
+                                  .filter(Boolean);
+                                return badges.length === 0
+                                  ? <span className="text-gray-300 text-[10px]">—</span>
+                                  : <>{badges}</>;
+                              })()}
                             </div>
                           </td>
                           <td className={`px-3 py-1.5 ${voltChanged ? "text-red-400 line-through opacity-70" : "text-gray-500"}`}>
