@@ -327,6 +327,8 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
   let changed = false;
   // Vergleich: beide Seiten auf Punkt normalisieren; Ausgabe immer mit Punkt (wie Volt-Spalte)
   const targetNorm = String(parseFloat(targetVolt)); // kanonisch: Nullen entfernen ("3.70" → "3.7")
+  const targetGerman = targetNorm.replace('.', ','); // Dezimalpunkt → Komma für deutsche Ausgabe
+  // Außerhalb von Tabellen: "Volt"/"V" je nach Original, Punkt-Format
   const replaceVoltInTextNodes = (s: string): string =>
     s.replace(/(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
       (m, tag, _f, num, unit) => {
@@ -337,11 +339,22 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
         changed = true;
         return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
       });
+  // In Tabellen: immer kurzes "V", deutsches Komma-Format (z.B. "4,5 V")
+  const replaceVoltInTableNodes = (s: string): string =>
+    s.replace(/(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
+      (m, tag, _f, num, unit) => {
+        if (tag !== undefined) return tag;
+        if (!num || !unit) return m;
+        const norm = num.replace(',', '.');
+        if (norm === targetNorm || /[-\/]/.test(num)) return m;
+        changed = true;
+        return targetGerman + ' V';
+      });
   let result = html.replace(/(<table[^>]*>[\s\S]*?<\/table>)/gi, (tableBlock) =>
     tableBlock.replace(/(<tr\b[^>]*>[\s\S]*?<\/tr>)/gi, (trBlock) => {
       const labelCell = trBlock.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/i);
       if (labelCell && protectedLabel.test(labelCell[1].replace(/<[^>]+>/g, ''))) return trBlock;
-      return replaceVoltInTextNodes(trBlock);
+      return replaceVoltInTableNodes(trBlock);
     })
   );
   result = result.replace(/(<table[^>]*>[\s\S]*?<\/table>)|(<[^>]*>)|(\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b)/gi,
@@ -354,6 +367,24 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
       changed = true;
       return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
     });
+  return { result, changed };
+}
+
+// Volt-Werte im deutschen Produktnamen korrigieren (Plaintext, Ausgabe: "3,7 Volt")
+function syncVoltInNameDE(name: string, targetVolt: string): { result: string; changed: boolean } {
+  if (!name || !targetVolt || targetVolt.includes('-') || targetVolt.includes('/')) {
+    return { result: name, changed: false };
+  }
+  const targetNorm = String(parseFloat(targetVolt)); // kanonisch ohne Nullen
+  const targetGerman = targetNorm.replace('.', ',');  // Dezimalpunkt → Komma
+  let changed = false;
+  const result = name.replace(/\b(\d+(?:[,.]\d+)?)\s*(V(?:olt)?)\b/gi, (m, num, _unit) => {
+    if (/[-\/]/.test(num)) return m;
+    const norm = num.replace(',', '.');
+    if (norm === targetNorm) return m; // schon korrekt
+    changed = true;
+    return targetGerman + ' Volt';
+  });
   return { result, changed };
 }
 
@@ -1172,6 +1203,20 @@ export async function processVoltFile(
             newRow[nlCol] = syncedNl;
             if (!changed.includes(nlCol)) changed.push(nlCol);
           }
+        }
+      }
+    }
+
+    // ─── Deutschen Produktnamen mit finalem Volt-Wert synchronisieren ────────
+    {
+      const finalVoltForName = (newRow[VOLT_COL] ?? '').trim();
+      const nameDeCol = 'p_name[de]';
+      if (finalVoltForName && !finalVoltForName.includes('-') && !finalVoltForName.includes('/')
+          && headers.includes(nameDeCol) && newRow[nameDeCol]) {
+        const { result: syncedName, changed: nameChanged } = syncVoltInNameDE(newRow[nameDeCol], finalVoltForName);
+        if (nameChanged) {
+          newRow[nameDeCol] = syncedName;
+          if (!changed.includes(nameDeCol)) changed.push(nameDeCol);
         }
       }
     }
