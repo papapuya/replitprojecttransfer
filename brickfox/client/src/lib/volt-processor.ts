@@ -175,6 +175,16 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
     return { fixed: stripped, changed: stripped !== trimmed };
   }
   if (!/^\d+$/.test(trimmed)) return { fixed: trimmed, changed: false };
+  // 2-stellige Ganzzahl ÷10 → z.B. 37→3.7, 74→7.4, 12→1.2
+  if (trimmed.length === 2) {
+    const n = parseInt(trimmed, 10);
+    const d10 = n / 10;
+    // Ergebnis 1.0–9.9 V (deckt alle typischen Akku-Zellspannungen ab)
+    if (d10 >= 1.0 && d10 <= 9.9) {
+      const raw = d10.toFixed(1);
+      return { fixed: stripTrailingZeroVolt(raw), changed: true };
+    }
+  }
   // 3-stellige Zahlen: Dezimalstelle einfügen
   // ÷10  → XX.Y  wenn Ergebnis 5–26 V  (z.B. 108→10.8, 144→14.4, 222→22.2, 250→25)
   // ÷100 → X.XX  wenn Ergebnis 1–9.9 V (z.B. 385→3.85, 675→6.75, 480→4.8, 720→7.2)
