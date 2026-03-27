@@ -530,8 +530,8 @@ function normalizeWatt(raw: string): string | null {
 function extractWattFromText(text: string): string | null {
   if (!text) return null;
   const clean = text.replace(/<[^>]+>/g, ' ');
-  // W oder Watt, aber NICHT Wh — W(?!h) matcht W nicht gefolgt von h
-  for (const m of clean.matchAll(/\b(\d+(?:[.,]\d+)?)\s*(?:Watt|W(?!h))(?!\w)/gi)) {
+  // Mindestens 1 Leerzeichen vor W/Watt, damit Artikelnummern wie "4122W" nicht matchen
+  for (const m of clean.matchAll(/\b(\d+(?:[.,]\d+)?)\s+(?:Watt|W(?!h))(?!\w)/gi)) {
     const result = normalizeWatt(m[1]);
     if (result) return result;
   }
