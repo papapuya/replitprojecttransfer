@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine, Search, Info } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { processVoltFile, applyDescriptionSync, type VoltProcessorResult } from "@/lib/volt-processor";
@@ -1253,21 +1253,16 @@ export default function VoltFixer() {
                 </div>
               )}
 
-              {/* Synchronisieren + Info-Icon */}
-              <div className="flex items-center gap-1">
-                <Button
-                  onClick={handleDescSync}
-                  disabled={descSynced || !rawProcessorResult}
-                  variant="outline"
-                  className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
-                >
-                  {descSynced ? <CheckCircle size={15} /> : <PenLine size={15} />}
-                  {descSynced ? `Fertig — ${descSyncCount} aktualisiert` : 'Synchronisieren'}
-                </Button>
-                <span title="Ersetzt falsche Werte (mAh, Wh, Watt, Gewicht) in der HTML-Beschreibung — nur falls ein Wert bereits vorhanden ist." className="cursor-help">
-                  <Info size={14} className="text-slate-400 hover:text-slate-600" />
-                </span>
-              </div>
+              {/* Synchronisieren */}
+              <Button
+                onClick={handleDescSync}
+                disabled={descSynced || !rawProcessorResult}
+                variant="outline"
+                className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
+              >
+                {descSynced ? <CheckCircle size={15} /> : <PenLine size={15} />}
+                {descSynced ? `Fertig — ${descSyncCount} aktualisiert` : 'Synchronisieren'}
+              </Button>
 
               {/* CSV herunterladen */}
               <Button onClick={download} variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2">
