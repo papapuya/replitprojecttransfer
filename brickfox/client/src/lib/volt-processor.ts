@@ -86,11 +86,18 @@ export interface CsvIssue {
   detail: string;
 }
 
-const VOLT_COL  = 'p_attributes[akku_v][de]';
-const MAH_COL   = 'p_attributes[akku_mah][de]';
-const WH_COL    = 'p_attributes[akku_wh][de]';
-const WATT_COL  = 'p_attributes[lela_leistung_watt][de]';
-const LEUCHT_COL = 'p_attributes[tala_leuchtweite][de]';
+const VOLT_COL         = 'p_attributes[akku_v][de]';
+const MAH_COL          = 'p_attributes[akku_mah][de]';
+const WH_COL           = 'p_attributes[akku_wh][de]';
+const WATT_COL         = 'p_attributes[lela_leistung_watt][de]';
+const LEUCHT_COL       = 'p_attributes[tala_leuchtweite][de]';
+const INPUT_VOLT_COL   = 'p_attributes[netzteil_input_volt][de]';
+const OUTPUT_VOLT_COL  = 'p_attributes[netzteil_output_volt][de]';
+const NENN_VOLT_COL    = 'p_attributes[Nennspannung][de]';
+const DURCHM_COL       = 'p_attributes[akku_durchmesser][de]';
+const BREITE_COL       = 'p_attributes[breite][de]';
+const HOEHE_COL        = 'p_attributes[hoehe][de]';
+const LAENGE_COL       = 'p_attributes[akku_länge][de]';
 const DESC_COLS = ['p_description[de]', 'p_description[nl]'];
 const NAME_COLS = ['p_name[de]', 'p_name[nl]'];
 
@@ -577,6 +584,146 @@ function extractLeuchtFromTable(html: string): string | null {
   return null;
 }
 
+// ─── Normalisierung: Maße (mm) ────────────────────────────────────────────────
+
+function fixDimension(val: string): { fixed: string; changed: boolean } {
+  const trimmed = val.trim();
+  if (!trimmed) return { fixed: trimmed, changed: false };
+  if (!trimmed.includes(',')) return { fixed: trimmed, changed: false };
+  const dotted = trimmed.replace(',', '.');
+  const stripped = dotted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  return { fixed: stripped, changed: stripped !== trimmed };
+}
+
+function normalizeMm(raw: string, isCm: boolean): string | null {
+  const num = parseFloat(raw.replace(',', '.'));
+  if (isNaN(num) || num <= 0 || num > 9999) return null;
+  const mm = isCm ? Math.round(num * 10) : Math.round(num * 10) / 10;
+  return mm % 1 === 0 ? mm.toString() : mm.toFixed(1).replace(/\.?0+$/, '');
+}
+
+// ─── Volt-Extraktion via Keyword (generisch) ──────────────────────────────────
+
+function extractVoltByKeyword(
+  text: string,
+  keyRx: RegExp,
+  allowHighVolt = false
+): string | null {
+  if (!text) return null;
+  const clean = text.replace(/<[^>]+>/g, ' ');
+  const voltRx = /\b(\d+(?:[.,]\d+)?(?:\s*[-–]\s*\d+(?:[.,]\d+)?)?)\s*V(?:olt|AC|DC)?\b/gi;
+  for (const segment of clean.split(/[\n\r;|]+/)) {
+    keyRx.lastIndex = 0;
+    if (!keyRx.test(segment)) continue;
+    for (const m of segment.matchAll(voltRx)) {
+      const normalized = normalizeExtractedVolt(m[1].replace(/\s/g, ''));
+      if (!normalized) continue;
+      if (!allowHighVolt && isAcMainsVolt(normalized)) continue;
+      return normalized;
+    }
+  }
+  return null;
+}
+
+function extractVoltFromTableByKeyword(
+  html: string,
+  keyRx: RegExp,
+  allowHighVolt = false
+): string | null {
+  if (!html) return null;
+  for (const trMatch of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [...trMatch[1].matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const label = cells[0][1].replace(/<[^>]+>/g, '').trim();
+    keyRx.lastIndex = 0;
+    if (!keyRx.test(label)) continue;
+    const valueText = cells[1][1].replace(/<[^>]+>/g, '').trim();
+    const m = valueText.match(/(\d+(?:[.,]\d+)?(?:[-–]\d+(?:[.,]\d+)?)?)\s*V/i);
+    if (m) {
+      const normalized = normalizeExtractedVolt(m[1].replace(/\s/g, ''));
+      if (normalized && (allowHighVolt || !isAcMainsVolt(normalized))) return normalized;
+    }
+  }
+  return null;
+}
+
+const INPUT_VOLT_KW  = /eingangsspannung|netzspannung|input\s*volt|input\b|AC\b|VAC\b/i;
+const OUTPUT_VOLT_KW = /ausgangsspannung|output\s*volt|output\b|DC\b|VDC\b/i;
+const NENN_VOLT_KW   = /nennspannung/i;
+
+// ─── Durchmesser-Extraktion ───────────────────────────────────────────────────
+
+function extractDurchmesserFromText(text: string): string | null {
+  if (!text) return null;
+  const clean = text.replace(/<[^>]+>/g, ' ');
+  const patterns: RegExp[] = [
+    /[Dd]urchmesser[^\d]{0,15}(\d+(?:[.,]\d+)?)\s*mm/g,
+    /[Øø]\s*(\d+(?:[.,]\d+)?)\s*mm/g,
+    /(\d+(?:[.,]\d+)?)\s*mm[^,;\n\r]{0,20}[Dd]urchmesser/g,
+    /[Øø]\s*(\d+(?:[.,]\d+)?)\b/g,
+  ];
+  for (const pat of patterns) {
+    for (const m of clean.matchAll(pat)) {
+      const r = normalizeMm(m[1], false);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
+function extractDurchmesserFromTable(html: string): string | null {
+  if (!html) return null;
+  for (const trMatch of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [...trMatch[1].matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const label = cells[0][1].replace(/<[^>]+>/g, '').trim();
+    if (!/durchmesser|[øØ]|diameter/i.test(label)) continue;
+    const valueText = cells[1][1].replace(/<[^>]+>/g, '').trim();
+    const m = valueText.match(/^(\d+(?:[.,]\d+)?)\s*(mm)?$/i);
+    if (m) {
+      const r = normalizeMm(m[1], false);
+      if (r) return r;
+    }
+    const found = extractDurchmesserFromText(valueText + ' mm');
+    if (found) return found;
+  }
+  return null;
+}
+
+// ─── Abmessungen (L × B × H) ─────────────────────────────────────────────────
+
+interface DimResult { laenge: string | null; breite: string | null; hoehe: string | null }
+
+function extractDimensions(text: string): DimResult {
+  const none = { laenge: null, breite: null, hoehe: null };
+  if (!text) return none;
+  const clean = text.replace(/<[^>]+>/g, ' ');
+  const dim3Rx = /(\d+(?:[.,]\d+)?)\s*[×xX]\s*(\d+(?:[.,]\d+)?)\s*[×xX]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm)\b/gi;
+  for (const m of clean.matchAll(dim3Rx)) {
+    const isCm = m[4].toLowerCase() === 'cm';
+    const l = normalizeMm(m[1], isCm);
+    const b = normalizeMm(m[2], isCm);
+    const h = normalizeMm(m[3], isCm);
+    if (l && b && h) return { laenge: l, breite: b, hoehe: h };
+  }
+  return none;
+}
+
+function extractDimensionsFromTable(html: string): DimResult {
+  const none = { laenge: null, breite: null, hoehe: null };
+  if (!html) return none;
+  for (const trMatch of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [...trMatch[1].matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
+    if (cells.length < 2) continue;
+    const label = cells[0][1].replace(/<[^>]+>/g, '').trim();
+    if (!/abmessungen|maße|größe|dimension|abm\./i.test(label)) continue;
+    const valueText = cells[1][1].replace(/<[^>]+>/g, '').trim();
+    const found = extractDimensions(valueText + ' mm');
+    if (found.laenge) return found;
+  }
+  return none;
+}
+
 export async function processVoltFile(
   file: File,
   options: VoltProcessorOptions
@@ -992,6 +1139,185 @@ export async function processVoltFile(
       }
     }
 
+    // ─── Input Volt ───────────────────────────────────────────────────────────
+    if (headers.includes(INPUT_VOLT_COL)) {
+      const raw = (newRow[INPUT_VOLT_COL] ?? '').trim();
+      if (raw) {
+        const { fixed, changed: c } = fixVolt(raw);
+        if (c) { newRow[INPUT_VOLT_COL] = fixed; if (!changed.includes(INPUT_VOLT_COL)) changed.push(INPUT_VOLT_COL); }
+      }
+      let extracted: string | null = null;
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col) || !row[col]) continue;
+        extracted = extractVoltByKeyword(row[col], new RegExp(INPUT_VOLT_KW.source, 'i'), true);
+        if (extracted) break;
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractVoltFromTableByKeyword(row[col], new RegExp(INPUT_VOLT_KW.source, 'i'), true);
+          if (extracted) break;
+        }
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractVoltByKeyword(row[col], new RegExp(INPUT_VOLT_KW.source, 'i'), true);
+          if (extracted) break;
+        }
+      }
+      if (extracted && extracted !== (newRow[INPUT_VOLT_COL] ?? '').trim()) {
+        newRow[INPUT_VOLT_COL] = extracted;
+        if (!changed.includes(INPUT_VOLT_COL)) changed.push(INPUT_VOLT_COL);
+      }
+    }
+
+    // ─── Output Volt ──────────────────────────────────────────────────────────
+    if (headers.includes(OUTPUT_VOLT_COL)) {
+      const raw = (newRow[OUTPUT_VOLT_COL] ?? '').trim();
+      if (raw) {
+        const { fixed, changed: c } = fixVolt(raw);
+        if (c) { newRow[OUTPUT_VOLT_COL] = fixed; if (!changed.includes(OUTPUT_VOLT_COL)) changed.push(OUTPUT_VOLT_COL); }
+      }
+      let extracted: string | null = null;
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col) || !row[col]) continue;
+        extracted = extractVoltByKeyword(row[col], new RegExp(OUTPUT_VOLT_KW.source, 'i'), false);
+        if (extracted) break;
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractVoltFromTableByKeyword(row[col], new RegExp(OUTPUT_VOLT_KW.source, 'i'), false);
+          if (extracted) break;
+        }
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractVoltByKeyword(row[col], new RegExp(OUTPUT_VOLT_KW.source, 'i'), false);
+          if (extracted) break;
+        }
+      }
+      if (extracted && extracted !== (newRow[OUTPUT_VOLT_COL] ?? '').trim()) {
+        newRow[OUTPUT_VOLT_COL] = extracted;
+        if (!changed.includes(OUTPUT_VOLT_COL)) changed.push(OUTPUT_VOLT_COL);
+      }
+    }
+
+    // ─── Nennspannung ─────────────────────────────────────────────────────────
+    if (headers.includes(NENN_VOLT_COL)) {
+      const raw = (newRow[NENN_VOLT_COL] ?? '').trim();
+      if (raw) {
+        const { fixed, changed: c } = fixVolt(raw);
+        if (c) { newRow[NENN_VOLT_COL] = fixed; if (!changed.includes(NENN_VOLT_COL)) changed.push(NENN_VOLT_COL); }
+      }
+      let extracted: string | null = null;
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col) || !row[col]) continue;
+        extracted = extractVoltByKeyword(row[col], new RegExp(NENN_VOLT_KW.source, 'i'), false);
+        if (extracted) break;
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractVoltFromTableByKeyword(row[col], new RegExp(NENN_VOLT_KW.source, 'i'), false);
+          if (extracted) break;
+        }
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractVoltByKeyword(row[col], new RegExp(NENN_VOLT_KW.source, 'i'), false);
+          if (extracted) break;
+        }
+      }
+      if (extracted && extracted !== (newRow[NENN_VOLT_COL] ?? '').trim()) {
+        newRow[NENN_VOLT_COL] = extracted;
+        if (!changed.includes(NENN_VOLT_COL)) changed.push(NENN_VOLT_COL);
+      }
+    }
+
+    // ─── Durchmesser ──────────────────────────────────────────────────────────
+    if (headers.includes(DURCHM_COL)) {
+      const raw = (newRow[DURCHM_COL] ?? '').trim();
+      if (raw) {
+        const { fixed, changed: c } = fixDimension(raw);
+        if (c) { newRow[DURCHM_COL] = fixed; if (!changed.includes(DURCHM_COL)) changed.push(DURCHM_COL); }
+      }
+      let extracted: string | null = null;
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col) || !row[col]) continue;
+        extracted = extractDurchmesserFromText(row[col]);
+        if (extracted) break;
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractDurchmesserFromTable(row[col]);
+          if (extracted) break;
+        }
+      }
+      if (!extracted) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          extracted = extractDurchmesserFromText(row[col]);
+          if (extracted) break;
+        }
+      }
+      if (extracted && extracted !== (newRow[DURCHM_COL] ?? '').trim()) {
+        newRow[DURCHM_COL] = extracted;
+        if (!changed.includes(DURCHM_COL)) changed.push(DURCHM_COL);
+      }
+    }
+
+    // ─── Abmessungen (Breite, Höhe, Länge) ───────────────────────────────────
+    const needsDim = [BREITE_COL, HOEHE_COL, LAENGE_COL].some(c => headers.includes(c));
+    if (needsDim) {
+      // Normalize existing values
+      for (const [col] of [[BREITE_COL], [HOEHE_COL], [LAENGE_COL]]) {
+        if (!headers.includes(col)) continue;
+        const raw = (newRow[col] ?? '').trim();
+        if (raw) {
+          const { fixed, changed: c } = fixDimension(raw);
+          if (c) { newRow[col] = fixed; if (!changed.includes(col)) changed.push(col); }
+        }
+      }
+      // Extract from names
+      let dims: DimResult = { laenge: null, breite: null, hoehe: null };
+      for (const col of NAME_COLS) {
+        if (!headers.includes(col) || !row[col]) continue;
+        dims = extractDimensions(row[col]);
+        if (dims.laenge) break;
+      }
+      // Extract from desc table
+      if (!dims.laenge) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          dims = extractDimensionsFromTable(row[col]);
+          if (dims.laenge) break;
+        }
+      }
+      // Extract from desc text
+      if (!dims.laenge) {
+        for (const col of DESC_COLS) {
+          if (!headers.includes(col) || !row[col]) continue;
+          dims = extractDimensions(row[col]);
+          if (dims.laenge) break;
+        }
+      }
+      const assign = (col: string, val: string | null) => {
+        if (!headers.includes(col) || !val) return;
+        if (val !== (newRow[col] ?? '').trim()) {
+          newRow[col] = val;
+          if (!changed.includes(col)) changed.push(col);
+        }
+      };
+      assign(BREITE_COL, dims.breite);
+      assign(HOEHE_COL,  dims.hoehe);
+      assign(LAENGE_COL, dims.laenge);
+    }
+
     fixedRows.push(newRow);
     changedCols.push(changed);
   }
@@ -1043,7 +1369,11 @@ export async function processVoltFile(
   const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
 
   // Attributspalten die im Original-CSV fehlten, aber jetzt befüllt wurden, hinzufügen
-  const ATTR_COLS_ORDERED = [VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL];
+  const ATTR_COLS_ORDERED = [
+    VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
+    INPUT_VOLT_COL, OUTPUT_VOLT_COL, NENN_VOLT_COL,
+    DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL,
+  ];
   const missingAttrCols = ATTR_COLS_ORDERED.filter(col =>
     !headers.includes(col) &&
     csvRowsClean.some(r => (r[col] ?? '').trim() !== '')
