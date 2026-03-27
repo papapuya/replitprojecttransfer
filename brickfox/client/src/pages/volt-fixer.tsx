@@ -1440,7 +1440,7 @@ export default function VoltFixer() {
                           <td className="px-3 py-1.5 text-gray-600 font-mono text-xs">{item.itemNr || "—"}</td>
                           <td className="px-3 py-1.5">
                             <div className="flex flex-wrap gap-1 min-w-[80px]">
-                              {item.changed.length === 0 && !item.descDEChanged ? (
+                              {item.changed.length === 0 ? (
                                 <span className="text-gray-300 text-[10px]">—</span>
                               ) : (
                                 <>
@@ -1454,11 +1454,6 @@ export default function VoltFixer() {
                                       </span>
                                     );
                                   })}
-                                  {item.descDEChanged && (
-                                    <span className="inline-block rounded px-1 py-0 text-[10px] font-semibold leading-4 bg-amber-100 text-amber-700">
-                                      Beschr.
-                                    </span>
-                                  )}
                                 </>
                               )}
                             </div>
