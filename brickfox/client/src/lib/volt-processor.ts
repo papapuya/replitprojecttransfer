@@ -332,7 +332,7 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
         if (tag !== undefined) return tag;
         if (!num || !unit) return m;
         const norm = num.replace(',', '.'); // Komma → Punkt für Vergleich
-        if (norm === targetVolt || /[-\/]/.test(num)) return m;
+        if (parseFloat(norm) === parseFloat(targetVolt) || /[-\/]/.test(num)) return m;
         changed = true;
         return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
       });
@@ -349,7 +349,7 @@ function syncVoltInHtmlText(html: string, targetVolt: string): { result: string;
       if (tag !== undefined) return tag;
       if (!num || !unit) return m;
       const norm = num.replace(',', '.'); // Komma → Punkt für Vergleich
-      if (norm === targetVolt || /[-\/]/.test(num)) return m;
+      if (parseFloat(norm) === parseFloat(targetVolt) || /[-\/]/.test(num)) return m;
       changed = true;
       return targetVolt + ' ' + (unit.trim().toLowerCase() === 'volt' ? 'Volt' : 'V');
     });
