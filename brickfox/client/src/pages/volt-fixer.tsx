@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, ChevronLeft, ChevronRight, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { processVoltFile } from "@/lib/volt-processor";
@@ -34,7 +34,6 @@ const COL_TO_FIELD: Record<string, string> = {
 };
 // Volt-Werte >= 1000 sind unrealistisch und werden nicht angezeigt
 const isUnrealisticVolt = (v: string) => { const n = Number(v.replace(',', '.')); return v !== '' && !isNaN(n) && n >= 1000; };
-const PAGE_SIZE = 500;
 
 type PreviewItem = {
   index: number;
@@ -561,7 +560,6 @@ export default function VoltFixer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<Result | null>(null);
-  const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<{ index: number; rowNum: number } | null>(null);
   const [restoreEmoji, setRestoreEmoji] = useState(false);
   const [progress, setProgress] = useState<ProgressState | null>(null);
@@ -636,7 +634,6 @@ export default function VoltFixer() {
 
       // Fallback: altes Verhalten (kein originalCsvBase64 im Save)
       setResult(data);
-      setPage(0);
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } catch { setError('Fehler beim Laden des Projekts'); } finally { setLoadingSaveId(null); }
   };
@@ -652,7 +649,6 @@ export default function VoltFixer() {
     setLoading(true);
     setError("");
     setResult(null);
-    setPage(0);
 
     try {
       const processorResult = await processVoltFile(file, {
@@ -898,8 +894,6 @@ export default function VoltFixer() {
   const allItems = result?.previewItems ?? [];
   const items = showOnlyChanged ? allItems.filter(it => it.changed.length > 0) : allItems;
   const changedCount = allItems.filter(it => it.changed.length > 0).length;
-  const totalPages = Math.ceil(items.length / PAGE_SIZE);
-  const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <div className="p-6 space-y-6">
@@ -1253,7 +1247,7 @@ export default function VoltFixer() {
               </h2>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => { setShowOnlyChanged(v => !v); setPage(0); }}
+                  onClick={() => setShowOnlyChanged(v => !v)}
                   className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
                     showOnlyChanged
                       ? "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700"
@@ -1262,30 +1256,11 @@ export default function VoltFixer() {
                 >
                   {showOnlyChanged ? "Nur Geänderte" : "Alle anzeigen"}
                 </button>
-                {totalPages > 1 && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <button
-                      onClick={() => setPage(p => Math.max(0, p - 1))}
-                      disabled={page === 0}
-                      className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <span>Seite {page + 1} / {totalPages} · Zeilen {(page * PAGE_SIZE + 1).toLocaleString()}–{Math.min((page + 1) * PAGE_SIZE, items.length).toLocaleString()}</span>
-                    <button
-                      onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                      disabled={page === totalPages - 1}
-                      className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
 
             <div className="border rounded-xl overflow-hidden shadow-sm">
-              <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+              <div className="overflow-x-auto max-h-[calc(100vh-220px)] overflow-y-auto">
                 <table className="text-xs w-full">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-gray-50 border-b">
@@ -1320,7 +1295,7 @@ export default function VoltFixer() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pageItems.map((item) => {
+                    {items.map((item) => {
                       const hasChange = item.changed.length > 0;
                       const voltChanged = item.changed.includes(VOLT_COL);
                       return (
@@ -1582,21 +1557,6 @@ export default function VoltFixer() {
               </div>
             </div>
 
-            {/* Pagination unten */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-3 mt-3">
-                <button onClick={() => setPage(0)} disabled={page === 0} className="text-xs px-2 py-1 rounded border hover:bg-gray-50 disabled:opacity-30">« Erste</button>
-                <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronLeft size={16} /></button>
-                {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                  const p = totalPages <= 7 ? i : Math.max(0, Math.min(page - 3, totalPages - 7)) + i;
-                  return (
-                    <button key={p} onClick={() => setPage(p)} className={`text-xs px-3 py-1 rounded border ${p === page ? "bg-indigo-600 text-white border-indigo-600" : "hover:bg-gray-50"}`}>{p + 1}</button>
-                  );
-                })}
-                <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1} className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronRight size={16} /></button>
-                <button onClick={() => setPage(totalPages - 1)} disabled={page === totalPages - 1} className="text-xs px-2 py-1 rounded border hover:bg-gray-50 disabled:opacity-30">Letzte »</button>
-              </div>
-            )}
           </div>
         </div>
       )}
