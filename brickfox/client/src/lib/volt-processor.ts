@@ -1277,8 +1277,8 @@ export async function processVoltFile(
       }
     }
 
-    // ─── Gewicht (immer in Gramm) ─────────────────────────────────────────────
-    if (headers.includes(GEWICHT_COL)) {
+    // ─── Gewicht (immer in Gramm) — läuft auch wenn Spalte im Original fehlt ──
+    {
       const raw = (newRow[GEWICHT_COL] ?? '').trim();
       if (raw) {
         const { fixed, changed: c } = fixGewicht(raw);
