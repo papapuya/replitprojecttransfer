@@ -421,6 +421,15 @@ function normalizeMah(raw: string): string | null {
   return Math.round(num).toString();
 }
 
+function fixMah(val: string): { fixed: string; changed: boolean } {
+  const trimmed = val.trim();
+  if (!trimmed) return { fixed: trimmed, changed: false };
+  if (!/^\d+(?:[.,]\d+)?$/.test(trimmed)) return { fixed: trimmed, changed: false };
+  const normalized = normalizeMah(trimmed);
+  if (!normalized) return { fixed: trimmed, changed: false };
+  return { fixed: normalized, changed: normalized !== trimmed };
+}
+
 function extractMahFromText(text: string): string | null {
   if (!text) return null;
   const clean = text.replace(/<[^>]+>/g, ' ');
@@ -1070,8 +1079,16 @@ export async function processVoltFile(
       }
     }
 
-    // ─── mAh: immer aus Name/Beschreibung extrahieren, bestehenden Wert überschreiben ──
+    // ─── mAh: bestehende Werte normalisieren (Komma→Punkt, Ganzzahl), dann aus Name/Beschreibung extrahieren ──
     if (headers.includes(MAH_COL)) {
+      const mahVal = (newRow[MAH_COL] ?? '').trim();
+      if (mahVal) {
+        const { fixed: fixedMah, changed: mahFixed } = fixMah(mahVal);
+        if (mahFixed) {
+          newRow[MAH_COL] = fixedMah;
+          if (!changed.includes(MAH_COL)) changed.push(MAH_COL);
+        }
+      }
       let extractedMah: string | null = null;
 
       // 1. Produktname (DE dann NL)
