@@ -666,6 +666,16 @@ function extractVoltFromTableByKeyword(
 const INPUT_VOLT_KW  = /eingangsspannung|netzspannung|input\s*volt|input\b|AC\b|VAC\b/i;
 const OUTPUT_VOLT_KW = /ausgangsspannung|output\s*volt|output\b|DC\b|VDC\b/i;
 
+// Eingangsspannung muss ein aufsteigender Bereich sein (z.B. 100-240).
+// Einzelwerte (z.B. "24") oder absteigende Ranges (z.B. "110-24") sind ungültig.
+function isValidInputVoltRange(raw: string): boolean {
+  if (!raw) return false;
+  if (!/[-\/]/.test(raw)) return false; // kein Bereich → ungültig
+  const parts = raw.split(/[-\/]/).map(p => parseFloat(p.replace(',', '.')));
+  if (parts.length < 2 || parts.some(isNaN)) return false;
+  return parts[0] < parts[parts.length - 1]; // aufsteigend prüfen
+}
+
 // ─── Durchmesser-Extraktion ───────────────────────────────────────────────────
 
 function extractDurchmesserFromText(text: string): string | null {
@@ -1304,27 +1314,34 @@ export async function processVoltFile(
     if (headers.includes(INPUT_VOLT_COL)) {
       const raw = (newRow[INPUT_VOLT_COL] ?? '').trim();
       if (raw) {
-        const { fixed, changed: c } = fixVolt(raw);
-        if (c) { newRow[INPUT_VOLT_COL] = fixed; if (!changed.includes(INPUT_VOLT_COL)) changed.push(INPUT_VOLT_COL); }
+        const { fixed } = fixVolt(raw);
+        if (!isValidInputVoltRange(fixed)) {
+          // Vorhandener Wert ist kein gültiger aufsteigender Bereich → löschen
+          newRow[INPUT_VOLT_COL] = '';
+          if (!changed.includes(INPUT_VOLT_COL)) changed.push(INPUT_VOLT_COL);
+        } else {
+          const { fixed: f2, changed: c } = fixVolt(raw);
+          if (c) { newRow[INPUT_VOLT_COL] = f2; if (!changed.includes(INPUT_VOLT_COL)) changed.push(INPUT_VOLT_COL); }
+        }
       }
       let extracted: string | null = null;
       for (const col of NAME_COLS) {
         if (!headers.includes(col) || !row[col]) continue;
-        extracted = extractVoltByKeyword(row[col], new RegExp(INPUT_VOLT_KW.source, 'i'), true);
-        if (extracted) break;
+        const v = extractVoltByKeyword(row[col], new RegExp(INPUT_VOLT_KW.source, 'i'), true);
+        if (v && isValidInputVoltRange(v)) { extracted = v; break; }
       }
       if (!extracted) {
         for (const col of DESC_COLS) {
           if (!headers.includes(col) || !row[col]) continue;
-          extracted = extractVoltFromTableByKeyword(row[col], new RegExp(INPUT_VOLT_KW.source, 'i'), true);
-          if (extracted) break;
+          const v = extractVoltFromTableByKeyword(row[col], new RegExp(INPUT_VOLT_KW.source, 'i'), true);
+          if (v && isValidInputVoltRange(v)) { extracted = v; break; }
         }
       }
       if (!extracted) {
         for (const col of DESC_COLS) {
           if (!headers.includes(col) || !row[col]) continue;
-          extracted = extractVoltByKeyword(row[col], new RegExp(INPUT_VOLT_KW.source, 'i'), true);
-          if (extracted) break;
+          const v = extractVoltByKeyword(row[col], new RegExp(INPUT_VOLT_KW.source, 'i'), true);
+          if (v && isValidInputVoltRange(v)) { extracted = v; break; }
         }
       }
       if (extracted && extracted !== (newRow[INPUT_VOLT_COL] ?? '').trim()) {
