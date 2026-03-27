@@ -769,7 +769,6 @@ export async function processVoltFile(
     return ';';
   };
   const delimiter = detectDelimiter(text);
-  console.log(`[VoltFixer] Delimiter erkannt: "${delimiter}" (Spalten-Probe: ${Papa.parse(text.slice(0, 2048), { delimiter, header: true, preview: 1 }).meta.fields?.length ?? 0})`);
 
   const parsed = Papa.parse<Record<string, string>>(text, {
     delimiter,
