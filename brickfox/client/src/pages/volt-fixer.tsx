@@ -565,6 +565,9 @@ export default function VoltFixer() {
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLTableRowElement>(null);
+  const [visibleCount, setVisibleCount] = useState(500);
   const [editingVolt, setEditingVolt] = useState<{ index: number; value: string } | null>(null);
   const [editingAttr, setEditingAttr] = useState<{ index: number; col: string; value: string } | null>(null);
   const [patchSaving, setPatchSaving] = useState(false);
@@ -894,6 +897,25 @@ export default function VoltFixer() {
   const allItems = result?.previewItems ?? [];
   const items = showOnlyChanged ? allItems.filter(it => it.changed.length > 0) : allItems;
   const changedCount = allItems.filter(it => it.changed.length > 0).length;
+  const visibleItems = items.slice(0, visibleCount);
+
+  useEffect(() => { setVisibleCount(500); }, [showOnlyChanged, result]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const container = scrollContainerRef.current;
+    if (!sentinel || !container) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(c => Math.min(c + 500, items.length));
+        }
+      },
+      { root: container, threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [sentinelRef.current, scrollContainerRef.current, items.length]);
 
   return (
     <div className="p-6 space-y-6">
@@ -1260,7 +1282,7 @@ export default function VoltFixer() {
             </div>
 
             <div className="border rounded-xl overflow-hidden shadow-sm">
-              <div className="overflow-x-auto max-h-[calc(100vh-220px)] overflow-y-auto">
+              <div ref={scrollContainerRef} className="overflow-x-auto max-h-[calc(100vh-220px)] overflow-y-auto">
                 <table className="text-xs w-full">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-gray-50 border-b">
@@ -1295,7 +1317,7 @@ export default function VoltFixer() {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => {
+                    {visibleItems.map((item) => {
                       const hasChange = item.changed.length > 0;
                       const voltChanged = item.changed.includes(VOLT_COL);
                       return (
@@ -1552,6 +1574,13 @@ export default function VoltFixer() {
                         </tr>
                       );
                     })}
+                    {visibleCount < items.length && (
+                      <tr ref={sentinelRef}>
+                        <td colSpan={99} className="py-4 text-center text-xs text-gray-400">
+                          Lade weitere Zeilen… ({visibleCount.toLocaleString()} / {items.length.toLocaleString()})
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
