@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine, Search } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { processVoltFile, applyDescriptionSync, type VoltProcessorResult } from "@/lib/volt-processor";
@@ -1120,10 +1120,6 @@ export default function VoltFixer() {
         <div ref={resultRef}>
           {/* Stats */}
           <div className="flex flex-wrap gap-2 items-center">
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
-              <FileText size={13} className="text-slate-400 shrink-0" />
-              <span className="text-sm font-medium text-slate-700 truncate max-w-xs">{result.fileName}</span>
-            </div>
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
               <span className="text-sm font-semibold text-slate-800">{result.stats.total.toLocaleString('de-DE')}</span>
               <span className="text-xs text-slate-500">Zeilen</span>
