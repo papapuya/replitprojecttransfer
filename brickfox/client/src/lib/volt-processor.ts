@@ -396,14 +396,6 @@ function extractMahFromText(text: string): string | null {
     const result = normalizeMah(m[1]);
     if (result) return result;
   }
-  // N.NAh oder N,NAh → ×1000
-  for (const m of clean.matchAll(/\b(\d+(?:[.,]\d+)?)\s*Ah\b/gi)) {
-    const num = parseFloat(m[1].replace(',', '.'));
-    if (!isNaN(num) && num >= 0.1 && num <= 50) {
-      const result = normalizeMah((num * 1000).toString());
-      if (result) return result;
-    }
-  }
   return null;
 }
 
