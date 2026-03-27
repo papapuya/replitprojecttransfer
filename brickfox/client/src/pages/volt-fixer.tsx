@@ -12,7 +12,7 @@ const WATT_COL        = "p_attributes[lela_leistung_watt][de]";
 const LEUCHT_COL      = "p_attributes[tala_leuchtweite][de]";
 const INPUT_VOLT_COL  = "p_attributes[netzteil_input_volt][de]";
 const OUTPUT_VOLT_COL = "p_attributes[netzteil_output_volt][de]";
-const NENN_VOLT_COL   = "p_attributes[Nennspannung][de]";
+
 const DURCHM_COL      = "p_attributes[akku_durchmesser][de]";
 const BREITE_COL      = "p_attributes[breite][de]";
 const HOEHE_COL       = "p_attributes[hoehe][de]";
@@ -21,7 +21,7 @@ const GEWICHT_COL     = "p_attributes[tala_gewicht][de]";
 
 const ALL_ATTR_COLS = [
   VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
-  INPUT_VOLT_COL, OUTPUT_VOLT_COL, NENN_VOLT_COL,
+  INPUT_VOLT_COL, OUTPUT_VOLT_COL,
   DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
 ];
 
@@ -54,8 +54,7 @@ type PreviewItem = {
   inputVoltNew?: string;
   outputVoltOrig?: string;
   outputVoltNew?: string;
-  nennVoltOrig?: string;
-  nennVoltNew?: string;
+
   durchmOrig?: string;
   durchmNew?: string;
   breiteOrig?: string;
@@ -212,7 +211,7 @@ const ATTR_SPECS: Array<[string, string]> = [
   [LEUCHT_COL,      'm(?!\\w)'],
   [INPUT_VOLT_COL,  'V(?:olt|AC|DC)?(?!\\w)'],
   [OUTPUT_VOLT_COL, 'V(?:olt|AC|DC)?(?!\\w)'],
-  [NENN_VOLT_COL,   'V(?:olt)?(?!\\w)'],
+
   [DURCHM_COL,      '(?:mm\\b|[xX×*])'],
   [BREITE_COL,      '(?:mm\\b|[xX×*])'],
   [HOEHE_COL,       '(?:mm\\b|[xX×*])'],
@@ -468,7 +467,7 @@ function DetailModal({
                     { col: LEUCHT_COL,      label: 'Leuchtweite'          },
                     { col: INPUT_VOLT_COL,  label: 'Netzteil Input (V)'   },
                     { col: OUTPUT_VOLT_COL, label: 'Netzteil Output (V)'  },
-                    { col: NENN_VOLT_COL,   label: 'Nennspannung (V)'     },
+
                     { col: DURCHM_COL,      label: 'Durchmesser (mm)'     },
                     { col: BREITE_COL,      label: 'Breite (mm)'          },
                     { col: HOEHE_COL,       label: 'Höhe (mm)'            },
@@ -768,7 +767,6 @@ export default function VoltFixer() {
           [LEUCHT_COL]:      item.leuchtNew      ?? '',
           [INPUT_VOLT_COL]:  item.inputVoltNew   ?? '',
           [OUTPUT_VOLT_COL]: item.outputVoltNew  ?? '',
-          [NENN_VOLT_COL]:   item.nennVoltNew    ?? '',
           [DURCHM_COL]:      item.durchmNew      ?? '',
           [BREITE_COL]:      item.breiteNew      ?? '',
           [HOEHE_COL]:       item.hoeheNew       ?? '',
@@ -788,7 +786,6 @@ export default function VoltFixer() {
           [LEUCHT_COL]:      item.leuchtOrig      ?? '',
           [INPUT_VOLT_COL]:  item.inputVoltOrig   ?? '',
           [OUTPUT_VOLT_COL]: item.outputVoltOrig  ?? '',
-          [NENN_VOLT_COL]:   item.nennVoltOrig    ?? '',
           [DURCHM_COL]:      item.durchmOrig      ?? '',
           [BREITE_COL]:      item.breiteOrig      ?? '',
           [HOEHE_COL]:       item.hoeheOrig       ?? '',
@@ -1312,8 +1309,6 @@ export default function VoltFixer() {
                       <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Input Volt (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Output Volt (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Output Volt (nachher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Nennspannung (vorher)</th>
-                      <th className="px-3 py-2 text-left font-semibold text-violet-700 whitespace-nowrap bg-violet-50">Nennspannung (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Durchmesser (vorher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Durchmesser (nachher)</th>
                       <th className="px-3 py-2 text-left font-semibold text-orange-700 whitespace-nowrap bg-orange-50">Breite (vorher)</th>
@@ -1523,19 +1518,6 @@ export default function VoltFixer() {
                               <button onClick={() => setEditingAttr({ index: item.index, col: OUTPUT_VOLT_COL, value: item.outputVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-violet-100 transition-colors cursor-text text-left w-full ${item.changed.includes(OUTPUT_VOLT_COL) ? "text-violet-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
                                 {item.changed.includes(OUTPUT_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-violet-500" />}
                                 <span className="font-mono text-xs">{item.outputVoltNew || <span className="text-gray-300 font-normal">—</span>}</span>
-                                <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
-                              </button>
-                            )}
-                          </td>
-                          {/* Nennspannung vorher/nachher */}
-                          <td className="px-3 py-1.5 font-mono text-xs text-gray-400 bg-violet-50/40">{item.nennVoltOrig || <span className="text-gray-300">—</span>}</td>
-                          <td className="px-1 py-1 font-mono text-xs bg-violet-50/40">
-                            {editingAttr?.index === item.index && editingAttr?.col === NENN_VOLT_COL ? (
-                              <div className="flex items-center gap-1"><input autoFocus className="w-20 px-2 py-0.5 text-xs border border-violet-400 rounded focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono" value={editingAttr.value} onChange={e => setEditingAttr({ ...editingAttr, value: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveAttrEdit(item.index, NENN_VOLT_COL, editingAttr.value); if (e.key === "Escape") setEditingAttr(null); }} /><button onClick={() => saveAttrEdit(item.index, NENN_VOLT_COL, editingAttr.value)} className="text-xs px-1.5 py-0.5 bg-violet-600 text-white rounded hover:bg-violet-700">✓</button><button onClick={() => setEditingAttr(null)} className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">✕</button></div>
-                            ) : (
-                              <button onClick={() => setEditingAttr({ index: item.index, col: NENN_VOLT_COL, value: item.nennVoltNew ?? '' })} className={`group flex items-center gap-1 px-2 py-0.5 rounded hover:bg-violet-100 transition-colors cursor-text text-left w-full ${item.changed.includes(NENN_VOLT_COL) ? "text-violet-700 font-semibold" : "text-gray-500"}`} title="Klicken zum Bearbeiten">
-                                {item.changed.includes(NENN_VOLT_COL) && <CheckCircle size={10} className="inline shrink-0 text-violet-500" />}
-                                <span className="font-mono text-xs">{item.nennVoltNew || <span className="text-gray-300 font-normal">—</span>}</span>
                                 <span className="ml-auto opacity-0 group-hover:opacity-60 text-gray-400 text-xs">✎</span>
                               </button>
                             )}

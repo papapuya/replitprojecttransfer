@@ -55,8 +55,7 @@ export interface PreviewItem {
   inputVoltNew: string;
   outputVoltOrig: string;
   outputVoltNew: string;
-  nennVoltOrig: string;
-  nennVoltNew: string;
+
   durchmOrig: string;
   durchmNew: string;
   breiteOrig: string;
@@ -109,7 +108,7 @@ const WATT_COL         = 'p_attributes[lela_leistung_watt][de]';
 const LEUCHT_COL       = 'p_attributes[tala_leuchtweite][de]';
 const INPUT_VOLT_COL   = 'p_attributes[netzteil_input_volt][de]';
 const OUTPUT_VOLT_COL  = 'p_attributes[netzteil_output_volt][de]';
-const NENN_VOLT_COL    = 'p_attributes[Nennspannung][de]';
+
 const DURCHM_COL       = 'p_attributes[akku_durchmesser][de]';
 const BREITE_COL       = 'p_attributes[breite][de]';
 const HOEHE_COL        = 'p_attributes[hoehe][de]';
@@ -676,7 +675,6 @@ function extractVoltFromTableByKeyword(
 
 const INPUT_VOLT_KW  = /eingangsspannung|netzspannung|input\s*volt|input\b|AC\b|VAC\b/i;
 const OUTPUT_VOLT_KW = /ausgangsspannung|output\s*volt|output\b|DC\b|VDC\b/i;
-const NENN_VOLT_KW   = /nennspannung/i;
 
 // ─── Durchmesser-Extraktion ───────────────────────────────────────────────────
 
@@ -1378,39 +1376,6 @@ export async function processVoltFile(
       }
     }
 
-    // ─── Nennspannung ─────────────────────────────────────────────────────────
-    if (headers.includes(NENN_VOLT_COL)) {
-      const raw = (newRow[NENN_VOLT_COL] ?? '').trim();
-      if (raw) {
-        const { fixed, changed: c } = fixVolt(raw);
-        if (c) { newRow[NENN_VOLT_COL] = fixed; if (!changed.includes(NENN_VOLT_COL)) changed.push(NENN_VOLT_COL); }
-      }
-      let extracted: string | null = null;
-      for (const col of NAME_COLS) {
-        if (!headers.includes(col) || !row[col]) continue;
-        extracted = extractVoltByKeyword(row[col], new RegExp(NENN_VOLT_KW.source, 'i'), false);
-        if (extracted) break;
-      }
-      if (!extracted) {
-        for (const col of DESC_COLS) {
-          if (!headers.includes(col) || !row[col]) continue;
-          extracted = extractVoltFromTableByKeyword(row[col], new RegExp(NENN_VOLT_KW.source, 'i'), false);
-          if (extracted) break;
-        }
-      }
-      if (!extracted) {
-        for (const col of DESC_COLS) {
-          if (!headers.includes(col) || !row[col]) continue;
-          extracted = extractVoltByKeyword(row[col], new RegExp(NENN_VOLT_KW.source, 'i'), false);
-          if (extracted) break;
-        }
-      }
-      if (extracted && extracted !== (newRow[NENN_VOLT_COL] ?? '').trim()) {
-        newRow[NENN_VOLT_COL] = extracted;
-        if (!changed.includes(NENN_VOLT_COL)) changed.push(NENN_VOLT_COL);
-      }
-    }
-
     // ─── Durchmesser ──────────────────────────────────────────────────────────
     if (headers.includes(DURCHM_COL)) {
       const raw = (newRow[DURCHM_COL] ?? '').trim();
@@ -1560,7 +1525,7 @@ export async function processVoltFile(
   // Attributspalten die im Original-CSV fehlten, aber jetzt befüllt wurden, hinzufügen
   const ATTR_COLS_ORDERED = [
     VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
-    INPUT_VOLT_COL, OUTPUT_VOLT_COL, NENN_VOLT_COL,
+    INPUT_VOLT_COL, OUTPUT_VOLT_COL,
     DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
   ];
   const missingAttrCols = ATTR_COLS_ORDERED.filter(col =>
@@ -1712,8 +1677,7 @@ export async function processVoltFile(
       inputVoltNew: row[INPUT_VOLT_COL] ?? '',
       outputVoltOrig: (orig[OUTPUT_VOLT_COL] ?? '').trim(),
       outputVoltNew: row[OUTPUT_VOLT_COL] ?? '',
-      nennVoltOrig: (orig[NENN_VOLT_COL] ?? '').trim(),
-      nennVoltNew: row[NENN_VOLT_COL] ?? '',
+
       durchmOrig: (orig[DURCHM_COL] ?? '').trim(),
       durchmNew: row[DURCHM_COL] ?? '',
       breiteOrig: (orig[BREITE_COL] ?? '').trim(),
