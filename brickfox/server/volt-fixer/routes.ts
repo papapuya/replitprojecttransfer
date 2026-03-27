@@ -1283,38 +1283,41 @@ router.get('/saves', (_req: Request, res: Response) => {
 
 // POST /api/volt-fixer/save — Aktuellen Job speichern
 router.post('/save', (req: Request, res: Response) => {
-  const { jobId, name, csvBase64, exportFileName } = req.body as {
+  const { jobId, name, csvBase64, exportFileName, stats, totalRows, fileName: clientFileName } = req.body as {
     jobId?: string; name?: string; csvBase64?: string; exportFileName?: string;
+    stats?: Record<string, number>; totalRows?: number; fileName?: string;
   };
-  if (!jobId || !name) return res.status(400).json({ error: 'jobId und name erforderlich' });
-  const job = jobStore.get(jobId);
-  if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  if (!name) return res.status(400).json({ error: 'name erforderlich' });
 
   ensureSavesDir();
   const saveId = crypto.randomUUID();
   const index = readSavesIndex();
 
-  const changedRows = job.changedCols.filter(c => c && c.length > 0).length;
+  // Versuche Job aus dem Store zu laden (server-seitige Verarbeitung)
+  const job = jobId ? jobStore.get(jobId) : undefined;
+
+  const changedRows = job ? job.changedCols.filter(c => c && c.length > 0).length : 0;
   const hasCsv = !!csvBase64;
+  const resolvedFileName = job?.fileName || clientFileName || 'export.csv';
   const meta: SaveMeta = {
     id: saveId,
     name: name.trim(),
     savedAt: new Date().toISOString(),
-    fileName: job.fileName,
-    totalRows: job.fixedRows.length,
+    fileName: resolvedFileName,
+    totalRows: job ? job.fixedRows.length : (totalRows ?? 0),
     changedRows,
     hasCsv,
-    exportFileName: exportFileName?.trim() || job.fileName,
+    exportFileName: exportFileName?.trim() || resolvedFileName,
   };
 
-  const saveData = {
-    meta,
-    resultData: {
+  const saveData: Record<string, unknown> = { meta };
+  if (job) {
+    saveData.resultData = {
       headers: job.headers,
       fileName: job.fileName,
       ...(job.resultCache ?? {}),
-    },
-    jobData: {
+    };
+    saveData.jobData = {
       csvBufferBase64: job.csvBuffer.toString('base64'),
       fixedRows: job.fixedRows,
       originalRows: job.originalRows,
@@ -1323,8 +1326,8 @@ router.post('/save', (req: Request, res: Response) => {
       dreiSpannungIndices: job.dreiSpannungIndices,
       restoreEmoji: job.restoreEmoji,
       fileName: job.fileName,
-    },
-  };
+    };
+  }
 
   const compressed = zlib.gzipSync(JSON.stringify(saveData));
   fs.writeFileSync(path.join(SAVES_DIR, `${saveId}.json.gz`), compressed);
