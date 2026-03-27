@@ -1206,11 +1206,11 @@ export default function VoltFixer() {
             </div>
           )}
 
-          {/* Beschreibungen korrigieren */}
+          {/* Beschreibungen synchronisieren */}
           {result.csvBlob && (
             <div className="flex items-center gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-amber-900">Beschreibungen korrigieren</p>
+                <p className="text-sm font-medium text-amber-900">Beschreibungen synchronisieren</p>
                 <p className="text-xs text-amber-700 mt-0.5">
                   Ersetzt falsche Werte (mAh, Wh, Watt, Gewicht) in der HTML-Beschreibung — nur falls ein Wert bereits vorhanden ist. Dezimalzahlen werden mit Komma geschrieben.
                 </p>
@@ -1225,7 +1225,7 @@ export default function VoltFixer() {
                 {descSynced ? <CheckCircle size={16} /> : <PenLine size={16} />}
                 {descSynced
                   ? `Fertig — ${descSyncCount} Beschreibung${descSyncCount !== 1 ? 'en' : ''} aktualisiert`
-                  : 'Beschreibungen korrigieren'}
+                  : 'Beschreibungen synchronisieren'}
               </Button>
             </div>
           )}
