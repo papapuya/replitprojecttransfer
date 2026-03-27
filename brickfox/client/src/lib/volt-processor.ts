@@ -439,6 +439,24 @@ function fixWh(val: string): { fixed: string; changed: boolean } {
   return { fixed: stripped, changed: stripped !== trimmed };
 }
 
+function fixWatt(val: string): { fixed: string; changed: boolean } {
+  const trimmed = val.trim();
+  if (!trimmed) return { fixed: trimmed, changed: false };
+  if (!trimmed.includes(',')) return { fixed: trimmed, changed: false };
+  const dotted = trimmed.replace(',', '.');
+  const stripped = dotted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  return { fixed: stripped, changed: stripped !== trimmed };
+}
+
+function fixLeucht(val: string): { fixed: string; changed: boolean } {
+  const trimmed = val.trim();
+  if (!trimmed) return { fixed: trimmed, changed: false };
+  if (!trimmed.includes(',')) return { fixed: trimmed, changed: false };
+  const dotted = trimmed.replace(',', '.');
+  const stripped = dotted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  return { fixed: stripped, changed: stripped !== trimmed };
+}
+
 // ─── Wh Extraktion ───────────────────────────────────────────────────────────
 
 function normalizeWh(raw: string): string | null {
@@ -878,8 +896,17 @@ export async function processVoltFile(
       }
     }
 
-    // ─── Watt: immer aus Name/Beschreibung extrahieren, bestehenden Wert überschreiben ──
+    // ─── Watt: bestehende Werte normalisieren, dann immer aus Name/Beschreibung extrahieren ──
     if (headers.includes(WATT_COL)) {
+      const wattVal = (newRow[WATT_COL] ?? '').trim();
+      if (wattVal) {
+        const { fixed: fixedWatt, changed: wattFixed } = fixWatt(wattVal);
+        if (wattFixed) {
+          newRow[WATT_COL] = fixedWatt;
+          if (!changed.includes(WATT_COL)) changed.push(WATT_COL);
+        }
+      }
+
       let extractedWatt: string | null = null;
 
       for (const col of NAME_COLS) {
@@ -921,8 +948,17 @@ export async function processVoltFile(
       }
     }
 
-    // ─── Leuchtweite: immer aus Name/Beschreibung extrahieren, bestehenden Wert überschreiben ──
+    // ─── Leuchtweite: bestehende Werte normalisieren, dann immer aus Name/Beschreibung extrahieren ──
     if (headers.includes(LEUCHT_COL)) {
+      const leuchtVal = (newRow[LEUCHT_COL] ?? '').trim();
+      if (leuchtVal) {
+        const { fixed: fixedLeucht, changed: leuchtFixed } = fixLeucht(leuchtVal);
+        if (leuchtFixed) {
+          newRow[LEUCHT_COL] = fixedLeucht;
+          if (!changed.includes(LEUCHT_COL)) changed.push(LEUCHT_COL);
+        }
+      }
+
       let extractedLeucht: string | null = null;
 
       for (const col of NAME_COLS) {
