@@ -454,32 +454,27 @@ function extractMahFromTable(html: string): string | null {
 
 // ─── Wh Normalisierung (bestehende Werte) ────────────────────────────────────
 
-function fixWh(val: string): { fixed: string; changed: boolean } {
+function fixNumericAttr(val: string): { fixed: string; changed: boolean } {
   const trimmed = val.trim();
   if (!trimmed) return { fixed: trimmed, changed: false };
-  if (!trimmed.includes(',')) return { fixed: trimmed, changed: false };
+  // Nur reine Zahlen verarbeiten (Komma oder Punkt als Dezimaltrenner)
+  if (!/^\d+(?:[.,]\d+)?$/.test(trimmed)) return { fixed: trimmed, changed: false };
   const dotted = trimmed.replace(',', '.');
   // Trailing-Nullen entfernen: 5.20 → 5.2, 50.00 → 50
   const stripped = dotted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
   return { fixed: stripped, changed: stripped !== trimmed };
 }
 
+function fixWh(val: string): { fixed: string; changed: boolean } {
+  return fixNumericAttr(val);
+}
+
 function fixWatt(val: string): { fixed: string; changed: boolean } {
-  const trimmed = val.trim();
-  if (!trimmed) return { fixed: trimmed, changed: false };
-  if (!trimmed.includes(',')) return { fixed: trimmed, changed: false };
-  const dotted = trimmed.replace(',', '.');
-  const stripped = dotted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
-  return { fixed: stripped, changed: stripped !== trimmed };
+  return fixNumericAttr(val);
 }
 
 function fixLeucht(val: string): { fixed: string; changed: boolean } {
-  const trimmed = val.trim();
-  if (!trimmed) return { fixed: trimmed, changed: false };
-  if (!trimmed.includes(',')) return { fixed: trimmed, changed: false };
-  const dotted = trimmed.replace(',', '.');
-  const stripped = dotted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
-  return { fixed: stripped, changed: stripped !== trimmed };
+  return fixNumericAttr(val);
 }
 
 // ─── Wh Extraktion ───────────────────────────────────────────────────────────
@@ -613,12 +608,7 @@ function extractLeuchtFromTable(html: string): string | null {
 // ─── Normalisierung: Maße (mm) ────────────────────────────────────────────────
 
 function fixDimension(val: string): { fixed: string; changed: boolean } {
-  const trimmed = val.trim();
-  if (!trimmed) return { fixed: trimmed, changed: false };
-  if (!trimmed.includes(',')) return { fixed: trimmed, changed: false };
-  const dotted = trimmed.replace(',', '.');
-  const stripped = dotted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
-  return { fixed: stripped, changed: stripped !== trimmed };
+  return fixNumericAttr(val);
 }
 
 function normalizeMm(raw: string, isCm: boolean): string | null {
