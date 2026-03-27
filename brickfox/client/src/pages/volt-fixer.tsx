@@ -101,6 +101,8 @@ type SaveMeta = {
   fileName: string;
   totalRows: number;
   changedRows: number;
+  hasCsv?: boolean;
+  exportFileName?: string;
 };
 
 type Result = {
@@ -640,6 +642,8 @@ export default function VoltFixer() {
   const [saveName, setSaveName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [loadingSaveId, setLoadingSaveId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const loadSaves = useCallback(async () => {
     setSavesLoading(true);
@@ -655,10 +659,20 @@ export default function VoltFixer() {
     if (!result || !saveName.trim()) return;
     setIsSaving(true);
     try {
+      let csvBase64: string | undefined;
+      let exportFileName: string | undefined;
+      if (result.csvBlob) {
+        const arrayBuffer = await result.csvBlob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        csvBase64 = btoa(binary);
+        exportFileName = result.fileName;
+      }
       const r = await fetch('/api/volt-fixer/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: result.jobId, name: saveName.trim() }),
+        body: JSON.stringify({ jobId: result.jobId, name: saveName.trim(), csvBase64, exportFileName }),
       });
       if (r.ok) {
         setSaveDialogOpen(false);
@@ -666,6 +680,18 @@ export default function VoltFixer() {
         await loadSaves();
       }
     } catch { /* ignore */ } finally { setIsSaving(false); }
+  };
+
+  const handleRenameSave = async (saveId: string) => {
+    if (!renameValue.trim()) { setRenamingId(null); return; }
+    try {
+      await fetch(`/api/volt-fixer/saves/${saveId}/rename`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: renameValue.trim() }),
+      });
+      await loadSaves();
+    } catch { /* ignore */ } finally { setRenamingId(null); }
   };
 
   const handleLoadSave = async (saveId: string) => {
@@ -1020,13 +1046,43 @@ export default function VoltFixer() {
           ) : (
             <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
               {saves.map(s => (
-                <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 group">
+                <div key={s.id} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 group">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {s.fileName} · {s.totalRows.toLocaleString()} Zeilen · {s.changedRows.toLocaleString()} geändert · {new Date(s.savedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {renamingId === s.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={e => setRenameValue(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') handleRenameSave(s.id); if (e.key === 'Escape') setRenamingId(null); }}
+                          className="flex-1 text-sm px-2 py-0.5 border border-indigo-400 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                        />
+                        <button onClick={() => handleRenameSave(s.id)} className="text-indigo-600 hover:text-indigo-800"><Check size={14} /></button>
+                        <button onClick={() => setRenamingId(null)} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
+                        <button
+                          onClick={() => { setRenamingId(s.id); setRenameValue(s.name); }}
+                          className="p-0.5 rounded text-gray-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        ><PenLine size={12} /></button>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400 truncate mt-0.5">
+                      {s.exportFileName || s.fileName} · {s.totalRows.toLocaleString()} Zeilen · {s.changedRows.toLocaleString()} geändert · {new Date(s.savedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
+                  {s.hasCsv && (
+                    <a
+                      href={`/api/volt-fixer/saves/${s.id}/download`}
+                      download={s.exportFileName || s.fileName}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 font-medium shrink-0"
+                    >
+                      <Download size={12} />
+                      CSV
+                    </a>
+                  )}
                   <button
                     onClick={() => handleLoadSave(s.id)}
                     disabled={loadingSaveId === s.id}

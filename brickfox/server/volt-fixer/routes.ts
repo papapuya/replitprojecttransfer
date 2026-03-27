@@ -1257,6 +1257,8 @@ interface SaveMeta {
   fileName: string;
   totalRows: number;
   changedRows: number;
+  hasCsv?: boolean;
+  exportFileName?: string;
 }
 
 function ensureSavesDir() {
@@ -1281,7 +1283,9 @@ router.get('/saves', (_req: Request, res: Response) => {
 
 // POST /api/volt-fixer/save — Aktuellen Job speichern
 router.post('/save', (req: Request, res: Response) => {
-  const { jobId, name } = req.body as { jobId?: string; name?: string };
+  const { jobId, name, csvBase64, exportFileName } = req.body as {
+    jobId?: string; name?: string; csvBase64?: string; exportFileName?: string;
+  };
   if (!jobId || !name) return res.status(400).json({ error: 'jobId und name erforderlich' });
   const job = jobStore.get(jobId);
   if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
@@ -1291,6 +1295,7 @@ router.post('/save', (req: Request, res: Response) => {
   const index = readSavesIndex();
 
   const changedRows = job.changedCols.filter(c => c && c.length > 0).length;
+  const hasCsv = !!csvBase64;
   const meta: SaveMeta = {
     id: saveId,
     name: name.trim(),
@@ -1298,6 +1303,8 @@ router.post('/save', (req: Request, res: Response) => {
     fileName: job.fileName,
     totalRows: job.fixedRows.length,
     changedRows,
+    hasCsv,
+    exportFileName: exportFileName?.trim() || job.fileName,
   };
 
   const saveData = {
@@ -1322,9 +1329,53 @@ router.post('/save', (req: Request, res: Response) => {
   const compressed = zlib.gzipSync(JSON.stringify(saveData));
   fs.writeFileSync(path.join(SAVES_DIR, `${saveId}.json.gz`), compressed);
 
+  // CSV-Datei separat speichern wenn mitgeschickt
+  if (csvBase64) {
+    const csvBuffer = Buffer.from(csvBase64, 'base64');
+    const csvCompressed = zlib.gzipSync(csvBuffer);
+    fs.writeFileSync(path.join(SAVES_DIR, `${saveId}.csv.gz`), csvCompressed);
+  }
+
   index.push(meta);
   writeSavesIndex(index);
 
+  res.json(meta);
+});
+
+// GET /api/volt-fixer/saves/:saveId/download — Gespeicherte CSV herunterladen
+router.get('/saves/:saveId/download', (req: Request, res: Response) => {
+  const { saveId } = req.params;
+  const csvPath = path.join(SAVES_DIR, `${saveId}.csv.gz`);
+  if (!fs.existsSync(csvPath)) return res.status(404).json({ error: 'Keine gespeicherte CSV für dieses Projekt' });
+
+  const index = readSavesIndex();
+  const meta = index.find(m => m.id === saveId);
+  const fileName = meta?.exportFileName || meta?.fileName || 'export.csv';
+
+  try {
+    const compressed = fs.readFileSync(csvPath);
+    const csvBuffer = zlib.gunzipSync(compressed);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+    res.send(csvBuffer);
+  } catch {
+    res.status(500).json({ error: 'Fehler beim Laden der CSV' });
+  }
+});
+
+// PATCH /api/volt-fixer/saves/:saveId/rename — Projekt umbenennen
+router.patch('/saves/:saveId/rename', (req: Request, res: Response) => {
+  const { saveId } = req.params;
+  const { name, exportFileName } = req.body as { name?: string; exportFileName?: string };
+  if (!name?.trim() && !exportFileName?.trim()) return res.status(400).json({ error: 'name oder exportFileName erforderlich' });
+
+  const index = readSavesIndex();
+  const meta = index.find(m => m.id === saveId);
+  if (!meta) return res.status(404).json({ error: 'Projekt nicht gefunden' });
+
+  if (name?.trim()) meta.name = name.trim();
+  if (exportFileName?.trim()) meta.exportFileName = exportFileName.trim();
+  writeSavesIndex(index);
   res.json(meta);
 });
 
