@@ -1296,9 +1296,8 @@ export default function VoltFixer() {
               <Button
                 onClick={handleDescSync}
                 disabled={descSynced || !rawProcessorResult}
-                className={descSynced
-                  ? "bg-violet-600 hover:bg-violet-700 text-white gap-2 shrink-0"
-                  : "bg-violet-600 hover:bg-violet-700 text-white gap-2 shrink-0"}
+                variant="outline"
+                className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2 shrink-0"
               >
                 {descSynced ? <CheckCircle size={16} /> : <PenLine size={16} />}
                 {descSynced
@@ -1309,12 +1308,12 @@ export default function VoltFixer() {
           )}
 
           {/* Download + Speichern */}
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={download} className="bg-violet-600 hover:bg-violet-700 text-white gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <Button onClick={download} variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2">
               <Download size={15} />
               CSV herunterladen
               {result.stats.total > 0 && (
-                <span className="ml-1 bg-white/15 rounded px-1.5 py-0.5 text-xs font-semibold">
+                <span className="ml-1 bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs font-semibold">
                   {result.stats.total.toLocaleString('de-DE')} Zeilen
                 </span>
               )}
