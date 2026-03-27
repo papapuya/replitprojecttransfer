@@ -1370,8 +1370,12 @@ export default function VoltFixer() {
                           <td className="px-2 py-1.5">
                             <button
                               onClick={() => openDetail(item.index, item.index + 1)}
-                              className="p-1 rounded hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors"
-                              title="Alle Felder anzeigen"
+                              className={`p-1 rounded transition-colors ${
+                                item.descDEChanged
+                                  ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100"
+                                  : "text-gray-400 hover:text-indigo-600 hover:bg-indigo-100"
+                              }`}
+                              title={item.descDEChanged ? "Beschreibung wurde korrigiert" : "Alle Felder anzeigen"}
                             >
                               <Eye size={13} />
                             </button>
