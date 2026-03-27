@@ -51,6 +51,20 @@ export interface PreviewItem {
   wattNew: string;
   leuchtOrig: string;
   leuchtNew: string;
+  inputVoltOrig: string;
+  inputVoltNew: string;
+  outputVoltOrig: string;
+  outputVoltNew: string;
+  nennVoltOrig: string;
+  nennVoltNew: string;
+  durchmOrig: string;
+  durchmNew: string;
+  breiteOrig: string;
+  breiteNew: string;
+  hoeheOrig: string;
+  hoeheNew: string;
+  laengeOrig: string;
+  laengeNew: string;
   nameDEOrig: string;
   nameDE: string;
   nameNLOrig: string;
@@ -1546,6 +1560,20 @@ export async function processVoltFile(
       wattNew: row[WATT_COL] ?? '',
       leuchtOrig: (orig[LEUCHT_COL] ?? '').trim(),
       leuchtNew: row[LEUCHT_COL] ?? '',
+      inputVoltOrig: (orig[INPUT_VOLT_COL] ?? '').trim(),
+      inputVoltNew: row[INPUT_VOLT_COL] ?? '',
+      outputVoltOrig: (orig[OUTPUT_VOLT_COL] ?? '').trim(),
+      outputVoltNew: row[OUTPUT_VOLT_COL] ?? '',
+      nennVoltOrig: (orig[NENN_VOLT_COL] ?? '').trim(),
+      nennVoltNew: row[NENN_VOLT_COL] ?? '',
+      durchmOrig: (orig[DURCHM_COL] ?? '').trim(),
+      durchmNew: row[DURCHM_COL] ?? '',
+      breiteOrig: (orig[BREITE_COL] ?? '').trim(),
+      breiteNew: row[BREITE_COL] ?? '',
+      hoeheOrig: (orig[HOEHE_COL] ?? '').trim(),
+      hoeheNew: row[HOEHE_COL] ?? '',
+      laengeOrig: (orig[LAENGE_COL] ?? '').trim(),
+      laengeNew: row[LAENGE_COL] ?? '',
       nameDEOrig: orig['p_name[de]'] ?? '',
       nameDE: row['p_name[de]'] ?? '',
       nameNLOrig: orig['p_name[nl]'] ?? '',
