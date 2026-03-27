@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine, Search } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine, Search, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { processVoltFile, applyDescriptionSync, type VoltProcessorResult } from "@/lib/volt-processor";
@@ -1213,136 +1213,98 @@ export default function VoltFixer() {
           </div>
 
 
-          {/* Spaltenauswahl */}
-          {result.csvBlob && result.headers.length > 0 && (
-            <div className="inline-block border border-slate-200 rounded-xl overflow-hidden">
-              <button
-                className="flex items-center gap-2 px-3 py-2 bg-violet-600 hover:bg-violet-700 transition-colors text-sm font-medium text-white rounded-t-xl"
-                onClick={() => setColPickerOpen(o => !o)}
-              >
-                <Columns size={14} />
-                Spalten für Export auswählen
-                {colPickerOpen ? <ChevronUp size={14} className="ml-1" /> : <ChevronDown size={14} className="ml-1" />}
-              </button>
+          {/* Alle Aktions-Buttons in einer Zeile */}
+          {result.csvBlob && (
+            <div className="flex flex-wrap gap-2 items-center">
 
-              {colPickerOpen && (
-                <div className="p-4 space-y-3 bg-white">
-                  <div className="flex gap-2">
-                    <button
-                      className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      onClick={() => setSelectedCols(new Set(result.headers))}
-                    >
-                      Alle auswählen
-                    </button>
-                    <button
-                      className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      onClick={() => setSelectedCols(new Set())}
-                    >
-                      Keine
-                    </button>
-                    <button
-                      className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      onClick={() => setSelectedCols(new Set([
-                        ...ALL_ATTR_COLS,
-                        'p_id', 'p_item_number', 'p_name[de]', 'p_name[nl]',
-                      ].filter(c => result.headers.includes(c))))}
-                    >
-                      Nur Attribute
-                    </button>
-                  </div>
-
-                  {/* Spalten-Liste */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 max-h-64 overflow-y-auto pr-1">
-                    {result.headers.map(col => {
-                      const isAttr = ALL_ATTR_COLS.includes(col);
-                      const checked = selectedCols.has(col);
-                      return (
-                        <label
-                          key={col}
-                          className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1 hover:bg-slate-50 ${isAttr ? 'font-medium text-indigo-600' : 'text-slate-600'}`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={e => {
-                              setSelectedCols(prev => {
-                                const next = new Set(prev);
-                                if (e.target.checked) next.add(col);
-                                else next.delete(col);
-                                return next;
-                              });
-                            }}
-                            className="accent-indigo-600 shrink-0"
-                          />
-                          <span className="truncate" title={col}>{col}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
+              {/* Spalten für Export — mit Dropdown */}
+              {result.headers.length > 0 && (
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
+                    onClick={() => setColPickerOpen(o => !o)}
+                  >
+                    <Columns size={15} />
+                    Spalten für Export
+                    {colPickerOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </Button>
+                  {colPickerOpen && (
+                    <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-slate-200 rounded-xl shadow-lg p-4 space-y-3 min-w-[320px]">
+                      <div className="flex gap-2">
+                        <button className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50" onClick={() => setSelectedCols(new Set(result.headers))}>Alle</button>
+                        <button className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50" onClick={() => setSelectedCols(new Set())}>Keine</button>
+                        <button className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50" onClick={() => setSelectedCols(new Set([...ALL_ATTR_COLS,'p_id','p_item_number','p_name[de]','p_name[nl]'].filter(c => result.headers.includes(c))))}>Nur Attribute</button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 max-h-64 overflow-y-auto pr-1">
+                        {result.headers.map(col => {
+                          const isAttr = ALL_ATTR_COLS.includes(col);
+                          const checked = selectedCols.has(col);
+                          return (
+                            <label key={col} className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1 hover:bg-slate-50 ${isAttr ? 'font-medium text-indigo-600' : 'text-slate-600'}`}>
+                              <input type="checkbox" checked={checked} onChange={e => { setSelectedCols(prev => { const next = new Set(prev); if (e.target.checked) next.add(col); else next.delete(col); return next; }); }} className="accent-indigo-600 shrink-0" />
+                              <span className="truncate" title={col}>{col}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Beschreibungen synchronisieren */}
-          {result.csvBlob && (
-            <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800">Beschreibungen synchronisieren</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Ersetzt falsche Werte (mAh, Wh, Watt, Gewicht) in der HTML-Beschreibung — nur falls ein Wert bereits vorhanden ist.
-                </p>
+              {/* Synchronisieren + Info-Icon */}
+              <div className="flex items-center gap-1">
+                <Button
+                  onClick={handleDescSync}
+                  disabled={descSynced || !rawProcessorResult}
+                  variant="outline"
+                  className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
+                >
+                  {descSynced ? <CheckCircle size={15} /> : <PenLine size={15} />}
+                  {descSynced ? `Fertig — ${descSyncCount} aktualisiert` : 'Synchronisieren'}
+                </Button>
+                <span title="Ersetzt falsche Werte (mAh, Wh, Watt, Gewicht) in der HTML-Beschreibung — nur falls ein Wert bereits vorhanden ist." className="cursor-help">
+                  <Info size={14} className="text-slate-400 hover:text-slate-600" />
+                </span>
               </div>
-              <Button
-                onClick={handleDescSync}
-                disabled={descSynced || !rawProcessorResult}
-                variant="outline"
-                className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2 shrink-0"
-              >
-                {descSynced ? <CheckCircle size={16} /> : <PenLine size={16} />}
-                {descSynced
-                  ? `Fertig — ${descSyncCount} aktualisiert`
-                  : 'Synchronisieren'}
-              </Button>
-            </div>
-          )}
 
-          {/* Download + Speichern */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <Button onClick={download} variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2">
-              <Download size={15} />
-              CSV herunterladen
-              {result.stats.total > 0 && (
-                <span className="ml-1 bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs font-semibold">
-                  {result.stats.total.toLocaleString('de-DE')} Zeilen
-                </span>
-              )}
-            </Button>
-
-            {result.noDescBlob && (result.noDescCount ?? 0) > 0 && (
-              <Button
-                onClick={() => {
-                  const url = URL.createObjectURL(result.noDescBlob!);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = result.noDescFileName ?? 'ohne_beschreibung.csv';
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  setTimeout(() => URL.revokeObjectURL(url), 5000);
-                }}
-                variant="outline"
-                className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
-              >
+              {/* CSV herunterladen */}
+              <Button onClick={download} variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2">
                 <Download size={15} />
-                Ohne Beschreibung
-                <span className="ml-1 bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs font-semibold">
-                  {(result.noDescCount ?? 0).toLocaleString('de-DE')}
-                </span>
+                CSV herunterladen
+                {result.stats.total > 0 && (
+                  <span className="ml-1 bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs font-semibold">
+                    {result.stats.total.toLocaleString('de-DE')} Zeilen
+                  </span>
+                )}
               </Button>
-            )}
 
-            {result.csvBlob && (
+              {/* Ohne Beschreibung */}
+              {result.noDescBlob && (result.noDescCount ?? 0) > 0 && (
+                <Button
+                  onClick={() => {
+                    const url = URL.createObjectURL(result.noDescBlob!);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = result.noDescFileName ?? 'ohne_beschreibung.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 5000);
+                  }}
+                  variant="outline"
+                  className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
+                >
+                  <Download size={15} />
+                  Ohne Beschreibung
+                  <span className="ml-1 bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs font-semibold">
+                    {(result.noDescCount ?? 0).toLocaleString('de-DE')}
+                  </span>
+                </Button>
+              )}
+
+              {/* Projekt speichern */}
               <Button
                 onClick={() => { setSaveName(""); setSaveDialogOpen(true); }}
                 variant="outline"
@@ -1351,22 +1313,22 @@ export default function VoltFixer() {
                 <Save size={15} />
                 Projekt speichern
               </Button>
-            )}
 
-            {(result.stats.dreiSpannungCount ?? 0) > 0 && result.jobId && !result.csvBlob && (
-              <Button
-                onClick={() => window.open(`/api/volt-fixer/download-drei-spannung/${result.jobId}`, "_blank")}
-                variant="outline"
-                className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
-              >
-                <Download size={15} />
-                Drei-Spannung
-                <span className="ml-1 bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs font-semibold">
-                  {result.stats.dreiSpannungCount!.toLocaleString()}
-                </span>
-              </Button>
-            )}
-          </div>
+              {(result.stats.dreiSpannungCount ?? 0) > 0 && result.jobId && !result.csvBlob && (
+                <Button
+                  onClick={() => window.open(`/api/volt-fixer/download-drei-spannung/${result.jobId}`, "_blank")}
+                  variant="outline"
+                  className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
+                >
+                  <Download size={15} />
+                  Drei-Spannung
+                  <span className="ml-1 bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-xs font-semibold">
+                    {result.stats.dreiSpannungCount!.toLocaleString()}
+                  </span>
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Speichern-Dialog */}
           {saveDialogOpen && (
