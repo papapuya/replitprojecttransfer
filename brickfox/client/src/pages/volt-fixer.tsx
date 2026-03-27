@@ -672,7 +672,14 @@ export default function VoltFixer() {
       const r = await fetch('/api/volt-fixer/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: result.jobId, name: saveName.trim(), csvBase64, exportFileName }),
+        body: JSON.stringify({
+          jobId: result.jobId,
+          name: saveName.trim(),
+          csvBase64,
+          exportFileName,
+          fileName: result.fileName,
+          totalRows: result.stats?.total ?? 0,
+        }),
       });
       if (r.ok) {
         setSaveDialogOpen(false);
@@ -1336,14 +1343,14 @@ export default function VoltFixer() {
               </Button>
             )}
 
-            {result.jobId && (
+            {result.csvBlob && (
               <Button
                 onClick={() => { setSaveName(""); setSaveDialogOpen(true); }}
                 variant="outline"
                 className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-2"
               >
                 <Save size={15} />
-                Speichern
+                Projekt speichern
               </Button>
             )}
 
