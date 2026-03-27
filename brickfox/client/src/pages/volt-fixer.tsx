@@ -584,7 +584,7 @@ export default function VoltFixer() {
       setProgress({ step: 'done', stepLabel: 'Fertig!', percent: 100, detail: '' });
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Fehler bei der Verarbeitung');
+      setError(e instanceof Error ? e.message : typeof e === 'string' ? e : 'Fehler bei der Verarbeitung');
       setProgress(null);
     } finally {
       setLoading(false);
