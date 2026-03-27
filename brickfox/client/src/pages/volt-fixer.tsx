@@ -226,13 +226,31 @@ const COL_SHORT: Record<string, { label: string; color: string }> = {
   [LEUCHT_COL]:      { label: 'Leuchtw.', color: 'bg-sky-100 text-sky-700' },
   [INPUT_VOLT_COL]:  { label: 'In-V',     color: 'bg-violet-100 text-violet-700' },
   [OUTPUT_VOLT_COL]: { label: 'Out-V',    color: 'bg-violet-100 text-violet-700' },
-  [DURCHM_COL]:      { label: 'Ø mm',     color: 'bg-orange-100 text-orange-700' },
-  [BREITE_COL]:      { label: 'B mm',     color: 'bg-orange-100 text-orange-700' },
-  [HOEHE_COL]:       { label: 'H mm',     color: 'bg-orange-100 text-orange-700' },
-  [LAENGE_COL]:      { label: 'L mm',     color: 'bg-orange-100 text-orange-700' },
+  [DURCHM_COL]:      { label: 'Ø',        color: 'bg-orange-100 text-orange-700' },
+  [BREITE_COL]:      { label: 'B',        color: 'bg-orange-100 text-orange-700' },
+  [HOEHE_COL]:       { label: 'H',        color: 'bg-orange-100 text-orange-700' },
+  [LAENGE_COL]:      { label: 'L',        color: 'bg-orange-100 text-orange-700' },
   [GEWICHT_COL]:     { label: 'Gew.',     color: 'bg-emerald-100 text-emerald-700' },
   ['p_description[de]']: { label: 'Beschr.', color: 'bg-amber-100 text-amber-700' },
 };
+
+function getColNewValue(col: string, item: PreviewItem): string {
+  switch (col) {
+    case VOLT_COL:        return item.voltNew ?? '';
+    case MAH_COL:         return item.mahNew ?? '';
+    case WH_COL:          return item.whNew ?? '';
+    case WATT_COL:        return item.wattNew ?? '';
+    case LEUCHT_COL:      return item.leuchtNew ?? '';
+    case INPUT_VOLT_COL:  return item.inputVoltNew ?? '';
+    case OUTPUT_VOLT_COL: return item.outputVoltNew ?? '';
+    case DURCHM_COL:      return item.durchmNew ?? '';
+    case BREITE_COL:      return item.breiteNew ?? '';
+    case HOEHE_COL:       return item.hoeheNew ?? '';
+    case LAENGE_COL:      return item.laengeNew ?? '';
+    case GEWICHT_COL:     return item.gewichtNew ?? '';
+    default:              return '';
+  }
+}
 
 type HLPatterns = { green: RegExp[]; yellow: RegExp[] };
 
@@ -1429,9 +1447,10 @@ export default function VoltFixer() {
                                   {item.changed.map((col) => {
                                     const info = COL_SHORT[col];
                                     if (!info) return null;
+                                    const val = getColNewValue(col, item);
                                     return (
                                       <span key={col} className={`inline-block rounded px-1 py-0 text-[10px] font-semibold leading-4 ${info.color}`}>
-                                        {info.label}
+                                        {val ? `${info.label}: ${val}` : info.label}
                                       </span>
                                     );
                                   })}
