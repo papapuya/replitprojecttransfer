@@ -505,6 +505,18 @@ export default function Pipeline() {
       clearInterval(repairTimerRef.current);
       repairTimerRef.current = null;
     }
+    if (repairStatus === 'running') {
+      setRepairStatus('pending');
+      setRepairProgress({ label: '', percent: 0 });
+    }
+    if (attrStatus === 'running') {
+      setAttrStatus('pending');
+      setAttrProgress({ label: '', percent: 0 });
+    }
+    if (descStatus === 'running') {
+      setDescStatus('pending');
+      setDescProgress({ current: 0, total: 0, productName: '' });
+    }
     setIsRunningAll(false);
     toast({ title: 'Abgebrochen', description: 'Der laufende Schritt wurde abgebrochen.' });
   };
