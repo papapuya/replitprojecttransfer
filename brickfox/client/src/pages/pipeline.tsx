@@ -599,9 +599,12 @@ export default function Pipeline() {
                   </div>
                 </div>
                 {repairStatus === 'running' && (
-                  <div className="mt-3 space-y-1">
-                    <Progress value={repairProgress.percent} className="h-2" />
-                    <p className="text-xs text-muted-foreground">{repairProgress.label}</p>
+                  <div className="mt-4 space-y-2 bg-indigo-50 rounded-lg p-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-indigo-700 font-medium">{repairProgress.label || 'Wird gestartet…'}</span>
+                      <span className="text-indigo-600 font-bold tabular-nums">{Math.round(repairProgress.percent)}%</span>
+                    </div>
+                    <Progress value={repairProgress.percent} className="h-3" />
                   </div>
                 )}
                 {repairStatus === 'done' && repairStats && (
@@ -641,9 +644,12 @@ export default function Pipeline() {
                   </div>
                 </div>
                 {attrStatus === 'running' && (
-                  <div className="mt-3 space-y-1">
-                    <Progress value={attrProgress.percent} className="h-2" />
-                    <p className="text-xs text-muted-foreground">{attrProgress.label}</p>
+                  <div className="mt-4 space-y-2 bg-yellow-50 rounded-lg p-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-yellow-800 font-medium">{attrProgress.label || 'Wird gestartet…'}</span>
+                      <span className="text-yellow-700 font-bold tabular-nums">{Math.round(attrProgress.percent)}%</span>
+                    </div>
+                    <Progress value={attrProgress.percent} className="h-3" />
                   </div>
                 )}
                 {attrStatus === 'done' && attrStats && (
@@ -723,13 +729,18 @@ export default function Pipeline() {
                   </div>
                 </div>
                 {descStatus === 'running' && (
-                  <div className="mt-3 space-y-1">
-                    <Progress value={descProgress.total > 0 ? (descProgress.current / descProgress.total) * 100 : 0} className="h-2" />
-                    <p className="text-xs text-muted-foreground">
-                      {descProgress.total > 0
-                        ? `${descProgress.current} / ${descProgress.total} — ${descProgress.productName}`
-                        : descProgress.productName || 'Wird vorbereitet…'}
-                    </p>
+                  <div className="mt-4 space-y-2 bg-purple-50 rounded-lg p-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-purple-800 font-medium">
+                        {descProgress.total > 0
+                          ? `${descProgress.current} / ${descProgress.total} Produkte — ${descProgress.productName}`
+                          : descProgress.productName || 'Wird vorbereitet…'}
+                      </span>
+                      <span className="text-purple-700 font-bold tabular-nums">
+                        {descProgress.total > 0 ? Math.round((descProgress.current / descProgress.total) * 100) : 0}%
+                      </span>
+                    </div>
+                    <Progress value={descProgress.total > 0 ? (descProgress.current / descProgress.total) * 100 : 0} className="h-3" />
                   </div>
                 )}
                 {descStatus === 'done' && descStats && (
