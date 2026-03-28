@@ -150,83 +150,53 @@ export default function Pipeline() {
     if (!input) return null;
 
     setRepairStatus('running');
-    setRepairProgress({ label: 'Zeilen werden analysiert…', percent: 5 });
+    setRepairProgress({ label: 'Wird hochgeladen…', percent: 0 });
     setRepairError('');
 
     const ac = new AbortController();
     abortRef.current = ac;
 
-    if (repairTimerRef.current) clearInterval(repairTimerRef.current);
-    repairTimerRef.current = setInterval(() => {
-      setRepairProgress(prev => {
-        if (prev.percent >= 99) return { ...prev, label: 'Server verarbeitet noch… bitte warten' };
-        let step: number;
-        if (prev.percent < 40) step = 5;
-        else if (prev.percent < 70) step = 2;
-        else if (prev.percent < 90) step = 0.8;
-        else step = 0.2;
-        const labels = ['Zeilen werden analysiert…', 'Zeilenstruktur wird repariert…', 'Encoding wird korrigiert…', 'CSV wird bereinigt…', 'Server verarbeitet noch… bitte warten'];
-        const labelIdx = Math.min(Math.floor(prev.percent / 22), labels.length - 1);
-        return { label: labels[labelIdx], percent: Math.min(prev.percent + step, 99) };
-      });
-    }, 300);
-
     try {
       const formData = new FormData();
       formData.append('file', input, originalFile?.name || 'input.csv');
 
-      const response = await fetch('/api/csv-repair/upload', {
+      const uploadRes = await fetch('/api/csv-repair/upload', {
         method: 'POST',
         body: formData,
         headers: getAuthHeaders(),
         signal: ac.signal,
       });
-
-      if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
-
-      if (!response.ok && response.headers.get('content-type')?.includes('application/json')) {
-        const errBody = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
-        throw new Error(errBody.error || `HTTP ${response.status}`);
+      const uploadBody = await uploadRes.json();
+      if (!uploadRes.ok) {
+        throw new Error(uploadBody?.error || `Upload fehlgeschlagen (HTTP ${uploadRes.status})`);
       }
+      const { jobId } = uploadBody;
+      if (!jobId) throw new Error('Keine Job-ID erhalten');
 
-      const responseText = await response.text();
-      console.log('[Pipeline] CSV-Repair response length:', responseText.length, 'first 200:', responseText.slice(0, 200));
-
-      let resultJobId = '';
+      let done = false;
       let resultStats: RepairStats | null = null;
-      let sseError: string | null = null;
+      while (!done) {
+        await new Promise(r => setTimeout(r, 500));
+        if (ac.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        const progressRes = await fetch(`/api/csv-repair/progress/${jobId}`, {
+          headers: getAuthHeaders(),
+          signal: ac.signal,
+        });
+        const progress = await progressRes.json();
+        setRepairProgress({ label: progress.progress?.label || '', percent: progress.progress?.percent || 0 });
 
-      const events = responseText.split('\n\n');
-      for (const block of events) {
-        if (!block.trim()) continue;
-        const lines = block.split('\n');
-        let eventName = 'message';
-        let dataStr = '';
-        for (const line of lines) {
-          if (line.startsWith('event: ')) eventName = line.slice(7).trim();
-          else if (line.startsWith('data: ')) dataStr += line.slice(6);
+        if (progress.status === 'done') {
+          done = true;
+          resultStats = progress.stats;
         }
-        if (!dataStr) continue;
-        try {
-          const data = JSON.parse(dataStr);
-          if (eventName === 'done') {
-            resultJobId = data.jobId;
-            resultStats = data.stats;
-          } else if (eventName === 'error') {
-            sseError = data.message || 'Reparatur fehlgeschlagen';
-          }
-        } catch {}
+        if (progress.status === 'error') {
+          throw new Error(progress.error || 'Reparatur fehlgeschlagen');
+        }
       }
 
-      if (sseError) throw new Error(sseError);
-      if (!resultJobId) {
-        console.error('[Pipeline] No jobId found. Full response:', responseText);
-        throw new Error('Keine Job-ID erhalten — Serverantwort war leer oder unvollständig');
-      }
-      setRepairProgress({ label: 'Abgeschlossen', percent: 100 });
-
-      const downloadRes = await fetch(`/api/csv-repair/download/${resultJobId}`, {
+      const downloadRes = await fetch(`/api/csv-repair/download/${jobId}`, {
         headers: getAuthHeaders(),
+        signal: ac.signal,
       });
       if (!downloadRes.ok) throw new Error('Download fehlgeschlagen');
       const csvBlob = await downloadRes.blob();
@@ -253,7 +223,6 @@ export default function Pipeline() {
 
       return csvBlob;
     } catch (err: any) {
-      if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
       if (err.name === 'AbortError') {
         setRepairStatus('pending');
         setRepairProgress({ label: '', percent: 0 });
