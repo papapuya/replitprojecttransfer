@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import { makeCsvBlob } from '@/lib/utils';
 
 export interface VoltProcessorOptions {
   restoreEmoji: boolean;
@@ -1720,10 +1721,10 @@ export async function processVoltFile(
     : [];
 
   const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders, quotes: true, newline: '\r\n' });
-  const csvBlob = new Blob(['\uFEFF', csvOut], { type: 'text/csv;charset=utf-8' });
+  const csvBlob = makeCsvBlob(csvOut);
 
   const noDescOut  = Papa.unparse(rowsWithoutDesc, { delimiter: ';', columns: finalHeaders, quotes: true, newline: '\r\n' });
-  const noDescBlob = new Blob(['\uFEFF', noDescOut], { type: 'text/csv;charset=utf-8' });
+  const noDescBlob = makeCsvBlob(noDescOut);
 
   // Debug: Blob-Inhalt direkt auslesen und verifizieren
   csvBlob.text().then(blobText => {
@@ -1888,7 +1889,7 @@ export async function processVoltFile(
       Volt_neu: fixedRows[i][VOLT_COL] ?? '',
     }));
   const reportCsv = Papa.unparse(reportRows, { delimiter: ';' });
-  const reportBlob = new Blob(['\uFEFF', reportCsv], { type: 'text/csv;charset=utf-8' });
+  const reportBlob = makeCsvBlob(reportCsv);
 
   onProgress('done', 'Fertig!', 100);
 
@@ -2017,7 +2018,7 @@ export function applyDescriptionSync(result: VoltProcessorResult): DescSyncResul
   const hasDescCol = finalHeaders.some(h => DESC_COLS.includes(h));
   const rowsWithDesc    = hasDescCol ? csvRowsClean.filter(row => DESC_COLS.some(c => (row[c] ?? '').trim())) : csvRowsClean;
   const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders, quotes: true, newline: '\r\n' });
-  const csvBlob = new Blob(['\uFEFF', csvOut], { type: 'text/csv;charset=utf-8' });
+  const csvBlob = makeCsvBlob(csvOut);
 
   return { csvBlob, previewItems, descSyncCount };
 }
