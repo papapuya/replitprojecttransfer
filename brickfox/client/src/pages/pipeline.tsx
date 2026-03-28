@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import {
   Upload, CheckCircle2, Circle, Loader2, AlertCircle, Download,
   Play, Wrench, Zap, Sparkles, FileText, ChevronDown, ChevronRight,
-  RotateCcw, Shield
+  RotateCcw, Shield, XCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -101,6 +101,7 @@ export default function Pipeline() {
   const [repairProgress, setRepairProgress] = useState({ label: '', percent: 0 });
   const repairTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [repairError, setRepairError] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
 
   const [attrStatus, setAttrStatus] = useState<StepStatus>('pending');
   const [attrStats, setAttrStats] = useState<AttributeStats | null>(null);
@@ -152,6 +153,9 @@ export default function Pipeline() {
     setRepairProgress({ label: 'Zeilen werden analysiert…', percent: 5 });
     setRepairError('');
 
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     if (repairTimerRef.current) clearInterval(repairTimerRef.current);
     repairTimerRef.current = setInterval(() => {
       setRepairProgress(prev => {
@@ -171,6 +175,7 @@ export default function Pipeline() {
         method: 'POST',
         body: formData,
         headers: getAuthHeaders(),
+        signal: ac.signal,
       });
 
       if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
@@ -237,6 +242,11 @@ export default function Pipeline() {
       return csvBlob;
     } catch (err: any) {
       if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
+      if (err.name === 'AbortError') {
+        setRepairStatus('pending');
+        setRepairProgress({ label: '', percent: 0 });
+        return null;
+      }
       setRepairStatus('error');
       setRepairError(err.message || 'Unbekannter Fehler');
       toast({ title: 'Reparatur fehlgeschlagen', description: err.message, variant: 'destructive' });
@@ -252,6 +262,9 @@ export default function Pipeline() {
     setAttrProgress({ label: 'Wird hochgeladen…', percent: 0 });
     setAttrError('');
 
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     try {
       const formData = new FormData();
       formData.append('file', input, originalFile?.name || 'input.csv');
@@ -261,6 +274,7 @@ export default function Pipeline() {
         method: 'POST',
         body: formData,
         headers: getAuthHeaders(),
+        signal: ac.signal,
       });
       const uploadBody = await uploadRes.json();
       if (!uploadRes.ok) {
@@ -272,8 +286,10 @@ export default function Pipeline() {
       let done = false;
       while (!done) {
         await new Promise(r => setTimeout(r, 500));
+        if (ac.signal.aborted) throw new DOMException('Aborted', 'AbortError');
         const progressRes = await fetch(`/api/volt-fixer/progress/${jobId}`, {
           headers: getAuthHeaders(),
+          signal: ac.signal,
         });
         const progress = await progressRes.json();
         setAttrProgress({ label: progress.stepLabel || '', percent: progress.percent || 0 });
@@ -339,6 +355,11 @@ export default function Pipeline() {
 
       return csvBlob;
     } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setAttrStatus('pending');
+        setAttrProgress({ label: '', percent: 0 });
+        return null;
+      }
       setAttrStatus('error');
       setAttrError(err.message || 'Unbekannter Fehler');
       toast({ title: 'Attribut-Verarbeitung fehlgeschlagen', description: err.message, variant: 'destructive' });
@@ -353,6 +374,9 @@ export default function Pipeline() {
     setDescStatus('running');
     setDescProgress({ current: 0, total: 0, productName: 'Wird vorbereitet…' });
     setDescError('');
+
+    const ac = new AbortController();
+    abortRef.current = ac;
 
     try {
       const sessionId = crypto.randomUUID();
@@ -401,6 +425,8 @@ export default function Pipeline() {
       const formData = new FormData();
       formData.append('file', input, originalFile?.name || 'input.csv');
 
+      ac.signal.addEventListener('abort', () => eventSource.close());
+
       const generateRes = await fetch('/api/desc-generator/generate', {
         method: 'POST',
         body: formData,
@@ -408,6 +434,7 @@ export default function Pipeline() {
           ...getAuthHeaders(),
           'x-session-id': sessionId,
         },
+        signal: ac.signal,
       });
 
       if (!generateRes.ok) {
@@ -437,6 +464,11 @@ export default function Pipeline() {
 
       return csvBlob;
     } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setDescStatus('pending');
+        setDescProgress({ current: 0, total: 0, productName: '' });
+        return null;
+      }
       setDescStatus('error');
       setDescError(err.message || 'Unbekannter Fehler');
       toast({ title: 'Beschreibungs-Generierung fehlgeschlagen', description: err.message, variant: 'destructive' });
@@ -462,6 +494,19 @@ export default function Pipeline() {
     } finally {
       setIsRunningAll(false);
     }
+  };
+
+  const cancelRunning = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    if (repairTimerRef.current) {
+      clearInterval(repairTimerRef.current);
+      repairTimerRef.current = null;
+    }
+    setIsRunningAll(false);
+    toast({ title: 'Abgebrochen', description: 'Der laufende Schritt wurde abgebrochen.' });
   };
 
   const handleDownload = () => {
@@ -585,18 +630,24 @@ export default function Pipeline() {
           </Card>
 
           <div className="flex gap-3 justify-center">
-            <Button
-              size="lg"
-              className="bg-indigo-600 hover:bg-indigo-700"
-              onClick={runAll}
-              disabled={anyRunning || isRunningAll}
-            >
-              {isRunningAll ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Wird optimiert…</>
-              ) : (
-                <><Zap className="w-4 h-4 mr-2" /> Alles optimieren</>
-              )}
-            </Button>
+            {anyRunning ? (
+              <Button
+                size="lg"
+                variant="destructive"
+                onClick={cancelRunning}
+              >
+                <XCircle className="w-4 h-4 mr-2" /> Abbrechen
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                className="bg-indigo-600 hover:bg-indigo-700"
+                onClick={runAll}
+                disabled={anyRunning || isRunningAll}
+              >
+                <Zap className="w-4 h-4 mr-2" /> Alles optimieren
+              </Button>
+            )}
             {hasOutput && (
               <Button size="lg" variant="outline" onClick={handleDownload}>
                 <Download className="w-4 h-4 mr-2" /> Ergebnis herunterladen
