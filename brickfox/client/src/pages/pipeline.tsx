@@ -155,13 +155,13 @@ export default function Pipeline() {
     if (repairTimerRef.current) clearInterval(repairTimerRef.current);
     repairTimerRef.current = setInterval(() => {
       setRepairProgress(prev => {
-        if (prev.percent >= 85) return prev;
-        const step = prev.percent < 30 ? 8 : prev.percent < 60 ? 5 : 2;
+        if (prev.percent >= 95) return prev;
+        const step = prev.percent < 40 ? 6 : prev.percent < 70 ? 3 : 1;
         const labels = ['Zeilen werden analysiert…', 'Zeilenstruktur wird repariert…', 'Encoding wird korrigiert…', 'CSV wird bereinigt…'];
         const labelIdx = Math.min(Math.floor(prev.percent / 25), labels.length - 1);
-        return { label: labels[labelIdx], percent: Math.min(prev.percent + step, 85) };
+        return { label: labels[labelIdx], percent: Math.min(prev.percent + step, 95) };
       });
-    }, 200);
+    }, 250);
 
     try {
       const formData = new FormData();
@@ -173,26 +173,27 @@ export default function Pipeline() {
         headers: getAuthHeaders(),
       });
 
-      if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
-
       if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
+        if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
         const errBody = await response.text();
         throw new Error(errBody || `HTTP ${response.status}`);
       }
 
       let resultJobId = '';
       let resultStats: RepairStats | null = null;
+      let sseError: string | null = null;
 
       await parseSSEStream(response, (event, data) => {
-        if (event === 'progress') {
-          setRepairProgress({ label: data.label || '', percent: Math.max(data.percent || 0, 85) });
-        } else if (event === 'done') {
+        if (event === 'done') {
           resultJobId = data.jobId;
           resultStats = data.stats;
         } else if (event === 'error') {
-          throw new Error(data.message || 'Reparatur fehlgeschlagen');
+          sseError = data.message || 'Reparatur fehlgeschlagen';
         }
       });
+
+      if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
+      if (sseError) throw new Error(sseError);
       setRepairProgress({ label: 'Abgeschlossen', percent: 100 });
 
       if (!resultJobId) throw new Error('Keine Job-ID erhalten');
