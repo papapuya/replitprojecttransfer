@@ -1312,7 +1312,6 @@ router.post('/save', upload.single('csvFile'), (req: Request, res: Response) => 
       ...(job.resultCache ?? {}),
     };
     saveData.jobData = {
-      csvBufferBase64: job.csvBuffer.toString('base64'),
       fixedRows: job.fixedRows,
       originalRows: job.originalRows,
       headers: job.headers,
@@ -1391,7 +1390,7 @@ router.post('/saves/:saveId/load', (req: Request, res: Response) => {
       meta: SaveMeta;
       resultData: Record<string, unknown>;
       jobData: {
-        csvBufferBase64: string;
+        csvBufferBase64?: string;
         fixedRows: Record<string, string>[];
         originalRows: Record<string, string>[];
         headers: string[];
@@ -1406,7 +1405,7 @@ router.post('/saves/:saveId/load', (req: Request, res: Response) => {
       meta: SaveMeta;
       resultData?: Record<string, unknown>;
       jobData?: {
-        csvBufferBase64: string;
+        csvBufferBase64?: string; // optional – alte Saves können es noch haben
         fixedRows: Record<string, string>[];
         originalRows: Record<string, string>[];
         headers: string[];
@@ -1419,10 +1418,22 @@ router.post('/saves/:saveId/load', (req: Request, res: Response) => {
 
     // Fall 1: Vollständige jobData vorhanden (server-seitige Verarbeitung)
     if (jobData) {
+      // csvBuffer aus .csv.gz Datei lesen (neue Saves) oder Fallback auf Base64 (alte Saves)
+      const csvGzPath = path.join(SAVES_DIR, `${saveId}.csv.gz`);
+      let csvBuffer: Buffer;
+      if (fs.existsSync(csvGzPath)) {
+        csvBuffer = zlib.gunzipSync(fs.readFileSync(csvGzPath));
+      } else if (jobData.csvBufferBase64) {
+        csvBuffer = Buffer.from(jobData.csvBufferBase64, 'base64');
+      } else {
+        const csv = Papa.unparse(jobData.originalRows ?? [], { delimiter: ';', columns: jobData.headers });
+        csvBuffer = Buffer.from(csv, 'utf-8');
+      }
+
       const newJobId = crypto.randomUUID();
       const expires = Date.now() + 30 * 60 * 1000;
       jobStore.set(newJobId, {
-        csvBuffer: Buffer.from(jobData.csvBufferBase64, 'base64'),
+        csvBuffer,
         fileName: jobData.fileName,
         expires,
         fixedRows: jobData.fixedRows,
