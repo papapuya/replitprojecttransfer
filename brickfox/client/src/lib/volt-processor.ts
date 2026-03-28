@@ -1715,20 +1715,6 @@ export async function processVoltFile(
     console.log(`[VoltFixer] Neue Attributspalten in Export eingefügt: ${missingAttrCols.join(', ')}`);
   }
 
-  // Dezimalpunkt → Komma für alle numerischen Attributspalten (Brickfox erwartet deutsches Format)
-  const NUMERIC_ATTR_COLS = [
-    VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
-    INPUT_VOLT_COL, OUTPUT_VOLT_COL,
-    DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
-  ];
-  for (const row of csvRowsClean) {
-    for (const col of NUMERIC_ATTR_COLS) {
-      if (col in row && row[col]) {
-        row[col] = toGermanDecimal(row[col]);
-      }
-    }
-  }
-
   // Produkte mit und ohne Beschreibung trennen
   const hasDesc = (row: Record<string, string>) =>
     DESC_COLS.some(col => finalHeaders.includes(col) && (row[col] ?? '').trim() !== '');
@@ -2035,17 +2021,6 @@ export function applyDescriptionSync(result: VoltProcessorResult): DescSyncResul
     return r;
   });
   const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
-  // Dezimalpunkt → Komma für alle numerischen Attributspalten (Brickfox erwartet deutsches Format)
-  const SYNC_NUMERIC_COLS = [
-    VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
-    INPUT_VOLT_COL, OUTPUT_VOLT_COL,
-    DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
-  ];
-  for (const row of csvRowsClean) {
-    for (const col of SYNC_NUMERIC_COLS) {
-      if (col in row && row[col]) row[col] = toGermanDecimal(row[col]);
-    }
-  }
   const hasDescCol = finalHeaders.some(h => DESC_COLS.includes(h));
   const rowsWithDesc    = hasDescCol ? csvRowsClean.filter(row => DESC_COLS.some(c => (row[c] ?? '').trim())) : csvRowsClean;
   const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders, quotes: true, newline: '\r\n' });
