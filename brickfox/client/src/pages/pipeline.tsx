@@ -160,18 +160,37 @@ export default function Pipeline() {
       const formData = new FormData();
       formData.append('file', input, originalFile?.name || 'input.csv');
 
-      const uploadRes = await fetch('/api/csv-repair/upload', {
-        method: 'POST',
-        body: formData,
-        headers: getAuthHeaders(),
-        signal: ac.signal,
+      const uploadBody = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/csv-repair/upload');
+        const authHeaders = getAuthHeaders();
+        if (authHeaders.Authorization) xhr.setRequestHeader('Authorization', authHeaders.Authorization);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setRepairProgress({ label: `Datei wird hochgeladen… (${Math.round(e.loaded / 1024 / 1024)}/${Math.round(e.total / 1024 / 1024)} MB)`, percent: Math.min(pct, 99) });
+          }
+        };
+        xhr.onload = () => {
+          try {
+            const body = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+            else reject(new Error(body?.error || `Upload fehlgeschlagen (HTTP ${xhr.status})`));
+          } catch { reject(new Error('Ungültige Serverantwort')); }
+        };
+        xhr.onerror = () => reject(new Error('Upload fehlgeschlagen — Netzwerkfehler'));
+        xhr.ontimeout = () => reject(new Error('Upload Timeout'));
+
+        ac.signal.addEventListener('abort', () => xhr.abort());
+        if (ac.signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
+
+        xhr.send(formData);
       });
-      const uploadBody = await uploadRes.json();
-      if (!uploadRes.ok) {
-        throw new Error(uploadBody?.error || `Upload fehlgeschlagen (HTTP ${uploadRes.status})`);
-      }
+
       const { jobId } = uploadBody;
       if (!jobId) throw new Error('Keine Job-ID erhalten');
+      setRepairProgress({ label: 'Wird verarbeitet…', percent: 0 });
 
       let done = false;
       let resultStats: RepairStats | null = null;
@@ -251,18 +270,34 @@ export default function Pipeline() {
       formData.append('file', input, originalFile?.name || 'input.csv');
       formData.append('restoreEmoji', 'true');
 
-      const uploadRes = await fetch('/api/volt-fixer/upload', {
-        method: 'POST',
-        body: formData,
-        headers: getAuthHeaders(),
-        signal: ac.signal,
+      const uploadBody = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/volt-fixer/upload');
+        const authHeaders = getAuthHeaders();
+        if (authHeaders.Authorization) xhr.setRequestHeader('Authorization', authHeaders.Authorization);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setAttrProgress({ label: `Datei wird hochgeladen… (${Math.round(e.loaded / 1024 / 1024)}/${Math.round(e.total / 1024 / 1024)} MB)`, percent: Math.min(pct, 99) });
+          }
+        };
+        xhr.onload = () => {
+          try {
+            const body = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+            else reject(new Error(body?.error || `Upload fehlgeschlagen (HTTP ${xhr.status})`));
+          } catch { reject(new Error('Ungültige Serverantwort')); }
+        };
+        xhr.onerror = () => reject(new Error('Upload fehlgeschlagen — Netzwerkfehler'));
+        ac.signal.addEventListener('abort', () => xhr.abort());
+        if (ac.signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
+        xhr.send(formData);
       });
-      const uploadBody = await uploadRes.json();
-      if (!uploadRes.ok) {
-        throw new Error(uploadBody?.error || `Upload fehlgeschlagen (HTTP ${uploadRes.status})`);
-      }
+
       const { jobId } = uploadBody;
       if (!jobId) throw new Error('Keine Job-ID erhalten');
+      setAttrProgress({ label: 'Wird verarbeitet…', percent: 0 });
 
       let done = false;
       while (!done) {
