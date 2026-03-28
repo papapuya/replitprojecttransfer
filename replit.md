@@ -1,8 +1,16 @@
-# PIMPilot - Product Information Management SaaS
+# PIMPilot - Brickfox Product Data Optimization Pipeline
 
 ## Overview
 
-PIMPilot is a multi-tenant B2B SaaS platform that automates AI-powered product description and PIM metadata generation from supplier data. The application processes product data via CSV uploads, URL scraping, and image analysis to generate SEO-optimized, structured HTML product descriptions for e-commerce platforms (specifically akkushop.de/akku500.de targeting Shopware/Brickfox export format).
+PIMPilot is a Brickfox/Akkushop product data management tool. The app uses a single-pipeline workflow:
+**CSV Upload → CSV-Reparatur → Attribut-Engine → Beschreibungs-Generator → Download**
+
+Key design principles:
+- Original CSV is **never overwritten** (kept in browser state as immutable Blob)
+- Each step creates a new version of the data
+- Per-step change-log tracks field, old→new value
+- Each step individually runnable + "Alles optimieren" button for full pipeline
+- Frontend orchestrates existing backend APIs directly (no backend pipeline coordinator)
 
 The system handles three main product types:
 - **Type A (Batteries/Akkus)**: Includes technical data tables
@@ -11,7 +19,24 @@ The system handles three main product types:
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+Preferred communication style: Simple, everyday German language (UI in German).
+
+## App Structure
+
+### Pages
+- `/login` — Authentication page
+- `/pipeline` — Main pipeline page (default after login)
+- `/account` — User account management
+
+### Pipeline Steps (Frontend Orchestration)
+1. **CSV-Reparatur** (`/api/csv-repair/upload` + `/api/csv-repair/download/:jobId`) — SSE stream from POST, fixes line structure and encoding
+2. **Attribut-Engine** (`/api/volt-fixer/upload` → poll `/progress/:jobId` → `/result/:jobId` → `/download/:jobId`) — Async job with polling, normalizes Volt/mAh/Wh attributes and syncs into descriptions
+3. **Beschreibungs-Generator** (`/api/desc-generator/progress/:sessionId` SSE + `/api/desc-generator/generate` POST) — EventSource for progress, POST returns final CSV, AI-generates structured HTML descriptions
+
+### Key Frontend Files
+- `brickfox/client/src/pages/pipeline.tsx` — Main pipeline UI with stepper, change-log, detail views
+- `brickfox/client/src/App.tsx` — Routing (login, pipeline, account)
+- `brickfox/client/src/components/app-sidebar.tsx` — Sidebar with single "Pipeline" entry
 
 ## System Architecture
 

@@ -98,11 +98,7 @@ export default function Login() {
       
       // Redirect
       setTimeout(() => {
-        if (data.user?.is_admin) {
-          window.location.href = '/admin/dashboard';
-        } else {
-          window.location.href = '/dashboard';
-        }
+        window.location.href = '/pipeline';
       }, 300);
     },
     onError: (error: Error) => {
@@ -124,14 +120,6 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-indigo-50 to-white p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
-          <div className="flex items-center justify-between mb-2">
-            <a 
-              href="/" 
-              className="text-sm text-gray-600 hover:text-indigo-600 flex items-center gap-1 transition-colors"
-            >
-              ← Zurück zur Startseite
-            </a>
-          </div>
           <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">PIMPilot</CardTitle>
           <CardDescription className="text-center">
             Melden Sie sich mit Ihrem Account an
@@ -202,14 +190,6 @@ export default function Login() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
-          <div className="text-sm text-gray-600 text-center">
-            Noch kein Account?{' '}
-            <a href="/register" className="text-indigo-600 hover:underline font-medium">
-              Jetzt registrieren
-            </a>
-          </div>
-        </CardFooter>
       </Card>
     </div>
   );
