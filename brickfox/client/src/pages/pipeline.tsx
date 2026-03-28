@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
+import { runAttributEngine } from '@/lib/attribut-engine';
 
 type StepStatus = 'pending' | 'running' | 'done' | 'error';
 
@@ -297,119 +298,64 @@ export default function Pipeline() {
     if (!input) return null;
 
     setAttrStatus('running');
-    setAttrProgress({ label: 'Wird hochgeladen…', percent: 0 });
+    setAttrProgress({ label: 'Wird vorbereitet…', percent: 0 });
     setAttrError('');
 
     const ac = new AbortController();
     abortRef.current = ac;
 
     try {
-      const formData = new FormData();
-      formData.append('file', input, originalFile?.name || 'input.csv');
-      formData.append('restoreEmoji', 'true');
+      const csvText = await input.text();
 
-      const uploadBody = await new Promise<any>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/volt-fixer/upload');
-        const authHeaders = getAuthHeaders();
-        if (authHeaders.Authorization) xhr.setRequestHeader('Authorization', authHeaders.Authorization);
-
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const pct = Math.round((e.loaded / e.total) * 100);
-            setAttrProgress({ label: `Datei wird hochgeladen… (${Math.round(e.loaded / 1024 / 1024)}/${Math.round(e.total / 1024 / 1024)} MB)`, percent: Math.min(pct, 99) });
-          }
-        };
-        xhr.onload = () => {
-          try {
-            const body = JSON.parse(xhr.responseText);
-            if (xhr.status >= 200 && xhr.status < 300) resolve(body);
-            else reject(new Error(body?.error || `Upload fehlgeschlagen (HTTP ${xhr.status})`));
-          } catch { reject(new Error('Ungültige Serverantwort')); }
-        };
-        xhr.onerror = () => reject(new Error('Upload fehlgeschlagen — Netzwerkfehler'));
-        ac.signal.addEventListener('abort', () => xhr.abort());
-        if (ac.signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
-        xhr.send(formData);
-      });
-
-      const { jobId } = uploadBody;
-      if (!jobId) throw new Error('Keine Job-ID erhalten');
-      setAttrProgress({ label: 'Wird verarbeitet…', percent: 0 });
-
-      let done = false;
-      while (!done) {
-        await new Promise(r => setTimeout(r, 500));
-        if (ac.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-        const progressRes = await fetch(`/api/volt-fixer/progress/${jobId}`, {
-          headers: getAuthHeaders(),
-          signal: ac.signal,
-        });
-        const progress = await progressRes.json();
-        setAttrProgress({ label: progress.stepLabel || '', percent: progress.percent || 0 });
-
-        if (progress.step === 'done') done = true;
-        if (progress.step === 'error') throw new Error(progress.stepLabel || 'Attribut-Verarbeitung fehlgeschlagen');
-      }
-
-      const resultRes = await fetch(`/api/volt-fixer/result/${jobId}`, {
-        headers: getAuthHeaders(),
-      });
-      if (!resultRes.ok) throw new Error('Ergebnis konnte nicht geladen werden');
-      const result = await resultRes.json();
+      const result = await runAttributEngine(
+        csvText,
+        (percent, label) => setAttrProgress({ label, percent }),
+        ac.signal,
+      );
 
       setAttrStats(result.stats);
-      setAttrPreview(result.previewItems || []);
-
-      const downloadRes = await fetch(`/api/volt-fixer/download/${jobId}`, {
-        headers: getAuthHeaders(),
-      });
-      if (!downloadRes.ok) throw new Error('Download fehlgeschlagen');
-      const csvBlob = await downloadRes.blob();
-
-      setAttrCsvBlob(csvBlob);
+      setAttrPreview(result.previewItems);
+      setAttrCsvBlob(result.csvBlob);
       setAttrStatus('done');
       setDescCsvBlob(null); setDescStatus('pending'); setDescStats(null);
 
-      if (result.previewItems) {
-        const entries: ChangeEntry[] = [];
-        for (const item of result.previewItems) {
-          if (item.changed && item.changed.length > 0) {
-            for (const col of item.changed) {
-              if (col === 'p_attributes[akku_v][de]') {
-                entries.push({
-                  step: 'Attribute',
-                  itemNr: item.itemNr || item.pId || '—',
-                  field: 'Spannung (V)',
-                  oldValue: item.voltOrig || '(leer)',
-                  newValue: item.voltNew || '(leer)',
-                });
-              } else if (col === 'p_name[de]' && item.nameDEOrig !== item.nameDE) {
-                entries.push({
-                  step: 'Attribute',
-                  itemNr: item.itemNr || item.pId || '—',
-                  field: 'Name (DE)',
-                  oldValue: (item.nameDEOrig || '').substring(0, 80),
-                  newValue: (item.nameDE || '').substring(0, 80),
-                });
-              } else if (col === 'p_description[de]') {
-                entries.push({
-                  step: 'Attribute',
-                  itemNr: item.itemNr || item.pId || '—',
-                  field: 'Beschreibung (DE)',
-                  oldValue: '(Volt-Werte korrigiert)',
-                  newValue: '(synchronisiert)',
-                });
-              }
+      const entries: ChangeEntry[] = [];
+      for (const item of result.previewItems) {
+        if (item.changed && item.changed.length > 0) {
+          for (const col of item.changed) {
+            if (col === 'p_attributes[akku_v][de]') {
+              entries.push({
+                step: 'Attribute',
+                itemNr: item.itemNr || item.pId || '—',
+                field: 'Spannung (V)',
+                oldValue: item.voltOrig || '(leer)',
+                newValue: item.voltNew || '(leer)',
+              });
+            } else if (col === 'p_name[de]' && item.nameDEOrig !== item.nameDE) {
+              entries.push({
+                step: 'Attribute',
+                itemNr: item.itemNr || item.pId || '—',
+                field: 'Name (DE)',
+                oldValue: (item.nameDEOrig || '').substring(0, 80),
+                newValue: (item.nameDE || '').substring(0, 80),
+              });
+            } else if (col === 'p_description[de]') {
+              entries.push({
+                step: 'Attribute',
+                itemNr: item.itemNr || item.pId || '—',
+                field: 'Beschreibung (DE)',
+                oldValue: '(Volt-Werte korrigiert)',
+                newValue: '(synchronisiert)',
+              });
             }
           }
         }
-        setChangeLog(prev => [...prev.filter(e => e.step !== 'Attribute'), ...entries]);
       }
+      setChangeLog(prev => [...prev.filter(e => e.step !== 'Attribute'), ...entries]);
 
-      return csvBlob;
+      return result.csvBlob;
     } catch (err: any) {
-      if (err.name === 'AbortError') {
+      if (err.name === 'AbortError' || err.message === 'Abgebrochen') {
         setAttrStatus('pending');
         setAttrProgress({ label: '', percent: 0 });
         return null;
