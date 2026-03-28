@@ -7,22 +7,6 @@ import iconv from 'iconv-lite';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
-// ─── Job-Speicher (30 Minuten TTL) ───────────────────────────────────────────
-const jobStore = new Map<string, {
-  csvBuffer: Buffer;
-  fileName: string;
-  expires: number;
-  stats: RepairStats;
-}>();
-
-// Aufräumen abgelaufener Jobs alle 10 Minuten
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, job] of jobStore.entries()) {
-    if (job.expires < now) jobStore.delete(id);
-  }
-}, 10 * 60 * 1000);
-
 interface RepairStats {
   totalRawLines: number;
   emptyLinesRemoved: number;
@@ -31,7 +15,25 @@ interface RepairStats {
   invalidItemNrRemoved: number;
 }
 
-// ─── Zeilen-Erkennung: Beginnt diese Zeile ein neues Produkt? ─────────────────
+interface JobData {
+  csvBuffer?: Buffer;
+  fileName: string;
+  expires: number;
+  stats?: RepairStats;
+  status: 'processing' | 'done' | 'error';
+  progress: { label: string; percent: number };
+  error?: string;
+}
+
+const jobStore = new Map<string, JobData>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, job] of jobStore.entries()) {
+    if (job.expires < now) jobStore.delete(id);
+  }
+}, 10 * 60 * 1000);
+
 function looksLikeNewProductRow(pIdField: string, pItemNrField: string): boolean {
   const id = pIdField.trim().replace(/^"|"$/g, '');
   if (!id) return false;
@@ -42,7 +44,6 @@ function looksLikeNewProductRow(pIdField: string, pItemNrField: string): boolean
   return false;
 }
 
-// ─── Endfilter: Ist p_item_number eine echte Artikelnummer? ──────────────────
 function isValidPItemNr(v: string): boolean {
   const val = v.trim();
   if (!val) return false;
@@ -52,33 +53,13 @@ function isValidPItemNr(v: string): boolean {
   return true;
 }
 
-// Yield to event loop so SSE events are flushed to client
-const yield_ = () => new Promise<void>(resolve => setImmediate(resolve));
-
-// POST /api/csv-repair/upload  →  SSE stream
-router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
-  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  const send = (event: string, data: object) => {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-  };
+async function processRepair(jobId: string, fileBuffer: Buffer, originalName: string) {
+  const job = jobStore.get(jobId)!;
 
   try {
-    if (!req.file) {
-      send('error', { message: 'Keine Datei hochgeladen' });
-      return res.end();
-    }
+    job.progress = { label: 'Datei wird gelesen…', percent: 5 };
 
-    const fileSizeMB = (req.file.size / 1024 / 1024).toFixed(1);
-    send('progress', { label: `Datei wird gelesen… (${fileSizeMB} MB)`, percent: 5 });
-    await yield_();
-
-    // ─── Kodierung erkennen ───────────────────────────────────────────────────
-    const buf = req.file.buffer;
+    const buf = fileBuffer;
     const encodingSample = buf.slice(0, Math.min(4096, buf.length));
     let highBytes = 0;
     for (const b of encodingSample) { if (b > 0x7F) highBytes++; }
@@ -91,15 +72,15 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     console.log(`[CsvRepair] Kodierung erkannt: ${detectedEncoding} (highBytes=${highBytes})`);
     if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
 
-    send('progress', { label: 'Zeilen werden gezählt…', percent: 12 });
-    await yield_();
+    job.progress = { label: 'Zeilen werden gezählt…', percent: 10 };
 
     const rawLines = raw.split(/\r?\n/);
     const totalRawLines = rawLines.length;
 
     if (rawLines.length < 2) {
-      send('error', { message: 'CSV zu kurz — mindestens Header + 1 Zeile erforderlich' });
-      return res.end();
+      job.status = 'error';
+      job.error = 'CSV zu kurz — mindestens Header + 1 Zeile erforderlich';
+      return;
     }
 
     const headerLine = rawLines[0];
@@ -126,14 +107,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       console.log(`[CsvRepair] looksLikeNewProductRow => ${looksLikeNewProductRow(sampleFields[pIdColIdx] || '', sampleFields[pItemNrColIdx] || '')}`);
     }
 
-    // ─── Zeilen zusammenführen ────────────────────────────────────────────────
+    job.progress = { label: `${totalRawLines.toLocaleString()} Zeilen werden zusammengeführt…`, percent: 15 };
+
     const mergedLines: string[] = [headerLine];
     let emptyLinesRemoved = 0;
     let rowsMerged = 0;
-    const PROGRESS_INTERVAL = 5_000;
-
-    send('progress', { label: `${totalRawLines.toLocaleString()} Zeilen werden zusammengeführt…`, percent: 18 });
-    await yield_();
+    const PROGRESS_INTERVAL = 2_000;
 
     const delimRegex = delimiter === ';' ? /^;+$/ : delimiter === ',' ? /^,+$/ : /^\t+$/;
     for (let i = 1; i < rawLines.length; i++) {
@@ -158,21 +137,19 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         }
       }
 
-      // Yield and emit progress every PROGRESS_INTERVAL lines
       if (i % PROGRESS_INTERVAL === 0) {
-        const pct = 18 + Math.round((i / totalRawLines) * 52);
-        send('progress', {
+        const pct = 15 + Math.round((i / totalRawLines) * 55);
+        job.progress = {
           label: `Zeile ${i.toLocaleString()} von ${totalRawLines.toLocaleString()} verarbeitet…`,
           percent: pct,
-        });
-        await yield_();
+        };
+        await new Promise(r => setImmediate(r));
       }
     }
 
-    send('progress', { label: 'Filtern und bereinigen…', percent: 72 });
-    await yield_();
+    job.progress = { label: 'Filtern und bereinigen…', percent: 72 };
+    await new Promise(r => setImmediate(r));
 
-    // ─── Mit Papa.parse neu verarbeiten ──────────────────────────────────────
     const mergedCsv = mergedLines.join('\n');
     const parsed = Papa.parse<Record<string, string>>(mergedCsv, {
       header: true,
@@ -191,8 +168,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     rows = rows.filter(row => isValidPItemNr(row['p_item_number'] ?? ''));
     const invalidItemNrRemoved = beforeFilter - rows.length;
 
-    send('progress', { label: 'Zeilenumbrüche aus Feldern entfernen…', percent: 82 });
-    await yield_();
+    job.progress = { label: 'Zeilenumbrüche aus Feldern entfernen…', percent: 82 };
 
     rows = rows.map(row => {
       const r = { ...row };
@@ -212,41 +188,72 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       invalidItemNrRemoved,
     };
 
-    send('progress', { label: 'Reparierte CSV wird erstellt…', percent: 92 });
-    await yield_();
+    job.progress = { label: 'Reparierte CSV wird erstellt…', percent: 92 };
 
-    // ─── CSV-Ausgabe erstellen (UTF-8 mit BOM) ───────────────────────────────
     const csvOut = Papa.unparse(rows, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([
       Buffer.from('\uFEFF', 'utf-8'),
       Buffer.from(csvOut, 'utf-8'),
     ]);
 
-    const jobId = crypto.randomBytes(16).toString('hex');
-    const baseName = (req.file.originalname || 'output').replace(/\.csv$/i, '');
-    const fileName = baseName + '_repariert.csv';
+    const baseName = (originalName || 'output').replace(/\.csv$/i, '');
 
-    jobStore.set(jobId, {
-      csvBuffer,
-      fileName,
-      expires: Date.now() + 30 * 60 * 1000,
-      stats,
-    });
+    job.csvBuffer = csvBuffer;
+    job.fileName = baseName + '_repariert.csv';
+    job.stats = stats;
+    job.status = 'done';
+    job.progress = { label: 'Abgeschlossen', percent: 100 };
 
     console.log(`[CsvRepair] Fertig: ${rows.length} Zeilen, ${invalidItemNrRemoved} entfernt`);
-    send('done', { jobId, fileName, stats });
-    res.end();
   } catch (err: any) {
     console.error('[CsvRepair] Fehler:', err);
-    send('error', { message: err.message || 'Interner Fehler' });
-    res.end();
+    job.status = 'error';
+    job.error = err.message || 'Interner Fehler';
+    job.progress = { label: 'Fehler', percent: 0 };
+  }
+}
+
+router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+    }
+
+    const jobId = crypto.randomBytes(16).toString('hex');
+    const fileSizeMB = (req.file.size / 1024 / 1024).toFixed(1);
+
+    jobStore.set(jobId, {
+      fileName: req.file.originalname || 'input.csv',
+      expires: Date.now() + 30 * 60 * 1000,
+      status: 'processing',
+      progress: { label: `Datei empfangen (${fileSizeMB} MB)…`, percent: 2 },
+    });
+
+    processRepair(jobId, req.file.buffer, req.file.originalname || 'input.csv');
+
+    res.json({ jobId });
+  } catch (err: any) {
+    console.error('[CsvRepair] Upload-Fehler:', err);
+    res.status(500).json({ error: err.message || 'Interner Fehler' });
   }
 });
 
-// GET /api/csv-repair/download/:jobId
+router.get('/progress/:jobId', (req: Request, res: Response) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job nicht gefunden' });
+
+  res.json({
+    status: job.status,
+    progress: job.progress,
+    stats: job.stats || null,
+    error: job.error || null,
+  });
+});
+
 router.get('/download/:jobId', (req: Request, res: Response) => {
   const job = jobStore.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Job nicht gefunden oder abgelaufen' });
+  if (job.status !== 'done' || !job.csvBuffer) return res.status(400).json({ error: 'Job noch nicht fertig' });
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${job.fileName}"`);
   res.send(job.csvBuffer);
