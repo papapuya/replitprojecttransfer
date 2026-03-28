@@ -33,12 +33,12 @@ interface RepairStats {
 
 // ─── Zeilen-Erkennung: Beginnt diese Zeile ein neues Produkt? ─────────────────
 function looksLikeNewProductRow(pIdField: string, pItemNrField: string): boolean {
-  const id = pIdField.trim();
+  const id = pIdField.trim().replace(/^"|"$/g, '');
   if (!id) return false;
   if (/<|>/.test(id)) return false;
   if (/\n|\r/.test(id)) return false;
   if (id.length > 100) return false;
-  if (/^[\w\-\.\/]+$/.test(id)) return true;
+  if (/^[\w\-\.\/\+\&]+$/.test(id)) return true;
   return false;
 }
 
@@ -103,17 +103,26 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     }
 
     const headerLine = rawLines[0];
-    const headerCols = headerLine.split(';').map(h => h.trim());
+
+    const semiCount = (headerLine.match(/;/g) || []).length;
+    const commaCount = (headerLine.match(/,/g) || []).length;
+    const tabCount = (headerLine.match(/\t/g) || []).length;
+    let delimiter = ';';
+    if (tabCount > semiCount && tabCount > commaCount) delimiter = '\t';
+    else if (commaCount > semiCount) delimiter = ',';
+    console.log(`[CsvRepair] Delimiter erkannt: "${delimiter === '\t' ? 'TAB' : delimiter}" (semi=${semiCount}, comma=${commaCount}, tab=${tabCount})`);
+
+    const headerCols = headerLine.split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
     const pIdIdx     = headerCols.findIndex(h => h === 'p_id');
     const pItemNrIdx = headerCols.findIndex(h => h === 'p_item_number');
     const pIdColIdx      = pIdIdx     >= 0 ? pIdIdx     : 0;
     const pItemNrColIdx  = pItemNrIdx >= 0 ? pItemNrIdx : 1;
 
     console.log(`[CsvRepair] Header-Spalten: ${headerCols.length}, p_id: ${pIdColIdx}, p_item_number: ${pItemNrColIdx}, Zeilen: ${totalRawLines}`);
-    console.log(`[CsvRepair] Headers: ${headerCols.join(' | ')}`);
+    console.log(`[CsvRepair] Headers (first 10): ${headerCols.slice(0, 10).join(' | ')}`);
     if (rawLines.length > 1) {
-      const sampleFields = rawLines[1].split(';');
-      console.log(`[CsvRepair] Erste Datenzeile p_id="${sampleFields[pIdColIdx]}" p_item_number="${sampleFields[pItemNrColIdx]}"`);
+      const sampleFields = rawLines[1].split(delimiter);
+      console.log(`[CsvRepair] Erste Datenzeile p_id="${(sampleFields[pIdColIdx] || '').slice(0, 50)}" p_item_number="${(sampleFields[pItemNrColIdx] || '').slice(0, 50)}"`);
       console.log(`[CsvRepair] looksLikeNewProductRow => ${looksLikeNewProductRow(sampleFields[pIdColIdx] || '', sampleFields[pItemNrColIdx] || '')}`);
     }
 
@@ -126,15 +135,15 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     send('progress', { label: `${totalRawLines.toLocaleString()} Zeilen werden zusammengeführt…`, percent: 18 });
     await yield_();
 
+    const delimRegex = delimiter === ';' ? /^;+$/ : delimiter === ',' ? /^,+$/ : /^\t+$/;
     for (let i = 1; i < rawLines.length; i++) {
       const line = rawLines[i];
-
-      if (!line.trim() || /^;+$/.test(line.trim())) {
+      if (!line.trim() || delimRegex.test(line.trim())) {
         emptyLinesRemoved++;
         continue;
       }
 
-      const fields      = line.split(';');
+      const fields      = line.split(delimiter);
       const pIdField    = fields[pIdColIdx]    ?? '';
       const pItemNrField = fields[pItemNrColIdx] ?? '';
 
@@ -167,7 +176,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const mergedCsv = mergedLines.join('\n');
     const parsed = Papa.parse<Record<string, string>>(mergedCsv, {
       header: true,
-      delimiter: ';',
+      delimiter,
       skipEmptyLines: true,
     });
 
