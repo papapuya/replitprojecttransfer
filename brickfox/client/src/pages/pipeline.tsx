@@ -901,7 +901,7 @@ export default function Pipeline() {
                                             >
                                               {isChanged && !isDesc ? (
                                                 <span>
-                                                  <span className="text-red-500 text-[10px] mr-1">{origDisplay || '—'}</span>
+                                                  <span className="text-red-400 text-[10px] mr-1 line-through">{origDisplay || '—'}</span>
                                                   <span className="text-blue-600">{val}</span>
                                                 </span>
                                               ) : (
@@ -1060,7 +1060,7 @@ export default function Pipeline() {
                                   <span className="w-56 font-mono text-gray-500 shrink-0 truncate mr-3" title={col}>{col}</span>
                                   {isChanged ? (
                                     <div className="flex items-center gap-2 min-w-0">
-                                      <span className="text-red-500">{origVal || '(leer)'}</span>
+                                      <span className="text-red-400 line-through">{origVal || '(leer)'}</span>
                                       <span className="text-gray-400">→</span>
                                       <span className="text-blue-600 font-semibold">{corrVal}</span>
                                       <span className="ml-1 text-[10px] bg-yellow-500 text-white px-1.5 py-0.5 rounded-full font-medium shrink-0">geändert</span>
