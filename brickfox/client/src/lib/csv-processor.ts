@@ -872,9 +872,7 @@ export function exportToCSV(products: Product[], selectedColumns: ExportColumn[]
       newline: '\r\n'
     });
     
-    // Add BOM for proper encoding in Excel
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
     // Create download link

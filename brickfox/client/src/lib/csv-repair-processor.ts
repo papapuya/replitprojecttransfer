@@ -188,7 +188,7 @@ export async function repairCsv(
 
   const csvOut = Papa.unparse(rows, { delimiter: ";", columns: headers });
   const csvBlob = new Blob(
-    ["\uFEFF" + csvOut],
+    [csvOut],
     { type: "text/csv;charset=utf-8" }
   );
 
