@@ -1,5 +1,6 @@
 import { Product } from "@shared/schema";
 import Papa from "papaparse";
+import { makeCsvBlob } from "@/lib/utils";
 
 interface RawCSVRow {
   [key: string]: string;
@@ -872,7 +873,7 @@ export function exportToCSV(products: Product[], selectedColumns: ExportColumn[]
       newline: '\r\n'
     });
     
-    const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = makeCsvBlob(csv);
     const url = URL.createObjectURL(blob);
     
     // Create download link

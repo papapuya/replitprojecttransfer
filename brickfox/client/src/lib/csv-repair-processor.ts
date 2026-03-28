@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { makeCsvBlob } from "@/lib/utils";
 
 export interface RepairStats {
   totalRawLines: number;
@@ -187,10 +188,7 @@ export async function repairCsv(
   await yield_();
 
   const csvOut = Papa.unparse(rows, { delimiter: ";", columns: headers });
-  const csvBlob = new Blob(
-    ['\uFEFF', csvOut],
-    { type: "text/csv;charset=utf-8" }
-  );
+  const csvBlob = makeCsvBlob(csvOut);
 
   const baseName = file.name.replace(/\.csv$/i, "");
   const fileName = baseName + "_repariert.csv";
