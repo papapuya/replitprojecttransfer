@@ -6,11 +6,11 @@ import { Progress } from '@/components/ui/progress';
 import {
   Upload, CheckCircle2, Circle, Loader2, AlertCircle, Download,
   Play, Wrench, Zap, Sparkles, FileText, ChevronDown, ChevronRight,
-  RotateCcw, Shield, XCircle
+  RotateCcw, Shield, XCircle, Eye, X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
-import { runAttributEngine } from '@/lib/attribut-engine';
+import { processVoltFile, type VoltProcessorResult, type PreviewItem as VoltPreviewItem } from '@/lib/volt-processor';
 
 type StepStatus = 'pending' | 'running' | 'done' | 'error';
 
@@ -30,6 +30,14 @@ interface AttributeStats {
   voltExtracted: number;
   dreiSpannungCount: number;
   htmlCorrectedCount: number;
+  mahExtracted: number;
+  mahSkipped: number;
+  whExtracted: number;
+  whSkipped: number;
+  wattExtracted: number;
+  wattSkipped: number;
+  leuchtExtracted: number;
+  leuchtSkipped: number;
 }
 
 interface DescStats {
@@ -122,6 +130,7 @@ export default function Pipeline() {
   const [showChangeLog, setShowChangeLog] = useState(false);
   const [showAttrDetails, setShowAttrDetails] = useState(false);
   const [attrFilterChanged, setAttrFilterChanged] = useState(true);
+  const [attrDetailItem, setAttrDetailItem] = useState<VoltPreviewItem | null>(null);
   const [isRunningAll, setIsRunningAll] = useState(false);
 
   const getInputForStep = useCallback((step: 'repair' | 'attributes' | 'descriptions'): Blob | File | null => {
@@ -305,13 +314,17 @@ export default function Pipeline() {
     abortRef.current = ac;
 
     try {
-      const csvText = await input.text();
+      const inputFile = input instanceof File
+        ? input
+        : new File([input], originalFile?.name || 'input.csv', { type: 'text/csv' });
 
-      const result = await runAttributEngine(
-        csvText,
-        (percent, label) => setAttrProgress({ label, percent }),
-        ac.signal,
-      );
+      const result = await processVoltFile(inputFile, {
+        restoreEmoji: true,
+        onProgress: (_step, label, percent) => {
+          if (ac.signal.aborted) throw new Error('Abgebrochen');
+          setAttrProgress({ label, percent });
+        },
+      });
 
       setAttrStats(result.stats);
       setAttrPreview(result.previewItems);
@@ -319,35 +332,66 @@ export default function Pipeline() {
       setAttrStatus('done');
       setDescCsvBlob(null); setDescStatus('pending'); setDescStats(null);
 
+      const fieldMap: Record<string, { label: string; origKey: keyof VoltPreviewItem; newKey: keyof VoltPreviewItem }> = {
+        'p_attributes[akku_v][de]': { label: 'Spannung (V)', origKey: 'voltOrig', newKey: 'voltNew' },
+        'p_attributes[akku_mah][de]': { label: 'Kapazität (mAh)', origKey: 'mahOrig', newKey: 'mahNew' },
+        'p_attributes[akku_wh][de]': { label: 'Energie (Wh)', origKey: 'whOrig', newKey: 'whNew' },
+        'p_attributes[lela_leistung_watt][de]': { label: 'Leistung (W)', origKey: 'wattOrig', newKey: 'wattNew' },
+        'p_attributes[tala_leuchtweite][de]': { label: 'Leuchtweite', origKey: 'leuchtOrig', newKey: 'leuchtNew' },
+        'p_attributes[netzteil_input_volt][de]': { label: 'Input-Volt', origKey: 'inputVoltOrig', newKey: 'inputVoltNew' },
+        'p_attributes[netzteil_output_volt][de]': { label: 'Output-Volt', origKey: 'outputVoltOrig', newKey: 'outputVoltNew' },
+        'p_attributes[akku_durchmesser][de]': { label: 'Durchmesser', origKey: 'durchmOrig', newKey: 'durchmNew' },
+        'p_attributes[breite][de]': { label: 'Breite', origKey: 'breiteOrig', newKey: 'breiteNew' },
+        'p_attributes[hoehe][de]': { label: 'Höhe', origKey: 'hoeheOrig', newKey: 'hoeheNew' },
+        'p_attributes[akku_länge][de]': { label: 'Länge', origKey: 'laengeOrig', newKey: 'laengeNew' },
+        'p_attributes[tala_gewicht][de]': { label: 'Gewicht', origKey: 'gewichtOrig', newKey: 'gewichtNew' },
+      };
+
       const entries: ChangeEntry[] = [];
       for (const item of result.previewItems) {
-        if (item.changed && item.changed.length > 0) {
-          for (const col of item.changed) {
-            if (col === 'p_attributes[akku_v][de]') {
-              entries.push({
-                step: 'Attribute',
-                itemNr: item.itemNr || item.pId || '—',
-                field: 'Spannung (V)',
-                oldValue: item.voltOrig || '(leer)',
-                newValue: item.voltNew || '(leer)',
-              });
-            } else if (col === 'p_name[de]' && item.nameDEOrig !== item.nameDE) {
-              entries.push({
-                step: 'Attribute',
-                itemNr: item.itemNr || item.pId || '—',
-                field: 'Name (DE)',
-                oldValue: (item.nameDEOrig || '').substring(0, 80),
-                newValue: (item.nameDE || '').substring(0, 80),
-              });
-            } else if (col === 'p_description[de]') {
-              entries.push({
-                step: 'Attribute',
-                itemNr: item.itemNr || item.pId || '—',
-                field: 'Beschreibung (DE)',
-                oldValue: '(Volt-Werte korrigiert)',
-                newValue: '(synchronisiert)',
-              });
-            }
+        if (!item.changed || item.changed.length === 0) continue;
+        for (const col of item.changed) {
+          const mapped = fieldMap[col];
+          if (mapped) {
+            entries.push({
+              step: 'Attribute',
+              itemNr: item.itemNr || item.pId || '—',
+              field: mapped.label,
+              oldValue: (String(item[mapped.origKey]) || '(leer)'),
+              newValue: (String(item[mapped.newKey]) || '(leer)'),
+            });
+          } else if (col === 'p_name[de]' && item.nameDEOrig !== item.nameDE) {
+            entries.push({
+              step: 'Attribute',
+              itemNr: item.itemNr || item.pId || '—',
+              field: 'Name (DE)',
+              oldValue: (item.nameDEOrig || '').substring(0, 80),
+              newValue: (item.nameDE || '').substring(0, 80),
+            });
+          } else if (col === 'p_name[nl]' && item.nameNLOrig !== item.nameNL) {
+            entries.push({
+              step: 'Attribute',
+              itemNr: item.itemNr || item.pId || '—',
+              field: 'Name (NL)',
+              oldValue: (item.nameNLOrig || '').substring(0, 80),
+              newValue: (item.nameNL || '').substring(0, 80),
+            });
+          } else if (col === 'p_description[de]') {
+            entries.push({
+              step: 'Attribute',
+              itemNr: item.itemNr || item.pId || '—',
+              field: 'Beschreibung (DE)',
+              oldValue: '(Werte korrigiert)',
+              newValue: '(synchronisiert)',
+            });
+          } else if (col === 'p_description[nl]') {
+            entries.push({
+              step: 'Attribute',
+              itemNr: item.itemNr || item.pId || '—',
+              field: 'Beschreibung (NL)',
+              oldValue: '(Werte korrigiert)',
+              newValue: '(synchronisiert)',
+            });
           }
         }
       }
@@ -544,6 +588,7 @@ export default function Pipeline() {
     setOriginalFile(null);
     setRepairStatus('pending'); setRepairStats(null); setRepairCsvBlob(null); setRepairError('');
     setAttrStatus('pending'); setAttrStats(null); setAttrCsvBlob(null); setAttrPreview([]); setAttrError('');
+    setAttrDetailItem(null);
     setDescStatus('pending'); setDescStats(null); setDescCsvBlob(null); setDescError('');
     setChangeLog([]);
     setShowChangeLog(false);
@@ -745,6 +790,10 @@ export default function Pipeline() {
                       <span>{attrStats.total} Produkte geprüft</span>
                       {attrStats.voltChanged > 0 && <span className="text-orange-600 font-medium">{attrStats.voltChanged} Volt korrigiert</span>}
                       {attrStats.voltExtracted > 0 && <span className="text-blue-600">{attrStats.voltExtracted} Volt extrahiert</span>}
+                      {attrStats.mahExtracted > 0 && <span className="text-blue-600">{attrStats.mahExtracted} mAh</span>}
+                      {attrStats.whExtracted > 0 && <span className="text-blue-600">{attrStats.whExtracted} Wh</span>}
+                      {attrStats.wattExtracted > 0 && <span className="text-blue-600">{attrStats.wattExtracted} Watt</span>}
+                      {attrStats.leuchtExtracted > 0 && <span className="text-blue-600">{attrStats.leuchtExtracted} Leuchtweite</span>}
                       {attrStats.htmlCorrectedCount > 0 && <span className="text-green-600">{attrStats.htmlCorrectedCount} Beschreibungen sync.</span>}
                     </div>
                     {attrPreview.length > 0 && (
@@ -768,37 +817,59 @@ export default function Pipeline() {
                               <table className="w-full text-xs">
                                 <thead className="sticky top-0 bg-slate-50 z-10">
                                   <tr className="border-b">
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap w-8"></th>
                                     <th className="text-left py-1.5 px-2 whitespace-nowrap">Artikel-Nr.</th>
                                     <th className="text-left py-1.5 px-2 whitespace-nowrap">Name (DE)</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Name (NL)</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Volt alt</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Volt neu</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Beschr. DE</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Beschr. NL</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Geänderte Felder</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Volt</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">mAh</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Wh</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Watt</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Beschr.</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Änderungen</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {(attrFilterChanged ? changedAttrItems : attrPreview).slice(0, 200).map((item: any, i: number) => {
                                     const hasChanges = item.changed && item.changed.length > 0;
                                     return (
-                                      <tr key={i} className={`border-b last:border-0 ${hasChanges ? 'bg-yellow-50' : ''}`}>
-                                        <td className="py-1 px-2 font-mono whitespace-nowrap">{item.itemNr || item.pId}</td>
-                                        <td className="py-1 px-2 max-w-[200px] truncate" title={item.nameDE}>{item.nameDE || '—'}</td>
-                                        <td className="py-1 px-2 max-w-[200px] truncate" title={item.nameNL}>{item.nameNL || '—'}</td>
-                                        <td className={`py-1 px-2 whitespace-nowrap ${item.voltOrig !== item.voltNew ? 'text-red-600' : ''}`}>{item.voltOrig || '—'}</td>
-                                        <td className={`py-1 px-2 whitespace-nowrap ${item.voltOrig !== item.voltNew ? 'text-green-600 font-medium' : ''}`}>{item.voltNew || '—'}</td>
+                                      <tr key={i} className={`border-b last:border-0 ${hasChanges ? 'bg-yellow-50' : ''} hover:bg-indigo-50 cursor-pointer`} onClick={() => setAttrDetailItem(item)}>
                                         <td className="py-1 px-2">
-                                          {item.descDEChanged
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setAttrDetailItem(item); }}
+                                            className="text-indigo-400 hover:text-indigo-600"
+                                            title="Detailansicht"
+                                          >
+                                            <Eye className="w-3.5 h-3.5" />
+                                          </button>
+                                        </td>
+                                        <td className="py-1 px-2 font-mono whitespace-nowrap">{item.itemNr || item.pId}</td>
+                                        <td className="py-1 px-2 max-w-[180px] truncate" title={item.nameDE}>{item.nameDE || '—'}</td>
+                                        <td className="py-1 px-2 whitespace-nowrap">
+                                          {item.voltOrig !== item.voltNew
+                                            ? <span><span className="text-red-500 line-through">{item.voltOrig || '—'}</span> <span className="text-green-600 font-medium">{item.voltNew}</span></span>
+                                            : <span className="text-gray-400">{item.voltNew || '—'}</span>}
+                                        </td>
+                                        <td className="py-1 px-2 whitespace-nowrap">
+                                          {item.mahOrig !== item.mahNew
+                                            ? <span><span className="text-red-500 line-through">{item.mahOrig || '—'}</span> <span className="text-green-600 font-medium">{item.mahNew}</span></span>
+                                            : <span className="text-gray-400">{item.mahNew || '—'}</span>}
+                                        </td>
+                                        <td className="py-1 px-2 whitespace-nowrap">
+                                          {item.whOrig !== item.whNew
+                                            ? <span><span className="text-red-500 line-through">{item.whOrig || '—'}</span> <span className="text-green-600 font-medium">{item.whNew}</span></span>
+                                            : <span className="text-gray-400">{item.whNew || '—'}</span>}
+                                        </td>
+                                        <td className="py-1 px-2 whitespace-nowrap">
+                                          {item.wattOrig !== item.wattNew
+                                            ? <span><span className="text-red-500 line-through">{item.wattOrig || '—'}</span> <span className="text-green-600 font-medium">{item.wattNew}</span></span>
+                                            : <span className="text-gray-400">{item.wattNew || '—'}</span>}
+                                        </td>
+                                        <td className="py-1 px-2">
+                                          {item.descDEChanged || item.descNLChanged
                                             ? <span className="text-green-600 font-medium">✓ sync</span>
                                             : item.hasHtml ? <span className="text-gray-400">OK</span> : <span className="text-gray-300">—</span>}
                                         </td>
-                                        <td className="py-1 px-2">
-                                          {item.descNLChanged
-                                            ? <span className="text-green-600 font-medium">✓ sync</span>
-                                            : item.descNL ? <span className="text-gray-400">OK</span> : <span className="text-gray-300">—</span>}
-                                        </td>
-                                        <td className="py-1 px-2 text-gray-500 max-w-[180px] truncate" title={(item.changed || []).join(', ')}>{(item.changed || []).join(', ') || '—'}</td>
+                                        <td className="py-1 px-2 text-gray-500">{(item.changed || []).length || '—'}</td>
                                       </tr>
                                     );
                                   })}
@@ -813,6 +884,112 @@ export default function Pipeline() {
                       </div>
                     )}
                   </>
+                )}
+
+                {attrDetailItem && (
+                  <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setAttrDetailItem(null)}>
+                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-between px-5 py-3 border-b bg-slate-50">
+                        <div>
+                          <h3 className="font-semibold text-sm">Detailansicht — {attrDetailItem.itemNr || attrDetailItem.pId}</h3>
+                          <p className="text-xs text-muted-foreground truncate max-w-md">{attrDetailItem.nameDE || '—'}</p>
+                        </div>
+                        <button onClick={() => setAttrDetailItem(null)} className="text-gray-400 hover:text-gray-600">
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="overflow-auto max-h-[calc(85vh-60px)] p-5 space-y-4">
+                        <div>
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Attribute (alt → neu)</h4>
+                          <div className="grid grid-cols-1 gap-1.5">
+                            {([
+                              { label: 'Spannung (V)', orig: attrDetailItem.voltOrig, neu: attrDetailItem.voltNew },
+                              { label: 'Kapazität (mAh)', orig: attrDetailItem.mahOrig, neu: attrDetailItem.mahNew },
+                              { label: 'Energie (Wh)', orig: attrDetailItem.whOrig, neu: attrDetailItem.whNew },
+                              { label: 'Leistung (W)', orig: attrDetailItem.wattOrig, neu: attrDetailItem.wattNew },
+                              { label: 'Leuchtweite', orig: attrDetailItem.leuchtOrig, neu: attrDetailItem.leuchtNew },
+                              { label: 'Input-Volt', orig: attrDetailItem.inputVoltOrig, neu: attrDetailItem.inputVoltNew },
+                              { label: 'Output-Volt', orig: attrDetailItem.outputVoltOrig, neu: attrDetailItem.outputVoltNew },
+                              { label: 'Durchmesser', orig: attrDetailItem.durchmOrig, neu: attrDetailItem.durchmNew },
+                              { label: 'Breite', orig: attrDetailItem.breiteOrig, neu: attrDetailItem.breiteNew },
+                              { label: 'Höhe', orig: attrDetailItem.hoeheOrig, neu: attrDetailItem.hoeheNew },
+                              { label: 'Länge', orig: attrDetailItem.laengeOrig, neu: attrDetailItem.laengeNew },
+                              { label: 'Gewicht', orig: attrDetailItem.gewichtOrig, neu: attrDetailItem.gewichtNew },
+                            ]).map(({ label, orig, neu }) => {
+                              const changed = orig !== neu;
+                              if (!orig && !neu) return null;
+                              return (
+                                <div key={label} className={`flex items-center text-xs rounded px-2 py-1 ${changed ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'}`}>
+                                  <span className="w-32 font-medium text-gray-600 shrink-0">{label}</span>
+                                  {changed ? (
+                                    <>
+                                      <span className="text-red-500 line-through mr-2">{orig || '(leer)'}</span>
+                                      <span className="text-green-600 font-semibold">{neu}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-gray-500">{neu || '—'}</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {(attrDetailItem.nameDEOrig !== attrDetailItem.nameDE || attrDetailItem.nameNLOrig !== attrDetailItem.nameNL) && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Produktname</h4>
+                            <div className="space-y-1.5">
+                              {attrDetailItem.nameDEOrig !== attrDetailItem.nameDE && (
+                                <div className="text-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
+                                  <span className="font-medium text-gray-600">DE: </span>
+                                  <span className="text-red-500 line-through">{attrDetailItem.nameDEOrig}</span>
+                                  {' → '}
+                                  <span className="text-green-600 font-semibold">{attrDetailItem.nameDE}</span>
+                                </div>
+                              )}
+                              {attrDetailItem.nameNLOrig !== attrDetailItem.nameNL && (
+                                <div className="text-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
+                                  <span className="font-medium text-gray-600">NL: </span>
+                                  <span className="text-red-500 line-through">{attrDetailItem.nameNLOrig}</span>
+                                  {' → '}
+                                  <span className="text-green-600 font-semibold">{attrDetailItem.nameNL}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {(attrDetailItem.descDEChanged || attrDetailItem.descNLChanged) && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Beschreibungen (synchronisiert)</h4>
+                            {attrDetailItem.descDEChanged && (
+                              <div className="mb-3">
+                                <p className="text-xs font-medium text-gray-600 mb-1">Beschreibung DE:</p>
+                                <div className="text-xs bg-green-50 border border-green-200 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono leading-relaxed" dangerouslySetInnerHTML={{ __html: attrDetailItem.descDEFull || attrDetailItem.descDE || '' }} />
+                              </div>
+                            )}
+                            {attrDetailItem.descNLChanged && (
+                              <div>
+                                <p className="text-xs font-medium text-gray-600 mb-1">Beschreibung NL:</p>
+                                <div className="text-xs bg-green-50 border border-green-200 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono leading-relaxed" dangerouslySetInnerHTML={{ __html: attrDetailItem.descNLFull || attrDetailItem.descNL || '' }} />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {attrDetailItem.changed && attrDetailItem.changed.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Geänderte Felder ({attrDetailItem.changed.length})</h4>
+                            <div className="flex flex-wrap gap-1">
+                              {attrDetailItem.changed.map((col: string) => (
+                                <Badge key={col} variant="outline" className="text-xs bg-yellow-50 border-yellow-300">{col}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
                 {attrStatus === 'error' && <p className="mt-2 text-sm text-red-500">{attrError}</p>}
               </CardContent>
