@@ -1020,6 +1020,10 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
     };
 
     const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
+    if (!headers.length || !csvRowsClean.length) {
+      setProgress('error', 'CSV enthält keine gültigen Zeilen nach Filterung', 0);
+      return;
+    }
     const csvOut = Papa.unparse(csvRowsClean, { delimiter: ';', columns: headers });
     const csvBuffer = Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(csvOut, 'utf-8')]);
 
