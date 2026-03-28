@@ -131,7 +131,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const mergedLines: string[] = [headerLine];
     let emptyLinesRemoved = 0;
     let rowsMerged = 0;
-    const PROGRESS_INTERVAL = 10_000;
+    const PROGRESS_INTERVAL = 500;
 
     send('progress', { label: `${totalRawLines.toLocaleString()} Zeilen werden zusammengeführt…`, percent: 18 });
     await yield_();
