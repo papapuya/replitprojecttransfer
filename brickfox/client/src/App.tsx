@@ -12,9 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 import Login from "@/pages/login";
 import Account from "@/pages/account";
 import NotFound from "@/pages/not-found";
-import DescGenerator from "@/pages/desc-generator";
-import VoltFixer from "@/pages/volt-fixer";
-import CsvRepair from "@/pages/csv-repair";
+import Pipeline from "@/pages/pipeline";
 
 function Router() {
   return (
@@ -22,22 +20,12 @@ function Router() {
       <Route path="/login" component={Login} />
 
       <Route path="/">
-        <Redirect to="/volt-fixer" />
+        <Redirect to="/pipeline" />
       </Route>
 
-      <Route path="/volt-fixer">
+      <Route path="/pipeline">
         <ProtectedRoute>
-          <VoltFixer />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/csv-repair">
-        <ProtectedRoute>
-          <CsvRepair />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/desc-generator">
-        <ProtectedRoute>
-          <DescGenerator />
+          <Pipeline />
         </ProtectedRoute>
       </Route>
       <Route path="/account">
@@ -53,7 +41,6 @@ function Router() {
 
 function AppContent() {
   const [location] = useLocation();
-  const { user } = useAuth();
 
   const publicRoutes = ['/login'];
   const isPublicRoute = publicRoutes.includes(location);
