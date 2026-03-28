@@ -173,26 +173,36 @@ export default function Pipeline() {
         headers: getAuthHeaders(),
       });
 
-      if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
-        if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
-        const errBody = await response.text();
-        throw new Error(errBody || `HTTP ${response.status}`);
-      }
+      if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
+
+      const responseText = await response.text();
 
       let resultJobId = '';
       let resultStats: RepairStats | null = null;
       let sseError: string | null = null;
 
-      await parseSSEStream(response, (event, data) => {
-        if (event === 'done') {
-          resultJobId = data.jobId;
-          resultStats = data.stats;
-        } else if (event === 'error') {
-          sseError = data.message || 'Reparatur fehlgeschlagen';
+      const events = responseText.split('\n\n');
+      for (const block of events) {
+        if (!block.trim()) continue;
+        const lines = block.split('\n');
+        let eventName = 'message';
+        let dataStr = '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) eventName = line.slice(7).trim();
+          else if (line.startsWith('data: ')) dataStr += line.slice(6);
         }
-      });
+        if (!dataStr) continue;
+        try {
+          const data = JSON.parse(dataStr);
+          if (eventName === 'done') {
+            resultJobId = data.jobId;
+            resultStats = data.stats;
+          } else if (eventName === 'error') {
+            sseError = data.message || 'Reparatur fehlgeschlagen';
+          }
+        } catch {}
+      }
 
-      if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
       if (sseError) throw new Error(sseError);
       setRepairProgress({ label: 'Abgeschlossen', percent: 100 });
 
