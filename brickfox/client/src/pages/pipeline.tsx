@@ -120,6 +120,7 @@ export default function Pipeline() {
   const [changeLog, setChangeLog] = useState<ChangeEntry[]>([]);
   const [showChangeLog, setShowChangeLog] = useState(false);
   const [showAttrDetails, setShowAttrDetails] = useState(false);
+  const [attrFilterChanged, setAttrFilterChanged] = useState(true);
   const [isRunningAll, setIsRunningAll] = useState(false);
 
   const getInputForStep = useCallback((step: 'repair' | 'attributes' | 'descriptions'): Blob | File | null => {
@@ -131,8 +132,8 @@ export default function Pipeline() {
   }, [originalFile, repairCsvBlob, attrCsvBlob]);
 
   const getLatestOutput = useCallback((): Blob | null => {
-    return descCsvBlob || attrCsvBlob || repairCsvBlob;
-  }, [descCsvBlob, attrCsvBlob, repairCsvBlob]);
+    return attrCsvBlob || repairCsvBlob;
+  }, [attrCsvBlob, repairCsvBlob]);
 
   const handleFile = (file: File) => {
     if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -540,10 +541,7 @@ export default function Pipeline() {
       const attrBlob = await runAttributes(repairedBlob);
       if (!attrBlob) { setIsRunningAll(false); return; }
 
-      const descBlob = await runDescriptions(attrBlob);
-      if (!descBlob) { setIsRunningAll(false); return; }
-
-      toast({ title: 'Pipeline abgeschlossen', description: 'Alle 3 Schritte wurden erfolgreich ausgeführt.' });
+      toast({ title: 'Pipeline abgeschlossen', description: 'Reparatur + Attribute fertig. Beschreibungs-Generator kann separat gestartet werden.' });
     } finally {
       setIsRunningAll(false);
     }
@@ -607,8 +605,8 @@ export default function Pipeline() {
   };
 
   const anyRunning = repairStatus === 'running' || attrStatus === 'running' || descStatus === 'running';
-  const hasOutput = !!(descCsvBlob || attrCsvBlob || repairCsvBlob);
-  const allDone = repairStatus === 'done' && attrStatus === 'done' && descStatus === 'done';
+  const hasOutput = !!(attrCsvBlob || repairCsvBlob);
+  const allDone = repairStatus === 'done' && attrStatus === 'done';
 
   const StatusIcon = ({ status }: { status: StepStatus }) => {
     switch (status) {
@@ -803,41 +801,68 @@ export default function Pipeline() {
                       {attrStats.voltExtracted > 0 && <span className="text-blue-600">{attrStats.voltExtracted} Volt extrahiert</span>}
                       {attrStats.htmlCorrectedCount > 0 && <span className="text-green-600">{attrStats.htmlCorrectedCount} Beschreibungen sync.</span>}
                     </div>
-                    {changedAttrItems.length > 0 && (
+                    {attrPreview.length > 0 && (
                       <div className="mt-2">
                         <button
                           onClick={() => setShowAttrDetails(!showAttrDetails)}
                           className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
                         >
                           {showAttrDetails ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                          {changedAttrItems.length} geänderte Produkte anzeigen
+                          {attrPreview.length} Produkte Vorschau {changedAttrItems.length > 0 ? `(${changedAttrItems.length} geändert)` : ''}
                         </button>
                         {showAttrDetails && (
-                          <div className="mt-2 max-h-64 overflow-auto rounded border">
-                            <table className="w-full text-xs">
-                              <thead className="sticky top-0 bg-slate-50">
-                                <tr className="border-b">
-                                  <th className="text-left py-1.5 px-2">Artikel-Nr.</th>
-                                  <th className="text-left py-1.5 px-2">Volt alt</th>
-                                  <th className="text-left py-1.5 px-2">Volt neu</th>
-                                  <th className="text-left py-1.5 px-2">Geänderte Felder</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {changedAttrItems.slice(0, 100).map((item: any, i: number) => (
-                                  <tr key={i} className="border-b last:border-0">
-                                    <td className="py-1 px-2 font-mono">{item.itemNr || item.pId}</td>
-                                    <td className="py-1 px-2 text-red-600">{item.voltOrig || '—'}</td>
-                                    <td className="py-1 px-2 text-green-600">{item.voltNew || '—'}</td>
-                                    <td className="py-1 px-2 text-gray-500">{(item.changed || []).join(', ')}</td>
+                          <>
+                            <div className="mt-2 flex gap-2 text-xs mb-2">
+                              <label className="flex items-center gap-1">
+                                <input type="checkbox" checked={attrFilterChanged} onChange={e => setAttrFilterChanged(e.target.checked)} className="rounded" />
+                                Nur geänderte
+                              </label>
+                            </div>
+                            <div className="mt-1 max-h-96 overflow-auto rounded border">
+                              <table className="w-full text-xs">
+                                <thead className="sticky top-0 bg-slate-50 z-10">
+                                  <tr className="border-b">
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Artikel-Nr.</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Name (DE)</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Name (NL)</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Volt alt</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Volt neu</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Beschr. DE</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Beschr. NL</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Geänderte Felder</th>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                            {changedAttrItems.length > 100 && (
-                              <p className="text-xs text-center text-muted-foreground py-1">… und {changedAttrItems.length - 100} weitere</p>
-                            )}
-                          </div>
+                                </thead>
+                                <tbody>
+                                  {(attrFilterChanged ? changedAttrItems : attrPreview).slice(0, 200).map((item: any, i: number) => {
+                                    const hasChanges = item.changed && item.changed.length > 0;
+                                    return (
+                                      <tr key={i} className={`border-b last:border-0 ${hasChanges ? 'bg-yellow-50' : ''}`}>
+                                        <td className="py-1 px-2 font-mono whitespace-nowrap">{item.itemNr || item.pId}</td>
+                                        <td className="py-1 px-2 max-w-[200px] truncate" title={item.nameDE}>{item.nameDE || '—'}</td>
+                                        <td className="py-1 px-2 max-w-[200px] truncate" title={item.nameNL}>{item.nameNL || '—'}</td>
+                                        <td className={`py-1 px-2 whitespace-nowrap ${item.voltOrig !== item.voltNew ? 'text-red-600' : ''}`}>{item.voltOrig || '—'}</td>
+                                        <td className={`py-1 px-2 whitespace-nowrap ${item.voltOrig !== item.voltNew ? 'text-green-600 font-medium' : ''}`}>{item.voltNew || '—'}</td>
+                                        <td className="py-1 px-2">
+                                          {item.descDEChanged
+                                            ? <span className="text-green-600 font-medium">✓ sync</span>
+                                            : item.hasHtml ? <span className="text-gray-400">OK</span> : <span className="text-gray-300">—</span>}
+                                        </td>
+                                        <td className="py-1 px-2">
+                                          {item.descNLChanged
+                                            ? <span className="text-green-600 font-medium">✓ sync</span>
+                                            : item.descNL ? <span className="text-gray-400">OK</span> : <span className="text-gray-300">—</span>}
+                                        </td>
+                                        <td className="py-1 px-2 text-gray-500 max-w-[180px] truncate" title={(item.changed || []).join(', ')}>{(item.changed || []).join(', ') || '—'}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                              {(attrFilterChanged ? changedAttrItems : attrPreview).length > 200 && (
+                                <p className="text-xs text-center text-muted-foreground py-1">… und {(attrFilterChanged ? changedAttrItems : attrPreview).length - 200} weitere</p>
+                              )}
+                            </div>
+                          </>
                         )}
                       </div>
                     )}
@@ -866,8 +891,22 @@ export default function Pipeline() {
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={descStatus} />
-                    <Button size="sm" variant="outline" onClick={() => runDescriptions()} disabled={anyRunning}>
-                      <Play className="w-3 h-3 mr-1" /> Ausführen
+                    <Button size="sm" variant="outline" onClick={() => {
+                      const blob = attrCsvBlob || repairCsvBlob;
+                      if (!blob) {
+                        toast({ title: 'Kein CSV vorhanden', description: 'Bitte zuerst Reparatur und Attribute ausführen.', variant: 'destructive' });
+                        return;
+                      }
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      const baseName = (originalFile?.name || 'output').replace(/\.csv$/i, '');
+                      a.download = baseName + '_attribut.csv';
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast({ title: 'CSV heruntergeladen', description: 'Lade die Datei im Beschreibungs-Generator hoch.' });
+                    }} disabled={!attrCsvBlob && !repairCsvBlob}>
+                      <Download className="w-3 h-3 mr-1" /> CSV herunterladen
                     </Button>
                   </div>
                 </div>
