@@ -211,20 +211,13 @@ function fixVolt(val: string): { fixed: string; changed: boolean } {
       return { fixed: stripTrailingZeroVolt(raw), changed: true };
     }
   }
-  // 3-stellige Zahlen: Dezimalstelle einfügen
-  // ÷10  → XX.Y  wenn Ergebnis 5–26 V  (z.B. 108→10.8, 144→14.4, 222→22.2, 250→25)
-  // ÷100 → X.XX  wenn Ergebnis 1–9.9 V (z.B. 385→3.85, 675→6.75, 480→4.8, 720→7.2)
+  // 3-stellige Zahlen: ÷10 → XX.Y  (z.B. 108→10.8, 144→14.4, 348→34.8, 480→48)
   if (trimmed.length === 3) {
     const n = parseInt(trimmed, 10);
     const d10 = n / 10;
-    if (d10 >= 5 && d10 <= 26) {
+    if (d10 >= 5 && d10 <= 99) {
       const raw = d10 % 1 === 0 ? d10.toString() : d10.toFixed(1);
       return { fixed: stripTrailingZeroVolt(raw), changed: true };
-    }
-    const d100 = n / 100;
-    if (d100 >= 1.0 && d100 < 10) {
-      const raw = d100.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-      return { fixed: raw, changed: raw !== trimmed };
     }
   }
   return { fixed: trimmed, changed: false };
@@ -1715,18 +1708,6 @@ export async function processVoltFile(
     console.log(`[VoltFixer] Neue Attributspalten in Export eingefügt: ${missingAttrCols.join(', ')}`);
   }
 
-  // Dezimalpunkt → Komma für alle numerischen Attributspalten (Brickfox erwartet deutsches Format)
-  const NUMERIC_ATTR_COLS = [
-    VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
-    INPUT_VOLT_COL, OUTPUT_VOLT_COL,
-    DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
-  ];
-  for (const row of csvRowsClean) {
-    for (const col of NUMERIC_ATTR_COLS) {
-      if (col in row && row[col]) row[col] = toGermanDecimal(row[col]);
-    }
-  }
-
   // Produkte mit und ohne Beschreibung trennen
   const hasDesc = (row: Record<string, string>) =>
     DESC_COLS.some(col => finalHeaders.includes(col) && (row[col] ?? '').trim() !== '');
@@ -2033,17 +2014,6 @@ export function applyDescriptionSync(result: VoltProcessorResult): DescSyncResul
     return r;
   });
   const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
-  // Dezimalpunkt → Komma für alle numerischen Attributspalten
-  const SYNC_NUMERIC_COLS = [
-    VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
-    INPUT_VOLT_COL, OUTPUT_VOLT_COL,
-    DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
-  ];
-  for (const row of csvRowsClean) {
-    for (const col of SYNC_NUMERIC_COLS) {
-      if (col in row && row[col]) row[col] = toGermanDecimal(row[col]);
-    }
-  }
   const hasDescCol = finalHeaders.some(h => DESC_COLS.includes(h));
   const rowsWithDesc    = hasDescCol ? csvRowsClean.filter(row => DESC_COLS.some(c => (row[c] ?? '').trim())) : csvRowsClean;
   const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders, quotes: true, newline: '\r\n' });
