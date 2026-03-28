@@ -422,7 +422,13 @@ function syncTableValuesFromDe(deHtml: string, nlHtml: string): { result: string
 
 // ─── Dezimalzahl auf deutsches Format (Komma) bringen ────────────────────────
 // "3.7" → "3,7", "5.0" → "5", "5" → "5", "10.4" → "10,4"
+// "3.7-7.4" → "3,7-7,4", "3.7/7.4" → "3,7/7,4"
 function toGermanDecimal(val: string): string {
+  if (!val) return val;
+  // Bereichswerte: alle Dezimalpunkte ersetzen
+  if (/[-\/]/.test(val)) {
+    return val.replace(/\./g, ',');
+  }
   const n = parseFloat(val);
   if (isNaN(n)) return val;
   if (n % 1 === 0) return n.toFixed(0);
@@ -1709,6 +1715,20 @@ export async function processVoltFile(
     console.log(`[VoltFixer] Neue Attributspalten in Export eingefügt: ${missingAttrCols.join(', ')}`);
   }
 
+  // Dezimalpunkt → Komma für alle numerischen Attributspalten (Brickfox erwartet deutsches Format)
+  const NUMERIC_ATTR_COLS = [
+    VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
+    INPUT_VOLT_COL, OUTPUT_VOLT_COL,
+    DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
+  ];
+  for (const row of csvRowsClean) {
+    for (const col of NUMERIC_ATTR_COLS) {
+      if (col in row && row[col]) {
+        row[col] = toGermanDecimal(row[col]);
+      }
+    }
+  }
+
   // Produkte mit und ohne Beschreibung trennen
   const hasDesc = (row: Record<string, string>) =>
     DESC_COLS.some(col => finalHeaders.includes(col) && (row[col] ?? '').trim() !== '');
@@ -2015,6 +2035,17 @@ export function applyDescriptionSync(result: VoltProcessorResult): DescSyncResul
     return r;
   });
   const csvRowsClean = csvRows.filter(row => isValidPItemNr(row));
+  // Dezimalpunkt → Komma für alle numerischen Attributspalten (Brickfox erwartet deutsches Format)
+  const SYNC_NUMERIC_COLS = [
+    VOLT_COL, MAH_COL, WH_COL, WATT_COL, LEUCHT_COL,
+    INPUT_VOLT_COL, OUTPUT_VOLT_COL,
+    DURCHM_COL, BREITE_COL, HOEHE_COL, LAENGE_COL, GEWICHT_COL,
+  ];
+  for (const row of csvRowsClean) {
+    for (const col of SYNC_NUMERIC_COLS) {
+      if (col in row && row[col]) row[col] = toGermanDecimal(row[col]);
+    }
+  }
   const hasDescCol = finalHeaders.some(h => DESC_COLS.includes(h));
   const rowsWithDesc    = hasDescCol ? csvRowsClean.filter(row => DESC_COLS.some(c => (row[c] ?? '').trim())) : csvRowsClean;
   const csvOut = Papa.unparse(rowsWithDesc, { delimiter: ';', columns: finalHeaders, quotes: true, newline: '\r\n' });
