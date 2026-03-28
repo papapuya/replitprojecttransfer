@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { makeCsvBlob } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -146,7 +147,7 @@ export function UnifiedDataPreview({
       )
     ].join('\n');
     
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = makeCsvBlob(csvContent);
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `${exportFileName}.csv`;
