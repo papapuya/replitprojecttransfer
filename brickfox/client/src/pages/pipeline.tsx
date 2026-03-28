@@ -845,62 +845,74 @@ export default function Pipeline() {
                               </label>
                             </div>
                             <div className="mt-1 overflow-x-auto rounded border">
-                              <table className="w-full text-xs min-w-[800px]">
+                              <table className="w-full text-xs min-w-[1100px]">
                                 <thead className="sticky top-0 bg-slate-50 z-10">
                                   <tr className="border-b">
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap w-8"></th>
+                                    <th className="text-center py-1.5 px-2 whitespace-nowrap w-10">#</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">p_id</th>
+                                    <th className="text-center py-1.5 px-2 whitespace-nowrap w-8"></th>
                                     <th className="text-left py-1.5 px-2 whitespace-nowrap">Artikel-Nr.</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Name (DE)</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Volt</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">mAh</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Wh</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Watt</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Beschr.</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Änderungen</th>
+                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Geändert</th>
+                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-red-500">Volt vor</th>
+                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-blue-600">Volt</th>
+                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-red-500">mAh vor</th>
+                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-blue-600">mAh</th>
+                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-red-500">Wh vor</th>
+                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-blue-600">Wh</th>
+                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-red-500">Gew. g vor</th>
+                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-blue-600">Gew. g</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {attrVisibleItems.map((item: any, i: number) => {
                                     const hasChanges = item.changed && item.changed.length > 0;
+                                    const changedLabels = (item.changed || []).map((c: string) => {
+                                      const short = c.replace('p_attributes[', '').replace('][de]', '').replace('p_name[', 'Name ').replace('p_description[', 'Beschr. ').replace(']', '');
+                                      return short;
+                                    });
                                     return (
-                                      <tr key={i} className={`border-b last:border-0 ${hasChanges ? 'bg-yellow-50' : ''} hover:bg-indigo-50 cursor-pointer`} onClick={() => setAttrDetailItem(item)}>
-                                        <td className="py-1 px-2">
+                                      <tr key={i} className={`border-b last:border-0 ${hasChanges ? 'bg-red-50/30' : ''} hover:bg-indigo-50/50`}>
+                                        <td className="py-1.5 px-2 text-center text-gray-400">{item.index != null ? item.index : i + 1}</td>
+                                        <td className="py-1.5 px-2 text-gray-500">{item.pId || '—'}</td>
+                                        <td className="py-1.5 px-2 text-center">
                                           <button
-                                            onClick={(e) => { e.stopPropagation(); setAttrDetailItem(item); }}
+                                            onClick={() => setAttrDetailItem(item)}
                                             className="text-indigo-400 hover:text-indigo-600"
                                             title="Detailansicht"
                                           >
                                             <Eye className="w-3.5 h-3.5" />
                                           </button>
                                         </td>
-                                        <td className="py-1 px-2 font-mono whitespace-nowrap">{item.itemNr || item.pId}</td>
-                                        <td className="py-1 px-2 max-w-[180px] truncate" title={item.nameDE}>{item.nameDE || '—'}</td>
-                                        <td className="py-1 px-2 whitespace-nowrap">
+                                        <td className="py-1.5 px-2 font-mono whitespace-nowrap">{item.itemNr || '—'}</td>
+                                        <td className="py-1.5 px-2 whitespace-nowrap">
+                                          {hasChanges
+                                            ? <span className="text-indigo-600 font-medium">{changedLabels.join(', ')}</span>
+                                            : <span className="text-gray-300">—</span>}
+                                        </td>
+                                        <td className="py-1.5 px-2 text-right text-red-500 tabular-nums">{item.voltOrig !== item.voltNew ? item.voltOrig || '—' : '—'}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">
                                           {item.voltOrig !== item.voltNew
-                                            ? <span><span className="text-red-500">{item.voltOrig || '—'}</span> <span className="text-blue-600 font-medium">{item.voltNew}</span></span>
+                                            ? <span className="text-blue-600 font-medium">✏ {item.voltNew}</span>
                                             : <span className="text-gray-400">{item.voltNew || '—'}</span>}
                                         </td>
-                                        <td className="py-1 px-2 whitespace-nowrap">
+                                        <td className="py-1.5 px-2 text-right text-red-500 tabular-nums">{item.mahOrig !== item.mahNew ? item.mahOrig || '—' : '—'}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">
                                           {item.mahOrig !== item.mahNew
-                                            ? <span><span className="text-red-500">{item.mahOrig || '—'}</span> <span className="text-blue-600 font-medium">{item.mahNew}</span></span>
+                                            ? <span className="text-blue-600 font-medium">✏ {item.mahNew}</span>
                                             : <span className="text-gray-400">{item.mahNew || '—'}</span>}
                                         </td>
-                                        <td className="py-1 px-2 whitespace-nowrap">
+                                        <td className="py-1.5 px-2 text-right text-red-500 tabular-nums">{item.whOrig !== item.whNew ? item.whOrig || '—' : '—'}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">
                                           {item.whOrig !== item.whNew
-                                            ? <span><span className="text-red-500">{item.whOrig || '—'}</span> <span className="text-blue-600 font-medium">{item.whNew}</span></span>
+                                            ? <span className="text-blue-600 font-medium">✏ {item.whNew}</span>
                                             : <span className="text-gray-400">{item.whNew || '—'}</span>}
                                         </td>
-                                        <td className="py-1 px-2 whitespace-nowrap">
-                                          {item.wattOrig !== item.wattNew
-                                            ? <span><span className="text-red-500">{item.wattOrig || '—'}</span> <span className="text-blue-600 font-medium">{item.wattNew}</span></span>
-                                            : <span className="text-gray-400">{item.wattNew || '—'}</span>}
+                                        <td className="py-1.5 px-2 text-right text-red-500 tabular-nums">{item.gewichtOrig !== item.gewichtNew ? item.gewichtOrig || '—' : '—'}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">
+                                          {item.gewichtOrig !== item.gewichtNew
+                                            ? <span className="text-blue-600 font-medium">✏ {item.gewichtNew}</span>
+                                            : <span className="text-gray-400">{item.gewichtNew || '—'}</span>}
                                         </td>
-                                        <td className="py-1 px-2">
-                                          {item.descDEChanged || item.descNLChanged
-                                            ? <span className="text-green-600 font-medium">✓ sync</span>
-                                            : item.hasHtml ? <span className="text-gray-400">OK</span> : <span className="text-gray-300">—</span>}
-                                        </td>
-                                        <td className="py-1 px-2 text-gray-500">{(item.changed || []).length || '—'}</td>
                                       </tr>
                                     );
                                   })}
@@ -919,111 +931,148 @@ export default function Pipeline() {
                   </>
                 )}
 
-                {attrDetailItem && (
-                  <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setAttrDetailItem(null)}>
-                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-between px-5 py-3 border-b bg-slate-50">
+                {attrDetailItem && (() => {
+                  const d = attrDetailItem;
+                  const attrRows = [
+                    { col: 'p_attributes[akku_v][de]', label: 'Spannung (V)', orig: d.voltOrig, neu: d.voltNew },
+                    { col: 'p_attributes[akku_mah][de]', label: 'Kapazität (mAh)', orig: d.mahOrig, neu: d.mahNew },
+                    { col: 'p_attributes[akku_wh][de]', label: 'Energie (Wh)', orig: d.whOrig, neu: d.whNew },
+                    { col: 'p_attributes[lela_leistung_watt][de]', label: 'Leistung (W)', orig: d.wattOrig, neu: d.wattNew },
+                    { col: 'p_attributes[tala_leuchtweite][de]', label: 'Leuchtweite', orig: d.leuchtOrig, neu: d.leuchtNew },
+                    { col: 'p_attributes[netzteil_input_volt][de]', label: 'Input-Volt', orig: d.inputVoltOrig, neu: d.inputVoltNew },
+                    { col: 'p_attributes[netzteil_output_volt][de]', label: 'Output-Volt', orig: d.outputVoltOrig, neu: d.outputVoltNew },
+                    { col: 'p_attributes[akku_durchmesser][de]', label: 'Durchmesser', orig: d.durchmOrig, neu: d.durchmNew },
+                    { col: 'p_attributes[breite][de]', label: 'Breite', orig: d.breiteOrig, neu: d.breiteNew },
+                    { col: 'p_attributes[hoehe][de]', label: 'Höhe', orig: d.hoeheOrig, neu: d.hoeheNew },
+                    { col: 'p_attributes[akku_länge][de]', label: 'Länge', orig: d.laengeOrig, neu: d.laengeNew },
+                    { col: 'p_attributes[tala_gewicht][de]', label: 'Gewicht (g)', orig: d.gewichtOrig, neu: d.gewichtNew },
+                  ];
+                  const changedSet = new Set(d.changed || []);
+                  return (
+                  <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto" onClick={() => setAttrDetailItem(null)}>
+                    <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full my-8" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-between px-6 py-4 border-b">
                         <div>
-                          <h3 className="font-semibold text-sm">Detailansicht — {attrDetailItem.itemNr || attrDetailItem.pId}</h3>
-                          <p className="text-xs text-muted-foreground truncate max-w-md">{attrDetailItem.nameDE || '—'}</p>
+                          <h3 className="text-lg font-bold">Zeile {d.index != null ? d.index : '—'} – Detailansicht</h3>
+                          <p className="text-sm text-muted-foreground font-mono">{d.itemNr || d.pId}</p>
                         </div>
                         <button onClick={() => setAttrDetailItem(null)} className="text-gray-400 hover:text-gray-600">
                           <X className="w-5 h-5" />
                         </button>
                       </div>
-                      <div className="overflow-auto max-h-[calc(85vh-60px)] p-5 space-y-4">
+
+                      <div className="px-6 py-4 space-y-6">
+                        {d.changed && d.changed.length > 0 && (
+                          <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2 flex items-center gap-2 text-sm">
+                            <span className="font-medium text-indigo-700">Markierungen:</span>
+                            <span className="inline-flex items-center gap-1 text-green-700"><span className="w-3 h-3 bg-green-500 rounded-sm inline-block" /> Wert korrigiert</span>
+                          </div>
+                        )}
+
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Attribute (alt → neu)</h4>
-                          <div className="grid grid-cols-1 gap-1.5">
-                            {([
-                              { label: 'Spannung (V)', orig: attrDetailItem.voltOrig, neu: attrDetailItem.voltNew },
-                              { label: 'Kapazität (mAh)', orig: attrDetailItem.mahOrig, neu: attrDetailItem.mahNew },
-                              { label: 'Energie (Wh)', orig: attrDetailItem.whOrig, neu: attrDetailItem.whNew },
-                              { label: 'Leistung (W)', orig: attrDetailItem.wattOrig, neu: attrDetailItem.wattNew },
-                              { label: 'Leuchtweite', orig: attrDetailItem.leuchtOrig, neu: attrDetailItem.leuchtNew },
-                              { label: 'Input-Volt', orig: attrDetailItem.inputVoltOrig, neu: attrDetailItem.inputVoltNew },
-                              { label: 'Output-Volt', orig: attrDetailItem.outputVoltOrig, neu: attrDetailItem.outputVoltNew },
-                              { label: 'Durchmesser', orig: attrDetailItem.durchmOrig, neu: attrDetailItem.durchmNew },
-                              { label: 'Breite', orig: attrDetailItem.breiteOrig, neu: attrDetailItem.breiteNew },
-                              { label: 'Höhe', orig: attrDetailItem.hoeheOrig, neu: attrDetailItem.hoeheNew },
-                              { label: 'Länge', orig: attrDetailItem.laengeOrig, neu: attrDetailItem.laengeNew },
-                              { label: 'Gewicht', orig: attrDetailItem.gewichtOrig, neu: attrDetailItem.gewichtNew },
-                            ]).map(({ label, orig, neu }) => {
-                              const changed = orig !== neu;
+                          <h4 className="font-bold text-sm mb-2">Produktnamen</h4>
+                          <div className="border rounded-lg overflow-hidden">
+                            <div className="bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 uppercase">Name DE</div>
+                            <div className="px-3 py-2 text-sm">{d.nameDE || '—'}</div>
+                            {d.nameDEOrig !== d.nameDE && (
+                              <div className="px-3 pb-2 text-xs">
+                                <span className="text-red-500">Vorher: {d.nameDEOrig}</span>
+                              </div>
+                            )}
+                          </div>
+                          {(d.nameNL || d.nameNLOrig) && (
+                            <div className="border rounded-lg overflow-hidden mt-2">
+                              <div className="bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 uppercase">Name NL</div>
+                              <div className="px-3 py-2 text-sm">{d.nameNL || '—'}</div>
+                              {d.nameNLOrig !== d.nameNL && (
+                                <div className="px-3 pb-2 text-xs">
+                                  <span className="text-red-500">Vorher: {d.nameNLOrig}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {(d.descDEFull || d.descDE || d.descDEOrig) && (
+                          <div>
+                            <h4 className="font-bold text-sm mb-2">Produktbeschreibung Deutsch</h4>
+                            <div className="border rounded-lg overflow-hidden">
+                              <div className="flex gap-1 px-3 py-1.5 bg-gray-50 border-b">
+                                <button
+                                  className="text-xs px-2 py-0.5 rounded bg-indigo-600 text-white font-medium"
+                                >
+                                  Fließtext
+                                </button>
+                              </div>
+                              <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-indigo-50/30">
+                                <div dangerouslySetInnerHTML={{ __html: d.descDEFull || d.descDE || d.descDEOrig || '' }} />
+                              </div>
+                              {d.descDEChanged && (
+                                <div className="px-3 py-1.5 bg-green-50 border-t text-xs text-green-700 font-medium">
+                                  ✓ Beschreibung wurde synchronisiert
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {(d.descNLFull || d.descNL || d.descNLOrig) && (
+                          <div>
+                            <h4 className="font-bold text-sm mb-2">Produktbeschreibung Niederländisch</h4>
+                            <div className="border rounded-lg overflow-hidden">
+                              <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-indigo-50/30">
+                                <div dangerouslySetInnerHTML={{ __html: d.descNLFull || d.descNL || d.descNLOrig || '' }} />
+                              </div>
+                              {d.descNLChanged && (
+                                <div className="px-3 py-1.5 bg-green-50 border-t text-xs text-green-700 font-medium">
+                                  ✓ Beschreibung wurde synchronisiert
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div>
+                          <h4 className="font-bold text-sm mb-3">Attribute</h4>
+                          <div className="space-y-3">
+                            {attrRows.map(({ col, label, orig, neu }) => {
                               if (!orig && !neu) return null;
+                              const isChanged = changedSet.has(col);
                               return (
-                                <div key={label} className={`flex items-center text-xs rounded px-2 py-1 ${changed ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'}`}>
-                                  <span className="w-32 font-medium text-gray-600 shrink-0">{label}</span>
-                                  {changed ? (
-                                    <>
-                                      <span className="text-red-500 mr-2">{orig || '(leer)'}</span>
-                                      <span className="text-blue-600 font-semibold">{neu}</span>
-                                    </>
-                                  ) : (
-                                    <span className="text-gray-500">{neu || '—'}</span>
-                                  )}
+                                <div key={col} className="border rounded-lg overflow-hidden">
+                                  <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 border-b">
+                                    <span className="text-xs font-mono text-gray-600">{col}</span>
+                                    {isChanged && (
+                                      <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">✏ geändert</span>
+                                    )}
+                                  </div>
+                                  <div className="px-3 py-2">
+                                    {isChanged ? (
+                                      <div className="flex items-center gap-6">
+                                        <div>
+                                          <div className="text-[10px] text-red-500 uppercase font-medium">Original</div>
+                                          <div className="text-lg font-bold text-red-500">{orig || '—'}</div>
+                                        </div>
+                                        <div className="text-gray-300">→</div>
+                                        <div>
+                                          <div className="text-[10px] text-blue-600 uppercase font-medium">Korrigiert</div>
+                                          <div className="text-lg font-bold text-blue-600">{neu}</div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="text-sm text-gray-600">{neu || orig || '—'}</div>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
                           </div>
                         </div>
-
-                        {(attrDetailItem.nameDEOrig !== attrDetailItem.nameDE || attrDetailItem.nameNLOrig !== attrDetailItem.nameNL) && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Produktname</h4>
-                            <div className="space-y-1.5">
-                              {attrDetailItem.nameDEOrig !== attrDetailItem.nameDE && (
-                                <div className="text-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
-                                  <span className="font-medium text-gray-600">DE: </span>
-                                  <span className="text-red-500">{attrDetailItem.nameDEOrig}</span>
-                                  {' → '}
-                                  <span className="text-blue-600 font-semibold">{attrDetailItem.nameDE}</span>
-                                </div>
-                              )}
-                              {attrDetailItem.nameNLOrig !== attrDetailItem.nameNL && (
-                                <div className="text-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
-                                  <span className="font-medium text-gray-600">NL: </span>
-                                  <span className="text-red-500">{attrDetailItem.nameNLOrig}</span>
-                                  {' → '}
-                                  <span className="text-blue-600 font-semibold">{attrDetailItem.nameNL}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {(attrDetailItem.descDEChanged || attrDetailItem.descNLChanged) && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Beschreibungen (synchronisiert)</h4>
-                            {attrDetailItem.descDEChanged && (
-                              <div className="mb-3">
-                                <p className="text-xs font-medium text-gray-600 mb-1">Beschreibung DE:</p>
-                                <div className="text-xs bg-green-50 border border-green-200 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono leading-relaxed" dangerouslySetInnerHTML={{ __html: attrDetailItem.descDEFull || attrDetailItem.descDE || '' }} />
-                              </div>
-                            )}
-                            {attrDetailItem.descNLChanged && (
-                              <div>
-                                <p className="text-xs font-medium text-gray-600 mb-1">Beschreibung NL:</p>
-                                <div className="text-xs bg-green-50 border border-green-200 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono leading-relaxed" dangerouslySetInnerHTML={{ __html: attrDetailItem.descNLFull || attrDetailItem.descNL || '' }} />
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {attrDetailItem.changed && attrDetailItem.changed.length > 0 && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Geänderte Felder ({attrDetailItem.changed.length})</h4>
-                            <div className="flex flex-wrap gap-1">
-                              {attrDetailItem.changed.map((col: string) => (
-                                <Badge key={col} variant="outline" className="text-xs bg-yellow-50 border-yellow-300">{col}</Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
-                )}
+                  );
+                })()}
                 {attrStatus === 'error' && <p className="mt-2 text-sm text-red-500">{attrError}</p>}
               </CardContent>
             </Card>
