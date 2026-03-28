@@ -995,40 +995,67 @@ export default function Pipeline() {
 
                         {(d.descDEFull || d.descDE || d.descDEOrig) && (
                           <div>
-                            <h4 className="font-bold text-sm mb-2">Produktbeschreibung Deutsch</h4>
-                            <div className="border rounded-lg overflow-hidden">
-                              <div className="flex gap-1 px-3 py-1.5 bg-gray-50 border-b">
-                                <button
-                                  className="text-xs px-2 py-0.5 rounded bg-indigo-600 text-white font-medium"
-                                >
-                                  Fließtext
-                                </button>
-                              </div>
-                              <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-indigo-50/30">
-                                <div dangerouslySetInnerHTML={{ __html: d.descDEFull || d.descDE || d.descDEOrig || '' }} />
-                              </div>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-bold text-sm">Produktbeschreibung Deutsch</h4>
                               {d.descDEChanged && (
-                                <div className="px-3 py-1.5 bg-green-50 border-t text-xs text-green-700 font-medium">
-                                  ✓ Beschreibung wurde synchronisiert
-                                </div>
+                                <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">✏ synchronisiert</span>
                               )}
                             </div>
+                            {d.descDEChanged ? (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="border rounded-lg overflow-hidden">
+                                  <div className="px-3 py-1.5 bg-red-50 border-b text-xs font-semibold text-red-600 uppercase">Original</div>
+                                  <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-red-50/20">
+                                    <div dangerouslySetInnerHTML={{ __html: d.descDEOrig || '' }} />
+                                  </div>
+                                </div>
+                                <div className="border border-green-200 rounded-lg overflow-hidden">
+                                  <div className="px-3 py-1.5 bg-green-50 border-b text-xs font-semibold text-green-700 uppercase">Korrigiert</div>
+                                  <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-green-50/20">
+                                    <div dangerouslySetInnerHTML={{ __html: d.descDEFull || d.descDE || '' }} />
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="border rounded-lg overflow-hidden">
+                                <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-indigo-50/30">
+                                  <div dangerouslySetInnerHTML={{ __html: d.descDEFull || d.descDE || d.descDEOrig || '' }} />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
                         {(d.descNLFull || d.descNL || d.descNLOrig) && (
                           <div>
-                            <h4 className="font-bold text-sm mb-2">Produktbeschreibung Niederländisch</h4>
-                            <div className="border rounded-lg overflow-hidden">
-                              <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-indigo-50/30">
-                                <div dangerouslySetInnerHTML={{ __html: d.descNLFull || d.descNL || d.descNLOrig || '' }} />
-                              </div>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-bold text-sm">Produktbeschreibung Niederländisch</h4>
                               {d.descNLChanged && (
-                                <div className="px-3 py-1.5 bg-green-50 border-t text-xs text-green-700 font-medium">
-                                  ✓ Beschreibung wurde synchronisiert
-                                </div>
+                                <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">✏ synchronisiert</span>
                               )}
                             </div>
+                            {d.descNLChanged ? (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="border rounded-lg overflow-hidden">
+                                  <div className="px-3 py-1.5 bg-red-50 border-b text-xs font-semibold text-red-600 uppercase">Original</div>
+                                  <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-red-50/20">
+                                    <div dangerouslySetInnerHTML={{ __html: d.descNLOrig || '' }} />
+                                  </div>
+                                </div>
+                                <div className="border border-green-200 rounded-lg overflow-hidden">
+                                  <div className="px-3 py-1.5 bg-green-50 border-b text-xs font-semibold text-green-700 uppercase">Korrigiert</div>
+                                  <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-green-50/20">
+                                    <div dangerouslySetInnerHTML={{ __html: d.descNLFull || d.descNL || '' }} />
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="border rounded-lg overflow-hidden">
+                                <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-indigo-50/30">
+                                  <div dangerouslySetInnerHTML={{ __html: d.descNLFull || d.descNL || d.descNLOrig || '' }} />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
