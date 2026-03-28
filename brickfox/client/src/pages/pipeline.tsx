@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +99,7 @@ export default function Pipeline() {
   const [repairStats, setRepairStats] = useState<RepairStats | null>(null);
   const [repairCsvBlob, setRepairCsvBlob] = useState<Blob | null>(null);
   const [repairProgress, setRepairProgress] = useState({ label: '', percent: 0 });
+  const repairTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [repairError, setRepairError] = useState('');
 
   const [attrStatus, setAttrStatus] = useState<StepStatus>('pending');
@@ -148,8 +149,19 @@ export default function Pipeline() {
     if (!input) return null;
 
     setRepairStatus('running');
-    setRepairProgress({ label: 'Wird vorbereitet…', percent: 0 });
+    setRepairProgress({ label: 'Zeilen werden analysiert…', percent: 5 });
     setRepairError('');
+
+    if (repairTimerRef.current) clearInterval(repairTimerRef.current);
+    repairTimerRef.current = setInterval(() => {
+      setRepairProgress(prev => {
+        if (prev.percent >= 85) return prev;
+        const step = prev.percent < 30 ? 8 : prev.percent < 60 ? 5 : 2;
+        const labels = ['Zeilen werden analysiert…', 'Zeilenstruktur wird repariert…', 'Encoding wird korrigiert…', 'CSV wird bereinigt…'];
+        const labelIdx = Math.min(Math.floor(prev.percent / 25), labels.length - 1);
+        return { label: labels[labelIdx], percent: Math.min(prev.percent + step, 85) };
+      });
+    }, 200);
 
     try {
       const formData = new FormData();
@@ -161,6 +173,8 @@ export default function Pipeline() {
         headers: getAuthHeaders(),
       });
 
+      if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
+
       if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
         const errBody = await response.text();
         throw new Error(errBody || `HTTP ${response.status}`);
@@ -171,7 +185,7 @@ export default function Pipeline() {
 
       await parseSSEStream(response, (event, data) => {
         if (event === 'progress') {
-          setRepairProgress({ label: data.label || '', percent: data.percent || 0 });
+          setRepairProgress({ label: data.label || '', percent: Math.max(data.percent || 0, 85) });
         } else if (event === 'done') {
           resultJobId = data.jobId;
           resultStats = data.stats;
@@ -179,6 +193,7 @@ export default function Pipeline() {
           throw new Error(data.message || 'Reparatur fehlgeschlagen');
         }
       });
+      setRepairProgress({ label: 'Abgeschlossen', percent: 100 });
 
       if (!resultJobId) throw new Error('Keine Job-ID erhalten');
 
@@ -210,6 +225,7 @@ export default function Pipeline() {
 
       return csvBlob;
     } catch (err: any) {
+      if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
       setRepairStatus('error');
       setRepairError(err.message || 'Unbekannter Fehler');
       toast({ title: 'Reparatur fehlgeschlagen', description: err.message, variant: 'destructive' });
