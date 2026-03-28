@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -131,6 +131,8 @@ export default function Pipeline() {
   const [showAttrDetails, setShowAttrDetails] = useState(false);
   const [attrFilterChanged, setAttrFilterChanged] = useState(true);
   const [attrDetailItem, setAttrDetailItem] = useState<VoltPreviewItem | null>(null);
+  const [attrVisibleCount, setAttrVisibleCount] = useState(500);
+  const attrSentinelRef = useRef<HTMLDivElement>(null);
   const [isRunningAll, setIsRunningAll] = useState(false);
 
   const getInputForStep = useCallback((step: 'repair' | 'attributes' | 'descriptions'): Blob | File | null => {
@@ -617,7 +619,36 @@ export default function Pipeline() {
     }
   };
 
-  const changedAttrItems = attrPreview.filter((item: any) => item.changed && item.changed.length > 0);
+  const changedAttrItems = useMemo(() =>
+    attrPreview.filter((item: any) => item.changed && item.changed.length > 0),
+    [attrPreview]
+  );
+
+  const attrDisplayList = attrFilterChanged ? changedAttrItems : attrPreview;
+  const attrVisibleItems = useMemo(() =>
+    attrDisplayList.slice(0, attrVisibleCount),
+    [attrDisplayList, attrVisibleCount]
+  );
+  const attrHasMore = attrDisplayList.length > attrVisibleCount;
+
+  useEffect(() => {
+    setAttrVisibleCount(500);
+  }, [attrFilterChanged, attrPreview]);
+
+  useEffect(() => {
+    const sentinel = attrSentinelRef.current;
+    if (!sentinel || !attrHasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setAttrVisibleCount(prev => prev + 500);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [attrHasMore, attrVisibleCount]);
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4 space-y-6">
@@ -803,7 +834,7 @@ export default function Pipeline() {
                           className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
                         >
                           {showAttrDetails ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                          {attrPreview.length} Produkte Vorschau {changedAttrItems.length > 0 ? `(${changedAttrItems.length} geändert)` : ''}
+                          {attrDisplayList.length} Produkte anzeigen {changedAttrItems.length > 0 ? `(${changedAttrItems.length} geändert)` : ''}
                         </button>
                         {showAttrDetails && (
                           <>
@@ -829,7 +860,7 @@ export default function Pipeline() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {(attrFilterChanged ? changedAttrItems : attrPreview).map((item: any, i: number) => {
+                                  {attrVisibleItems.map((item: any, i: number) => {
                                     const hasChanges = item.changed && item.changed.length > 0;
                                     return (
                                       <tr key={i} className={`border-b last:border-0 ${hasChanges ? 'bg-yellow-50' : ''} hover:bg-indigo-50 cursor-pointer`} onClick={() => setAttrDetailItem(item)}>
@@ -875,6 +906,11 @@ export default function Pipeline() {
                                   })}
                                 </tbody>
                               </table>
+                              {attrHasMore && (
+                                <div ref={attrSentinelRef} className="text-xs text-center text-muted-foreground py-2">
+                                  {attrVisibleCount} von {attrDisplayList.length} geladen — scrolle weiter…
+                                </div>
+                              )}
                             </div>
                           </>
                         )}
