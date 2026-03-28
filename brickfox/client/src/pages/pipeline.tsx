@@ -118,6 +118,10 @@ export default function Pipeline() {
   const [attrCsvBlob, setAttrCsvBlob] = useState<Blob | null>(null);
   const [attrProgress, setAttrProgress] = useState({ label: '', percent: 0 });
   const [attrPreview, setAttrPreview] = useState<any[]>([]);
+  const [attrHeaders, setAttrHeaders] = useState<string[]>([]);
+  const [attrOriginalRows, setAttrOriginalRows] = useState<Record<string, string>[]>([]);
+  const [attrCorrectedRows, setAttrCorrectedRows] = useState<Record<string, string>[]>([]);
+  const [attrChangedCols, setAttrChangedCols] = useState<string[][]>([]);
   const [attrError, setAttrError] = useState('');
 
   const [descStatus, setDescStatus] = useState<StepStatus>('pending');
@@ -131,6 +135,8 @@ export default function Pipeline() {
   const [showAttrDetails, setShowAttrDetails] = useState(false);
   const [attrFilterChanged, setAttrFilterChanged] = useState(true);
   const [attrDetailItem, setAttrDetailItem] = useState<VoltPreviewItem | null>(null);
+  const [attrDetailIndex, setAttrDetailIndex] = useState<number | null>(null);
+  const [descViewMode, setDescViewMode] = useState<'text' | 'html'>('text');
   const [attrVisibleCount, setAttrVisibleCount] = useState(500);
   const attrSentinelRef = useRef<HTMLDivElement>(null);
   const [isRunningAll, setIsRunningAll] = useState(false);
@@ -330,6 +336,10 @@ export default function Pipeline() {
 
       setAttrStats(result.stats);
       setAttrPreview(result.previewItems);
+      setAttrHeaders(result.finalHeaders || result.headers || []);
+      setAttrOriginalRows(result.originalRows || []);
+      setAttrCorrectedRows(result.correctedRows || []);
+      setAttrChangedCols(result.changedColsPerRow || []);
       setAttrCsvBlob(result.csvBlob);
       setAttrStatus('done');
       setDescCsvBlob(null); setDescStatus('pending'); setDescStats(null);
@@ -590,7 +600,8 @@ export default function Pipeline() {
     setOriginalFile(null);
     setRepairStatus('pending'); setRepairStats(null); setRepairCsvBlob(null); setRepairError('');
     setAttrStatus('pending'); setAttrStats(null); setAttrCsvBlob(null); setAttrPreview([]); setAttrError('');
-    setAttrDetailItem(null);
+    setAttrHeaders([]); setAttrOriginalRows([]); setAttrCorrectedRows([]); setAttrChangedCols([]);
+    setAttrDetailItem(null); setAttrDetailIndex(null);
     setDescStatus('pending'); setDescStats(null); setDescCsvBlob(null); setDescError('');
     setChangeLog([]);
     setShowChangeLog(false);
@@ -838,81 +849,67 @@ export default function Pipeline() {
                         </button>
                         {showAttrDetails && (
                           <>
-                            <div className="mt-2 flex gap-2 text-xs mb-2">
+                            <div className="mt-2 flex items-center justify-between text-xs mb-2">
                               <label className="flex items-center gap-1">
                                 <input type="checkbox" checked={attrFilterChanged} onChange={e => setAttrFilterChanged(e.target.checked)} className="rounded" />
                                 Nur geänderte
                               </label>
+                              <span className="text-muted-foreground">{attrHeaders.length} Spalten · {attrDisplayList.length} Zeilen{attrFilterChanged ? ` · ${changedAttrItems.length} geändert` : ''}</span>
                             </div>
                             <div className="mt-1 overflow-x-auto rounded border">
-                              <table className="w-full text-xs min-w-[1100px]">
+                              <table className="text-xs" style={{ minWidth: `${Math.max(1200, attrHeaders.length * 120)}px` }}>
                                 <thead className="sticky top-0 bg-slate-50 z-10">
                                   <tr className="border-b">
-                                    <th className="text-center py-1.5 px-2 whitespace-nowrap w-10">#</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">p_id</th>
-                                    <th className="text-center py-1.5 px-2 whitespace-nowrap w-8"></th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Artikel-Nr.</th>
-                                    <th className="text-left py-1.5 px-2 whitespace-nowrap">Geändert</th>
-                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-red-500">Volt vor</th>
-                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-blue-600">Volt</th>
-                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-red-500">mAh vor</th>
-                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-blue-600">mAh</th>
-                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-red-500">Wh vor</th>
-                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-blue-600">Wh</th>
-                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-red-500">Gew. g vor</th>
-                                    <th className="text-right py-1.5 px-2 whitespace-nowrap text-blue-600">Gew. g</th>
+                                    <th className="text-center py-1.5 px-2 whitespace-nowrap w-10 sticky left-0 bg-slate-50 z-20">#</th>
+                                    <th className="text-center py-1.5 px-2 whitespace-nowrap w-8 sticky left-10 bg-slate-50 z-20"></th>
+                                    {attrHeaders.map((h) => (
+                                      <th key={h} className="text-left py-1.5 px-2 whitespace-nowrap font-medium">{h}</th>
+                                    ))}
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {attrVisibleItems.map((item: any, i: number) => {
-                                    const hasChanges = item.changed && item.changed.length > 0;
-                                    const changedLabels = (item.changed || []).map((c: string) => {
-                                      const short = c.replace('p_attributes[', '').replace('][de]', '').replace('p_name[', 'Name ').replace('p_description[', 'Beschr. ').replace(']', '');
-                                      return short;
-                                    });
+                                  {attrVisibleItems.map((item: any, vi: number) => {
+                                    const rowIdx = item.index != null ? item.index - 1 : vi;
+                                    const origRow = attrOriginalRows[rowIdx] || {};
+                                    const corrRow = attrCorrectedRows[rowIdx] || {};
+                                    const changedCols = new Set(attrChangedCols[rowIdx] || item.changed || []);
+                                    const hasChanges = changedCols.size > 0;
                                     return (
-                                      <tr key={i} className={`border-b last:border-0 ${hasChanges ? 'bg-red-50/30' : ''} hover:bg-indigo-50/50`}>
-                                        <td className="py-1.5 px-2 text-center text-gray-400">{item.index != null ? item.index : i + 1}</td>
-                                        <td className="py-1.5 px-2 text-gray-500">{item.pId || '—'}</td>
-                                        <td className="py-1.5 px-2 text-center">
+                                      <tr key={vi} className={`border-b last:border-0 ${hasChanges ? 'bg-red-50/30' : ''} hover:bg-indigo-50/50`}>
+                                        <td className="py-1.5 px-2 text-center text-gray-400 sticky left-0 bg-inherit z-10">{item.index != null ? item.index : vi + 1}</td>
+                                        <td className="py-1.5 px-2 text-center sticky left-10 bg-inherit z-10">
                                           <button
-                                            onClick={() => setAttrDetailItem(item)}
+                                            onClick={() => { setAttrDetailItem(item); setAttrDetailIndex(rowIdx); setDescViewMode('text'); }}
                                             className="text-indigo-400 hover:text-indigo-600"
                                             title="Detailansicht"
                                           >
                                             <Eye className="w-3.5 h-3.5" />
                                           </button>
                                         </td>
-                                        <td className="py-1.5 px-2 font-mono whitespace-nowrap">{item.itemNr || '—'}</td>
-                                        <td className="py-1.5 px-2 whitespace-nowrap">
-                                          {hasChanges
-                                            ? <span className="text-indigo-600 font-medium">{changedLabels.join(', ')}</span>
-                                            : <span className="text-gray-300">—</span>}
-                                        </td>
-                                        <td className="py-1.5 px-2 text-right text-red-500 tabular-nums">{item.voltOrig !== item.voltNew ? item.voltOrig || '—' : '—'}</td>
-                                        <td className="py-1.5 px-2 text-right tabular-nums">
-                                          {item.voltOrig !== item.voltNew
-                                            ? <span className="text-blue-600 font-medium">✏ {item.voltNew}</span>
-                                            : <span className="text-gray-400">{item.voltNew || '—'}</span>}
-                                        </td>
-                                        <td className="py-1.5 px-2 text-right text-red-500 tabular-nums">{item.mahOrig !== item.mahNew ? item.mahOrig || '—' : '—'}</td>
-                                        <td className="py-1.5 px-2 text-right tabular-nums">
-                                          {item.mahOrig !== item.mahNew
-                                            ? <span className="text-blue-600 font-medium">✏ {item.mahNew}</span>
-                                            : <span className="text-gray-400">{item.mahNew || '—'}</span>}
-                                        </td>
-                                        <td className="py-1.5 px-2 text-right text-red-500 tabular-nums">{item.whOrig !== item.whNew ? item.whOrig || '—' : '—'}</td>
-                                        <td className="py-1.5 px-2 text-right tabular-nums">
-                                          {item.whOrig !== item.whNew
-                                            ? <span className="text-blue-600 font-medium">✏ {item.whNew}</span>
-                                            : <span className="text-gray-400">{item.whNew || '—'}</span>}
-                                        </td>
-                                        <td className="py-1.5 px-2 text-right text-red-500 tabular-nums">{item.gewichtOrig !== item.gewichtNew ? item.gewichtOrig || '—' : '—'}</td>
-                                        <td className="py-1.5 px-2 text-right tabular-nums">
-                                          {item.gewichtOrig !== item.gewichtNew
-                                            ? <span className="text-blue-600 font-medium">✏ {item.gewichtNew}</span>
-                                            : <span className="text-gray-400">{item.gewichtNew || '—'}</span>}
-                                        </td>
+                                        {attrHeaders.map((h) => {
+                                          const val = corrRow[h] ?? '';
+                                          const origVal = origRow[h] ?? '';
+                                          const isChanged = changedCols.has(h);
+                                          const isDesc = h.startsWith('p_description');
+                                          const display = isDesc ? (val ? '(HTML)' : '—') : (val || '—');
+                                          const origDisplay = isDesc ? '' : origVal;
+                                          return (
+                                            <td
+                                              key={h}
+                                              className={`py-1.5 px-2 whitespace-nowrap max-w-[200px] truncate tabular-nums ${isChanged ? 'bg-yellow-100 font-medium' : ''}`}
+                                              title={isDesc ? '' : (isChanged ? `Vorher: ${origDisplay}` : val)}
+                                            >
+                                              {isChanged && !isDesc ? (
+                                                <span>
+                                                  <span className="text-red-500 text-[10px] mr-1">{origDisplay || '—'}</span>
+                                                  <span className="text-blue-600">{val}</span>
+                                                </span>
+                                              ) : (
+                                                <span className={isChanged ? 'text-blue-600' : 'text-gray-600'}>{display}</span>
+                                              )}
+                                            </td>
+                                          );
+                                        })}
                                       </tr>
                                     );
                                   })}
@@ -933,39 +930,40 @@ export default function Pipeline() {
 
                 {attrDetailItem && (() => {
                   const d = attrDetailItem;
-                  const attrRows = [
-                    { col: 'p_attributes[akku_v][de]', label: 'Spannung (V)', orig: d.voltOrig, neu: d.voltNew },
-                    { col: 'p_attributes[akku_mah][de]', label: 'Kapazität (mAh)', orig: d.mahOrig, neu: d.mahNew },
-                    { col: 'p_attributes[akku_wh][de]', label: 'Energie (Wh)', orig: d.whOrig, neu: d.whNew },
-                    { col: 'p_attributes[lela_leistung_watt][de]', label: 'Leistung (W)', orig: d.wattOrig, neu: d.wattNew },
-                    { col: 'p_attributes[tala_leuchtweite][de]', label: 'Leuchtweite', orig: d.leuchtOrig, neu: d.leuchtNew },
-                    { col: 'p_attributes[netzteil_input_volt][de]', label: 'Input-Volt', orig: d.inputVoltOrig, neu: d.inputVoltNew },
-                    { col: 'p_attributes[netzteil_output_volt][de]', label: 'Output-Volt', orig: d.outputVoltOrig, neu: d.outputVoltNew },
-                    { col: 'p_attributes[akku_durchmesser][de]', label: 'Durchmesser', orig: d.durchmOrig, neu: d.durchmNew },
-                    { col: 'p_attributes[breite][de]', label: 'Breite', orig: d.breiteOrig, neu: d.breiteNew },
-                    { col: 'p_attributes[hoehe][de]', label: 'Höhe', orig: d.hoeheOrig, neu: d.hoeheNew },
-                    { col: 'p_attributes[akku_länge][de]', label: 'Länge', orig: d.laengeOrig, neu: d.laengeNew },
-                    { col: 'p_attributes[tala_gewicht][de]', label: 'Gewicht (g)', orig: d.gewichtOrig, neu: d.gewichtNew },
-                  ];
-                  const changedSet = new Set(d.changed || []);
+                  const rowIdx = attrDetailIndex ?? (d.index != null ? d.index - 1 : 0);
+                  const origRow = attrOriginalRows[rowIdx] || {};
+                  const corrRow = attrCorrectedRows[rowIdx] || {};
+                  const changedCols = new Set(attrChangedCols[rowIdx] || d.changed || []);
+
+                  const descDEOrig = origRow['p_description[de]'] || d.descDEOrig || '';
+                  const descDENew = corrRow['p_description[de]'] || d.descDEFull || d.descDE || '';
+                  const descNLOrig = origRow['p_description[nl]'] || d.descNLOrig || '';
+                  const descNLNew = corrRow['p_description[nl]'] || d.descNLFull || d.descNL || '';
+                  const descDEChanged = changedCols.has('p_description[de]') || d.descDEChanged;
+                  const descNLChanged = changedCols.has('p_description[nl]') || d.descNLChanged;
+
+                  const allCols = attrHeaders.filter(h =>
+                    !h.startsWith('p_description') && !h.startsWith('p_name')
+                  );
+
                   return (
-                  <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto" onClick={() => setAttrDetailItem(null)}>
-                    <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full my-8" onClick={e => e.stopPropagation()}>
+                  <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-auto" onClick={() => { setAttrDetailItem(null); setAttrDetailIndex(null); }}>
+                    <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-between px-6 py-4 border-b">
                         <div>
-                          <h3 className="text-lg font-bold">Zeile {d.index != null ? d.index : '—'} – Detailansicht</h3>
+                          <h3 className="text-lg font-bold">Zeile {d.index != null ? d.index : rowIdx + 1} – Detailansicht</h3>
                           <p className="text-sm text-muted-foreground font-mono">{d.itemNr || d.pId}</p>
                         </div>
-                        <button onClick={() => setAttrDetailItem(null)} className="text-gray-400 hover:text-gray-600">
+                        <button onClick={() => { setAttrDetailItem(null); setAttrDetailIndex(null); }} className="text-gray-400 hover:text-gray-600">
                           <X className="w-5 h-5" />
                         </button>
                       </div>
 
                       <div className="px-6 py-4 space-y-6">
-                        {d.changed && d.changed.length > 0 && (
-                          <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2 flex items-center gap-2 text-sm">
-                            <span className="font-medium text-indigo-700">Markierungen:</span>
-                            <span className="inline-flex items-center gap-1 text-green-700"><span className="w-3 h-3 bg-green-500 rounded-sm inline-block" /> Wert korrigiert</span>
+                        {changedCols.size > 0 && (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 flex items-center gap-3 text-sm">
+                            <span className="font-medium text-yellow-800">Markierungen:</span>
+                            <span className="inline-flex items-center gap-1"><span className="w-4 h-3 bg-yellow-200 border border-yellow-400 rounded-sm inline-block" /> Wert geändert</span>
                           </div>
                         )}
 
@@ -973,86 +971,76 @@ export default function Pipeline() {
                           <h4 className="font-bold text-sm mb-2">Produktnamen</h4>
                           <div className="border rounded-lg overflow-hidden">
                             <div className="bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 uppercase">Name DE</div>
-                            <div className="px-3 py-2 text-sm">{d.nameDE || '—'}</div>
-                            {d.nameDEOrig !== d.nameDE && (
-                              <div className="px-3 pb-2 text-xs">
-                                <span className="text-red-500">Vorher: {d.nameDEOrig}</span>
-                              </div>
+                            <div className={`px-3 py-2 text-sm ${changedCols.has('p_name[de]') ? 'bg-yellow-50' : ''}`}>{d.nameDE || corrRow['p_name[de]'] || '—'}</div>
+                            {changedCols.has('p_name[de]') && (
+                              <div className="px-3 pb-2 text-xs text-red-500">Vorher: {d.nameDEOrig || origRow['p_name[de]'] || '—'}</div>
                             )}
                           </div>
-                          {(d.nameNL || d.nameNLOrig) && (
+                          {(d.nameNL || corrRow['p_name[nl]'] || d.nameNLOrig) && (
                             <div className="border rounded-lg overflow-hidden mt-2">
                               <div className="bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 uppercase">Name NL</div>
-                              <div className="px-3 py-2 text-sm">{d.nameNL || '—'}</div>
-                              {d.nameNLOrig !== d.nameNL && (
-                                <div className="px-3 pb-2 text-xs">
-                                  <span className="text-red-500">Vorher: {d.nameNLOrig}</span>
-                                </div>
+                              <div className={`px-3 py-2 text-sm ${changedCols.has('p_name[nl]') ? 'bg-yellow-50' : ''}`}>{d.nameNL || corrRow['p_name[nl]'] || '—'}</div>
+                              {changedCols.has('p_name[nl]') && (
+                                <div className="px-3 pb-2 text-xs text-red-500">Vorher: {d.nameNLOrig || origRow['p_name[nl]'] || '—'}</div>
                               )}
                             </div>
                           )}
                         </div>
 
-                        {(d.descDEFull || d.descDE || d.descDEOrig) && (
+                        {(descDEOrig || descDENew) && (
                           <div>
                             <div className="flex items-center justify-between mb-2">
                               <h4 className="font-bold text-sm">Produktbeschreibung Deutsch</h4>
-                              {d.descDEChanged && (
-                                <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">✏ synchronisiert</span>
-                              )}
-                            </div>
-                            {d.descDEChanged ? (
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="border rounded-lg overflow-hidden">
-                                  <div className="px-3 py-1.5 bg-red-50 border-b text-xs font-semibold text-red-600 uppercase">Original</div>
-                                  <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-red-50/20">
-                                    <div dangerouslySetInnerHTML={{ __html: d.descDEOrig || '' }} />
-                                  </div>
-                                </div>
-                                <div className="border border-green-200 rounded-lg overflow-hidden">
-                                  <div className="px-3 py-1.5 bg-green-50 border-b text-xs font-semibold text-green-700 uppercase">Korrigiert</div>
-                                  <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-green-50/20">
-                                    <div dangerouslySetInnerHTML={{ __html: d.descDEFull || d.descDE || '' }} />
-                                  </div>
-                                </div>
+                              <div className="flex gap-1">
+                                <button onClick={() => setDescViewMode('text')} className={`text-xs px-2 py-0.5 rounded font-medium ${descViewMode === 'text' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>Fließtext</button>
+                                <button onClick={() => setDescViewMode('html')} className={`text-xs px-2 py-0.5 rounded font-medium ${descViewMode === 'html' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>HTML</button>
                               </div>
-                            ) : (
-                              <div className="border rounded-lg overflow-hidden">
-                                <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-indigo-50/30">
-                                  <div dangerouslySetInnerHTML={{ __html: d.descDEFull || d.descDE || d.descDEOrig || '' }} />
+                            </div>
+
+                            <div className="border rounded-lg overflow-hidden mb-2">
+                              <div className="px-3 py-1.5 bg-gray-50 border-b text-xs font-semibold text-gray-600 uppercase">Original</div>
+                              <div className="px-3 py-3 text-sm leading-relaxed max-h-48 overflow-auto">
+                                {descViewMode === 'html'
+                                  ? <pre className="whitespace-pre-wrap text-xs font-mono text-gray-700">{descDEOrig || '(leer)'}</pre>
+                                  : <div dangerouslySetInnerHTML={{ __html: descDEOrig || '<span class="text-gray-400">(leer)</span>' }} />
+                                }
+                              </div>
+                            </div>
+
+                            {descDEChanged && (
+                              <div className="border border-yellow-300 rounded-lg overflow-hidden bg-yellow-50/50">
+                                <div className="px-3 py-1.5 bg-yellow-100 border-b text-xs font-semibold text-yellow-800 uppercase">Geändert ✏</div>
+                                <div className="px-3 py-3 text-sm leading-relaxed max-h-48 overflow-auto">
+                                  {descViewMode === 'html'
+                                    ? <pre className="whitespace-pre-wrap text-xs font-mono text-gray-700">{descDENew || '(leer)'}</pre>
+                                    : <div dangerouslySetInnerHTML={{ __html: descDENew || '' }} />
+                                  }
                                 </div>
                               </div>
                             )}
                           </div>
                         )}
 
-                        {(d.descNLFull || d.descNL || d.descNLOrig) && (
+                        {(descNLOrig || descNLNew) && (
                           <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-bold text-sm">Produktbeschreibung Niederländisch</h4>
-                              {d.descNLChanged && (
-                                <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">✏ synchronisiert</span>
-                              )}
-                            </div>
-                            {d.descNLChanged ? (
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="border rounded-lg overflow-hidden">
-                                  <div className="px-3 py-1.5 bg-red-50 border-b text-xs font-semibold text-red-600 uppercase">Original</div>
-                                  <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-red-50/20">
-                                    <div dangerouslySetInnerHTML={{ __html: d.descNLOrig || '' }} />
-                                  </div>
-                                </div>
-                                <div className="border border-green-200 rounded-lg overflow-hidden">
-                                  <div className="px-3 py-1.5 bg-green-50 border-b text-xs font-semibold text-green-700 uppercase">Korrigiert</div>
-                                  <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-green-50/20">
-                                    <div dangerouslySetInnerHTML={{ __html: d.descNLFull || d.descNL || '' }} />
-                                  </div>
-                                </div>
+                            <h4 className="font-bold text-sm mb-2">Produktbeschreibung Niederländisch</h4>
+                            <div className="border rounded-lg overflow-hidden mb-2">
+                              <div className="px-3 py-1.5 bg-gray-50 border-b text-xs font-semibold text-gray-600 uppercase">Original</div>
+                              <div className="px-3 py-3 text-sm leading-relaxed max-h-48 overflow-auto">
+                                {descViewMode === 'html'
+                                  ? <pre className="whitespace-pre-wrap text-xs font-mono text-gray-700">{descNLOrig || '(leer)'}</pre>
+                                  : <div dangerouslySetInnerHTML={{ __html: descNLOrig || '<span class="text-gray-400">(leer)</span>' }} />
+                                }
                               </div>
-                            ) : (
-                              <div className="border rounded-lg overflow-hidden">
-                                <div className="px-3 py-3 text-sm leading-relaxed max-h-60 overflow-auto bg-indigo-50/30">
-                                  <div dangerouslySetInnerHTML={{ __html: d.descNLFull || d.descNL || d.descNLOrig || '' }} />
+                            </div>
+                            {descNLChanged && (
+                              <div className="border border-yellow-300 rounded-lg overflow-hidden bg-yellow-50/50">
+                                <div className="px-3 py-1.5 bg-yellow-100 border-b text-xs font-semibold text-yellow-800 uppercase">Geändert ✏</div>
+                                <div className="px-3 py-3 text-sm leading-relaxed max-h-48 overflow-auto">
+                                  {descViewMode === 'html'
+                                    ? <pre className="whitespace-pre-wrap text-xs font-mono text-gray-700">{descNLNew || '(leer)'}</pre>
+                                    : <div dangerouslySetInnerHTML={{ __html: descNLNew || '' }} />
+                                  }
                                 </div>
                               </div>
                             )}
@@ -1060,36 +1048,26 @@ export default function Pipeline() {
                         )}
 
                         <div>
-                          <h4 className="font-bold text-sm mb-3">Attribute</h4>
-                          <div className="space-y-3">
-                            {attrRows.map(({ col, label, orig, neu }) => {
-                              if (!orig && !neu) return null;
-                              const isChanged = changedSet.has(col);
+                          <h4 className="font-bold text-sm mb-3">Alle Spalten</h4>
+                          <div className="space-y-1.5">
+                            {allCols.map((col) => {
+                              const origVal = origRow[col] ?? '';
+                              const corrVal = corrRow[col] ?? '';
+                              const isChanged = changedCols.has(col);
+                              if (!origVal && !corrVal) return null;
                               return (
-                                <div key={col} className="border rounded-lg overflow-hidden">
-                                  <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 border-b">
-                                    <span className="text-xs font-mono text-gray-600">{col}</span>
-                                    {isChanged && (
-                                      <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">✏ geändert</span>
-                                    )}
-                                  </div>
-                                  <div className="px-3 py-2">
-                                    {isChanged ? (
-                                      <div className="flex items-center gap-6">
-                                        <div>
-                                          <div className="text-[10px] text-red-500 uppercase font-medium">Original</div>
-                                          <div className="text-lg font-bold text-red-500">{orig || '—'}</div>
-                                        </div>
-                                        <div className="text-gray-300">→</div>
-                                        <div>
-                                          <div className="text-[10px] text-blue-600 uppercase font-medium">Korrigiert</div>
-                                          <div className="text-lg font-bold text-blue-600">{neu}</div>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="text-sm text-gray-600">{neu || orig || '—'}</div>
-                                    )}
-                                  </div>
+                                <div key={col} className={`flex items-start text-xs rounded px-3 py-1.5 ${isChanged ? 'bg-yellow-100 border border-yellow-300' : 'bg-gray-50 border border-gray-100'}`}>
+                                  <span className="w-56 font-mono text-gray-500 shrink-0 truncate mr-3" title={col}>{col}</span>
+                                  {isChanged ? (
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-red-500">{origVal || '(leer)'}</span>
+                                      <span className="text-gray-400">→</span>
+                                      <span className="text-blue-600 font-semibold">{corrVal}</span>
+                                      <span className="ml-1 text-[10px] bg-yellow-500 text-white px-1.5 py-0.5 rounded-full font-medium shrink-0">geändert</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-600 truncate">{corrVal || origVal}</span>
+                                  )}
                                 </div>
                               );
                             })}
