@@ -9,6 +9,7 @@ import {
   RotateCcw, Shield, XCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Papa from 'papaparse';
 
 type StepStatus = 'pending' | 'running' | 'done' | 'error';
 
@@ -150,95 +151,131 @@ export default function Pipeline() {
     if (!input) return null;
 
     setRepairStatus('running');
-    setRepairProgress({ label: 'Wird hochgeladen…', percent: 0 });
+    setRepairProgress({ label: 'Datei wird gelesen…', percent: 5 });
     setRepairError('');
 
-    const ac = new AbortController();
-    abortRef.current = ac;
-
     try {
-      const formData = new FormData();
-      formData.append('file', input, originalFile?.name || 'input.csv');
+      const raw = await input.text();
+      setRepairProgress({ label: 'Zeilen werden analysiert…', percent: 15 });
 
-      const uploadBody = await new Promise<any>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/csv-repair/upload');
-        const authHeaders = getAuthHeaders();
-        if (authHeaders.Authorization) xhr.setRequestHeader('Authorization', authHeaders.Authorization);
+      let text = raw;
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
 
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const pct = Math.round((e.loaded / e.total) * 100);
-            setRepairProgress({ label: `Datei wird hochgeladen… (${Math.round(e.loaded / 1024 / 1024)}/${Math.round(e.total / 1024 / 1024)} MB)`, percent: Math.min(pct, 99) });
-          }
-        };
-        xhr.onload = () => {
-          try {
-            const body = JSON.parse(xhr.responseText);
-            if (xhr.status >= 200 && xhr.status < 300) resolve(body);
-            else reject(new Error(body?.error || `Upload fehlgeschlagen (HTTP ${xhr.status})`));
-          } catch { reject(new Error('Ungültige Serverantwort')); }
-        };
-        xhr.onerror = () => reject(new Error('Upload fehlgeschlagen — Netzwerkfehler'));
-        xhr.ontimeout = () => reject(new Error('Upload Timeout'));
+      const rawLines = text.split(/\r?\n/);
+      const totalRawLines = rawLines.length;
 
-        ac.signal.addEventListener('abort', () => xhr.abort());
-        if (ac.signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
+      if (rawLines.length < 2) throw new Error('CSV zu kurz — mindestens Header + 1 Zeile erforderlich');
 
-        xhr.send(formData);
-      });
+      const headerLine = rawLines[0];
+      const semiCount = (headerLine.match(/;/g) || []).length;
+      const commaCount = (headerLine.match(/,/g) || []).length;
+      const tabCount = (headerLine.match(/\t/g) || []).length;
+      let delimiter = ';';
+      if (tabCount > semiCount && tabCount > commaCount) delimiter = '\t';
+      else if (commaCount > semiCount) delimiter = ',';
 
-      const { jobId } = uploadBody;
-      if (!jobId) throw new Error('Keine Job-ID erhalten');
-      setRepairProgress({ label: 'Wird verarbeitet…', percent: 0 });
+      const headerCols = headerLine.split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
+      const pIdIdx = headerCols.findIndex(h => h === 'p_id');
+      const pItemNrIdx = headerCols.findIndex(h => h === 'p_item_number');
+      const pIdColIdx = pIdIdx >= 0 ? pIdIdx : 0;
+      const pItemNrColIdx = pItemNrIdx >= 0 ? pItemNrIdx : 1;
 
-      let done = false;
-      let resultStats: RepairStats | null = null;
-      while (!done) {
-        await new Promise(r => setTimeout(r, 500));
-        if (ac.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-        const progressRes = await fetch(`/api/csv-repair/progress/${jobId}`, {
-          headers: getAuthHeaders(),
-          signal: ac.signal,
-        });
-        const progress = await progressRes.json();
-        setRepairProgress({ label: progress.progress?.label || '', percent: progress.progress?.percent || 0 });
+      setRepairProgress({ label: `${totalRawLines.toLocaleString()} Zeilen werden zusammengeführt…`, percent: 25 });
 
-        if (progress.status === 'done') {
-          done = true;
-          resultStats = progress.stats;
+      const looksLikeNewRow = (pId: string) => {
+        const id = pId.trim().replace(/^"|"$/g, '');
+        if (!id || /<|>/.test(id) || /\n|\r/.test(id) || id.length > 100) return false;
+        return /^[\w\-\.\/\+\&]+$/.test(id);
+      };
+
+      const delimRegex = delimiter === ';' ? /^;+$/ : delimiter === ',' ? /^,+$/ : /^\t+$/;
+      const mergedLines: string[] = [headerLine];
+      let emptyLinesRemoved = 0;
+      let rowsMerged = 0;
+
+      for (let i = 1; i < rawLines.length; i++) {
+        const line = rawLines[i];
+        if (!line.trim() || delimRegex.test(line.trim())) {
+          emptyLinesRemoved++;
+          continue;
         }
-        if (progress.status === 'error') {
-          throw new Error(progress.error || 'Reparatur fehlgeschlagen');
+        const fields = line.split(delimiter);
+        const pIdField = fields[pIdColIdx] ?? '';
+        if (looksLikeNewRow(pIdField)) {
+          mergedLines.push(line);
+        } else {
+          if (mergedLines.length > 1) {
+            mergedLines[mergedLines.length - 1] += ' ' + line;
+            rowsMerged++;
+          } else {
+            emptyLinesRemoved++;
+          }
         }
       }
 
-      const downloadRes = await fetch(`/api/csv-repair/download/${jobId}`, {
-        headers: getAuthHeaders(),
-        signal: ac.signal,
-      });
-      if (!downloadRes.ok) throw new Error('Download fehlgeschlagen');
-      const csvBlob = await downloadRes.blob();
+      setRepairProgress({ label: 'CSV wird bereinigt…', percent: 70 });
 
+      const mergedCsv = mergedLines.join('\n');
+      const parsed = Papa.parse<Record<string, string>>(mergedCsv, {
+        header: true,
+        delimiter,
+        skipEmptyLines: true,
+      });
+
+      const headers = parsed.meta.fields ?? [];
+      let rows = parsed.data;
+      rows = rows.filter(row => Object.values(row).some(v => (v ?? '').trim() !== ''));
+
+      const isValidPItemNr = (v: string) => {
+        const val = v.trim();
+        return val.length > 0 && val.length <= 200 && !/<|>/.test(val) && !/\n|\r/.test(val);
+      };
+
+      const beforeFilter = rows.length;
+      rows = rows.filter(row => isValidPItemNr(row['p_item_number'] ?? ''));
+      const invalidItemNrRemoved = beforeFilter - rows.length;
+
+      setRepairProgress({ label: 'Felder werden bereinigt…', percent: 85 });
+
+      rows = rows.map(row => {
+        const r = { ...row };
+        for (const key of Object.keys(r)) {
+          if (r[key] && typeof r[key] === 'string') {
+            r[key] = r[key].replace(/\r?\n|\r/g, ' ').replace(/  +/g, ' ').trim();
+          }
+        }
+        return r;
+      });
+
+      const csvOut = Papa.unparse(rows, { delimiter: ';', columns: headers });
+      const csvBlob = new Blob(['\uFEFF' + csvOut], { type: 'text/csv;charset=utf-8' });
+
+      const resultStats: RepairStats = {
+        totalRawLines,
+        emptyLinesRemoved,
+        rowsMerged,
+        rowsAfterRepair: rows.length,
+        invalidItemNrRemoved,
+      };
+
+      setRepairProgress({ label: 'Abgeschlossen', percent: 100 });
       setRepairStats(resultStats);
       setRepairCsvBlob(csvBlob);
       setRepairStatus('done');
       setAttrCsvBlob(null); setAttrStatus('pending'); setAttrStats(null); setAttrPreview([]);
       setDescCsvBlob(null); setDescStatus('pending'); setDescStats(null);
 
-      if (resultStats) {
-        const entries: ChangeEntry[] = [];
-        if (resultStats.rowsMerged > 0) {
-          entries.push({ step: 'Reparatur', itemNr: '—', field: 'Zeilenstruktur', oldValue: `${resultStats.totalRawLines} Rohzeilen`, newValue: `${resultStats.rowsMerged} Zeilen zusammengeführt` });
-        }
-        if (resultStats.emptyLinesRemoved > 0) {
-          entries.push({ step: 'Reparatur', itemNr: '—', field: 'Leerzeilen', oldValue: `${resultStats.emptyLinesRemoved} leere Zeilen`, newValue: 'Entfernt' });
-        }
-        if (resultStats.invalidItemNrRemoved > 0) {
-          entries.push({ step: 'Reparatur', itemNr: '—', field: 'Ungültige Artikelnr.', oldValue: `${resultStats.invalidItemNrRemoved} ungültige`, newValue: 'Entfernt' });
-        }
-        setChangeLog(prev => [...prev.filter(e => e.step !== 'Reparatur'), ...entries]);
+      const entries: ChangeEntry[] = [];
+      if (resultStats.rowsMerged > 0) {
+        entries.push({ step: 'Reparatur', itemNr: '—', field: 'Zeilenstruktur', oldValue: `${resultStats.totalRawLines} Rohzeilen`, newValue: `${resultStats.rowsMerged} Zeilen zusammengeführt` });
       }
+      if (resultStats.emptyLinesRemoved > 0) {
+        entries.push({ step: 'Reparatur', itemNr: '—', field: 'Leerzeilen', oldValue: `${resultStats.emptyLinesRemoved} leere Zeilen`, newValue: 'Entfernt' });
+      }
+      if (resultStats.invalidItemNrRemoved > 0) {
+        entries.push({ step: 'Reparatur', itemNr: '—', field: 'Ungültige Artikelnr.', oldValue: `${resultStats.invalidItemNrRemoved} ungültige`, newValue: 'Entfernt' });
+      }
+      setChangeLog(prev => [...prev.filter(e => e.step !== 'Reparatur'), ...entries]);
 
       return csvBlob;
     } catch (err: any) {
