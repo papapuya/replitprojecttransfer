@@ -159,13 +159,17 @@ export default function Pipeline() {
     if (repairTimerRef.current) clearInterval(repairTimerRef.current);
     repairTimerRef.current = setInterval(() => {
       setRepairProgress(prev => {
-        if (prev.percent >= 95) return prev;
-        const step = prev.percent < 40 ? 6 : prev.percent < 70 ? 3 : 1;
-        const labels = ['Zeilen werden analysiert…', 'Zeilenstruktur wird repariert…', 'Encoding wird korrigiert…', 'CSV wird bereinigt…'];
-        const labelIdx = Math.min(Math.floor(prev.percent / 25), labels.length - 1);
-        return { label: labels[labelIdx], percent: Math.min(prev.percent + step, 95) };
+        if (prev.percent >= 99) return { ...prev, label: 'Server verarbeitet noch… bitte warten' };
+        let step: number;
+        if (prev.percent < 40) step = 5;
+        else if (prev.percent < 70) step = 2;
+        else if (prev.percent < 90) step = 0.8;
+        else step = 0.2;
+        const labels = ['Zeilen werden analysiert…', 'Zeilenstruktur wird repariert…', 'Encoding wird korrigiert…', 'CSV wird bereinigt…', 'Server verarbeitet noch… bitte warten'];
+        const labelIdx = Math.min(Math.floor(prev.percent / 22), labels.length - 1);
+        return { label: labels[labelIdx], percent: Math.min(prev.percent + step, 99) };
       });
-    }, 250);
+    }, 300);
 
     try {
       const formData = new FormData();
@@ -180,7 +184,13 @@ export default function Pipeline() {
 
       if (repairTimerRef.current) { clearInterval(repairTimerRef.current); repairTimerRef.current = null; }
 
+      if (!response.ok && response.headers.get('content-type')?.includes('application/json')) {
+        const errBody = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
+        throw new Error(errBody.error || `HTTP ${response.status}`);
+      }
+
       const responseText = await response.text();
+      console.log('[Pipeline] CSV-Repair response length:', responseText.length, 'first 200:', responseText.slice(0, 200));
 
       let resultJobId = '';
       let resultStats: RepairStats | null = null;
@@ -209,9 +219,11 @@ export default function Pipeline() {
       }
 
       if (sseError) throw new Error(sseError);
+      if (!resultJobId) {
+        console.error('[Pipeline] No jobId found. Full response:', responseText);
+        throw new Error('Keine Job-ID erhalten — Serverantwort war leer oder unvollständig');
+      }
       setRepairProgress({ label: 'Abgeschlossen', percent: 100 });
-
-      if (!resultJobId) throw new Error('Keine Job-ID erhalten');
 
       const downloadRes = await fetch(`/api/csv-repair/download/${resultJobId}`, {
         headers: getAuthHeaders(),
