@@ -642,6 +642,7 @@ export default function VoltFixer() {
   const [projectsPanelOpen, setProjectsPanelOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [loadingSaveId, setLoadingSaveId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -659,35 +660,31 @@ export default function VoltFixer() {
   const handleSave = async () => {
     if (!result || !saveName.trim()) return;
     setIsSaving(true);
+    setSaveError(null);
     try {
-      let csvBase64: string | undefined;
-      let exportFileName: string | undefined;
+      const formData = new FormData();
+      formData.append('name', saveName.trim());
+      formData.append('fileName', result.fileName || '');
+      formData.append('totalRows', String(result.stats?.total ?? 0));
+      if (result.jobId) formData.append('jobId', result.jobId);
       if (result.csvBlob) {
-        const arrayBuffer = await result.csvBlob.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer);
-        let binary = '';
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        csvBase64 = btoa(binary);
-        exportFileName = result.fileName;
+        formData.append('csvFile', result.csvBlob, result.fileName || 'export.csv');
       }
       const r = await fetch('/api/volt-fixer/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobId: result.jobId,
-          name: saveName.trim(),
-          csvBase64,
-          exportFileName,
-          fileName: result.fileName,
-          totalRows: result.stats?.total ?? 0,
-        }),
+        body: formData,
       });
       if (r.ok) {
         setSaveDialogOpen(false);
         setSaveName("");
         await loadSaves();
+      } else {
+        const err = await r.json().catch(() => ({ error: 'Unbekannter Fehler' }));
+        setSaveError(err.error || 'Fehler beim Speichern');
       }
-    } catch { /* ignore */ } finally { setIsSaving(false); }
+    } catch {
+      setSaveError('Netzwerkfehler — bitte erneut versuchen');
+    } finally { setIsSaving(false); }
   };
 
   const handleRenameSave = async (saveId: string) => {
@@ -1401,6 +1398,9 @@ export default function VoltFixer() {
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                 </div>
+                {saveError && (
+                  <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{saveError}</p>
+                )}
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => setSaveDialogOpen(false)} className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm">Abbrechen</button>
                   <button
