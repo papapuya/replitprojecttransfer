@@ -36,23 +36,10 @@ function looksLikeNewProductRow(pIdField: string, pItemNrField: string): boolean
   const id = pIdField.trim();
   if (!id) return false;
   if (/<|>/.test(id)) return false;
-  if (/&/.test(id)) return false;
-  if (/\s/.test(id)) return false;
-  if (/,/.test(id)) return false;
-  if (/^\d+\.\d+$/.test(id)) return false;
-  if (!/^[\w\-]+$/.test(id)) return false;
-
-  const nr = pItemNrField.trim();
-  if (!nr) return false;
-  if (/<|>/.test(nr)) return false;
-  if (/&/.test(nr)) return false;
-  if (/\s/.test(nr)) return false;
-  if (/,/.test(nr)) return false;
-  if (/^\d+\.\d+$/.test(nr)) return false;
-  if (/^\d{1,2}$/.test(nr)) return false;
-  if (!/^[\w\-]+$/.test(nr)) return false;
-
-  return true;
+  if (/\n|\r/.test(id)) return false;
+  if (id.length > 100) return false;
+  if (/^[\w\-\.\/]+$/.test(id)) return true;
+  return false;
 }
 
 // ─── Endfilter: Ist p_item_number eine echte Artikelnummer? ──────────────────
@@ -60,11 +47,8 @@ function isValidPItemNr(v: string): boolean {
   const val = v.trim();
   if (!val) return false;
   if (/<|>/.test(val)) return false;
-  if (/&/.test(val)) return false;
-  if (/\s/.test(val)) return false;
-  if (/,/.test(val)) return false;
-  if (/^\d+\.\d+$/.test(val)) return false;
-  if (/^\d{1,2}$/.test(val)) return false;
+  if (/\n|\r/.test(val)) return false;
+  if (val.length > 200) return false;
   return true;
 }
 
@@ -126,6 +110,12 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const pItemNrColIdx  = pItemNrIdx >= 0 ? pItemNrIdx : 1;
 
     console.log(`[CsvRepair] Header-Spalten: ${headerCols.length}, p_id: ${pIdColIdx}, p_item_number: ${pItemNrColIdx}, Zeilen: ${totalRawLines}`);
+    console.log(`[CsvRepair] Headers: ${headerCols.join(' | ')}`);
+    if (rawLines.length > 1) {
+      const sampleFields = rawLines[1].split(';');
+      console.log(`[CsvRepair] Erste Datenzeile p_id="${sampleFields[pIdColIdx]}" p_item_number="${sampleFields[pItemNrColIdx]}"`);
+      console.log(`[CsvRepair] looksLikeNewProductRow => ${looksLikeNewProductRow(sampleFields[pIdColIdx] || '', sampleFields[pItemNrColIdx] || '')}`);
+    }
 
     // ─── Zeilen zusammenführen ────────────────────────────────────────────────
     const mergedLines: string[] = [headerLine];
