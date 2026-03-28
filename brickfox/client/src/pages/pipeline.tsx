@@ -813,8 +813,8 @@ export default function Pipeline() {
                                 Nur geänderte
                               </label>
                             </div>
-                            <div className="mt-1 max-h-96 overflow-auto rounded border">
-                              <table className="w-full text-xs">
+                            <div className="mt-1 overflow-x-auto rounded border">
+                              <table className="w-full text-xs min-w-[800px]">
                                 <thead className="sticky top-0 bg-slate-50 z-10">
                                   <tr className="border-b">
                                     <th className="text-left py-1.5 px-2 whitespace-nowrap w-8"></th>
@@ -829,7 +829,7 @@ export default function Pipeline() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {(attrFilterChanged ? changedAttrItems : attrPreview).slice(0, 200).map((item: any, i: number) => {
+                                  {(attrFilterChanged ? changedAttrItems : attrPreview).map((item: any, i: number) => {
                                     const hasChanges = item.changed && item.changed.length > 0;
                                     return (
                                       <tr key={i} className={`border-b last:border-0 ${hasChanges ? 'bg-yellow-50' : ''} hover:bg-indigo-50 cursor-pointer`} onClick={() => setAttrDetailItem(item)}>
@@ -846,22 +846,22 @@ export default function Pipeline() {
                                         <td className="py-1 px-2 max-w-[180px] truncate" title={item.nameDE}>{item.nameDE || '—'}</td>
                                         <td className="py-1 px-2 whitespace-nowrap">
                                           {item.voltOrig !== item.voltNew
-                                            ? <span><span className="text-red-500 line-through">{item.voltOrig || '—'}</span> <span className="text-green-600 font-medium">{item.voltNew}</span></span>
+                                            ? <span><span className="text-red-500">{item.voltOrig || '—'}</span> <span className="text-blue-600 font-medium">{item.voltNew}</span></span>
                                             : <span className="text-gray-400">{item.voltNew || '—'}</span>}
                                         </td>
                                         <td className="py-1 px-2 whitespace-nowrap">
                                           {item.mahOrig !== item.mahNew
-                                            ? <span><span className="text-red-500 line-through">{item.mahOrig || '—'}</span> <span className="text-green-600 font-medium">{item.mahNew}</span></span>
+                                            ? <span><span className="text-red-500">{item.mahOrig || '—'}</span> <span className="text-blue-600 font-medium">{item.mahNew}</span></span>
                                             : <span className="text-gray-400">{item.mahNew || '—'}</span>}
                                         </td>
                                         <td className="py-1 px-2 whitespace-nowrap">
                                           {item.whOrig !== item.whNew
-                                            ? <span><span className="text-red-500 line-through">{item.whOrig || '—'}</span> <span className="text-green-600 font-medium">{item.whNew}</span></span>
+                                            ? <span><span className="text-red-500">{item.whOrig || '—'}</span> <span className="text-blue-600 font-medium">{item.whNew}</span></span>
                                             : <span className="text-gray-400">{item.whNew || '—'}</span>}
                                         </td>
                                         <td className="py-1 px-2 whitespace-nowrap">
                                           {item.wattOrig !== item.wattNew
-                                            ? <span><span className="text-red-500 line-through">{item.wattOrig || '—'}</span> <span className="text-green-600 font-medium">{item.wattNew}</span></span>
+                                            ? <span><span className="text-red-500">{item.wattOrig || '—'}</span> <span className="text-blue-600 font-medium">{item.wattNew}</span></span>
                                             : <span className="text-gray-400">{item.wattNew || '—'}</span>}
                                         </td>
                                         <td className="py-1 px-2">
@@ -875,9 +875,6 @@ export default function Pipeline() {
                                   })}
                                 </tbody>
                               </table>
-                              {(attrFilterChanged ? changedAttrItems : attrPreview).length > 200 && (
-                                <p className="text-xs text-center text-muted-foreground py-1">… und {(attrFilterChanged ? changedAttrItems : attrPreview).length - 200} weitere</p>
-                              )}
                             </div>
                           </>
                         )}
@@ -923,8 +920,8 @@ export default function Pipeline() {
                                   <span className="w-32 font-medium text-gray-600 shrink-0">{label}</span>
                                   {changed ? (
                                     <>
-                                      <span className="text-red-500 line-through mr-2">{orig || '(leer)'}</span>
-                                      <span className="text-green-600 font-semibold">{neu}</span>
+                                      <span className="text-red-500 mr-2">{orig || '(leer)'}</span>
+                                      <span className="text-blue-600 font-semibold">{neu}</span>
                                     </>
                                   ) : (
                                     <span className="text-gray-500">{neu || '—'}</span>
@@ -942,17 +939,17 @@ export default function Pipeline() {
                               {attrDetailItem.nameDEOrig !== attrDetailItem.nameDE && (
                                 <div className="text-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
                                   <span className="font-medium text-gray-600">DE: </span>
-                                  <span className="text-red-500 line-through">{attrDetailItem.nameDEOrig}</span>
+                                  <span className="text-red-500">{attrDetailItem.nameDEOrig}</span>
                                   {' → '}
-                                  <span className="text-green-600 font-semibold">{attrDetailItem.nameDE}</span>
+                                  <span className="text-blue-600 font-semibold">{attrDetailItem.nameDE}</span>
                                 </div>
                               )}
                               {attrDetailItem.nameNLOrig !== attrDetailItem.nameNL && (
                                 <div className="text-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
                                   <span className="font-medium text-gray-600">NL: </span>
-                                  <span className="text-red-500 line-through">{attrDetailItem.nameNLOrig}</span>
+                                  <span className="text-red-500">{attrDetailItem.nameNLOrig}</span>
                                   {' → '}
-                                  <span className="text-green-600 font-semibold">{attrDetailItem.nameNL}</span>
+                                  <span className="text-blue-600 font-semibold">{attrDetailItem.nameNL}</span>
                                 </div>
                               )}
                             </div>
