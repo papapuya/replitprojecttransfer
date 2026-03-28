@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { makeCsvBlob } from "@/lib/utils";
 import { Upload, Download, FileText, CheckCircle2, Loader2, AlertTriangle, Settings2, FolderPlus, Sparkles, Eye, Monitor, Smartphone, ArrowLeft, XCircle, Languages, RefreshCw, Copy, Search, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -806,8 +807,7 @@ export default function CSVBulkDescription() {
         ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
       ].join('\n');
 
-      // UTF-8 ohne BOM für Brickfox
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      const blob = makeCsvBlob(csvContent);
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
@@ -1488,7 +1488,7 @@ export default function CSVBulkDescription() {
                           )
                         ].join('\n');
                         
-                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+                        const blob = makeCsvBlob(csvContent);
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;

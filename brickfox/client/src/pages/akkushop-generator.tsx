@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { makeCsvBlob } from '@/lib/utils';
 import Papa from 'papaparse';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -955,7 +956,7 @@ export default function AkkushopGenerator() {
                           'p_description[de]': r['p_description[de]'],
                           _category: r._category,
                         })), { delimiter: ';' });
-                        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+                        const blob = makeCsvBlob(csvContent);
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
@@ -986,7 +987,7 @@ export default function AkkushopGenerator() {
                           'p_description[de]': r['p_description[de]'],
                           _error: r._error,
                         })), { delimiter: ';' });
-                        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+                        const blob = makeCsvBlob(csvContent);
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;

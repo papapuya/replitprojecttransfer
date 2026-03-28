@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { makeCsvBlob } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -190,8 +191,8 @@ export default function WeightGenerator() {
       exportHeaders.push("confidence");
     }
 
-    const csv = "\uFEFF" + Papa.unparse(csvData, { quotes: true, delimiter: ";", columns: exportHeaders });
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const csv = Papa.unparse(csvData, { quotes: true, delimiter: ";", columns: exportHeaders });
+    const blob = makeCsvBlob(csv);
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, Fragment } from "react";
+import { makeCsvBlob } from "@/lib/utils";
 import { Upload, Download, CheckCircle, AlertCircle, Loader2, Eye, X, Copy, Check, Save, Trash2, FolderOpen, Columns, ChevronDown, ChevronUp, PenLine, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -844,7 +845,7 @@ export default function VoltFixer() {
             return r;
           });
           const csv = Papa.unparse(filtered, { delimiter: ';', columns: cols });
-          blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+          blob = makeCsvBlob(csv);
         } catch { /* Originalblob nehmen falls Fehler */ }
       }
       const url = URL.createObjectURL(blob);
@@ -1020,7 +1021,7 @@ export default function VoltFixer() {
         if (rowToEdit && col in rowToEdit) {
           rowToEdit[col] = newVal;
           const newCsv = Papa.unparse(parsed.data, { delimiter: ';', columns: parsed.meta.fields });
-          const newBlob = new Blob(['\uFEFF' + newCsv], { type: 'text/csv;charset=utf-8' });
+          const newBlob = makeCsvBlob(newCsv);
           setResult(prev => prev ? { ...prev, csvBlob: newBlob } : prev);
         }
       } catch { /* ignorieren */ }

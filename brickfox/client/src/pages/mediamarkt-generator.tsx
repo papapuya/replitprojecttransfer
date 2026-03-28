@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { makeCsvBlob } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,7 +109,7 @@ export default function MediaMarktGeneratorPage() {
     if (csvData.length === 0) return;
 
     const csv = Papa.unparse(csvData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = makeCsvBlob(csv);
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `mediamarkt-export-${new Date().toISOString().split('T')[0]}.csv`;
