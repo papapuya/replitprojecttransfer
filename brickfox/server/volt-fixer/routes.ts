@@ -162,7 +162,7 @@ function rebuildCsvBuffer(job: { fixedRows: Record<string,string>[]; headers: st
     return r;
   });
   const clean = csvRows.filter(row => isValidPItemNr(row));
-  return Buffer.concat([Buffer.from('\uFEFF', 'utf-8'), Buffer.from(Papa.unparse(clean, { delimiter: ';', columns: job.headers }), 'utf-8')]);
+  return Buffer.from(Papa.unparse(clean, { delimiter: ';', columns: job.headers }), 'utf-8');
 }
 
 // Fortschritts-Speicher für laufende Jobs
@@ -1281,33 +1281,34 @@ router.get('/saves', (_req: Request, res: Response) => {
   res.json(readSavesIndex());
 });
 
-// POST /api/volt-fixer/save — Aktuellen Job speichern
-router.post('/save', (req: Request, res: Response) => {
-  const { jobId, name, csvBase64, exportFileName, stats, totalRows, fileName: clientFileName } = req.body as {
-    jobId?: string; name?: string; csvBase64?: string; exportFileName?: string;
-    stats?: Record<string, number>; totalRows?: number; fileName?: string;
-  };
+// POST /api/volt-fixer/save — Aktuellen Job speichern (FormData: csvFile + Felder)
+router.post('/save', upload.single('csvFile'), (req: Request, res: Response) => {
+  const jobId = req.body?.jobId as string | undefined;
+  const name = req.body?.name as string | undefined;
+  const totalRows = parseInt(req.body?.totalRows ?? '0', 10) || 0;
+  const clientFileName = req.body?.fileName as string | undefined;
+
   if (!name) return res.status(400).json({ error: 'name erforderlich' });
 
   ensureSavesDir();
   const saveId = crypto.randomUUID();
   const index = readSavesIndex();
 
-  // Versuche Job aus dem Store zu laden (server-seitige Verarbeitung)
   const job = jobId ? jobStore.get(jobId) : undefined;
+  const csvFile = (req as any).file as Express.Multer.File | undefined;
 
   const changedRows = job ? job.changedCols.filter(c => c && c.length > 0).length : 0;
-  const hasCsv = !!csvBase64;
+  const hasCsv = !!(csvFile || job);
   const resolvedFileName = job?.fileName || clientFileName || 'export.csv';
   const meta: SaveMeta = {
     id: saveId,
     name: name.trim(),
     savedAt: new Date().toISOString(),
     fileName: resolvedFileName,
-    totalRows: job ? job.fixedRows.length : (totalRows ?? 0),
+    totalRows: job ? job.fixedRows.length : totalRows,
     changedRows,
     hasCsv,
-    exportFileName: exportFileName?.trim() || resolvedFileName,
+    exportFileName: resolvedFileName,
   };
 
   const saveData: Record<string, unknown> = { meta };
@@ -1332,10 +1333,12 @@ router.post('/save', (req: Request, res: Response) => {
   const compressed = zlib.gzipSync(JSON.stringify(saveData));
   fs.writeFileSync(path.join(SAVES_DIR, `${saveId}.json.gz`), compressed);
 
-  // CSV-Datei separat speichern wenn mitgeschickt
-  if (csvBase64) {
-    const csvBuffer = Buffer.from(csvBase64, 'base64');
-    const csvCompressed = zlib.gzipSync(csvBuffer);
+  // CSV-Datei separat speichern (bevorzugt: hochgeladene Datei, Fallback: Job-Buffer)
+  if (csvFile) {
+    const csvCompressed = zlib.gzipSync(csvFile.buffer);
+    fs.writeFileSync(path.join(SAVES_DIR, `${saveId}.csv.gz`), csvCompressed);
+  } else if (job) {
+    const csvCompressed = zlib.gzipSync(job.csvBuffer);
     fs.writeFileSync(path.join(SAVES_DIR, `${saveId}.csv.gz`), csvCompressed);
   }
 
