@@ -14,3 +14,4 @@ local.db-wal
 migrations/
 attached_assets/
 uploads/
+saves/
